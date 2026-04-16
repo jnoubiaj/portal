@@ -1129,7 +1129,7 @@
           </div>
           <div class="form-group">
             <label>Email Address *</label>
-            <input id="p_email" type="email" placeholder="james@email.com" />
+            <input id="p_email" type="email" placeholder="james@email.com" readonly style="background:var(--gray-50);color:var(--gray-500);cursor:not-allowed" />
           </div>
           <div class="form-group">
             <label>Phone Number *</label>
@@ -2554,6 +2554,15 @@
 
   // Allow Enter key in other input + wire state listener
   document.addEventListener('DOMContentLoaded', () => {
+    // Lock email field to session email — prevents it ever being overwritten with wrong address
+    try {
+      const sess = _getOnboardSession();
+      if (sess && sess.email) {
+        const emailEl = document.getElementById('p_email');
+        if (emailEl) emailEl.value = sess.email;
+      }
+    } catch(e) {}
+
     // Restore step from last session so refresh doesn't go back to welcome
     try {
       const sess = _getOnboardSession();
@@ -2888,7 +2897,9 @@
           if (onboardData.firstName) c.fname = onboardData.firstName;
           if (onboardData.lastName)  c.lname = onboardData.lastName;
           if (onboardData.phone)     c.phone = onboardData.phone;
-          if (onboardData.email)     c.email = onboardData.email;
+          // Never overwrite the login email — it's the key used in cq_client_creds.
+          // Only fill it in if it was never set (e.g. imported client with no email).
+          if (onboardData.email && !c.email) c.email = onboardData.email;
           c.onboardingComplete = true;
           c.lastActivity = new Date().toISOString().split('T')[0];
           localStorage.setItem('cq_admin_clients', JSON.stringify(adminClients));
