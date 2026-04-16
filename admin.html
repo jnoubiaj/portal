@@ -992,6 +992,21 @@
   })();
   if (currentAdmin) initAdminApp();
 
+  // Re-render overview once DOM is fully ready to catch any elements not yet painted
+  document.addEventListener('DOMContentLoaded', function() {
+    if (currentAdmin) {
+      renderOverview();
+      // Also restore last section after full DOM ready
+      try {
+        const lastSection = localStorage.getItem('cq_admin_section');
+        if (lastSection && document.getElementById('asec-' + lastSection)) {
+          const navEl = document.querySelector(`.a-nav-item[onclick*="'${lastSection}'"]`);
+          switchAdminSection(lastSection, navEl);
+        }
+      } catch(e) {}
+    }
+  });
+
   // ── SECTION SWITCHING ─────────────────────────────────────────────────
   const sectionLabels = { overview:'Overview', clients:'Clients', messages:'Messages' };
   function switchAdminSection(name, el) {
