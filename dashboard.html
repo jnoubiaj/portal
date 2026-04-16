@@ -3038,16 +3038,25 @@
     // "Average 10 yrs. 8 mos. account age" (OCR with periods)
     // "Average account age 10 yrs 8 mos"  (label first)
     {
-      const yr = `(\\d+)\\s*yr[s]?\\.?`;
-      const mo = `(\\d+)\\s*mo[s]?\\.?`;
+      const yr = `(\\d+)\\s*(?:yrs?|years?)\\.?`;
+      const mo = `(\\d+)\\s*(?:mos?|months?)\\.?`;
       const sep = `[^\\d]{0,8}`;  // allows ". " or " " between yrs and mos
       const aamPats = [
+        // "Average 10 yrs 8 mos account age"
         new RegExp(`average\\s+${yr}${sep}${mo}\\s*account`, 'i'),
+        // "Average account age 10 yrs 8 mos"
         new RegExp(`average\\s+account\\s*age[^\\d]{0,30}${yr}[^\\d]{0,15}${mo}`, 'i'),
-        // creditchecktotal.com OCR: "Average 10 yrs 8 mos Total debt $..." (account age on next line, far away)
+        // "Avg. account age 10 yrs 8 mos"
+        new RegExp(`avg\\.?\\s+(?:acct\\.?\\s+)?age[^\\d]{0,30}${yr}[^\\d]{0,15}${mo}`, 'i'),
+        // "Average age of accounts 10 yrs 8 mos"
+        new RegExp(`average\\s+age[^\\d]{0,30}${yr}[^\\d]{0,15}${mo}`, 'i'),
+        // creditchecktotal.com OCR: "Average 10 yrs 8 mos Total debt $..."
         new RegExp(`average[^\\d]{0,20}${yr}${sep}${mo}`, 'i'),
+        // years-only variants
         new RegExp(`average\\s+${yr}\\s*account`, 'i'),
         new RegExp(`average\\s+account\\s*age[^\\d]{0,30}${yr}`, 'i'),
+        new RegExp(`avg\\.?\\s+(?:acct\\.?\\s+)?age[^\\d]{0,30}${yr}`, 'i'),
+        new RegExp(`average\\s+age[^\\d]{0,30}${yr}`, 'i'),
       ];
       for(const rx of aamPats){
         const m=t.match(rx);
@@ -3061,8 +3070,8 @@
 
     // ── Oldest account ─────────────────────────────────────────────────────
     {
-      const yr = `(\\d+)\\s*yr[s]?\\.?`;
-      const mo = `(\\d+)\\s*mo[s]?\\.?`;
+      const yr = `(\\d+)\\s*(?:yrs?|years?)\\.?`;
+      const mo = `(\\d+)\\s*(?:mos?|months?)\\.?`;
       const olmPats = [
         new RegExp(`oldest\\s+account\\s+${yr}[^\\d]{0,8}${mo}`, 'i'),
         new RegExp(`oldest\\s+account[^\\d]{0,20}${yr}[^\\d]{0,15}${mo}`, 'i'),
@@ -3725,9 +3734,9 @@
     d.collectionsCount = colm ? parseInt(colm[1]) : 0;
 
     // Credit age
-    const aam = t.match(/Average account age\s+(\d+\s*yrs?\s*\d*\s*mos?)/i);
+    const aam = t.match(/Average account age\s+(\d+\s*yrs?(?:\s*\d+\s*mos?)?)/i);
     d.avgAge = aam ? aam[1].replace(/\s+/g,' ').trim() : null;
-    const olm = t.match(/Oldest account\s+(\d+\s*yrs?\s*\d*\s*mos?)/i);
+    const olm = t.match(/Oldest account\s+(\d+\s*yrs?(?:\s*\d+\s*mos?)?)/i);
     d.oldestAccount = olm ? olm[1].replace(/\s+/g,' ').trim() : null;
 
     // Credit usage summary
