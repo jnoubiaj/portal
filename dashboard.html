@@ -2963,7 +2963,7 @@
     // Progress
     const stages = d.stageNames || DEFAULT_DASH.stageNames;
     const cs = d.currentStage || 1;
-    const pct = Math.round(((cs - 1) / stages.length) * 100);
+    const pct = Math.round((cs / stages.length) * 100);
     renderProgressSteps('progress-steps-mini', stages, cs);
     renderProgressSteps('progress-steps-full', stages, cs);
     const pmm = document.getElementById('progress-meta-mini'); if(pmm) pmm.textContent = 'Stage ' + cs + ' of ' + stages.length + ' — ' + (stages[cs-1]||'');
@@ -2971,7 +2971,7 @@
     ['progress-bar-mini','progress-bar-full'].forEach(id => { const el=document.getElementById(id); if(el) el.style.width=pct+'%'; });
     ['progress-pct-mini','progress-pct-full'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=pct+'% Complete'; });
     const psm = document.getElementById('progress-stage-mini'); if(psm) psm.textContent = 'Currently: ' + (stages[cs-1]||'');
-    const pmiles = document.getElementById('progress-miles-full'); if(pmiles) pmiles.textContent = (cs-1) + ' of ' + stages.length + ' milestones completed';
+    const pmiles = document.getElementById('progress-miles-full'); if(pmiles) pmiles.textContent = cs + ' of ' + stages.length + ' milestones completed';
     // Tasks
     renderTaskList('task-list-mini', d.tasks||[], true);
     renderTaskList('task-list-full', d.tasks||[], false);
