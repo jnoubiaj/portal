@@ -1560,7 +1560,19 @@
   // ── OVERVIEW TAB ──────────────────────────────────────────────────────
   function renderOverviewTab(clientId, client) {
     let o = null;
-    try { o = JSON.parse(localStorage.getItem('cq_onboard_data') || 'null'); } catch(e) {}
+    // Try per-client key first (set when client submits onboarding after login)
+    try { o = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null'); } catch(e) {}
+    // Fall back to global key for demo client (c1) or if per-client not yet saved
+    if (!o && clientId === 'c1') {
+      try { o = JSON.parse(localStorage.getItem('cq_onboard_data') || 'null'); } catch(e) {}
+    }
+    // Last resort: check if global key email matches this client
+    if (!o && client.email) {
+      try {
+        const global = JSON.parse(localStorage.getItem('cq_onboard_data') || 'null');
+        if (global && global.email && global.email.toLowerCase() === client.email.toLowerCase()) o = global;
+      } catch(e) {}
+    }
 
     const fv = (val, fallback) => {
       if (val === undefined || val === null || val === '') return `<span class="prof-field-val empty">${fallback || '—'}</span>`;

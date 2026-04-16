@@ -755,9 +755,8 @@
           <input class="f-input" type="password" id="loginPassword" placeholder="••••••••••" />
         </div>
 
-        <div class="f-row-between">
-          <a href="#" class="f-link">Forgot password?</a>
-        </div>
+        <!-- Inline error -->
+        <div id="login-error" style="display:none;margin-bottom:16px;padding:12px 14px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-size:13px;color:#f87171;"></div>
 
         <div class="f-tos">
           <input type="checkbox" id="tosAgree" />
@@ -855,53 +854,78 @@
   </div>
 
   <script>
-    let _pendingSession = null; // stores {clientId, email} during password change flow
+    let _pendingSession = null;
 
     function showPage(id) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById(id).classList.add('active');
       window.scrollTo(0, 0);
     }
-    function openTos() { document.getElementById('tosModal').classList.add('open'); }
+    function openTos()  { document.getElementById('tosModal').classList.add('open'); }
     function closeTos() { document.getElementById('tosModal').classList.remove('open'); }
-    function acceptTos() { document.getElementById('tosAgree').checked = true; closeTos(); }
+    function acceptTos(){ document.getElementById('tosAgree').checked = true; closeTos(); }
+
+    function showLoginError(msg) {
+      const el = document.getElementById('login-error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function hideLoginError() {
+      document.getElementById('login-error').style.display = 'none';
+    }
 
     function doLogin() {
+      hideLoginError();
       if (!document.getElementById('tosAgree').checked) {
-        alert('Please review and accept the Privacy Policy & Terms of Service to continue.');
+        showLoginError('Please check the box to agree to the Privacy Policy & Terms of Service.');
         return;
       }
       const email = document.getElementById('loginEmail').value.trim().toLowerCase();
       const pass  = document.getElementById('loginPassword').value;
-      if (!email || !pass) { alert('Please enter your email and password.'); return; }
+      if (!email || !pass) {
+        showLoginError('Please enter your email address and password.');
+        return;
+      }
 
-      // Check real credentials from admin-created accounts
       let creds = {};
       try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
       const cred = creds[email];
 
       if (cred) {
         if (cred.password !== pass) {
-          alert('Incorrect password. Please try again.');
+          showLoginError('Incorrect password. Please try again.');
           return;
         }
         if (cred.mustChange) {
-          // Store pending session for after password change
           _pendingSession = { clientId: cred.clientId, email };
           showPage('page-change-password');
           return;
         }
-        // Valid login — start session
         startClientSession(cred.clientId, email);
         window.location.href = 'onboarding.html';
         return;
       }
 
-      // Fallback: demo login (no account in localStorage) — for demo clients
+      // No account found — show helpful message instead of silently redirecting
+      showLoginError('No account found for this email. Please contact your CapitalQuest advisor to set up portal access.');
+    }
+
+    function demoLogin() {
+      startClientSession('c1', 'demo@capitalquestfunding.com');
       window.location.href = 'onboarding.html';
     }
 
-    function demoLogin() { window.location.href = 'onboarding.html'; }
+    function startClientSession(clientId, email) {
+      try {
+        sessionStorage.setItem('cq_client_session', JSON.stringify({
+          clientId, email, loggedInAt: new Date().toISOString()
+        }));
+        // Also persist to localStorage as backup (sessionStorage clears on tab close)
+        localStorage.setItem('cq_active_client_session', JSON.stringify({
+          clientId, email, loggedInAt: new Date().toISOString()
+        }));
+      } catch(e) {}
+    }
 
     function checkPwReqs(val) {
       setReq('req-upper',   /[A-Z]/.test(val));
@@ -909,56 +933,52 @@
       setReq('req-special', /[!?@#$%^&*]/.test(val));
       setReq('req-length',  val.length >= 8);
     }
-    function setReq(id, pass) {
+    function setReq(id, ok) {
       const el = document.getElementById(id);
       if (!el) return;
       const dot = el.querySelector('.req-dot');
-      if (pass) {
-        el.style.color = '#6ee7b7';
-        dot.style.background = '#10b981';
-      } else {
-        el.style.color = 'rgba(255,255,255,0.4)';
-        dot.style.background = 'rgba(255,255,255,0.2)';
-      }
+      el.style.color = ok ? '#6ee7b7' : 'rgba(255,255,255,0.4)';
+      dot.style.background = ok ? '#10b981' : 'rgba(255,255,255,0.2)';
     }
     function validatePassword(pw) {
-      if (pw.length < 8)          return 'Password must be at least 8 characters.';
-      if (!/[A-Z]/.test(pw))      return 'Password must contain at least one uppercase letter.';
-      if (!/[0-9]/.test(pw))      return 'Password must contain at least one number.';
+      if (pw.length < 8)           return 'Password must be at least 8 characters.';
+      if (!/[A-Z]/.test(pw))       return 'Password must contain at least one uppercase letter (A–Z).';
+      if (!/[0-9]/.test(pw))       return 'Password must contain at least one number.';
       if (!/[!?@#$%^&*]/.test(pw)) return 'Password must contain at least one special character (!?@#$%^&*).';
       return null;
     }
     function submitNewPassword() {
-      const pw1 = document.getElementById('newPw1').value;
-      const pw2 = document.getElementById('newPw2').value;
+      const pw1   = document.getElementById('newPw1').value;
+      const pw2   = document.getElementById('newPw2').value;
       const errEl = document.getElementById('cp-error');
       errEl.style.display = 'none';
 
-      const validErr = validatePassword(pw1);
-      if (validErr) { errEl.textContent = validErr; errEl.style.display = 'block'; return; }
-      if (pw1 !== pw2) { errEl.textContent = 'Passwords do not match. Please try again.'; errEl.style.display = 'block'; return; }
+      const err = validatePassword(pw1);
+      if (err)        { errEl.textContent = err;                               errEl.style.display = 'block'; return; }
+      if (pw1 !== pw2){ errEl.textContent = 'Passwords do not match.';         errEl.style.display = 'block'; return; }
 
-      // Save new password
-      const email = _pendingSession ? _pendingSession.email : document.getElementById('loginEmail').value.trim().toLowerCase();
+      const email = _pendingSession ? _pendingSession.email : '';
+      if (!email) { errEl.textContent = 'Session expired. Please log in again.'; errEl.style.display = 'block'; return; }
+
+      // Save new password and clear mustChange flag
       let creds = {};
       try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
       if (creds[email]) {
-        creds[email].password = pw1;
+        creds[email].password   = pw1;
         creds[email].mustChange = false;
         try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
       }
 
-      if (_pendingSession) {
-        startClientSession(_pendingSession.clientId, email);
-      }
+      startClientSession(_pendingSession.clientId, email);
       window.location.href = 'onboarding.html';
     }
 
-    function startClientSession(clientId, email) {
-      try {
-        sessionStorage.setItem('cq_client_session', JSON.stringify({ clientId, email, loggedInAt: new Date().toISOString() }));
-      } catch(e) {}
-    }
+    // Allow Enter key on password field
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('loginPassword').addEventListener('keydown', e => {
+        if (e.key === 'Enter') doLogin();
+      });
+    });
   </script>
 </body>
 </html>

@@ -2789,24 +2789,35 @@
       contractSigned: localStorage.getItem('cq_signed_contract') || '',
       contractName:   localStorage.getItem('cq_signed_name') || '',
     };
+    // Save global key (backward compat)
     try { localStorage.setItem('cq_onboard_data', JSON.stringify(onboardData)); } catch(e) {}
 
-    // Auto-update the admin client record with the real name from onboarding
+    // Read session from sessionStorage OR localStorage backup
+    let session = null;
     try {
-      const session = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null');
-      if (session && session.clientId) {
+      session = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null');
+      if (!session) session = JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+    } catch(e) {}
+
+    if (session && session.clientId) {
+      // Save per-client onboarding data so admin can read it per-client
+      try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(onboardData)); } catch(e) {}
+
+      // Auto-update admin client record with real name, phone, onboarding status
+      try {
         const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
         const c = adminClients.find(cl => cl.id === session.clientId);
         if (c) {
-          c.fname = onboardData.firstName || c.fname;
-          c.lname = onboardData.lastName  || c.lname;
-          c.phone = onboardData.phone     || c.phone;
+          if (onboardData.firstName) c.fname = onboardData.firstName;
+          if (onboardData.lastName)  c.lname = onboardData.lastName;
+          if (onboardData.phone)     c.phone = onboardData.phone;
+          if (onboardData.email)     c.email = onboardData.email;
           c.onboardingComplete = true;
           c.lastActivity = new Date().toISOString().split('T')[0];
           localStorage.setItem('cq_admin_clients', JSON.stringify(adminClients));
         }
-      }
-    } catch(e) {}
+      } catch(e) {}
+    }
 
     goTo('done');
   }
