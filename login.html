@@ -861,6 +861,43 @@
       document.getElementById(id).classList.add('active');
       window.scrollTo(0, 0);
     }
+
+    // ── MAGIC LINK: check URL for ?access=clientId on page load ──────────
+    (function checkMagicLink() {
+      const params = new URLSearchParams(window.location.search);
+      const clientId = params.get('access');
+      if (!clientId) return;
+
+      // Look up client record to get their email
+      let email = '';
+      try {
+        const clients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+        const c = clients.find(cl => cl.id === clientId);
+        if (c) email = c.email;
+      } catch(e) {}
+
+      // Ensure credential exists
+      let creds = {};
+      try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+      if (email && !creds[email]) {
+        creds[email] = { clientId, password: 'cqconsulting123!', mustChange: true };
+        try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+      }
+
+      const cred = email ? creds[email] : null;
+      if (cred && cred.mustChange) {
+        _pendingSession = { clientId, email };
+        // Clean URL then show change-password page
+        window.history.replaceState({}, '', window.location.pathname);
+        showPage('page-change-password');
+        return;
+      }
+
+      // Already has a real password — just log them in
+      startClientSession(clientId, email);
+      window.history.replaceState({}, '', window.location.pathname);
+      window.location.href = 'onboarding.html';
+    })();
     function openTos()  { document.getElementById('tosModal').classList.add('open'); }
     function closeTos() { document.getElementById('tosModal').classList.remove('open'); }
     function acceptTos(){ document.getElementById('tosAgree').checked = true; closeTos(); }

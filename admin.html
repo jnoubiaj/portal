@@ -1589,17 +1589,17 @@
               ${hasAccount ? (mustChange ? 'Temporary — must change on login' : 'Client-set password') : 'No account created yet'}
             </div>
           </div>
-          <div style="display:flex;gap:8px;flex-shrink:0;">
+          <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;">
             ${!hasAccount ? `
               <button onclick="createPortalAccess('${clientId}')" style="height:34px;padding:0 14px;background:var(--navy);border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer;">
                 Create Account
               </button>` : `
               <button onclick="resetToTempPassword('${clientId}')" style="height:34px;padding:0 14px;background:var(--danger-bg);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--danger);cursor:pointer;">
                 Reset Password
-              </button>
-              <button onclick="copyLoginDetails('${clientId}')" id="copy-cred-btn-${clientId}" style="height:34px;padding:0 14px;background:var(--blue-light);border:1px solid rgba(34,167,240,0.2);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;">
-                Copy Login Info
               </button>`}
+            <button onclick="copyMagicLink('${clientId}')" id="magic-btn-${clientId}" style="height:34px;padding:0 14px;background:var(--navy);border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer;">
+              📋 Copy Login Link
+            </button>
           </div>
         </div>
       </div>`;
@@ -1643,6 +1643,31 @@
     navigator.clipboard.writeText(text).then(() => {
       const btn = document.getElementById('copy-cred-btn-' + clientId);
       if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy Login Info'; }, 2000); }
+    });
+  }
+
+  function copyMagicLink(clientId) {
+    const c = getClient(clientId);
+    if (!c) return;
+
+    // Ensure credential exists so magic link works on same device
+    let creds = {};
+    try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+    if (!creds[c.email]) {
+      creds[c.email] = { clientId, password: TEMP_PASSWORD, mustChange: true };
+      try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+    }
+
+    const base = window.location.origin + window.location.pathname.replace('admin.html','');
+    const link = `${base}login.html?access=${clientId}`;
+    navigator.clipboard.writeText(link).then(() => {
+      const btn = document.getElementById('magic-btn-' + clientId);
+      if (btn) {
+        btn.textContent = '✓ Link Copied!';
+        btn.style.background = 'var(--success)';
+        setTimeout(() => { btn.textContent = '📋 Copy Login Link'; btn.style.background = 'var(--navy)'; }, 2500);
+      }
+      showToast('Login link copied — send this to your client');
     });
   }
 
