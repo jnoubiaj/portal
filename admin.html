@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — CapitalQuest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:      #0A1628;
+      --navy-mid:  #112240;
+      --navy-light:#1a3a6b;
+      --blue:      #22A7F0;
+      --blue-dark: #1a8fd4;
+      --blue-light:#e8f5fd;
+      --blue-xl:   #f0f9ff;
+      --white:     #ffffff;
+      --bg:        #F0F4F8;
+      --gray-50:   #F8FAFC;
+      --gray-100:  #EDF1F7;
+      --gray-200:  #D4DCE8;
+      --gray-300:  #B8C4D8;
+      --gray-400:  #8A97B0;
+      --gray-500:  #627090;
+      --gray-600:  #4A5568;
+      --gray-800:  #1A2340;
+      --success:   #10b981;
+      --success-bg:#ecfdf5;
+      --warning:   #f59e0b;
+      --warn-bg:   #fffbeb;
+      --danger:    #ef4444;
+      --danger-bg: #fef2f2;
+      --purple:    #8b5cf6;
+      --purple-bg: #f5f3ff;
+      --sidebar-w: 240px;
+      --header-h:  64px;
+      --font-h:    'Plus Jakarta Sans', sans-serif;
+      --font-b:    'Inter', sans-serif;
+    }
+    html, body { height: 100%; font-family: var(--font-b); background: var(--bg); color: var(--gray-800); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    input, select, textarea { font-size: 16px !important; }
+
+    /* ── LOGIN ─────────────────────────────────── */
+    #admin-login {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--navy);
+      background-image: radial-gradient(ellipse at 20% 50%, rgba(34,167,240,0.12) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 20%, rgba(26,58,107,0.4) 0%, transparent 50%);
+    }
+    .login-box {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+    }
+    .login-logo { text-align: center; margin-bottom: 32px; }
+    .login-logo img { height: 32px; }
+    .login-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--navy); color: var(--white);
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 4px 12px; border-radius: 999px; margin-bottom: 24px;
+    }
+    .login-box h1 { font-family: var(--font-h); font-size: 22px; font-weight: 800; color: var(--navy); letter-spacing: -0.02em; margin-bottom: 6px; }
+    .login-box p { font-size: 13px; color: var(--gray-400); margin-bottom: 28px; }
+    .lf-group { margin-bottom: 16px; }
+    .lf-group label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-600); margin-bottom: 6px; letter-spacing: 0.02em; }
+    .lf-group input {
+      width: 100%; height: 44px; padding: 0 14px;
+      border: 1.5px solid var(--gray-200); border-radius: 10px;
+      font-family: var(--font-b); font-size: 14px; color: var(--navy);
+      outline: none; transition: border-color 0.15s;
+    }
+    .lf-group input:focus { border-color: var(--blue); }
+    .lf-error { font-size: 12px; color: var(--danger); margin-top: 8px; display: none; }
+    .lf-error.show { display: block; }
+    .btn-login {
+      width: 100%; height: 46px; background: var(--navy);
+      border: none; border-radius: 10px;
+      font-family: var(--font-h); font-size: 14px; font-weight: 700; color: var(--white);
+      cursor: pointer; margin-top: 8px; transition: background 0.15s;
+    }
+    .btn-login:hover { background: var(--navy-light); }
+
+    /* ── APP SHELL ─────────────────────────────── */
+    #admin-app { display: none; min-height: 100vh; }
+    .a-wrap { display: flex; min-height: 100vh; }
+
+    /* ── SIDEBAR ───────────────────────────────── */
+    .a-sidebar {
+      width: var(--sidebar-w); background: var(--navy);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0;
+      z-index: 100; overflow-y: auto;
+    }
+    .a-sb-logo { padding: 24px 20px 18px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .a-sb-logo img { height: 32px; filter: brightness(0) invert(1); }
+    .a-sb-badge {
+      display: inline-block; margin-top: 8px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--blue); background: rgba(34,167,240,0.12);
+      padding: 2px 8px; border-radius: 4px;
+    }
+    .a-sb-user {
+      padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .a-sb-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), var(--navy-light));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-h); font-weight: 700; font-size: 13px; color: var(--white);
+      flex-shrink: 0;
+    }
+    .a-sb-uname { font-size: 13px; font-weight: 600; color: var(--white); }
+    .a-sb-urole { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 1px; }
+    .a-sb-nav { flex: 1; padding: 16px 12px; }
+    .a-sb-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.25); padding: 0 8px; margin: 16px 0 6px; }
+    .a-nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 10px; border-radius: 8px; cursor: pointer;
+      transition: background 0.13s; margin-bottom: 2px;
+      font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55);
+      position: relative;
+    }
+    .a-nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); }
+    .a-nav-item.active { background: rgba(34,167,240,0.15); color: var(--white); font-weight: 600; }
+    .a-nav-item.active .a-nav-icon { color: var(--blue); }
+    .a-nav-icon { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+    .a-nav-item.active .a-nav-icon { opacity: 1; }
+    .a-nav-badge {
+      margin-left: auto; font-size: 11px; font-weight: 700;
+      background: var(--blue); color: var(--white);
+      padding: 1px 7px; border-radius: 999px; min-width: 20px; text-align: center;
+    }
+    .a-nav-badge.red { background: var(--danger); }
+    .a-sb-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.07); }
+    .btn-logout {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; padding: 9px 10px; border-radius: 8px;
+      background: none; border: none; cursor: pointer;
+      font-family: var(--font-b); font-size: 13px; color: rgba(255,255,255,0.4);
+      transition: color 0.13s, background 0.13s;
+    }
+    .btn-logout:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); }
+
+    /* ── MAIN ──────────────────────────────────── */
+    .a-main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+    .a-header {
+      height: var(--header-h); background: var(--white);
+      border-bottom: 1px solid var(--gray-100);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px; position: sticky; top: 0; z-index: 50;
+      box-shadow: 0 1px 4px rgba(10,22,40,0.04);
+    }
+    .a-page-title { font-family: var(--font-h); font-size: 17px; font-weight: 800; color: var(--navy); letter-spacing: -0.02em; }
+    .a-header-right { display: flex; align-items: center; gap: 12px; }
+    .a-header-btn {
+      height: 36px; padding: 0 14px; border-radius: 8px;
+      background: var(--navy); border: none;
+      font-family: var(--font-h); font-size: 12px; font-weight: 700; color: var(--white);
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: background 0.13s;
+    }
+    .a-header-btn:hover { background: var(--navy-light); }
+    .a-content { flex: 1; padding: 28px; }
+
+    /* ── SECTION ───────────────────────────────── */
+    .a-section { display: none; }
+    .a-section.active { display: block; }
+
+    /* ── STATS ─────────────────────────────────── */
+    .a-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .a-stat-card {
+      background: var(--white); border-radius: 14px;
+      border: 1px solid var(--gray-100); padding: 20px 22px;
+      box-shadow: 0 1px 4px rgba(10,22,40,0.04);
+    }
+    .a-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--gray-400); margin-bottom: 8px; }
+    .a-stat-val { font-family: var(--font-h); font-size: 28px; font-weight: 800; color: var(--navy); letter-spacing: -0.03em; }
+    .a-stat-sub { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
+    .a-stat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+
+    /* ── CLIENTS LAYOUT ────────────────────────── */
+    .a-clients-wrap { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+    .a-client-list-card {
+      background: var(--white); border-radius: 16px;
+      border: 1px solid var(--gray-100); overflow: hidden;
+      box-shadow: 0 2px 8px rgba(10,22,40,0.04);
+      position: sticky; top: calc(var(--header-h) + 28px);
+    }
+    .a-cl-header { padding: 18px 20px; border-bottom: 1px solid var(--gray-100); }
+    .a-cl-title { font-family: var(--font-h); font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
+    .a-cl-search {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--gray-50); border: 1.5px solid var(--gray-100);
+      border-radius: 8px; padding: 0 12px; height: 36px;
+    }
+    .a-cl-search input {
+      flex: 1; background: none; border: none; outline: none;
+      font-family: var(--font-b); font-size: 13px; color: var(--navy);
+    }
+    .a-cl-filters { display: flex; gap: 6px; padding: 12px 20px; border-bottom: 1px solid var(--gray-100); flex-wrap: wrap; }
+    .a-filter-btn {
+      height: 26px; padding: 0 10px; border-radius: 6px;
+      border: 1.5px solid var(--gray-200); background: none;
+      font-size: 11px; font-weight: 600; color: var(--gray-500);
+      cursor: pointer; transition: all 0.13s; white-space: nowrap;
+    }
+    .a-filter-btn.active { background: var(--navy); border-color: var(--navy); color: var(--white); }
+    .a-cl-list { max-height: calc(100vh - 280px); overflow-y: auto; }
+    .a-client-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px; cursor: pointer;
+      border-bottom: 1px solid var(--gray-50);
+      transition: background 0.12s;
+    }
+    .a-client-row:hover { background: var(--gray-50); }
+    .a-client-row.active { background: var(--blue-xl); border-left: 3px solid var(--blue); }
+    .a-cl-avatar {
+      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-h); font-weight: 700; font-size: 14px; color: var(--white);
+    }
+    .a-cl-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+    .a-cl-info { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+    .a-cl-right { margin-left: auto; text-align: right; flex-shrink: 0; }
+    .status-pill {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 999px;
+    }
+    .sp-approved   { background: var(--success-bg); color: var(--success); }
+    .sp-pending    { background: var(--warn-bg);    color: var(--warning); }
+    .sp-progress   { background: var(--blue-light); color: var(--blue);    }
+    .sp-disqual    { background: var(--danger-bg);  color: var(--danger);  }
+    .sp-new        { background: var(--purple-bg);  color: var(--purple);  }
+    .a-cl-fico { font-size: 11px; color: var(--gray-400); margin-top: 3px; }
+
+    /* ── CLIENT DETAIL ─────────────────────────── */
+    .a-detail-card {
+      background: var(--white); border-radius: 16px;
+      border: 1px solid var(--gray-100);
+      box-shadow: 0 2px 8px rgba(10,22,40,0.04);
+      overflow: hidden;
+    }
+    .a-detail-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 80px 40px; text-align: center; color: var(--gray-400);
+    }
+    .a-detail-empty svg { margin-bottom: 16px; opacity: 0.3; }
+    .a-detail-empty h3 { font-family: var(--font-h); font-size: 16px; font-weight: 700; color: var(--gray-500); margin-bottom: 6px; }
+    .a-detail-empty p { font-size: 13px; }
+
+    /* Detail header */
+    .a-dh {
+      padding: 24px 28px 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .a-dh-top { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+    .a-dh-avatar {
+      width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-h); font-weight: 700; font-size: 18px; color: var(--white);
+    }
+    .a-dh-name { font-family: var(--font-h); font-size: 20px; font-weight: 800; color: var(--navy); letter-spacing: -0.02em; }
+    .a-dh-sub { font-size: 13px; color: var(--gray-400); margin-top: 3px; }
+    .a-dh-actions { margin-left: auto; display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
+    .a-action-btn {
+      height: 34px; padding: 0 14px; border-radius: 8px; border: 1.5px solid var(--gray-200);
+      background: var(--white); font-family: var(--font-h); font-size: 12px; font-weight: 700;
+      color: var(--gray-600); cursor: pointer; transition: all 0.13s; white-space: nowrap;
+    }
+    .a-action-btn:hover { border-color: var(--gray-300); background: var(--gray-50); }
+    .a-action-btn.approve { background: var(--success-bg); border-color: rgba(16,185,129,0.2); color: var(--success); }
+    .a-action-btn.approve:hover { background: #d1fae5; }
+    .a-action-btn.disqual { background: var(--danger-bg); border-color: rgba(239,68,68,0.2); color: var(--danger); }
+    .a-action-btn.disqual:hover { background: #fee2e2; }
+    .a-action-btn.primary { background: var(--blue); border-color: var(--blue); color: var(--white); }
+    .a-action-btn.primary:hover { background: var(--blue-dark); }
+
+    /* Tabs */
+    .a-tabs { display: flex; gap: 2px; }
+    .a-tab {
+      padding: 10px 16px; font-family: var(--font-h); font-size: 13px; font-weight: 600;
+      color: var(--gray-400); cursor: pointer; border-bottom: 2px solid transparent;
+      transition: all 0.13s; white-space: nowrap;
+    }
+    .a-tab:hover { color: var(--gray-600); }
+    .a-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    /* Tab panes */
+    .a-tab-pane { display: none; padding: 24px 28px; }
+    .a-tab-pane.active { display: block; }
+
+    /* ── OVERVIEW TAB ──────────────────────────── */
+    .a-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .a-info-card {
+      background: var(--gray-50); border-radius: 12px;
+      border: 1px solid var(--gray-100); padding: 16px 18px;
+    }
+    .a-info-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); margin-bottom: 4px; }
+    .a-info-val { font-size: 15px; font-weight: 600; color: var(--navy); }
+    .a-status-changer { margin-bottom: 24px; }
+    .a-sc-label { font-size: 12px; font-weight: 600; color: var(--gray-500); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .a-sc-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .a-sc-pill {
+      height: 32px; padding: 0 14px; border-radius: 8px;
+      border: 1.5px solid var(--gray-200); background: var(--white);
+      font-size: 12px; font-weight: 600; color: var(--gray-500); cursor: pointer; transition: all 0.13s;
+    }
+    .a-sc-pill:hover { border-color: var(--gray-300); color: var(--gray-700); }
+    .a-sc-pill.sel-new      { background: var(--purple-bg); border-color: rgba(139,92,246,0.3); color: var(--purple); }
+    .a-sc-pill.sel-pending  { background: var(--warn-bg);   border-color: rgba(245,158,11,0.3); color: var(--warning); }
+    .a-sc-pill.sel-progress { background: var(--blue-light);border-color: rgba(34,167,240,0.3); color: var(--blue);    }
+    .a-sc-pill.sel-approved { background: var(--success-bg);border-color: rgba(16,185,129,0.3); color: var(--success); }
+    .a-sc-pill.sel-disqual  { background: var(--danger-bg); border-color: rgba(239,68,68,0.3);  color: var(--danger);  }
+    .a-note-area {
+      width: 100%; min-height: 80px; padding: 12px 14px;
+      border: 1.5px solid var(--gray-200); border-radius: 10px;
+      font-family: var(--font-b); font-size: 14px; color: var(--navy);
+      resize: vertical; outline: none; transition: border-color 0.15s;
+    }
+    .a-note-area:focus { border-color: var(--blue); }
+    .a-save-btn {
+      margin-top: 10px; height: 36px; padding: 0 18px;
+      background: var(--navy); border: none; border-radius: 8px;
+      font-family: var(--font-h); font-size: 12px; font-weight: 700; color: var(--white);
+      cursor: pointer; transition: background 0.13s;
+    }
+    .a-save-btn:hover { background: var(--navy-light); }
+    .a-saved-toast {
+      display: inline-block; margin-left: 10px; font-size: 12px;
+      color: var(--success); font-weight: 600; opacity: 0; transition: opacity 0.3s;
+    }
+    .a-saved-toast.show { opacity: 1; }
+
+    /* ── DOCUMENTS TAB ─────────────────────────── */
+    .a-doc-section-title {
+      font-family: var(--font-h); font-size: 13px; font-weight: 700; color: var(--navy);
+      text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 12px;
+    }
+    .a-req-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .a-req-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; background: var(--gray-50);
+      border: 1px solid var(--gray-100); border-radius: 10px;
+    }
+    .a-req-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--navy); }
+    .a-req-status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+    .ars-pending  { background: var(--warn-bg);    color: var(--warning); }
+    .ars-received { background: var(--success-bg); color: var(--success); }
+    .a-req-del {
+      width: 28px; height: 28px; border-radius: 6px; background: none;
+      border: 1px solid var(--gray-200); color: var(--gray-400);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.13s; flex-shrink: 0;
+    }
+    .a-req-del:hover { background: var(--danger-bg); border-color: rgba(239,68,68,0.2); color: var(--danger); }
+    .a-add-req-row { display: flex; gap: 8px; margin-bottom: 24px; }
+    .a-add-req-input {
+      flex: 1; height: 38px; padding: 0 12px;
+      border: 1.5px solid var(--gray-200); border-radius: 8px;
+      font-family: var(--font-b); font-size: 13px; color: var(--navy); outline: none;
+      transition: border-color 0.15s;
+    }
+    .a-add-req-input:focus { border-color: var(--blue); }
+    .a-add-req-btn {
+      height: 38px; padding: 0 16px; border-radius: 8px;
+      background: var(--blue); border: none;
+      font-family: var(--font-h); font-size: 12px; font-weight: 700; color: var(--white);
+      cursor: pointer; white-space: nowrap; transition: background 0.13s;
+      box-shadow: 0 2px 8px rgba(34,167,240,0.25);
+    }
+    .a-add-req-btn:hover { background: var(--blue-dark); }
+    .a-doc-divider { border: none; border-top: 1px solid var(--gray-100); margin: 20px 0; }
+    .a-drop-zone {
+      border: 2px dashed var(--gray-200); border-radius: 12px;
+      padding: 28px 20px; text-align: center; cursor: pointer;
+      transition: all 0.13s; background: var(--gray-50); margin-bottom: 16px;
+    }
+    .a-drop-zone:hover, .a-drop-zone.drag-over { border-color: var(--blue); background: var(--blue-xl); }
+    .a-drop-zone p { font-size: 13px; color: var(--gray-400); }
+    .a-drop-zone strong { color: var(--blue); }
+    .a-doc-file-list { display: flex; flex-direction: column; gap: 8px; }
+    .a-doc-file-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 14px; border-radius: 10px;
+      border: 1px solid var(--gray-100);
+    }
+    .a-doc-file-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: var(--blue-light); display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .a-doc-file-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+    .a-doc-file-meta { font-size: 11px; color: var(--gray-400); margin-top: 1px; }
+    .a-doc-file-badge {
+      margin-left: auto; font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 999px;
+    }
+    .adfb-admin  { background: var(--blue-light); color: var(--blue); }
+    .adfb-client { background: var(--success-bg); color: var(--success); }
+
+    /* ── CREDIT TAB ────────────────────────────── */
+    .a-credit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .a-credit-metric {
+      background: var(--gray-50); border: 1px solid var(--gray-100);
+      border-radius: 12px; padding: 16px;
+    }
+    .a-cm-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); margin-bottom: 6px; }
+    .a-cm-val { font-family: var(--font-h); font-size: 22px; font-weight: 800; color: var(--navy); letter-spacing: -0.02em; }
+    .a-cm-sub { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+    .a-cm-ok   { border-top: 3px solid var(--success); }
+    .a-cm-warn { border-top: 3px solid var(--warning); }
+    .a-cm-bad  { border-top: 3px solid var(--danger); }
+    .a-no-credit {
+      text-align: center; padding: 40px 20px; color: var(--gray-400);
+    }
+    .a-no-credit p { font-size: 13px; }
+
+    /* ── MESSAGES TAB / SECTION ────────────────── */
+    .a-chat-wrap { display: flex; flex-direction: column; height: 420px; }
+    .a-chat-msgs { flex: 1; overflow-y: auto; padding: 16px 0; display: flex; flex-direction: column; gap: 12px; }
+    .a-chat-msg { display: flex; gap: 10px; align-items: flex-start; }
+    .a-chat-msg.admin-msg { flex-direction: row-reverse; }
+    .a-chat-av {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-h); font-weight: 700; font-size: 11px; color: var(--white);
+    }
+    .a-chat-bubble {
+      max-width: 70%; padding: 10px 14px; border-radius: 12px;
+      font-size: 13px; line-height: 1.5; color: var(--navy);
+      background: var(--gray-100);
+    }
+    .a-chat-msg.admin-msg .a-chat-bubble {
+      background: var(--navy); color: var(--white);
+    }
+    .a-chat-time { font-size: 10px; color: var(--gray-300); margin-top: 3px; }
+    .a-chat-input-row {
+      display: flex; gap: 8px; padding-top: 14px;
+      border-top: 1px solid var(--gray-100);
+    }
+    .a-chat-input {
+      flex: 1; height: 40px; padding: 0 14px;
+      border: 1.5px solid var(--gray-200); border-radius: 10px;
+      font-family: var(--font-b); font-size: 13px; color: var(--navy); outline: none;
+      transition: border-color 0.15s;
+    }
+    .a-chat-input:focus { border-color: var(--blue); }
+    .a-chat-send {
+      height: 40px; width: 40px; border-radius: 10px;
+      background: var(--blue); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.13s; flex-shrink: 0;
+    }
+    .a-chat-send:hover { background: var(--blue-dark); }
+
+    /* ── MESSAGES SECTION ──────────────────────── */
+    .a-msgs-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
+    .a-msg-thread-list {
+      background: var(--white); border-radius: 14px;
+      border: 1px solid var(--gray-100); overflow: hidden;
+    }
+    .a-msg-thread {
+      padding: 14px 16px; cursor: pointer; border-bottom: 1px solid var(--gray-50);
+      transition: background 0.12s;
+    }
+    .a-msg-thread:hover { background: var(--gray-50); }
+    .a-msg-thread.active { background: var(--blue-xl); }
+    .a-msg-thread-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+    .a-msg-thread-preview { font-size: 12px; color: var(--gray-400); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .a-msg-full {
+      background: var(--white); border-radius: 14px;
+      border: 1px solid var(--gray-100); padding: 24px;
+      display: flex; flex-direction: column; height: 520px;
+    }
+    .a-msg-full-header { font-family: var(--font-h); font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--gray-100); }
+
+    /* ── ACTIVITY FEED ─────────────────────────── */
+    .a-activity-card {
+      background: var(--white); border-radius: 14px;
+      border: 1px solid var(--gray-100); padding: 20px 22px;
+      box-shadow: 0 1px 4px rgba(10,22,40,0.04);
+    }
+    .a-activity-title { font-family: var(--font-h); font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 14px; }
+    .a-activity-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--gray-50); }
+    .a-activity-item:last-child { border-bottom: none; }
+    .a-act-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 5px;
+    }
+    .a-act-text { font-size: 13px; color: var(--gray-600); line-height: 1.5; }
+    .a-act-time { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+
+    /* ── RESPONSIVE ────────────────────────────── */
+    @media (max-width: 1100px) {
+      .a-stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .a-clients-wrap { grid-template-columns: 1fr; }
+      .a-client-list-card { position: static; }
+      .a-cl-list { max-height: 320px; }
+    }
+    @media (max-width: 768px) {
+      .a-sidebar { transform: translateX(-100%); transition: transform 0.25s; }
+      .a-sidebar.open { transform: translateX(0); }
+      .a-main { margin-left: 0; }
+      .a-content { padding: 16px; }
+      .a-info-grid { grid-template-columns: 1fr; }
+      .a-credit-grid { grid-template-columns: repeat(2, 1fr); }
+      .a-msgs-layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ───────────────────────────────────────────────────────── -->
+<div id="admin-login">
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="Brand_assets/CapitalQuest%20Consulting-R-02.png" alt="CapitalQuest" />
+    </div>
+    <div class="login-badge">
+      <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      Admin Portal
+    </div>
+    <h1>Welcome back</h1>
+    <p>Sign in to manage your clients</p>
+    <div class="lf-group">
+      <label>Email Address</label>
+      <input type="email" id="al-email" placeholder="you@capitalquestfunding.com" />
+    </div>
+    <div class="lf-group">
+      <label>Password</label>
+      <input type="password" id="al-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()" />
+    </div>
+    <div class="lf-error" id="al-error">Invalid email or password. Please try again.</div>
+    <button class="btn-login" onclick="adminLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- ── ADMIN APP ────────────────────────────────────────────────────── -->
+<div id="admin-app">
+  <div class="a-wrap">
+
+    <!-- Sidebar -->
+    <aside class="a-sidebar">
+      <div class="a-sb-logo">
+        <img src="Brand_assets/CapitalQuest%20Consulting-R-02.png" alt="CapitalQuest" />
+        <div class="a-sb-badge">Admin</div>
+      </div>
+      <div class="a-sb-user">
+        <div class="a-sb-avatar" id="sb-avatar">S</div>
+        <div>
+          <div class="a-sb-uname" id="sb-name">Sam</div>
+          <div class="a-sb-urole">CapitalQuest Team</div>
+        </div>
+      </div>
+      <nav class="a-sb-nav">
+        <div class="a-sb-label">Main</div>
+        <div class="a-nav-item active" onclick="switchAdminSection('overview',this)">
+          <svg class="a-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Overview
+        </div>
+        <div class="a-nav-item" onclick="switchAdminSection('clients',this)">
+          <svg class="a-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          Clients
+          <span class="a-nav-badge" id="sb-client-count">0</span>
+        </div>
+        <div class="a-nav-item" onclick="switchAdminSection('messages',this)">
+          <svg class="a-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Messages
+          <span class="a-nav-badge red" id="sb-msg-badge" style="display:none">3</span>
+        </div>
+      </nav>
+      <div class="a-sb-footer">
+        <button class="btn-logout" onclick="adminLogout()">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="a-main">
+      <header class="a-header">
+        <div class="a-page-title" id="a-page-title">Overview</div>
+        <div class="a-header-right">
+          <button class="a-header-btn" onclick="showAddClientModal()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Add Client
+          </button>
+        </div>
+      </header>
+
+      <div class="a-content">
+
+        <!-- OVERVIEW -->
+        <div class="a-section active" id="asec-overview">
+          <div class="a-stats-grid" id="a-stats-grid"></div>
+          <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+            <div class="a-activity-card">
+              <div class="a-activity-title">Recent Activity</div>
+              <div id="a-activity-feed"></div>
+            </div>
+            <div class="a-activity-card">
+              <div class="a-activity-title">Client Status Breakdown</div>
+              <div id="a-status-breakdown"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CLIENTS -->
+        <div class="a-section" id="asec-clients">
+          <div class="a-clients-wrap">
+            <!-- List -->
+            <div class="a-client-list-card">
+              <div class="a-cl-header">
+                <div class="a-cl-title">All Clients</div>
+                <div class="a-cl-search">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#8A97B0" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                  <input type="text" id="client-search" placeholder="Search clients…" oninput="renderClientList()" />
+                </div>
+              </div>
+              <div class="a-cl-filters" id="cl-filters">
+                <button class="a-filter-btn active" onclick="setFilter('all',this)">All</button>
+                <button class="a-filter-btn" onclick="setFilter('new',this)">New</button>
+                <button class="a-filter-btn" onclick="setFilter('pending',this)">Pending</button>
+                <button class="a-filter-btn" onclick="setFilter('progress',this)">In Progress</button>
+                <button class="a-filter-btn" onclick="setFilter('approved',this)">Approved</button>
+                <button class="a-filter-btn" onclick="setFilter('disqualified',this)">Disqualified</button>
+              </div>
+              <div class="a-cl-list" id="a-cl-list"></div>
+            </div>
+            <!-- Detail -->
+            <div class="a-detail-card" id="a-detail-card">
+              <div class="a-detail-empty">
+                <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                <h3>Select a client</h3>
+                <p>Click any client from the list to view their full profile</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MESSAGES -->
+        <div class="a-section" id="asec-messages">
+          <div class="a-msgs-layout">
+            <div class="a-msg-thread-list" id="a-msg-thread-list"></div>
+            <div class="a-msg-full">
+              <div class="a-msg-full-header" id="a-msg-full-header">Select a conversation</div>
+              <div class="a-chat-msgs" id="a-msg-chat-msgs" style="flex:1"></div>
+              <div class="a-chat-input-row">
+                <input class="a-chat-input" id="a-msg-input" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendMsgFromSection()" />
+                <button class="a-chat-send" onclick="sendMsgFromSection()">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /a-content -->
+    </main>
+  </div>
+</div>
+
+<!-- ── ADD CLIENT MODAL ─────────────────────────────────────────────── -->
+<div id="add-client-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,0.5);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:20px;padding:36px;width:100%;max-width:480px;margin:20px;box-shadow:0 24px 80px rgba(0,0,0,0.25);">
+    <div style="font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--navy);margin-bottom:4px;">Add New Client</div>
+    <div style="font-size:13px;color:var(--gray-400);margin-bottom:24px;">Create a new client profile</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+      <div class="lf-group" style="margin:0"><label>First Name</label><input type="text" id="nc-fname" placeholder="James" /></div>
+      <div class="lf-group" style="margin:0"><label>Last Name</label><input type="text" id="nc-lname" placeholder="Wilson" /></div>
+    </div>
+    <div class="lf-group"><label>Email</label><input type="email" id="nc-email" placeholder="client@email.com" /></div>
+    <div class="lf-group"><label>Phone</label><input type="tel" id="nc-phone" placeholder="(555) 000-0000" /></div>
+    <div class="lf-group" style="margin-bottom:24px">
+      <label>Initial Status</label>
+      <select id="nc-status" style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);color:var(--navy);outline:none;background:white;">
+        <option value="new">New</option>
+        <option value="pending">Pending Review</option>
+        <option value="progress">In Progress</option>
+        <option value="approved">Approved</option>
+        <option value="disqualified">Disqualified</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeAddClientModal()" style="flex:1;height:44px;border-radius:10px;border:1.5px solid var(--gray-200);background:none;font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--gray-500);cursor:pointer;">Cancel</button>
+      <button onclick="saveNewClient()" style="flex:2;height:44px;border-radius:10px;border:none;background:var(--navy);font-family:var(--font-h);font-size:13px;font-weight:700;color:white;cursor:pointer;">Create Client</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── AUTH ──────────────────────────────────────────────────────────────
+  const ADMIN_CREDS = [
+    { email: 'sam@capitalquestfunding.com', password: 'CapitalQuest2024', name: 'Sam', initials: 'S' },
+    { email: 'ali@capitalquestfunding.com', password: 'CapitalQuest2024', name: 'Ali', initials: 'A' },
+  ];
+  let currentAdmin = null;
+
+  function adminLogin() {
+    const email = document.getElementById('al-email').value.trim().toLowerCase();
+    const pass  = document.getElementById('al-pass').value;
+    const user  = ADMIN_CREDS.find(c => c.email === email && c.password === pass);
+    if (!user) {
+      document.getElementById('al-error').classList.add('show');
+      return;
+    }
+    currentAdmin = user;
+    try { sessionStorage.setItem('cq_admin_session', JSON.stringify(user)); } catch(e) {}
+    document.getElementById('admin-login').style.display = 'none';
+    document.getElementById('admin-app').style.display = 'block';
+    document.getElementById('sb-avatar').textContent = user.initials;
+    document.getElementById('sb-name').textContent = user.name;
+    initAdminApp();
+  }
+
+  function adminLogout() {
+    try { sessionStorage.removeItem('cq_admin_session'); } catch(e) {}
+    location.reload();
+  }
+
+  // Auto-restore session
+  (function() {
+    try {
+      const s = sessionStorage.getItem('cq_admin_session');
+      if (s) {
+        currentAdmin = JSON.parse(s);
+        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-app').style.display = 'block';
+        document.getElementById('sb-avatar').textContent = currentAdmin.initials;
+        document.getElementById('sb-name').textContent = currentAdmin.name;
+      }
+    } catch(e) {}
+  })();
+
+  // ── DATA ──────────────────────────────────────────────────────────────
+  const AVATAR_COLORS = ['#22A7F0','#10b981','#f59e0b','#8b5cf6','#ef4444','#1a3a6b','#059669','#d97706'];
+  const DEFAULT_CLIENTS = [
+    { id:'c1', fname:'James', lname:'Wilson',  email:'james.wilson@email.com',  phone:'(305) 555-0192', status:'progress',     fico:767, createdAt:'2025-03-15', notes:'Strong profile. Currently in Round 1 funding.', color:'#22A7F0' },
+    { id:'c2', fname:'Marcus', lname:'Thompson', email:'marcus.t@email.com',    phone:'(404) 555-0284', status:'pending',      fico:690, createdAt:'2025-03-28', notes:'Needs credit report review before proceeding.', color:'#8b5cf6' },
+    { id:'c3', fname:'Sofia', lname:'Rodriguez', email:'sofia.r@email.com',     phone:'(786) 555-0371', status:'approved',     fico:742, createdAt:'2025-02-10', notes:'Approved for $50k business line of credit.', color:'#10b981' },
+    { id:'c4', fname:'David', lname:'Kim',       email:'david.kim@email.com',   phone:'(213) 555-0453', status:'disqualified', fico:580, createdAt:'2025-03-01', notes:'Score below threshold. Advised to reapply in 90 days.', color:'#ef4444' },
+    { id:'c5', fname:'Priya', lname:'Patel',     email:'priya.p@email.com',     phone:'(312) 555-0567', status:'progress',     fico:715, createdAt:'2025-04-02', notes:'Round 2 underway. Chase & Amex applied.', color:'#f59e0b' },
+    { id:'c6', fname:'Jordan', lname:'Lee',      email:'jordan.l@email.com',    phone:'(646) 555-0618', status:'new',          fico:null, createdAt:'2025-04-14', notes:'', color:'#1a3a6b' },
+  ];
+
+  let clients = [];
+  let selectedClientId = null;
+  let activeFilter = 'all';
+  let activeMsgClientId = null;
+  let activeDetailTab = 'overview';
+
+  function loadClients() {
+    try {
+      const saved = localStorage.getItem('cq_admin_clients');
+      clients = saved ? JSON.parse(saved) : DEFAULT_CLIENTS;
+      if (!saved) saveClients();
+    } catch(e) { clients = [...DEFAULT_CLIENTS]; }
+  }
+  function saveClients() {
+    try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+  }
+  function getClient(id) { return clients.find(c => c.id === id); }
+
+  // Doc requests per client
+  function getDocRequests(clientId) {
+    try { return JSON.parse(localStorage.getItem('cq_admin_reqs_'+clientId) || '[]'); } catch(e) { return []; }
+  }
+  function saveDocRequests(clientId, reqs) {
+    try { localStorage.setItem('cq_admin_reqs_'+clientId, JSON.stringify(reqs)); } catch(e) {}
+  }
+
+  // Admin-uploaded docs per client
+  function getAdminDocs(clientId) {
+    try { return JSON.parse(localStorage.getItem('cq_admin_docs_'+clientId) || '[]'); } catch(e) { return []; }
+  }
+  function saveAdminDocs(clientId, docs) {
+    try { localStorage.setItem('cq_admin_docs_'+clientId, JSON.stringify(docs)); } catch(e) {}
+  }
+
+  // Client-submitted docs (read what client portal saves)
+  function getClientDocs(clientId) {
+    // Client portal saves to cq_doc_files (single user for demo)
+    // In multi-user system this would be keyed by clientId
+    if (clientId === 'c1') {
+      try { return JSON.parse(localStorage.getItem('cq_doc_files') || '[]'); } catch(e) { return []; }
+    }
+    try { return JSON.parse(localStorage.getItem('cq_client_docs_'+clientId) || '[]'); } catch(e) { return []; }
+  }
+
+  // Messages per client
+  function getMsgs(clientId) {
+    const def = clientId === 'c1' ? [
+      { from:'admin', name:'Sam', text:"Hey James! We reviewed your credit report. Your Equifax score jumped 18 points — great progress!", time:'Apr 8, 10:22 AM' },
+      { from:'client', name:'James', text:"That's amazing news! What's the next step?", time:'Apr 8, 10:45 AM' },
+      { from:'admin', name:'Sam', text:"We're moving into Round 1 this week. I'll send you the list of banks to apply with today.", time:'Apr 8, 11:02 AM' },
+    ] : [];
+    try { return JSON.parse(localStorage.getItem('cq_admin_msgs_'+clientId) || JSON.stringify(def)); } catch(e) { return def; }
+  }
+  function saveMsgs(clientId, msgs) {
+    try { localStorage.setItem('cq_admin_msgs_'+clientId, JSON.stringify(msgs)); } catch(e) {}
+  }
+
+  // Activity log
+  function getActivity() {
+    const def = [
+      { text: 'James Wilson uploaded <strong>Bank Statement — March 2025</strong>', time: '2 hours ago', color: '#22A7F0' },
+      { text: 'Sofia Rodriguez status changed to <strong>Approved</strong>', time: '5 hours ago', color: '#10b981' },
+      { text: 'Marcus Thompson submitted onboarding form', time: 'Yesterday', color: '#8b5cf6' },
+      { text: 'David Kim marked as <strong>Disqualified</strong>', time: '2 days ago', color: '#ef4444' },
+      { text: 'Priya Patel completed Round 1 applications', time: '3 days ago', color: '#f59e0b' },
+    ];
+    try { return JSON.parse(localStorage.getItem('cq_admin_activity') || JSON.stringify(def)); } catch(e) { return def; }
+  }
+  function logActivity(text, color) {
+    const act = getActivity();
+    act.unshift({ text, time: 'Just now', color: color || '#22A7F0' });
+    if (act.length > 20) act.pop();
+    try { localStorage.setItem('cq_admin_activity', JSON.stringify(act)); } catch(e) {}
+  }
+
+  // ── INIT ──────────────────────────────────────────────────────────────
+  function initAdminApp() {
+    loadClients();
+    renderOverview();
+    renderClientList();
+    renderMsgThreads();
+    document.getElementById('sb-client-count').textContent = clients.length;
+    if (currentAdmin) {
+      document.getElementById('sb-avatar').textContent = currentAdmin.initials;
+      document.getElementById('sb-name').textContent = currentAdmin.name;
+    }
+  }
+  if (currentAdmin) initAdminApp();
+
+  // ── SECTION SWITCHING ─────────────────────────────────────────────────
+  const sectionLabels = { overview:'Overview', clients:'Clients', messages:'Messages' };
+  function switchAdminSection(name, el) {
+    document.querySelectorAll('.a-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.a-nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('asec-'+name).classList.add('active');
+    if (el) el.classList.add('active');
+    document.getElementById('a-page-title').textContent = sectionLabels[name] || name;
+    if (name === 'overview') renderOverview();
+    if (name === 'messages') renderMsgThreads();
+  }
+
+  // ── OVERVIEW ──────────────────────────────────────────────────────────
+  function renderOverview() {
+    const total    = clients.length;
+    const approved = clients.filter(c => c.status === 'approved').length;
+    const pending  = clients.filter(c => c.status === 'pending' || c.status === 'new').length;
+    const progress = clients.filter(c => c.status === 'progress').length;
+
+    document.getElementById('a-stats-grid').innerHTML = `
+      <div class="a-stat-card">
+        <div class="a-stat-label">Total Clients</div>
+        <div class="a-stat-val">${total}</div>
+        <div class="a-stat-sub">All time</div>
+      </div>
+      <div class="a-stat-card">
+        <div class="a-stat-label">In Progress</div>
+        <div class="a-stat-val" style="color:var(--blue)">${progress}</div>
+        <div class="a-stat-sub"><span class="a-stat-dot" style="background:var(--blue)"></span>Active funding</div>
+      </div>
+      <div class="a-stat-card">
+        <div class="a-stat-label">Approved</div>
+        <div class="a-stat-val" style="color:var(--success)">${approved}</div>
+        <div class="a-stat-sub"><span class="a-stat-dot" style="background:var(--success)"></span>Fully funded</div>
+      </div>
+      <div class="a-stat-card">
+        <div class="a-stat-label">Pending Review</div>
+        <div class="a-stat-val" style="color:var(--warning)">${pending}</div>
+        <div class="a-stat-sub"><span class="a-stat-dot" style="background:var(--warning)"></span>Awaiting action</div>
+      </div>`;
+
+    // Activity feed
+    const acts = getActivity();
+    document.getElementById('a-activity-feed').innerHTML = acts.slice(0,5).map(a => `
+      <div class="a-activity-item">
+        <div class="a-act-dot" style="background:${a.color}"></div>
+        <div><div class="a-act-text">${a.text}</div><div class="a-act-time">${a.time}</div></div>
+      </div>`).join('');
+
+    // Status breakdown
+    const statuses = ['new','pending','progress','approved','disqualified'];
+    const labels   = ['New','Pending','In Progress','Approved','Disqualified'];
+    const colors   = [PURPLE='#8b5cf6','#f59e0b','#22A7F0','#10b981','#ef4444'];
+    document.getElementById('a-status-breakdown').innerHTML = statuses.map((s,i) => {
+      const cnt = clients.filter(c => c.status === s).length;
+      const pct = total > 0 ? Math.round(cnt/total*100) : 0;
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:12px;font-weight:600;color:var(--gray-600)">${labels[i]}</span>
+          <span style="font-size:12px;font-weight:700;color:var(--navy)">${cnt}</span>
+        </div>
+        <div style="height:5px;background:var(--gray-100);border-radius:999px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${colors[i]};border-radius:999px"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── CLIENT LIST ───────────────────────────────────────────────────────
+  function setFilter(f, el) {
+    activeFilter = f;
+    document.querySelectorAll('.a-filter-btn').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+    renderClientList();
+  }
+
+  function renderClientList() {
+    const q = (document.getElementById('client-search')?.value || '').toLowerCase();
+    let filtered = clients.filter(c => {
+      const name = (c.fname+' '+c.lname).toLowerCase();
+      const matchQ = !q || name.includes(q) || c.email.toLowerCase().includes(q);
+      const matchF = activeFilter === 'all' || c.status === activeFilter;
+      return matchQ && matchF;
+    });
+    document.getElementById('a-cl-list').innerHTML = filtered.length === 0
+      ? `<div style="padding:24px;text-align:center;font-size:13px;color:var(--gray-400)">No clients found</div>`
+      : filtered.map(c => `
+        <div class="a-client-row ${selectedClientId===c.id?'active':''}" onclick="selectClient('${c.id}')">
+          <div class="a-cl-avatar" style="background:${c.color}">${c.fname[0]}${c.lname[0]}</div>
+          <div style="min-width:0">
+            <div class="a-cl-name">${c.fname} ${c.lname}</div>
+            <div class="a-cl-info">${c.email}</div>
+          </div>
+          <div class="a-cl-right">
+            <span class="status-pill sp-${c.status==='progress'?'progress':c.status==='approved'?'approved':c.status==='disqualified'?'disqual':c.status==='new'?'new':'pending'}">${statusLabel(c.status)}</span>
+            ${c.fico ? `<div class="a-cl-fico">FICO ${c.fico}</div>` : ''}
+          </div>
+        </div>`).join('');
+  }
+
+  function statusLabel(s) {
+    return { new:'New', pending:'Pending', progress:'In Progress', approved:'Approved', disqualified:'Disqualified' }[s] || s;
+  }
+
+  // ── CLIENT DETAIL ─────────────────────────────────────────────────────
+  function selectClient(id) {
+    selectedClientId = id;
+    activeDetailTab = 'overview';
+    renderClientList();
+    renderClientDetail(id);
+    // Switch to clients section if not already
+    document.querySelectorAll('.a-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.a-nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('asec-clients').classList.add('active');
+    document.querySelector('[onclick="switchAdminSection(\'clients\',this)"]').classList.add('active');
+    document.getElementById('a-page-title').textContent = 'Clients';
+  }
+
+  function renderClientDetail(id) {
+    const c = getClient(id);
+    if (!c) return;
+    const reqs    = getDocRequests(id);
+    const adminDocs = getAdminDocs(id);
+    const clientDocs = getClientDocs(id);
+    const msgs    = getMsgs(id);
+    const creditData = getCreditData(id);
+
+    document.getElementById('a-detail-card').innerHTML = `
+      <div class="a-dh">
+        <div class="a-dh-top">
+          <div class="a-dh-avatar" style="background:${c.color}">${c.fname[0]}${c.lname[0]}</div>
+          <div style="min-width:0">
+            <div class="a-dh-name">${c.fname} ${c.lname}</div>
+            <div class="a-dh-sub">${c.email} · ${c.phone || 'No phone'}</div>
+          </div>
+          <div class="a-dh-actions">
+            ${c.status !== 'approved'    ? `<button class="a-action-btn approve" onclick="updateStatus('${id}','approved')">Approve</button>` : ''}
+            ${c.status !== 'disqualified'? `<button class="a-action-btn disqual" onclick="updateStatus('${id}','disqualified')">Disqualify</button>` : ''}
+            <button class="a-action-btn primary" onclick="switchDetailTab('messages')">Message</button>
+          </div>
+        </div>
+        <div class="a-tabs">
+          <div class="a-tab ${activeDetailTab==='overview'?'active':''}" onclick="switchDetailTab('overview')">Overview</div>
+          <div class="a-tab ${activeDetailTab==='documents'?'active':''}" onclick="switchDetailTab('documents')">Documents</div>
+          <div class="a-tab ${activeDetailTab==='credit'?'active':''}" onclick="switchDetailTab('credit')">Credit</div>
+          <div class="a-tab ${activeDetailTab==='messages'?'active':''}" onclick="switchDetailTab('messages')">Messages <span style="font-size:11px;color:var(--gray-400)">(${msgs.length})</span></div>
+        </div>
+      </div>
+
+      <!-- OVERVIEW TAB -->
+      <div class="a-tab-pane ${activeDetailTab==='overview'?'active':''}" id="dtab-overview">
+        <div class="a-status-changer">
+          <div class="a-sc-label">Status</div>
+          <div class="a-sc-pills">
+            ${['new','pending','progress','approved','disqualified'].map(s => `
+              <button class="a-sc-pill ${c.status===s?'sel-'+s:''}" onclick="updateStatus('${id}','${s}')">${statusLabel(s)}</button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="a-info-grid">
+          <div class="a-info-card"><div class="a-info-label">Full Name</div><div class="a-info-val">${c.fname} ${c.lname}</div></div>
+          <div class="a-info-card"><div class="a-info-label">FICO Score</div><div class="a-info-val">${c.fico ? `<span style="color:${c.fico>=700?'var(--success)':c.fico>=640?'var(--warning)':'var(--danger)'}">${c.fico}</span>` : '—'}</div></div>
+          <div class="a-info-card"><div class="a-info-label">Email</div><div class="a-info-val" style="font-size:13px">${c.email}</div></div>
+          <div class="a-info-card"><div class="a-info-label">Phone</div><div class="a-info-val">${c.phone || '—'}</div></div>
+          <div class="a-info-card"><div class="a-info-label">Client Since</div><div class="a-info-val">${formatDate(c.createdAt)}</div></div>
+          <div class="a-info-card"><div class="a-info-label">Status</div><div class="a-info-val"><span class="status-pill sp-${statusPillClass(c.status)}">${statusLabel(c.status)}</span></div></div>
+        </div>
+        <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.05em">Internal Notes</div>
+        <textarea class="a-note-area" id="client-notes-${id}" placeholder="Add internal notes about this client…">${c.notes||''}</textarea>
+        <button class="a-save-btn" onclick="saveNotes('${id}')">Save Notes</button>
+        <span class="a-saved-toast" id="notes-toast-${id}">Saved!</span>
+      </div>
+
+      <!-- DOCUMENTS TAB -->
+      <div class="a-tab-pane ${activeDetailTab==='documents'?'active':''}" id="dtab-documents">
+        <div class="a-doc-section-title">Document Requests</div>
+        <div class="a-req-list" id="dreq-list-${id}">
+          ${reqs.length === 0 ? `<div style="font-size:13px;color:var(--gray-400);padding:12px 0">No requests yet. Add one below.</div>` :
+            reqs.map(r => `
+              <div class="a-req-row" id="areq-${r.id}">
+                <div class="a-req-name">${r.name}</div>
+                <span class="a-req-status ${r.received ? 'ars-received' : 'ars-pending'}">${r.received ? 'Received' : 'Pending'}</span>
+                <button class="a-req-del" onclick="removeDocReq('${id}','${r.id}')" title="Remove">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>`).join('')}
+        </div>
+        <div class="a-add-req-row">
+          <input class="a-add-req-input" id="new-req-input-${id}" placeholder="e.g. Bank Statements — Last 3 Months" onkeydown="if(event.key==='Enter')addDocReq('${id}')" />
+          <button class="a-add-req-btn" onclick="addDocReq('${id}')">+ Add Request</button>
+        </div>
+        <hr class="a-doc-divider" />
+        <div class="a-doc-section-title">Upload Document to Client</div>
+        <div class="a-drop-zone" id="adz-${id}"
+          onclick="document.getElementById('adf-${id}').click()"
+          ondragover="adzDragOver(event,'${id}')" ondragleave="adzDragLeave('${id}')" ondrop="adzDrop(event,'${id}')">
+          <p>Drag & drop or <strong>click to browse</strong> — PDF, JPG, PNG, DOCX</p>
+        </div>
+        <input type="file" id="adf-${id}" multiple accept=".pdf,.jpg,.jpeg,.png,.docx" style="display:none" onchange="adminUploadDocs('${id}',this.files)" />
+        <div class="a-doc-file-list" id="adoc-list-${id}">
+          ${[...adminDocs.map(d => docFileRowHTML(d.name, d.size, d.date, 'admin')),
+             ...clientDocs.map(d => docFileRowHTML(d.name, d.size, d.date, 'client'))].join('')}
+          ${(adminDocs.length + clientDocs.length) === 0 ? '<div style="font-size:13px;color:var(--gray-400);padding:8px 0">No documents yet</div>' : ''}
+        </div>
+      </div>
+
+      <!-- CREDIT TAB -->
+      <div class="a-tab-pane ${activeDetailTab==='credit'?'active':''}" id="dtab-credit">
+        ${renderCreditTab(creditData)}
+      </div>
+
+      <!-- MESSAGES TAB -->
+      <div class="a-tab-pane ${activeDetailTab==='messages'?'active':''}" id="dtab-messages">
+        <div class="a-chat-wrap">
+          <div class="a-chat-msgs" id="dchat-msgs-${id}">
+            ${msgs.map(m => chatMsgHTML(m)).join('')}
+          </div>
+          <div class="a-chat-input-row">
+            <input class="a-chat-input" id="dchat-input-${id}" placeholder="Message ${c.fname}…" onkeydown="if(event.key==='Enter')sendMsg('${id}')" />
+            <button class="a-chat-send" onclick="sendMsg('${id}')">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>`;
+
+    // Scroll chat to bottom
+    setTimeout(() => {
+      const el = document.getElementById('dchat-msgs-'+id);
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 50);
+  }
+
+  function switchDetailTab(tab) {
+    activeDetailTab = tab;
+    if (selectedClientId) renderClientDetail(selectedClientId);
+  }
+
+  // ── STATUS ────────────────────────────────────────────────────────────
+  function updateStatus(id, status) {
+    const c = getClient(id);
+    if (!c) return;
+    const old = c.status;
+    c.status = status;
+    saveClients();
+    logActivity(`${c.fname} ${c.lname} status changed to <strong>${statusLabel(status)}</strong>`, statusColor(status));
+    renderClientList();
+    renderClientDetail(id);
+    renderOverview();
+  }
+  function statusColor(s) { return { approved:'#10b981', pending:'#f59e0b', progress:'#22A7F0', disqualified:'#ef4444', new:'#8b5cf6' }[s] || '#22A7F0'; }
+  function statusPillClass(s) { return { new:'new', pending:'pending', progress:'progress', approved:'approved', disqualified:'disqual' }[s] || 'pending'; }
+
+  // ── NOTES ─────────────────────────────────────────────────────────────
+  function saveNotes(id) {
+    const c = getClient(id);
+    if (!c) return;
+    c.notes = document.getElementById('client-notes-'+id)?.value || '';
+    saveClients();
+    const toast = document.getElementById('notes-toast-'+id);
+    if (toast) { toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2000); }
+  }
+
+  // ── DOCUMENTS ─────────────────────────────────────────────────────────
+  function addDocReq(clientId) {
+    const inp = document.getElementById('new-req-input-'+clientId);
+    const name = inp?.value.trim();
+    if (!name) return;
+    const reqs = getDocRequests(clientId);
+    const newReq = { id: 'r'+Date.now(), name, received: false };
+    reqs.push(newReq);
+    saveDocRequests(clientId, reqs);
+    // Also update the shared requests key so client portal picks it up
+    try { localStorage.setItem('cq_doc_requests', JSON.stringify(reqs)); } catch(e) {}
+    inp.value = '';
+    renderClientDetail(clientId);
+    const c = getClient(clientId);
+    logActivity(`Document requested from ${c.fname} ${c.lname}: <strong>${name}</strong>`, '#22A7F0');
+  }
+
+  function removeDocReq(clientId, reqId) {
+    const reqs = getDocRequests(clientId).filter(r => r.id !== reqId);
+    saveDocRequests(clientId, reqs);
+    renderClientDetail(clientId);
+  }
+
+  function adzDragOver(e, id) { e.preventDefault(); document.getElementById('adz-'+id)?.classList.add('drag-over'); }
+  function adzDragLeave(id) { document.getElementById('adz-'+id)?.classList.remove('drag-over'); }
+  function adzDrop(e, id) { e.preventDefault(); adzDragLeave(id); adminUploadDocs(id, e.dataTransfer.files); }
+
+  function adminUploadDocs(clientId, files) {
+    if (!files?.length) return;
+    const docs = getAdminDocs(clientId);
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    Array.from(files).forEach(f => {
+      const sizeStr = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' MB' : Math.round(f.size/1024)+' KB';
+      docs.push({ name: f.name, size: sizeStr, date: dateStr });
+    });
+    saveAdminDocs(clientId, docs);
+    document.getElementById('adf-'+clientId).value = '';
+    renderClientDetail(clientId);
+    const c = getClient(clientId);
+    logActivity(`Document uploaded for ${c.fname} ${c.lname}: <strong>${files[0].name}</strong>`, '#22A7F0');
+  }
+
+  function docFileRowHTML(name, size, date, source) {
+    const ext = name.split('.').pop().toLowerCase();
+    const iconColor = ext==='pdf'?'#ef4444':ext==='docx'?'#2563eb':'#22A7F0';
+    return `<div class="a-doc-file-row">
+      <div class="a-doc-file-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="${iconColor}" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
+      <div><div class="a-doc-file-name">${name}</div><div class="a-doc-file-meta">${size} · ${date}</div></div>
+      <span class="a-doc-file-badge ${source==='admin'?'adfb-admin':'adfb-client'}">${source==='admin'?'Admin Upload':'Client Upload'}</span>
+    </div>`;
+  }
+
+  // ── CREDIT ────────────────────────────────────────────────────────────
+  function getCreditData(clientId) {
+    if (clientId === 'c1') {
+      try { return JSON.parse(localStorage.getItem('cq_credit_data') || 'null'); } catch(e) { return null; }
+    }
+    try { return JSON.parse(localStorage.getItem('cq_credit_'+clientId) || 'null'); } catch(e) { return null; }
+  }
+
+  function renderCreditTab(d) {
+    if (!d) return `<div class="a-no-credit">
+      <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#D4DCE8" stroke-width="1.5" style="margin:0 auto 12px;display:block"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <p>No credit report analyzed yet.<br>Client needs to upload their report via the portal.</p></div>`;
+    const fico = d.fico || d.fico8 || 0;
+    const ficoCls = fico >= 700 ? 'a-cm-ok' : fico >= 640 ? 'a-cm-warn' : 'a-cm-bad';
+    const inq = d.inqCount ?? d.inquiryCount ?? 0;
+    const inqCls = inq <= 2 ? 'a-cm-ok' : inq <= 4 ? 'a-cm-warn' : 'a-cm-bad';
+    const late = d.late ?? d.accountsEverLate ?? 0;
+    return `
+      <div class="a-credit-grid">
+        <div class="a-credit-metric ${ficoCls}">
+          <div class="a-cm-label">FICO Score</div>
+          <div class="a-cm-val">${fico || '—'}</div>
+          <div class="a-cm-sub">${fico >= 740?'Very Good':fico>=700?'Good':fico>=640?'Fair':'Below Min'}</div>
+        </div>
+        <div class="a-credit-metric ${inqCls}">
+          <div class="a-cm-label">Hard Inquiries</div>
+          <div class="a-cm-val">${inq}</div>
+          <div class="a-cm-sub">${inq <= 4 ? 'Within limit' : 'Exceeds 4'}</div>
+        </div>
+        <div class="a-credit-metric ${late === 0 ? 'a-cm-ok' : 'a-cm-bad'}">
+          <div class="a-cm-label">Late Payments</div>
+          <div class="a-cm-val">${late}</div>
+          <div class="a-cm-sub">${late === 0 ? 'Perfect history' : late+' account(s)'}</div>
+        </div>
+        <div class="a-credit-metric a-cm-ok">
+          <div class="a-cm-label">Avg Account Age</div>
+          <div class="a-cm-val">${d.avgAge || '—'}</div>
+          <div class="a-cm-sub">${d.oldAge ? 'Oldest: '+d.oldAge : ''}</div>
+        </div>
+        <div class="a-credit-metric ${(d.util??d.overallUtil??0) <= 30 ? 'a-cm-ok' : (d.util??d.overallUtil??0) <= 50 ? 'a-cm-warn' : 'a-cm-bad'}">
+          <div class="a-cm-label">Utilization</div>
+          <div class="a-cm-val">${d.util ?? d.overallUtil ?? '—'}${(d.util || d.overallUtil) ? '%' : ''}</div>
+          <div class="a-cm-sub">${(d.util??d.overallUtil??0) <= 30 ? 'Healthy' : 'High'}</div>
+        </div>
+        <div class="a-credit-metric a-cm-ok">
+          <div class="a-cm-label">Open Accounts</div>
+          <div class="a-cm-val">${d.openCount ?? d.openAccounts ?? '—'}</div>
+          <div class="a-cm-sub">${d.closedCount ? d.closedCount+' closed' : ''}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--gray-400);padding:4px 0">
+        Credit data from client's uploaded report · ${d.accounts?.length ?? 0} accounts parsed
+      </div>`;
+  }
+
+  // ── MESSAGING ─────────────────────────────────────────────────────────
+  function chatMsgHTML(m) {
+    const isAdmin = m.from === 'admin';
+    return `<div class="a-chat-msg ${isAdmin?'admin-msg':''}">
+      <div class="a-chat-av" style="background:${isAdmin?'var(--navy)':'var(--blue)'}">${m.name?m.name[0]:'?'}</div>
+      <div>
+        <div class="a-chat-bubble">${m.text}</div>
+        <div class="a-chat-time">${m.name} · ${m.time}</div>
+      </div>
+    </div>`;
+  }
+
+  function sendMsg(clientId) {
+    const inp = document.getElementById('dchat-input-'+clientId);
+    const text = inp?.value.trim();
+    if (!text) return;
+    const msgs = getMsgs(clientId);
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    msgs.push({ from:'admin', name: currentAdmin?.name || 'Admin', text, time: now.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+timeStr });
+    saveMsgs(clientId, msgs);
+    inp.value = '';
+    renderClientDetail(clientId);
+    renderMsgThreads();
+  }
+
+  // ── MESSAGES SECTION ──────────────────────────────────────────────────
+  function renderMsgThreads() {
+    const list = document.getElementById('a-msg-thread-list');
+    if (!list) return;
+    list.innerHTML = `<div style="padding:14px 16px;border-bottom:1px solid var(--gray-100);font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy)">Conversations</div>` +
+      clients.map(c => {
+        const msgs = getMsgs(c.id);
+        const last = msgs[msgs.length-1];
+        return `<div class="a-msg-thread ${activeMsgClientId===c.id?'active':''}" onclick="openMsgThread('${c.id}')">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:28px;height:28px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:700;font-size:11px;color:white;flex-shrink:0">${c.fname[0]}${c.lname[0]}</div>
+            <div style="min-width:0">
+              <div class="a-msg-thread-name">${c.fname} ${c.lname}</div>
+              <div class="a-msg-thread-preview">${last ? last.text : 'No messages yet'}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+  }
+
+  function openMsgThread(clientId) {
+    activeMsgClientId = clientId;
+    const c = getClient(clientId);
+    document.getElementById('a-msg-full-header').textContent = c.fname+' '+c.lname;
+    const msgs = getMsgs(clientId);
+    document.getElementById('a-msg-chat-msgs').innerHTML = msgs.map(m => chatMsgHTML(m)).join('') ||
+      `<div style="text-align:center;padding:40px;font-size:13px;color:var(--gray-400)">No messages yet</div>`;
+    const msgEl = document.getElementById('a-msg-chat-msgs');
+    if (msgEl) msgEl.scrollTop = msgEl.scrollHeight;
+    renderMsgThreads();
+    // Update send handler
+    const inp = document.getElementById('a-msg-input');
+    inp.placeholder = `Message ${c.fname}…`;
+    inp.onkeydown = e => { if(e.key==='Enter') sendMsgFromSection(); };
+  }
+
+  function sendMsgFromSection() {
+    if (!activeMsgClientId) return;
+    const inp = document.getElementById('a-msg-input');
+    const text = inp?.value.trim();
+    if (!text) return;
+    const msgs = getMsgs(activeMsgClientId);
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    msgs.push({ from:'admin', name: currentAdmin?.name || 'Admin', text, time: now.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+timeStr });
+    saveMsgs(activeMsgClientId, msgs);
+    inp.value = '';
+    openMsgThread(activeMsgClientId);
+    renderMsgThreads();
+  }
+
+  // ── ADD CLIENT MODAL ──────────────────────────────────────────────────
+  function showAddClientModal() {
+    document.getElementById('add-client-modal').style.display = 'flex';
+  }
+  function closeAddClientModal() {
+    document.getElementById('add-client-modal').style.display = 'none';
+  }
+  function saveNewClient() {
+    const fname  = document.getElementById('nc-fname').value.trim();
+    const lname  = document.getElementById('nc-lname').value.trim();
+    const email  = document.getElementById('nc-email').value.trim();
+    const phone  = document.getElementById('nc-phone').value.trim();
+    const status = document.getElementById('nc-status').value;
+    if (!fname || !lname || !email) { alert('Please fill in First Name, Last Name, and Email.'); return; }
+    const color = AVATAR_COLORS[clients.length % AVATAR_COLORS.length];
+    const newClient = {
+      id: 'c'+Date.now(), fname, lname, email, phone, status,
+      fico: null, createdAt: new Date().toISOString().split('T')[0],
+      notes: '', color
+    };
+    clients.push(newClient);
+    saveClients();
+    logActivity(`New client added: <strong>${fname} ${lname}</strong>`, color);
+    closeAddClientModal();
+    document.getElementById('nc-fname').value = '';
+    document.getElementById('nc-lname').value = '';
+    document.getElementById('nc-email').value = '';
+    document.getElementById('nc-phone').value = '';
+    renderClientList();
+    renderOverview();
+    document.getElementById('sb-client-count').textContent = clients.length;
+    selectClient(newClient.id);
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────────
+  function formatDate(d) {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch(e) { return d; }
+  }
+</script>
+</body>
+</html>
