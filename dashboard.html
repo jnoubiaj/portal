@@ -2522,6 +2522,15 @@
 </div><!-- /portal-wrap -->
 
 <script>
+  // ── SESSION GUARD ─────────────────────────────────────
+  (function() {
+    try {
+      const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
+                || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+      if (!sess || !sess.clientId) window.location.replace('login.html');
+    } catch(e) { window.location.replace('login.html'); }
+  })();
+
   // ── PORTAL CONFIG ─────────────────────────────────────
   // Change currentStage to update the entire dashboard at once
   const PORTAL_STAGES = [

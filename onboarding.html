@@ -1633,6 +1633,13 @@
 
   let currentStep = 'welcome';
 
+  function _getOnboardSession() {
+    try {
+      return JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
+          || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+    } catch(e) { return null; }
+  }
+
   function goTo(name) {
     // Hide all screens
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -1660,6 +1667,13 @@
     });
 
     currentStep = name;
+    // Persist step so refresh doesn't reset to welcome
+    try {
+      const sess = _getOnboardSession();
+      if (sess && sess.clientId) {
+        localStorage.setItem('cq_onboard_step_' + sess.clientId, name);
+      }
+    } catch(e) {}
     window.scrollTo(0, 0);
   }
 
@@ -2486,6 +2500,15 @@
 
   // Allow Enter key in other input + wire state listener
   document.addEventListener('DOMContentLoaded', () => {
+    // Restore step from last session so refresh doesn't go back to welcome
+    try {
+      const sess = _getOnboardSession();
+      if (sess && sess.clientId) {
+        const saved = localStorage.getItem('cq_onboard_step_' + sess.clientId);
+        if (saved && screenMap[saved]) goTo(saved);
+      }
+    } catch(e) {}
+
     document.getElementById('bankOtherInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); addOtherBank(); }
     });
