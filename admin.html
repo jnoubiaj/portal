@@ -987,6 +987,7 @@
         </div>
         <div class="a-tabs">
           <div class="a-tab ${activeDetailTab==='overview'?'active':''}" onclick="switchDetailTab('overview')">Overview</div>
+          <div class="a-tab ${activeDetailTab==='dashboard'?'active':''}" onclick="switchDetailTab('dashboard')">Dashboard</div>
           <div class="a-tab ${activeDetailTab==='documents'?'active':''}" onclick="switchDetailTab('documents')">Documents</div>
           <div class="a-tab ${activeDetailTab==='credit'?'active':''}" onclick="switchDetailTab('credit')">Credit</div>
           <div class="a-tab ${activeDetailTab==='messages'?'active':''}" onclick="switchDetailTab('messages')">Messages <span style="font-size:11px;color:var(--gray-400)">(${msgs.length})</span></div>
@@ -1053,6 +1054,11 @@
       <!-- CREDIT TAB -->
       <div class="a-tab-pane ${activeDetailTab==='credit'?'active':''}" id="dtab-credit">
         ${renderCreditTab(creditData)}
+      </div>
+
+      <!-- DASHBOARD EDITOR TAB -->
+      <div class="a-tab-pane ${activeDetailTab==='dashboard'?'active':''}" id="dtab-dashboard">
+        ${renderDashboardEditor(id)}
       </div>
 
       <!-- MESSAGES TAB -->
@@ -1324,6 +1330,173 @@
     renderOverview();
     document.getElementById('sb-client-count').textContent = clients.length;
     selectClient(newClient.id);
+  }
+
+  // ── DASHBOARD EDITOR ──────────────────────────────────────────────────
+  const DEFAULT_DASH = {
+    clientName:'James', subtitle:'Your funding journey is in progress. 3 tasks need attention.',
+    fundingSecured:45000, creditScore:712, creditChange:'+18 pts',
+    fundingApproved:45000, fundingGoal:150000,
+    applyingBank:'Amex Blue Cash Business', applyingCount:'2 of 2 applications',
+    currentStage:4,
+    stageNames:['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
+    tasks:[
+      {id:'t1',text:'Upload Government-Issued ID',desc:"Driver's license or passport",status:'done'},
+      {id:'t2',text:'Sign Consulting Agreement',desc:'',status:'done'},
+      {id:'t3',text:'Disable Fraud Alerts on all 3 bureaus',desc:'',status:'done'},
+      {id:'t4',text:'Pay down Chase card to 10% utilization',desc:'Current balance: $1,200 / Limit: $2,000. Pay $680 to reach 10%',status:'progress'},
+      {id:'t5',text:'Pay down Bank of America card to 8%',desc:'Current: $520 / Limit: $1,500. Pay $360 to reach 8%',status:'progress'},
+      {id:'t6',text:'Dispute Equifax inquiry — Capital One Jan 2025',desc:'File dispute via Equifax.com. Reference: Bureau Method',status:'todo'},
+      {id:'t7',text:'Open dedicated business checking account',desc:'Required before funding applications are submitted',status:'todo'}
+    ]
+  };
+
+  function getDashData(clientId) {
+    try { return Object.assign({}, DEFAULT_DASH, JSON.parse(localStorage.getItem('cq_dash_'+clientId) || '{}')); }
+    catch(e) { return Object.assign({}, DEFAULT_DASH); }
+  }
+  function saveDashData(clientId, data) {
+    try {
+      localStorage.setItem('cq_dash_'+clientId, JSON.stringify(data));
+      // Also write to active key so client portal picks it up immediately
+      localStorage.setItem('cq_dash_data', JSON.stringify(data));
+    } catch(e) {}
+  }
+
+  function renderDashboardEditor(clientId) {
+    const d = getDashData(clientId);
+    const stagesHTML = d.stageNames.map((name, i) => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="width:20px;height:20px;border-radius:50%;background:${i+1 < d.currentStage ? 'var(--success)' : i+1 === d.currentStage ? 'var(--blue)' : 'var(--gray-200)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0">${i+1 < d.currentStage ? '✓' : i+1}</span>
+        <input style="flex:1;height:32px;padding:0 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none" value="${name}" id="stage-name-${clientId}-${i}" />
+        <button onclick="setCurrentStage('${clientId}',${i+1})" style="height:32px;padding:0 10px;border-radius:7px;border:1.5px solid ${i+1===d.currentStage?'var(--blue)':'var(--gray-200)'};background:${i+1===d.currentStage?'var(--blue-light)':'none'};font-size:11px;font-weight:700;color:${i+1===d.currentStage?'var(--blue)':'var(--gray-400)'};cursor:pointer;white-space:nowrap">${i+1===d.currentStage?'ACTIVE':'Set Active'}</button>
+      </div>`).join('');
+
+    const tasksHTML = d.tasks.map((t, i) => `
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;margin-bottom:8px" id="dash-task-row-${clientId}-${t.id}">
+        <div style="flex:1;min-width:0">
+          <input style="width:100%;height:30px;padding:0 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:13px;color:var(--navy);outline:none;margin-bottom:5px" value="${t.text}" id="task-text-${clientId}-${t.id}" placeholder="Task name" />
+          <input style="width:100%;height:28px;padding:0 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:12px;color:var(--gray-500);outline:none" value="${t.desc||''}" id="task-desc-${clientId}-${t.id}" placeholder="Description (optional)" />
+        </div>
+        <select id="task-status-${clientId}-${t.id}" style="height:30px;padding:0 8px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:12px;font-weight:600;color:var(--navy);outline:none;background:white;flex-shrink:0">
+          <option value="todo" ${t.status==='todo'?'selected':''}>To-Do</option>
+          <option value="progress" ${t.status==='progress'?'selected':''}>In Progress</option>
+          <option value="done" ${t.status==='done'?'selected':''}>Done</option>
+        </select>
+        <button onclick="removeDashTask('${clientId}','${t.id}')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--gray-200);background:none;color:var(--gray-400);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>`).join('');
+
+    return `
+      <div style="display:flex;flex-direction:column;gap:20px">
+
+        <!-- Banner & Stats -->
+        <div>
+          <div class="a-doc-section-title" style="margin-bottom:14px">Banner & Stats</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Client First Name</div>
+              <input class="a-add-req-input" style="width:100%" id="db-name-${clientId}" value="${d.clientName}" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Total Funding Secured ($)</div>
+              <input class="a-add-req-input" style="width:100%" type="number" id="db-secured-${clientId}" value="${d.fundingSecured}" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Credit Score</div>
+              <input class="a-add-req-input" style="width:100%" type="number" id="db-fico-${clientId}" value="${d.creditScore}" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Score Change (e.g. +18 pts)</div>
+              <input class="a-add-req-input" style="width:100%" id="db-ficochange-${clientId}" value="${d.creditChange}" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Approved ($)</div>
+              <input class="a-add-req-input" style="width:100%" type="number" id="db-approved-${clientId}" value="${d.fundingApproved}" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Goal ($)</div>
+              <input class="a-add-req-input" style="width:100%" type="number" id="db-goal-${clientId}" value="${d.fundingGoal}" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Applying To (Bank)</div>
+              <input class="a-add-req-input" style="width:100%" id="db-bank-${clientId}" value="${d.applyingBank}" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Application Count (e.g. 2 of 2)</div>
+              <input class="a-add-req-input" style="width:100%" id="db-bankcount-${clientId}" value="${d.applyingCount}" /></div>
+          </div>
+          <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Banner Subtitle</div>
+            <input class="a-add-req-input" style="width:100%" id="db-subtitle-${clientId}" value="${d.subtitle}" /></div>
+        </div>
+
+        <!-- Progress Stages -->
+        <div>
+          <div class="a-doc-section-title" style="margin-bottom:14px">Funding Progress Stages</div>
+          <div id="dash-stages-${clientId}">${stagesHTML}</div>
+        </div>
+
+        <!-- Tasks -->
+        <div>
+          <div class="a-doc-section-title" style="margin-bottom:14px">Task List</div>
+          <div id="dash-tasks-${clientId}">${tasksHTML}</div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <input class="a-add-req-input" style="flex:1" id="new-task-text-${clientId}" placeholder="New task name…" onkeydown="if(event.key==='Enter')addDashTask('${clientId}')" />
+            <button class="a-add-req-btn" onclick="addDashTask('${clientId}')">+ Add Task</button>
+          </div>
+        </div>
+
+        <!-- Publish -->
+        <div style="padding-top:4px;border-top:1px solid var(--gray-100);display:flex;align-items:center;gap:12px">
+          <button onclick="publishDashboard('${clientId}')" style="height:42px;padding:0 28px;background:var(--navy);border:none;border-radius:10px;font-family:var(--font-h);font-size:13px;font-weight:700;color:white;cursor:pointer;transition:background 0.13s" onmouseover="this.style.background='var(--navy-light)'" onmouseout="this.style.background='var(--navy)'">
+            Publish to Client Portal
+          </button>
+          <span id="dash-pub-toast-${clientId}" style="font-size:13px;font-weight:600;color:var(--success);opacity:0;transition:opacity 0.3s"></span>
+        </div>
+      </div>`;
+  }
+
+  function setCurrentStage(clientId, stage) {
+    const d = getDashData(clientId);
+    d.currentStage = stage;
+    saveDashData(clientId, d);
+    renderClientDetail(clientId);
+  }
+
+  function addDashTask(clientId) {
+    const inp = document.getElementById('new-task-text-'+clientId);
+    const text = inp?.value.trim();
+    if (!text) return;
+    const d = getDashData(clientId);
+    d.tasks.push({ id: 't'+Date.now(), text, desc: '', status: 'todo' });
+    saveDashData(clientId, d);
+    inp.value = '';
+    renderClientDetail(clientId);
+  }
+
+  function removeDashTask(clientId, taskId) {
+    const d = getDashData(clientId);
+    d.tasks = d.tasks.filter(t => t.id !== taskId);
+    saveDashData(clientId, d);
+    renderClientDetail(clientId);
+  }
+
+  function publishDashboard(clientId) {
+    const d = getDashData(clientId);
+    // Collect all form values
+    const g = id => document.getElementById(id);
+    d.clientName    = g('db-name-'+clientId)?.value.trim() || d.clientName;
+    d.subtitle      = g('db-subtitle-'+clientId)?.value.trim() || d.subtitle;
+    d.fundingSecured= +g('db-secured-'+clientId)?.value || d.fundingSecured;
+    d.creditScore   = +g('db-fico-'+clientId)?.value || d.creditScore;
+    d.creditChange  = g('db-ficochange-'+clientId)?.value.trim() || d.creditChange;
+    d.fundingApproved= +g('db-approved-'+clientId)?.value || d.fundingApproved;
+    d.fundingGoal   = +g('db-goal-'+clientId)?.value || d.fundingGoal;
+    d.applyingBank  = g('db-bank-'+clientId)?.value.trim() || d.applyingBank;
+    d.applyingCount = g('db-bankcount-'+clientId)?.value.trim() || d.applyingCount;
+    // Collect stage names
+    d.stageNames = d.stageNames.map((_, i) => g('stage-name-'+clientId+'-'+i)?.value.trim() || d.stageNames[i]);
+    // Collect tasks
+    d.tasks = d.tasks.map(t => ({
+      ...t,
+      text:   g('task-text-'+clientId+'-'+t.id)?.value.trim() || t.text,
+      desc:   g('task-desc-'+clientId+'-'+t.id)?.value.trim() || '',
+      status: g('task-status-'+clientId+'-'+t.id)?.value || t.status
+    }));
+    saveDashData(clientId, d);
+    // Update client FICO in the client list too
+    const c = getClient(clientId);
+    if (c && d.creditScore) { c.fico = d.creditScore; saveClients(); renderClientList(); }
+    logActivity(`Dashboard updated for ${c?.fname} ${c?.lname}`, '#22A7F0');
+    // Show toast
+    const toast = g('dash-pub-toast-'+clientId);
+    if (toast) { toast.textContent = '✓ Published to client portal'; toast.style.opacity = '1'; setTimeout(() => toast.style.opacity = '0', 3000); }
   }
 
   // ── HELPERS ───────────────────────────────────────────────────────────

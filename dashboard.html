@@ -2002,11 +2002,11 @@
 
         <div class="welcome-banner">
           <div class="welcome-text">
-            <h2>Welcome back, James!</h2>
-            <p>Your funding journey is in progress. 3 tasks need attention.</p>
+            <h2 id="wb-greeting">Welcome back, James!</h2>
+            <p id="wb-subtitle">Your funding journey is in progress. 3 tasks need attention.</p>
           </div>
           <div class="welcome-funding">
-            <div class="amount">$45,000</div>
+            <div class="amount" id="wb-funding">$45,000</div>
             <div class="label">Total Funding Secured</div>
           </div>
         </div>
@@ -2014,17 +2014,17 @@
         <div class="stats-row">
           <div class="stat-card">
             <div class="stat-label">Credit Score (Avg)</div>
-            <div class="stat-value">712</div>
-            <div class="stat-sub"><span class="stat-badge badge-up">+18 pts</span> since last month</div>
+            <div class="stat-value" id="s-fico">712</div>
+            <div class="stat-sub"><span class="stat-badge badge-up" id="s-fico-change">+18 pts</span> since last month</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Funding Approved</div>
-            <div class="stat-value">$45K</div>
-            <div class="stat-sub">of $150K goal</div>
+            <div class="stat-value" id="s-approved">$45K</div>
+            <div class="stat-sub" id="s-goal">of $150K goal</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Pending Tasks</div>
-            <div class="stat-value">3</div>
+            <div class="stat-value" id="s-tasks">3</div>
             <div class="stat-sub"><span class="stat-badge badge-pending">Action needed</span></div>
           </div>
           <div class="stat-card applying-card">
@@ -2042,53 +2042,16 @@
         <div class="section-card">
           <div class="card-header">
             <div class="card-title">Funding Progress</div>
-            <div class="card-meta stage-card-meta">Stage 4 of 9 — Pay Down Utilization</div>
+            <div class="card-meta stage-card-meta" id="progress-meta-mini">Stage 4 of 9 — Pay Down Utilization</div>
           </div>
           <div class="card-body">
-            <div class="progress-steps">
-              <div class="progress-step done">
-                <div class="step-circle">✓</div>
-                <div class="step-label">Contract Signed</div>
-              </div>
-              <div class="progress-step done">
-                <div class="step-circle">✓</div>
-                <div class="step-label">Onboarding Complete</div>
-              </div>
-              <div class="progress-step done">
-                <div class="step-circle">✓</div>
-                <div class="step-label">Fraud Alerts Off</div>
-              </div>
-              <div class="progress-step active">
-                <div class="step-circle">4</div>
-                <div class="step-label">Pay Down Utilization</div>
-              </div>
-              <div class="progress-step">
-                <div class="step-circle">5</div>
-                <div class="step-label">Add Tradeline</div>
-              </div>
-              <div class="progress-step">
-                <div class="step-circle">6</div>
-                <div class="step-label">Remove Inquiries</div>
-              </div>
-              <div class="progress-step">
-                <div class="step-circle">7</div>
-                <div class="step-label">Business Account</div>
-              </div>
-              <div class="progress-step">
-                <div class="step-circle">8</div>
-                <div class="step-label">Cleared for Funding</div>
-              </div>
-              <div class="progress-step">
-                <div class="step-circle">9</div>
-                <div class="step-label">Funded</div>
-              </div>
-            </div>
+            <div class="progress-steps" id="progress-steps-mini"></div>
             <div class="progress-bar-wrap">
-              <div class="progress-bar-fill" style="width: 44%"></div>
+              <div class="progress-bar-fill" id="progress-bar-mini" style="width:44%"></div>
             </div>
             <div class="progress-meta">
-              <span class="progress-pct">44% Complete</span>
-              <span class="progress-stage">Currently: Pay Down Utilization</span>
+              <span class="progress-pct" id="progress-pct-mini">44% Complete</span>
+              <span class="progress-stage" id="progress-stage-mini">Currently: Pay Down Utilization</span>
             </div>
           </div>
         </div>
@@ -2101,23 +2064,7 @@
               <div class="card-meta" style="color: var(--blue); cursor:pointer" onclick="switchSection('tasks', document.querySelector('[onclick*=tasks]'))">View all →</div>
             </div>
             <div class="card-body">
-              <div class="task-list">
-                <div class="task-item">
-                  <div class="task-check done">✓</div>
-                  <div class="task-info"><div class="task-name done-text">Upload Government ID</div></div>
-                  <span class="task-pill pill-done">Done</span>
-                </div>
-                <div class="task-item">
-                  <div class="task-check progress">→</div>
-                  <div class="task-info"><div class="task-name">Pay down Chase utilization to 10%</div><div class="task-desc">Currently at 42% — target $680 paydown</div></div>
-                  <span class="task-pill pill-progress">In Progress</span>
-                </div>
-                <div class="task-item">
-                  <div class="task-check"></div>
-                  <div class="task-info"><div class="task-name">Dispute Equifax inquiry — Capital One</div></div>
-                  <span class="task-pill pill-todo">To-Do</span>
-                </div>
-              </div>
+              <div class="task-list" id="task-list-mini"></div>
             </div>
           </div>
 
@@ -2161,26 +2108,16 @@
         <div class="section-card">
           <div class="card-header">
             <div class="card-title">Your Funding Journey</div>
-            <div class="card-meta">Admin-controlled · Last updated Apr 8</div>
+            <div class="card-meta" id="progress-meta-full">Admin-controlled</div>
           </div>
           <div class="card-body">
-            <div class="progress-steps">
-              <div class="progress-step done"><div class="step-circle">✓</div><div class="step-label">Contract Signed</div></div>
-              <div class="progress-step done"><div class="step-circle">✓</div><div class="step-label">Onboarding Complete</div></div>
-              <div class="progress-step done"><div class="step-circle">✓</div><div class="step-label">Fraud Alerts Off</div></div>
-              <div class="progress-step active"><div class="step-circle">4</div><div class="step-label">Pay Down Utilization</div></div>
-              <div class="progress-step"><div class="step-circle">5</div><div class="step-label">Add Tradeline</div></div>
-              <div class="progress-step"><div class="step-circle">6</div><div class="step-label">Remove Inquiries</div></div>
-              <div class="progress-step"><div class="step-circle">7</div><div class="step-label">Business Account</div></div>
-              <div class="progress-step"><div class="step-circle">8</div><div class="step-label">Cleared for Funding</div></div>
-              <div class="progress-step"><div class="step-circle">9</div><div class="step-label">Funded</div></div>
-            </div>
+            <div class="progress-steps" id="progress-steps-full"></div>
             <div class="progress-bar-wrap" style="margin-top:24px">
-              <div class="progress-bar-fill" style="width:33%"></div>
+              <div class="progress-bar-fill" id="progress-bar-full" style="width:44%"></div>
             </div>
             <div class="progress-meta">
-              <span class="progress-pct">44% Complete</span>
-              <span class="progress-stage milestones-completed">4 of 9 milestones completed</span>
+              <span class="progress-pct" id="progress-pct-full">44% Complete</span>
+              <span class="progress-stage milestones-completed" id="progress-miles-full">4 of 9 milestones completed</span>
             </div>
           </div>
         </div>
@@ -2191,46 +2128,10 @@
         <div class="section-card">
           <div class="card-header">
             <div class="card-title">My Task List</div>
-            <div class="card-meta">Admin-managed · 3 open tasks</div>
+            <div class="card-meta" id="tasks-meta">Admin-managed</div>
           </div>
           <div class="card-body">
-            <div class="task-list">
-              <div class="task-item">
-                <div class="task-check done">✓</div>
-                <div class="task-info"><div class="task-name done-text">Upload Government-Issued ID</div><div class="task-desc">Driver's license or passport</div></div>
-                <span class="task-pill pill-done">Completed</span>
-              </div>
-              <div class="task-item">
-                <div class="task-check done">✓</div>
-                <div class="task-info"><div class="task-name done-text">Sign Consulting Agreement</div></div>
-                <span class="task-pill pill-done">Completed</span>
-              </div>
-              <div class="task-item">
-                <div class="task-check done">✓</div>
-                <div class="task-info"><div class="task-name done-text">Disable Fraud Alerts on all 3 bureaus</div></div>
-                <span class="task-pill pill-done">Completed</span>
-              </div>
-              <div class="task-item">
-                <div class="task-check progress">→</div>
-                <div class="task-info"><div class="task-name">Pay down Chase card to 10% utilization</div><div class="task-desc">Current balance: $1,200 / Limit: $2,000. Pay $680 to reach 10%</div></div>
-                <span class="task-pill pill-progress">In Progress</span>
-              </div>
-              <div class="task-item">
-                <div class="task-check progress">→</div>
-                <div class="task-info"><div class="task-name">Pay down Bank of America card to 8%</div><div class="task-desc">Current: $520 / Limit: $1,500. Pay $360 to reach 8%</div></div>
-                <span class="task-pill pill-progress">In Progress</span>
-              </div>
-              <div class="task-item">
-                <div class="task-check"></div>
-                <div class="task-info"><div class="task-name">Dispute Equifax inquiry — Capital One Jan 2025</div><div class="task-desc">File dispute via Equifax.com. Reference: Bureau Method</div></div>
-                <span class="task-pill pill-todo">To-Do</span>
-              </div>
-              <div class="task-item">
-                <div class="task-check"></div>
-                <div class="task-info"><div class="task-name">Open dedicated business checking account</div><div class="task-desc">Required before funding applications are submitted</div></div>
-                <span class="task-pill pill-todo">To-Do</span>
-              </div>
-            </div>
+            <div class="task-list" id="task-list-full"></div>
           </div>
         </div>
       </div>
@@ -2980,7 +2881,115 @@
     if (totalEl) totalEl.textContent = totalBanks;
   }
 
+  // ── DASHBOARD DATA (admin-controlled) ────────────────────────────────
+  const DEFAULT_DASH = {
+    clientName: 'James',
+    subtitle: 'Your funding journey is in progress. 3 tasks need attention.',
+    fundingSecured: 45000,
+    creditScore: 712,
+    creditChange: '+18 pts',
+    fundingApproved: 45000,
+    fundingGoal: 150000,
+    applyingBank: 'Amex Blue Cash Business',
+    applyingCount: '2 of 2 applications',
+    currentStage: 4,
+    stageNames: ['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
+    tasks: [
+      { id:'t1', text:'Upload Government-Issued ID', desc:"Driver's license or passport", status:'done' },
+      { id:'t2', text:'Sign Consulting Agreement', desc:'', status:'done' },
+      { id:'t3', text:'Disable Fraud Alerts on all 3 bureaus', desc:'', status:'done' },
+      { id:'t4', text:'Pay down Chase card to 10% utilization', desc:'Current balance: $1,200 / Limit: $2,000. Pay $680 to reach 10%', status:'progress' },
+      { id:'t5', text:'Pay down Bank of America card to 8%', desc:'Current: $520 / Limit: $1,500. Pay $360 to reach 8%', status:'progress' },
+      { id:'t6', text:'Dispute Equifax inquiry — Capital One Jan 2025', desc:'File dispute via Equifax.com. Reference: Bureau Method', status:'todo' },
+      { id:'t7', text:'Open dedicated business checking account', desc:'Required before funding applications are submitted', status:'todo' }
+    ]
+  };
+
+  function getDashData() {
+    try { return Object.assign({}, DEFAULT_DASH, JSON.parse(localStorage.getItem('cq_dash_data') || '{}')); }
+    catch(e) { return Object.assign({}, DEFAULT_DASH); }
+  }
+
+  function renderProgressSteps(containerId, stages, currentStage) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = stages.map((name, i) => {
+      const n = i + 1;
+      const done = n < currentStage;
+      const active = n === currentStage;
+      return `<div class="progress-step ${done?'done':active?'active':''}">
+        <div class="step-circle">${done ? '✓' : n}</div>
+        <div class="step-label">${name}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderTaskList(containerId, tasks, preview) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const list = preview ? tasks.slice(0, 3) : tasks;
+    el.innerHTML = list.map(t => {
+      const done = t.status === 'done';
+      const prog = t.status === 'progress';
+      return `<div class="task-item">
+        <div class="task-check ${done?'done':prog?'progress':''}">${done?'✓':prog?'→':''}</div>
+        <div class="task-info">
+          <div class="task-name ${done?'done-text':''}">${t.text}</div>
+          ${t.desc ? `<div class="task-desc">${t.desc}</div>` : ''}
+        </div>
+        <span class="task-pill ${done?'pill-done':prog?'pill-progress':'pill-todo'}">${done?'Done':prog?'In Progress':'To-Do'}</span>
+      </div>`;
+    }).join('') || '<div style="padding:12px 0;font-size:13px;color:var(--gray-400)">No tasks assigned.</div>';
+  }
+
+  function loadDashboardData() {
+    const d = getDashData();
+    // Welcome banner
+    const wbg = document.getElementById('wb-greeting'); if(wbg) wbg.textContent = 'Welcome back, ' + d.clientName + '!';
+    const wbs = document.getElementById('wb-subtitle'); if(wbs) wbs.textContent = d.subtitle;
+    const wbf = document.getElementById('wb-funding'); if(wbf) wbf.textContent = '$' + Number(d.fundingSecured).toLocaleString();
+    // Stats
+    const sf = document.getElementById('s-fico'); if(sf) sf.textContent = d.creditScore || '—';
+    const sc = document.getElementById('s-fico-change'); if(sc) sc.textContent = d.creditChange || '';
+    const sa = document.getElementById('s-approved'); if(sa) sa.textContent = '$' + Math.round((d.fundingApproved||0)/1000) + 'K';
+    const sg = document.getElementById('s-goal'); if(sg) sg.textContent = 'of $' + Math.round((d.fundingGoal||0)/1000) + 'K goal';
+    const st = document.getElementById('s-tasks');
+    const openTasks = (d.tasks||[]).filter(t => t.status !== 'done').length;
+    if(st) st.textContent = openTasks;
+    // Sidebar client name
+    const sn = document.querySelector('.client-info .name'); if(sn) sn.textContent = d.clientName;
+    const av = document.querySelector('.client-avatar'); if(av) av.textContent = d.clientName ? d.clientName.slice(0,2).toUpperCase() : 'JD';
+    const hav = document.querySelector('.header-avatar'); if(hav) hav.textContent = d.clientName ? d.clientName.slice(0,2).toUpperCase() : 'JD';
+    // Progress
+    const stages = d.stageNames || DEFAULT_DASH.stageNames;
+    const cs = d.currentStage || 1;
+    const pct = Math.round(((cs - 1) / stages.length) * 100);
+    renderProgressSteps('progress-steps-mini', stages, cs);
+    renderProgressSteps('progress-steps-full', stages, cs);
+    const pmm = document.getElementById('progress-meta-mini'); if(pmm) pmm.textContent = 'Stage ' + cs + ' of ' + stages.length + ' — ' + (stages[cs-1]||'');
+    const pmf = document.getElementById('progress-meta-full'); if(pmf) pmf.textContent = 'Last updated by admin';
+    ['progress-bar-mini','progress-bar-full'].forEach(id => { const el=document.getElementById(id); if(el) el.style.width=pct+'%'; });
+    ['progress-pct-mini','progress-pct-full'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=pct+'% Complete'; });
+    const psm = document.getElementById('progress-stage-mini'); if(psm) psm.textContent = 'Currently: ' + (stages[cs-1]||'');
+    const pmiles = document.getElementById('progress-miles-full'); if(pmiles) pmiles.textContent = (cs-1) + ' of ' + stages.length + ' milestones completed';
+    // Tasks
+    renderTaskList('task-list-mini', d.tasks||[], true);
+    renderTaskList('task-list-full', d.tasks||[], false);
+    const tm = document.getElementById('tasks-meta');
+    if(tm) tm.textContent = 'Admin-managed · ' + openTasks + ' open task' + (openTasks!==1?'s':'');
+    // Nav badge for tasks
+    const nb = document.querySelector('[onclick*="tasks"] .nav-badge');
+    if(nb) { nb.textContent = openTasks; nb.style.display = openTasks > 0 ? '' : 'none'; }
+    // Applying card — update from dash data if set
+    if(d.applyingBank) {
+      APPLYING_TO = [{ name: d.applyingBank, count: d.applyingCount || '' }];
+      applyIdx = 0;
+      renderApplyingCard();
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
+    loadDashboardData();
     renderApplyingCard();
     renderFundingSequence();
     if (APPLYING_TO.length > 1) {
