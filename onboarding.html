@@ -1371,7 +1371,13 @@
           </div>
         </div>
 
-        <div class="form-section-title">Business Address</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;margin-top:24px">
+          <div class="form-section-title" style="margin:0">Business Address</div>
+          <button type="button" onclick="copyHomeAddress()" style="height:32px;padding:0 14px;border:1.5px solid var(--blue);border-radius:8px;background:rgba(34,167,240,0.07);color:var(--blue);font-family:var(--font-b);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background 0.15s" onmouseover="this.style.background='rgba(34,167,240,0.14)'" onmouseout="this.style.background='rgba(34,167,240,0.07)'">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            Same as home address
+          </button>
+        </div>
         <div class="form-grid">
           <div class="form-group span-2">
             <label>Street Address *</label>
@@ -2524,6 +2530,27 @@
   }
 
   function filterBizBankChips(query) { renderFilteredBizChips(query); }
+
+  function copyHomeAddress() {
+    const street = document.getElementById('p_street').value;
+    const city   = document.getElementById('p_city').value;
+    const state  = document.getElementById('p_state').value;
+    const zip    = document.getElementById('p_zip').value;
+    if (!street && !city) {
+      alert('Please fill in your home address in the Personal Info section first.');
+      return;
+    }
+    document.getElementById('b_street').value = street;
+    document.getElementById('b_city').value   = city;
+    document.getElementById('b_zip').value    = zip;
+    // Set the state select
+    const bizState = document.getElementById('b_state');
+    if (state) {
+      bizState.value = state;
+      // Trigger change to load banks for that state
+      bizState.dispatchEvent(new Event('change'));
+    }
+  }
 
   // Allow Enter key in other input + wire state listener
   document.addEventListener('DOMContentLoaded', () => {
