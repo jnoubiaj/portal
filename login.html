@@ -804,7 +804,59 @@
     </div>
   </div>
 
+  <!-- CHANGE PASSWORD PAGE -->
+  <div class="page" id="page-change-password" style="flex-direction:column;align-items:center;justify-content:center;background:var(--navy);padding:40px 24px;position:relative;overflow:hidden;">
+    <div style="position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(34,167,240,0.1) 0%,transparent 65%);top:-200px;right:-100px;pointer-events:none;"></div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:44px 40px;max-width:440px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,0.5);position:relative;z-index:1;">
+      <div style="text-align:center;margin-bottom:28px;">
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(34,167,240,0.15);border:2px solid rgba(34,167,240,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+        </div>
+        <div style="font-family:var(--font-head);font-size:20px;font-weight:800;color:var(--white);letter-spacing:-0.02em;margin-bottom:6px;">Create Your Password</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.4);">Your account is active — set a permanent password to continue</div>
+      </div>
+
+      <!-- Requirements -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;margin-bottom:24px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:rgba(255,255,255,0.3);margin-bottom:10px;">Password Requirements</div>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <div class="pw-req" id="req-upper" style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.4);">
+            <span class="req-dot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></span>
+            At least 1 uppercase letter (A–Z)
+          </div>
+          <div class="pw-req" id="req-number" style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.4);">
+            <span class="req-dot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></span>
+            At least 1 number (0–9)
+          </div>
+          <div class="pw-req" id="req-special" style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.4);">
+            <span class="req-dot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></span>
+            At least 1 special character (!?@#$%^&*)
+          </div>
+          <div class="pw-req" id="req-length" style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.4);">
+            <span class="req-dot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></span>
+            At least 8 characters long
+          </div>
+        </div>
+      </div>
+
+      <div class="f-group">
+        <label class="f-label">New Password</label>
+        <input class="f-input" type="password" id="newPw1" placeholder="Enter your new password" oninput="checkPwReqs(this.value)" />
+      </div>
+      <div class="f-group" style="margin-bottom:24px;">
+        <label class="f-label">Confirm Password</label>
+        <input class="f-input" type="password" id="newPw2" placeholder="Confirm your new password" />
+      </div>
+      <div id="cp-error" style="display:none;font-size:12px;color:#f87171;margin-bottom:14px;padding:10px 14px;background:rgba(239,68,68,0.1);border-radius:8px;border:1px solid rgba(239,68,68,0.2);"></div>
+      <button onclick="submitNewPassword()" style="width:100%;height:50px;background:var(--blue);border:none;border-radius:12px;font-family:var(--font-head);font-size:14px;font-weight:700;color:white;cursor:pointer;box-shadow:0 6px 24px rgba(34,167,240,0.35);transition:background 0.15s;">
+        Set Password &amp; Enter Portal
+      </button>
+    </div>
+  </div>
+
   <script>
+    let _pendingSession = null; // stores {clientId, email} during password change flow
+
     function showPage(id) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById(id).classList.add('active');
@@ -813,14 +865,100 @@
     function openTos() { document.getElementById('tosModal').classList.add('open'); }
     function closeTos() { document.getElementById('tosModal').classList.remove('open'); }
     function acceptTos() { document.getElementById('tosAgree').checked = true; closeTos(); }
+
     function doLogin() {
       if (!document.getElementById('tosAgree').checked) {
         alert('Please review and accept the Privacy Policy & Terms of Service to continue.');
         return;
       }
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const pass  = document.getElementById('loginPassword').value;
+      if (!email || !pass) { alert('Please enter your email and password.'); return; }
+
+      // Check real credentials from admin-created accounts
+      let creds = {};
+      try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+      const cred = creds[email];
+
+      if (cred) {
+        if (cred.password !== pass) {
+          alert('Incorrect password. Please try again.');
+          return;
+        }
+        if (cred.mustChange) {
+          // Store pending session for after password change
+          _pendingSession = { clientId: cred.clientId, email };
+          showPage('page-change-password');
+          return;
+        }
+        // Valid login — start session
+        startClientSession(cred.clientId, email);
+        window.location.href = 'onboarding.html';
+        return;
+      }
+
+      // Fallback: demo login (no account in localStorage) — for demo clients
       window.location.href = 'onboarding.html';
     }
+
     function demoLogin() { window.location.href = 'onboarding.html'; }
+
+    function checkPwReqs(val) {
+      setReq('req-upper',   /[A-Z]/.test(val));
+      setReq('req-number',  /[0-9]/.test(val));
+      setReq('req-special', /[!?@#$%^&*]/.test(val));
+      setReq('req-length',  val.length >= 8);
+    }
+    function setReq(id, pass) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const dot = el.querySelector('.req-dot');
+      if (pass) {
+        el.style.color = '#6ee7b7';
+        dot.style.background = '#10b981';
+      } else {
+        el.style.color = 'rgba(255,255,255,0.4)';
+        dot.style.background = 'rgba(255,255,255,0.2)';
+      }
+    }
+    function validatePassword(pw) {
+      if (pw.length < 8)          return 'Password must be at least 8 characters.';
+      if (!/[A-Z]/.test(pw))      return 'Password must contain at least one uppercase letter.';
+      if (!/[0-9]/.test(pw))      return 'Password must contain at least one number.';
+      if (!/[!?@#$%^&*]/.test(pw)) return 'Password must contain at least one special character (!?@#$%^&*).';
+      return null;
+    }
+    function submitNewPassword() {
+      const pw1 = document.getElementById('newPw1').value;
+      const pw2 = document.getElementById('newPw2').value;
+      const errEl = document.getElementById('cp-error');
+      errEl.style.display = 'none';
+
+      const validErr = validatePassword(pw1);
+      if (validErr) { errEl.textContent = validErr; errEl.style.display = 'block'; return; }
+      if (pw1 !== pw2) { errEl.textContent = 'Passwords do not match. Please try again.'; errEl.style.display = 'block'; return; }
+
+      // Save new password
+      const email = _pendingSession ? _pendingSession.email : document.getElementById('loginEmail').value.trim().toLowerCase();
+      let creds = {};
+      try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+      if (creds[email]) {
+        creds[email].password = pw1;
+        creds[email].mustChange = false;
+        try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+      }
+
+      if (_pendingSession) {
+        startClientSession(_pendingSession.clientId, email);
+      }
+      window.location.href = 'onboarding.html';
+    }
+
+    function startClientSession(clientId, email) {
+      try {
+        sessionStorage.setItem('cq_client_session', JSON.stringify({ clientId, email, loggedInAt: new Date().toISOString() }));
+      } catch(e) {}
+    }
   </script>
 </body>
 </html>

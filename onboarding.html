@@ -2739,6 +2739,75 @@
       return;
     }
     banner.classList.remove('visible');
+
+    // ── SAVE ALL ONBOARDING DATA TO LOCALSTORAGE ──────────────
+    const getVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const onboardData = {
+      submittedAt: new Date().toISOString(),
+      // Personal
+      firstName:      getVal('p_firstName'),
+      lastName:       getVal('p_lastName'),
+      email:          getVal('p_email'),
+      phone:          getVal('p_phone'),
+      dob:            getVal('p_dob'),
+      ssn:            getVal('p_ssn'),
+      street:         getVal('p_street'),
+      city:           getVal('p_city'),
+      state:          getVal('p_state'),
+      zip:            getVal('p_zip'),
+      maidenName:     getVal('p_maiden'),
+      annualIncome:   getVal('p_income'),
+      citizen:        getVal('p_citizen'),
+      personalBanks:  getVal('p_banks'),
+      newCreditAccts: getVal('p_creditAccounts'),
+      // Business
+      bizName:        getVal('b_bizName'),
+      dba:            getVal('b_dba'),
+      ein:            getVal('b_ein'),
+      dateEstablished:getVal('b_dateEstablished'),
+      bizType:        getVal('b_bizType'),
+      industry:       getVal('b_industry'),
+      employees:      getVal('b_employees'),
+      monthlySales:   getVal('b_monthlySales'),
+      ownership:      getVal('b_ownership'),
+      bizPhone:       getVal('b_phone'),
+      loanAmount:     getVal('b_loanAmount'),
+      loanReason:     getVal('b_loanReason'),
+      bizStreet:      getVal('b_street'),
+      bizCity:        getVal('b_city'),
+      bizState:       getVal('b_state'),
+      bizZip:         getVal('b_zip'),
+      bizBanks:       getVal('b_bankingRelationships'),
+      bizCreditCards: getVal('b_creditCards'),
+      // Experian / Security
+      experianEmail:  getVal('b_expEmail'),
+      experianPass:   getVal('b_expPass'),
+      secQuestion:    getVal('b_secQ'),
+      secAnswer:      getVal('b_secA'),
+      pin:            getVal('b_pin'),
+      // Contract
+      contractSigned: localStorage.getItem('cq_signed_contract') || '',
+      contractName:   localStorage.getItem('cq_signed_name') || '',
+    };
+    try { localStorage.setItem('cq_onboard_data', JSON.stringify(onboardData)); } catch(e) {}
+
+    // Auto-update the admin client record with the real name from onboarding
+    try {
+      const session = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null');
+      if (session && session.clientId) {
+        const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+        const c = adminClients.find(cl => cl.id === session.clientId);
+        if (c) {
+          c.fname = onboardData.firstName || c.fname;
+          c.lname = onboardData.lastName  || c.lname;
+          c.phone = onboardData.phone     || c.phone;
+          c.onboardingComplete = true;
+          c.lastActivity = new Date().toISOString().split('T')[0];
+          localStorage.setItem('cq_admin_clients', JSON.stringify(adminClients));
+        }
+      }
+    } catch(e) {}
+
     goTo('done');
   }
 </script>
