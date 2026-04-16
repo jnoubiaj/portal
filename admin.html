@@ -1384,7 +1384,7 @@
     document.getElementById('a-detail-card').innerHTML = `
       <div class="a-dh">
         <div class="a-dh-top">
-          <div class="a-dh-avatar" style="background:${c.color}">${c.fname[0]}${c.lname[0]}</div>
+          <div class="a-dh-avatar" style="background:${c.color}">${(c.fname||'?')[0]}${(c.lname||'')[0]||''}</div>
           <div style="min-width:0">
             <div class="a-dh-name">${c.fname} ${c.lname}</div>
             <div class="a-dh-sub">${c.email} · ${c.phone || 'No phone'}</div>
@@ -1558,6 +1558,108 @@
   }
 
   // ── OVERVIEW TAB ──────────────────────────────────────────────────────
+  function renderPortalAccessCard(clientId, client) {
+    let creds = {};
+    try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+    const cred = creds[client.email] || null;
+    const hasAccount = !!cred;
+    const mustChange = cred && cred.mustChange;
+
+    return `
+      <div style="background:var(--white);border:1.5px solid ${hasAccount ? 'rgba(34,167,240,0.2)' : 'var(--gray-200)'};border-radius:14px;overflow:hidden;">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;background:${hasAccount ? '#f0f9ff' : 'var(--gray-50)'};border-bottom:1px solid ${hasAccount ? 'rgba(34,167,240,0.12)' : 'var(--gray-100)'};">
+          <div style="width:30px;height:30px;border-radius:8px;background:${hasAccount ? 'rgba(34,167,240,0.12)' : 'var(--gray-100)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="${hasAccount ? '#22A7F0' : '#8A97B0'}" stroke-width="2"><path d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+          </div>
+          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy);">Portal Access</div>
+          <span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;
+            background:${hasAccount ? (mustChange ? '#fffbeb' : 'var(--success-bg)') : 'var(--gray-100)'};
+            color:${hasAccount ? (mustChange ? '#b45309' : 'var(--success)') : 'var(--gray-400)'}">
+            ${hasAccount ? (mustChange ? 'Temp Password Active' : 'Active') : 'No Account'}
+          </span>
+        </div>
+        <div style="padding:16px 18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:180px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--gray-400);margin-bottom:4px;">Login Email</div>
+            <div style="font-size:13px;font-weight:600;color:var(--navy);">${client.email}</div>
+          </div>
+          <div style="flex:1;min-width:160px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--gray-400);margin-bottom:4px;">Password Status</div>
+            <div style="font-size:13px;font-weight:600;color:${hasAccount ? (mustChange ? '#b45309' : 'var(--success)') : 'var(--gray-300)'};">
+              ${hasAccount ? (mustChange ? 'Temporary — must change on login' : 'Client-set password') : 'No account created yet'}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            ${!hasAccount ? `
+              <button onclick="createPortalAccess('${clientId}')" style="height:34px;padding:0 14px;background:var(--navy);border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer;">
+                Create Account
+              </button>` : `
+              <button onclick="resetToTempPassword('${clientId}')" style="height:34px;padding:0 14px;background:var(--danger-bg);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--danger);cursor:pointer;">
+                Reset Password
+              </button>
+              <button onclick="copyLoginDetails('${clientId}')" id="copy-cred-btn-${clientId}" style="height:34px;padding:0 14px;background:var(--blue-light);border:1px solid rgba(34,167,240,0.2);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;">
+                Copy Login Info
+              </button>`}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function createPortalAccess(clientId) {
+    const c = getClient(clientId);
+    if (!c) return;
+    let creds = {};
+    try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+    creds[c.email] = { clientId, password: TEMP_PASSWORD, mustChange: true };
+    try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+    renderClientDetail(clientId);
+    showToast('Portal account created. Reset password sent.');
+  }
+
+  function resetToTempPassword(clientId) {
+    const c = getClient(clientId);
+    if (!c) return;
+    if (!confirm('Reset ' + c.fname + '\'s password to the temporary password (cqconsulting123!)? They will need to set a new password on next login.')) return;
+    let creds = {};
+    try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+    if (!creds[c.email]) creds[c.email] = { clientId };
+    creds[c.email].password = TEMP_PASSWORD;
+    creds[c.email].mustChange = true;
+    try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+    renderClientDetail(clientId);
+    showToast('Password reset to temporary password.');
+  }
+
+  function copyLoginDetails(clientId) {
+    const c = getClient(clientId);
+    if (!c) return;
+    let creds = {};
+    try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+    const cred = creds[c.email];
+    const mustChange = cred && cred.mustChange;
+    const text = mustChange
+      ? `CapitalQuest Portal Login\nEmail: ${c.email}\nTemporary Password: ${TEMP_PASSWORD}\n\nYou will be required to set a new password on first login.\nPortal: ${window.location.origin}/login.html`
+      : `CapitalQuest Portal Login\nEmail: ${c.email}\nPassword: [Client has set their own password]\nPortal: ${window.location.origin}/login.html`;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-cred-btn-' + clientId);
+      if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy Login Info'; }, 2000); }
+    });
+  }
+
+  function showToast(msg) {
+    let t = document.getElementById('admin-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'admin-toast';
+      t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--navy);color:white;padding:12px 22px;border-radius:10px;font-family:var(--font-h);font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.3);transition:opacity 0.3s;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+  }
+
   function renderOverviewTab(clientId, client) {
     let o = null;
     // Try per-client key first (set when client submits onboarding after login)
@@ -1590,9 +1692,13 @@
         ${badgeText ? `<span class="prof-section-badge" style="background:${badgeColor}20;color:${badgeColor}">${badgeText}</span>` : ''}
       </div>`;
 
+    // Portal access card (shown always)
+    const portalAccessCard = renderPortalAccessCard(clientId, client);
+
     if (!o) {
       return `
-        <div class="prof-pending-banner">
+        ${portalAccessCard}
+        <div class="prof-pending-banner" style="margin-top:14px">
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
           Client has not submitted their onboarding form yet
         </div>
@@ -1611,7 +1717,9 @@
     const yesNo = v => v === true || v === 'yes' || v === 'Yes' || v === 'true' ? 'Yes' : (v ? v : null);
 
     return `
-      <div class="prof-submitted-banner">
+      ${portalAccessCard}
+
+      <div class="prof-submitted-banner" style="margin-top:14px">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         Onboarding submitted on ${submittedDate}
       </div>
