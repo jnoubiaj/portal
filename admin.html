@@ -845,7 +845,7 @@
       return;
     }
     currentAdmin = user;
-    try { sessionStorage.setItem('cq_admin_session', JSON.stringify(user)); } catch(e) {}
+    try { localStorage.setItem('cq_admin_session', JSON.stringify(user)); } catch(e) {}
     document.getElementById('admin-login').style.display = 'none';
     document.getElementById('admin-app').style.display = 'block';
     document.getElementById('sb-avatar').textContent = user.initials;
@@ -854,20 +854,21 @@
   }
 
   function adminLogout() {
-    try { sessionStorage.removeItem('cq_admin_session'); } catch(e) {}
+    try { localStorage.removeItem('cq_admin_session'); } catch(e) {}
     location.reload();
   }
 
-  // Auto-restore session
+  // Auto-restore session on every page load/refresh
   (function() {
     try {
-      const s = sessionStorage.getItem('cq_admin_session');
+      const s = localStorage.getItem('cq_admin_session');
       if (s) {
         currentAdmin = JSON.parse(s);
         document.getElementById('admin-login').style.display = 'none';
         document.getElementById('admin-app').style.display = 'block';
         document.getElementById('sb-avatar').textContent = currentAdmin.initials;
         document.getElementById('sb-name').textContent = currentAdmin.name;
+        initAdminApp();
       }
     } catch(e) {}
   })();
