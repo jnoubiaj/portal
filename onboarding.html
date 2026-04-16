@@ -1748,8 +1748,35 @@
       alert('Please type your full legal name to sign.');
       return;
     }
+    const signedAt = new Date().toISOString();
     localStorage.setItem('cq_signed_contract', contractKey);
     localStorage.setItem('cq_signed_name', name);
+
+    // Immediately push contract data to per-client onboarding record so admin sees it right away
+    try {
+      const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
+               || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+      if (sess && sess.clientId) {
+        const key = 'cq_onboard_data_' + sess.clientId;
+        const existing = JSON.parse(localStorage.getItem(key) || '{}');
+        existing.contractSigned = 'signed';
+        existing.contractName   = name;
+        existing.contractType   = contractKey;
+        existing.contractDate   = signedAt;
+        existing.submittedAt    = existing.submittedAt || signedAt;
+        localStorage.setItem(key, JSON.stringify(existing));
+
+        // Also update admin client record to flag contract signed
+        const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+        const idx = adminClients.findIndex(c => c.id === sess.clientId);
+        if (idx !== -1) {
+          adminClients[idx].contractSigned = true;
+          adminClients[idx].lastActivity = signedAt.split('T')[0];
+          localStorage.setItem('cq_admin_clients', JSON.stringify(adminClients));
+        }
+      }
+    } catch(e) {}
+
     goTo('personal');
   }
 
