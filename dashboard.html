@@ -3066,6 +3066,21 @@
           break;
         }
       }
+      // Nuclear fallback: extract from the segment between "Collections N" and "Oldest account"
+      // This is exactly where Experian places avg account age in the Account Summary
+      if(!d.avgAge){
+        const seg=t.match(/collections\s+\d+\s+([\s\S]{0,300}?)oldest\s+account/i);
+        if(seg){
+          const yrM=seg[1].match(/(\d{1,2})\s*(?:yrs?|years?)/i);
+          if(yrM&&+yrM[1]>0&&+yrM[1]<50){
+            const moM=seg[1].match(/(\d{1,2})\s*(?:mos?|months?)/i);
+            d.avgYrs=+yrM[1]; d.avgMos=moM?+moM[1]:0;
+            d.avgAge=((d.avgYrs?d.avgYrs+' yr ':'')+( d.avgMos?d.avgMos+' mo':'')).trim();
+          }
+        }
+        console.log('[avgAge fallback] seg:', seg&&seg[1], '→', d.avgAge);
+      }
+      console.log('[avgAge] result:', d.avgAge, '| text around average:', t.substring(Math.max(0,t.toLowerCase().indexOf('average account')-10), t.toLowerCase().indexOf('average account')+80));
     }
 
     // ── Oldest account ─────────────────────────────────────────────────────
