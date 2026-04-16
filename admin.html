@@ -888,9 +888,10 @@
   function loadClients() {
     try {
       const saved = localStorage.getItem('cq_admin_clients');
-      clients = saved ? JSON.parse(saved) : DEFAULT_CLIENTS;
-      if (!saved) saveClients();
-    } catch(e) { clients = [...DEFAULT_CLIENTS]; }
+      const parsed = saved ? JSON.parse(saved) : null;
+      clients = (parsed && parsed.length > 0) ? parsed : [...DEFAULT_CLIENTS];
+      if (!parsed || parsed.length === 0) saveClients();
+    } catch(e) { clients = [...DEFAULT_CLIENTS]; saveClients(); }
   }
   function saveClients() {
     try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
@@ -1075,11 +1076,11 @@
   }
 
   function renderOverview() {
-    checkAndSaveMonthlyReport();
-    renderOvCards();
-    renderOvClientTable();
-    renderOvKpi();
-    renderOvTaskTable();
+    try { checkAndSaveMonthlyReport(); } catch(e) {}
+    try { renderOvCards(); } catch(e) { console.error('renderOvCards', e); }
+    try { renderOvClientTable(); } catch(e) { console.error('renderOvClientTable', e); }
+    try { renderOvKpi(); } catch(e) { console.error('renderOvKpi', e); }
+    try { renderOvTaskTable(); } catch(e) { console.error('renderOvTaskTable', e); }
   }
 
   function renderOvCards() {
