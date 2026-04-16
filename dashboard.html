@@ -3035,6 +3035,14 @@
         renderApplyingCard();
       }, 3000);
     }
+    // Restore last active section on refresh
+    try {
+      const lastSection = localStorage.getItem('cq_dash_section');
+      if (lastSection && document.getElementById('section-' + lastSection)) {
+        const navEl = document.querySelector(`.nav-item[onclick*="'${lastSection}'"]`);
+        switchSection(lastSection, navEl);
+      }
+    } catch(e) {}
   });
 
   const sectionTitles = {
@@ -4260,6 +4268,8 @@
     if (sec) sec.classList.add('active');
     if (el) el.classList.add('active');
     document.getElementById('pageTitleText').textContent = sectionTitles[name] || name;
+    // Persist active section so refresh returns to same section
+    try { localStorage.setItem('cq_dash_section', name); } catch(e) {}
     // Close sidebar on mobile after nav
     if (window.innerWidth <= 768) closeSidebar();
     // Auto-load persisted credit report (admin uploads once, client sees it)
