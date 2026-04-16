@@ -2882,32 +2882,60 @@
   }
 
   // ── DASHBOARD DATA (admin-controlled) ────────────────────────────────
+  // Blank defaults — admin fills everything in via the dashboard editor
   const DEFAULT_DASH = {
-    clientName: 'James',
-    subtitle: 'Your funding journey is in progress. 3 tasks need attention.',
-    fundingSecured: 45000,
-    creditScore: 712,
-    creditChange: '+18 pts',
-    fundingApproved: 45000,
-    fundingGoal: 150000,
-    applyingBank: 'Amex Blue Cash Business',
-    applyingCount: '2 of 2 applications',
-    currentStage: 4,
+    clientName: '',
+    subtitle: 'Your CapitalQuest team is getting your profile ready. Check back soon.',
+    fundingSecured: 0,
+    creditScore: 0,
+    creditChange: '',
+    fundingApproved: 0,
+    fundingGoal: 0,
+    applyingBank: '',
+    applyingCount: '',
+    currentStage: 1,
     stageNames: ['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
-    tasks: [
-      { id:'t1', text:'Upload Government-Issued ID', desc:"Driver's license or passport", status:'done' },
-      { id:'t2', text:'Sign Consulting Agreement', desc:'', status:'done' },
-      { id:'t3', text:'Disable Fraud Alerts on all 3 bureaus', desc:'', status:'done' },
-      { id:'t4', text:'Pay down Chase card to 10% utilization', desc:'Current balance: $1,200 / Limit: $2,000. Pay $680 to reach 10%', status:'progress' },
-      { id:'t5', text:'Pay down Bank of America card to 8%', desc:'Current: $520 / Limit: $1,500. Pay $360 to reach 8%', status:'progress' },
-      { id:'t6', text:'Dispute Equifax inquiry — Capital One Jan 2025', desc:'File dispute via Equifax.com. Reference: Bureau Method', status:'todo' },
-      { id:'t7', text:'Open dedicated business checking account', desc:'Required before funding applications are submitted', status:'todo' }
-    ]
+    tasks: []
   };
 
+  // Resolve client session — check sessionStorage first, then localStorage backup
+  function getClientSession() {
+    try {
+      return JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
+          || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+    } catch(e) { return null; }
+  }
+
   function getDashData() {
-    try { return Object.assign({}, DEFAULT_DASH, JSON.parse(localStorage.getItem('cq_dash_data') || '{}')); }
-    catch(e) { return Object.assign({}, DEFAULT_DASH); }
+    const session = getClientSession();
+    const clientId = session ? session.clientId : null;
+
+    // Demo client c1 uses the global key (admin publishes to cq_dash_data for demo)
+    // Real clients use their own key cq_dash_${clientId}
+    let saved = null;
+    if (clientId && clientId !== 'c1') {
+      try { saved = JSON.parse(localStorage.getItem('cq_dash_' + clientId) || 'null'); } catch(e) {}
+    }
+    if (!saved) {
+      try { saved = JSON.parse(localStorage.getItem('cq_dash_data') || 'null'); } catch(e) {}
+    }
+
+    const base = Object.assign({}, DEFAULT_DASH, saved || {});
+
+    // Auto-fill clientName from onboarding data if admin hasn't set it yet
+    if (!base.clientName && clientId) {
+      try {
+        const od = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null')
+                || JSON.parse(localStorage.getItem('cq_onboard_data') || 'null');
+        if (od && od.firstName) base.clientName = od.firstName;
+      } catch(e) {}
+      // Final fallback: use email prefix
+      if (!base.clientName && session && session.email) {
+        base.clientName = session.email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+      }
+    }
+
+    return base;
   }
 
   function renderProgressSteps(containerId, stages, currentStage) {
@@ -2947,12 +2975,12 @@
     // Welcome banner
     const wbg = document.getElementById('wb-greeting'); if(wbg) wbg.textContent = 'Welcome back, ' + d.clientName + '!';
     const wbs = document.getElementById('wb-subtitle'); if(wbs) wbs.textContent = d.subtitle;
-    const wbf = document.getElementById('wb-funding'); if(wbf) wbf.textContent = '$' + Number(d.fundingSecured).toLocaleString();
+    const wbf = document.getElementById('wb-funding'); if(wbf) wbf.textContent = d.fundingSecured ? '$' + Number(d.fundingSecured).toLocaleString() : '$0';
     // Stats
     const sf = document.getElementById('s-fico'); if(sf) sf.textContent = d.creditScore || '—';
     const sc = document.getElementById('s-fico-change'); if(sc) sc.textContent = d.creditChange || '';
-    const sa = document.getElementById('s-approved'); if(sa) sa.textContent = '$' + Math.round((d.fundingApproved||0)/1000) + 'K';
-    const sg = document.getElementById('s-goal'); if(sg) sg.textContent = 'of $' + Math.round((d.fundingGoal||0)/1000) + 'K goal';
+    const sa = document.getElementById('s-approved'); if(sa) sa.textContent = d.fundingApproved ? '$' + Math.round(d.fundingApproved/1000) + 'K' : '$0';
+    const sg = document.getElementById('s-goal'); if(sg) sg.textContent = d.fundingGoal ? 'of $' + Math.round(d.fundingGoal/1000) + 'K goal' : 'Goal not set';
     const st = document.getElementById('s-tasks');
     const openTasks = (d.tasks||[]).filter(t => t.status !== 'done').length;
     if(st) st.textContent = openTasks;
