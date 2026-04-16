@@ -966,6 +966,14 @@
       document.getElementById('sb-avatar').textContent = currentAdmin.initials;
       document.getElementById('sb-name').textContent = currentAdmin.name;
     }
+    // Restore last active section on refresh
+    try {
+      const lastSection = localStorage.getItem('cq_admin_section');
+      if (lastSection && lastSection !== 'overview' && document.getElementById('asec-' + lastSection)) {
+        const navEl = document.querySelector(`.a-nav-item[onclick*="'${lastSection}'"]`);
+        switchAdminSection(lastSection, navEl);
+      }
+    } catch(e) {}
   }
   // Auto-restore admin session — runs here so all data/functions are defined first
   (function() {
@@ -994,6 +1002,8 @@
     document.getElementById('a-page-title').textContent = sectionLabels[name] || name;
     if (name === 'overview') renderOverview();
     if (name === 'messages') renderMsgThreads();
+    // Persist so refresh returns to same section
+    try { localStorage.setItem('cq_admin_section', name); } catch(e) {}
   }
 
   // ── OVERVIEW ──────────────────────────────────────────────────────────
