@@ -1779,7 +1779,7 @@
         </div>
         <div class="prof-full-row">
           <div class="prof-field-label" style="margin-bottom:4px">Home Address</div>
-          ${fv(o.address)}
+          ${fv(o.address || (o.street ? [o.street, o.city, o.state, o.zip].filter(Boolean).join(', ') : null))}
         </div>
       </div>
 
@@ -1815,7 +1815,7 @@
         </div>
         <div class="prof-full-row">
           <div class="prof-field-label" style="margin-bottom:4px">Business Address</div>
-          ${fv(o.bizAddress)}
+          ${fv(o.bizAddress || (o.bizStreet ? [o.bizStreet, o.bizCity, o.bizState, o.bizZip].filter(Boolean).join(', ') : null))}
         </div>
       </div>
 
