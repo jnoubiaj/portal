@@ -930,6 +930,15 @@
 
       if (cred) {
         if (cred.password !== pass) {
+          // If they're trying temp password, reset and force change
+          if (pass === 'cqconsulting123!') {
+            cred.mustChange = true;
+            cred.password = pass;
+            try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+            _pendingSession = { clientId: cred.clientId, email };
+            showPage('page-change-password');
+            return;
+          }
           showLoginError('Incorrect password. Please try again.');
           return;
         }
@@ -943,8 +952,34 @@
         return;
       }
 
-      // No account found — show helpful message instead of silently redirecting
-      showLoginError('No account found for this email. Please contact your CapitalQuest advisor to set up portal access.');
+      // No account in this browser — if using temp password, auto-register them
+      if (pass === 'cqconsulting123!') {
+        const newClientId = 'c' + Date.now();
+        creds[email] = { clientId: newClientId, password: pass, mustChange: true };
+        try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+        // Also add to admin client list so they appear in admin panel
+        try {
+          const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+          if (!adminClients.find(c => c.email === email)) {
+            const colors = ['#22A7F0','#10b981','#f59e0b','#8b5cf6','#ef4444','#1a3a6b'];
+            adminClients.push({
+              id: newClientId, fname: email.split('@')[0], lname: '',
+              email, phone: '', status: 'new',
+              serviceType: 'Both', assignedTo: 'Sam', isActive: true,
+              fico: null, createdAt: new Date().toISOString().split('T')[0],
+              lastActivity: new Date().toISOString().split('T')[0],
+              notes: '', color: colors[adminClients.length % colors.length],
+              fundingApprovedAmount: 0, fundingApprovedDate: null, onboardingComplete: false
+            });
+            localStorage.setItem('cq_admin_clients', JSON.stringify(adminClients));
+          }
+        } catch(e) {}
+        _pendingSession = { clientId: newClientId, email };
+        showPage('page-change-password');
+        return;
+      }
+
+      showLoginError('Incorrect password. If this is your first time logging in, use the temporary password: cqconsulting123!');
     }
 
     function demoLogin() {
