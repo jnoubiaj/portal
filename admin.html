@@ -1421,6 +1421,7 @@
             ${c.status !== 'approved'    ? `<button class="a-action-btn approve" onclick="updateStatus('${id}','approved')">Approve</button>` : ''}
             ${c.status !== 'disqualified'? `<button class="a-action-btn disqual" onclick="updateStatus('${id}','disqualified')">Disqualify</button>` : ''}
             <button class="a-action-btn primary" onclick="switchDetailTab('messages')">Message</button>
+            <button class="a-action-btn" onclick="deleteClient('${id}')" style="border-color:#ef4444;color:#ef4444;background:transparent" onmouseover="this.style.background='#ef4444';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#ef4444'">Delete</button>
           </div>
         </div>
         <div class="a-tabs">
@@ -1505,6 +1506,29 @@
   function switchDetailTab(tab) {
     activeDetailTab = tab;
     if (selectedClientId) renderClientDetail(selectedClientId);
+  }
+
+  // ── DELETE CLIENT ─────────────────────────────────────────────────────
+  function deleteClient(id) {
+    const c = getClient(id);
+    if (!c) return;
+    if (!confirm(`Delete ${c.fname} ${c.lname}? This cannot be undone.`)) return;
+    clients = clients.filter(cl => cl.id !== id);
+    saveClients();
+    // Clean up per-client localStorage keys
+    try { localStorage.removeItem('cq_dash_' + id); } catch(e) {}
+    try { localStorage.removeItem('cq_onboard_data_' + id); } catch(e) {}
+    try { localStorage.removeItem('cq_onboard_step_' + id); } catch(e) {}
+    // Remove from cq_client_creds
+    try {
+      const creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}');
+      if (c.email && creds[c.email]) { delete creds[c.email]; localStorage.setItem('cq_client_creds', JSON.stringify(creds)); }
+    } catch(e) {}
+    logActivity(`Client <strong>${c.fname} ${c.lname}</strong> deleted`, '#ef4444');
+    selectedClientId = null;
+    document.getElementById('a-detail-card').innerHTML = '<div style="padding:40px;text-align:center;color:var(--gray-400);font-size:13px">Select a client to view details</div>';
+    renderClientList();
+    renderOverview();
   }
 
   // ── STATUS ────────────────────────────────────────────────────────────
