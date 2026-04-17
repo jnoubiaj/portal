@@ -2742,12 +2742,138 @@
   }
 
   // ── VALIDATION HELPERS ───────────────────────────────
+  // ── INPUT MASKING & FORMATTING ───────────────────────────────────────
+
+  // Phone: 000-000-0000
+  function maskPhone(el) {
+    el.addEventListener('input', () => {
+      let v = el.value.replace(/\D/g, '').slice(0, 10);
+      if (v.length > 6)      v = v.slice(0,3) + '-' + v.slice(3,6) + '-' + v.slice(6);
+      else if (v.length > 3) v = v.slice(0,3) + '-' + v.slice(3);
+      el.value = v;
+    });
+  }
+
+  // SSN: ###-##-####
+  function maskSSN(el) {
+    el.addEventListener('input', () => {
+      let v = el.value.replace(/\D/g, '').slice(0, 9);
+      if (v.length > 5)      v = v.slice(0,3) + '-' + v.slice(3,5) + '-' + v.slice(5);
+      else if (v.length > 3) v = v.slice(0,3) + '-' + v.slice(3);
+      el.value = v;
+    });
+  }
+
+  // EIN: ##-#######
+  function maskEIN(el) {
+    el.addEventListener('input', () => {
+      let v = el.value.replace(/\D/g, '').slice(0, 9);
+      if (v.length > 2) v = v.slice(0,2) + '-' + v.slice(2);
+      el.value = v;
+    });
+  }
+
+  // Income / monthly sales: comma-formatted number
+  function maskCurrency(el) {
+    el.addEventListener('input', () => {
+      const raw = el.value.replace(/[^0-9]/g, '');
+      el.value = raw ? Number(raw).toLocaleString('en-US') : '';
+      el.dataset.raw = raw;
+    });
+  }
+
+  // Ownership %: numeric + auto-append %
+  function maskPercent(el) {
+    el.addEventListener('input', () => {
+      let v = el.value.replace(/[^0-9]/g, '').slice(0, 3);
+      if (+v > 100) v = '100';
+      el.value = v ? v + '%' : '';
+      // keep cursor before %
+      if (el.value.endsWith('%')) {
+        const pos = el.value.length - 1;
+        el.setSelectionRange(pos, pos);
+      }
+      el.dataset.raw = v;
+    });
+    el.addEventListener('keydown', (e) => {
+      // if cursor is at end (before %) and backspace, remove last digit not %
+      if (e.key === 'Backspace' && el.selectionStart === el.value.length) {
+        e.preventDefault();
+        const digits = el.value.replace(/[^0-9]/g, '');
+        const trimmed = digits.slice(0, -1);
+        el.value = trimmed ? trimmed + '%' : '';
+        el.dataset.raw = trimmed;
+      }
+    });
+  }
+
+  // Init all masks once DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    maskPhone(document.getElementById('p_phone'));
+    maskPhone(document.getElementById('b_phone'));
+    maskSSN(document.getElementById('p_ssn'));
+    maskEIN(document.getElementById('b_ein'));
+    maskCurrency(document.getElementById('p_income'));
+    maskCurrency(document.getElementById('b_monthlySales'));
+    maskPercent(document.getElementById('b_ownership'));
+  });
+
+  // ── FIELD VALIDATION ─────────────────────────────────────────────────
+
   function validateField(el) {
+    if (!el) return true;
     const val = el.value.trim();
     if (!val) {
       el.classList.add('field-error');
       return false;
     }
+
+    // DOB: must be 18+
+    if (el.id === 'p_dob') {
+      const dob = new Date(val);
+      const cutoff = new Date();
+      cutoff.setFullYear(cutoff.getFullYear() - 18);
+      if (dob > cutoff) {
+        el.classList.add('field-error');
+        let hint = el.closest('.form-group').querySelector('.age-error');
+        if (!hint) {
+          hint = document.createElement('span');
+          hint.className = 'field-hint age-error';
+          hint.style.color = 'var(--danger, #ef4444)';
+          el.closest('.form-group').appendChild(hint);
+        }
+        hint.textContent = 'You must be at least 18 years old.';
+        return false;
+      } else {
+        const hint = el.closest('.form-group').querySelector('.age-error');
+        if (hint) hint.remove();
+      }
+    }
+
+    // SSN: must be ###-##-#### (11 chars)
+    if (el.id === 'p_ssn') {
+      if (!/^\d{3}-\d{2}-\d{4}$/.test(val)) {
+        el.classList.add('field-error');
+        return false;
+      }
+    }
+
+    // Phone: must be ###-###-#### (12 chars)
+    if (el.id === 'p_phone' || el.id === 'b_phone') {
+      if (!/^\d{3}-\d{3}-\d{4}$/.test(val)) {
+        el.classList.add('field-error');
+        return false;
+      }
+    }
+
+    // EIN: must be ##-####### (10 chars)
+    if (el.id === 'b_ein') {
+      if (!/^\d{2}-\d{7}$/.test(val)) {
+        el.classList.add('field-error');
+        return false;
+      }
+    }
+
     el.classList.remove('field-error');
     return true;
   }
@@ -2841,7 +2967,14 @@
     banner.classList.remove('visible');
 
     // ── SAVE ALL ONBOARDING DATA TO LOCALSTORAGE ──────────────
-    const getVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const getVal = id => {
+      const el = document.getElementById(id);
+      if (!el) return '';
+      // For masked fields, return raw numeric value stored in dataset
+      if ((id === 'p_income' || id === 'b_monthlySales') && el.dataset.raw !== undefined) return el.dataset.raw;
+      if (id === 'b_ownership' && el.dataset.raw !== undefined) return el.dataset.raw;
+      return el.value.trim();
+    };
     const onboardData = {
       submittedAt: new Date().toISOString(),
       // Personal
