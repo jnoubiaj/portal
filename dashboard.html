@@ -4596,6 +4596,63 @@
 
   // Init on load
   docInit();
+
+  // ── AUTO-LOGOUT AFTER 3 MIN INACTIVITY ───────────────────────────────
+  (function() {
+    const TIMEOUT_MS   = 3 * 60 * 1000; // 3 minutes
+    const WARNING_MS   = 30 * 1000;     // warn 30s before logout
+    let logoutTimer, warnTimer;
+
+    // Inject warning banner
+    const banner = document.createElement('div');
+    banner.id = 'inactivity-banner';
+    banner.style.cssText = `
+      display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+      background:#0A1628;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;
+      padding:12px 20px;border-radius:12px;z-index:9999;
+      box-shadow:0 8px 32px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);
+      display:none;align-items:center;gap:12px;white-space:nowrap;
+    `;
+    banner.innerHTML = `
+      <span>⏱ You'll be logged out in <strong id="inactivity-countdown">30</strong>s due to inactivity</span>
+      <button onclick="window._resetInactivity()" style="background:#22A7F0;border:none;color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:6px;cursor:pointer;">Stay Logged In</button>
+    `;
+    document.body.appendChild(banner);
+
+    function showWarning() {
+      banner.style.display = 'flex';
+      let secs = 30;
+      document.getElementById('inactivity-countdown').textContent = secs;
+      const tick = setInterval(() => {
+        secs--;
+        const el = document.getElementById('inactivity-countdown');
+        if (el) el.textContent = secs;
+        if (secs <= 0) clearInterval(tick);
+      }, 1000);
+    }
+
+    function doLogout() {
+      try { sessionStorage.removeItem('cq_client_session'); } catch(e) {}
+      try { localStorage.removeItem('cq_active_client_session'); } catch(e) {}
+      window.location.replace('login.html');
+    }
+
+    function reset() {
+      banner.style.display = 'none';
+      clearTimeout(logoutTimer);
+      clearTimeout(warnTimer);
+      warnTimer  = setTimeout(showWarning, TIMEOUT_MS - WARNING_MS);
+      logoutTimer = setTimeout(doLogout,  TIMEOUT_MS);
+    }
+
+    window._resetInactivity = reset;
+
+    ['touchstart','click','scroll','keydown','mousemove'].forEach(ev =>
+      document.addEventListener(ev, reset, { passive: true })
+    );
+
+    reset(); // start timer on load
+  })();
 </script>
 </body>
 </html>
