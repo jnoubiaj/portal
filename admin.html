@@ -2224,14 +2224,15 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Client First Name</div>
               <input class="a-add-req-input" style="width:100%" id="db-name-${clientId}" value="${d.clientName}" oninput="debouncedPublish('${clientId}')" /></div>
-            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Total Funding Secured ($)</div>
-              <input class="a-add-req-input" style="width:100%" type="number" id="db-secured-${clientId}" value="${d.fundingSecured}" oninput="debouncedPublish('${clientId}')" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Total Funding Secured ($) <span style="font-weight:400;color:var(--gray-400)">(synced with Funding Approved)</span></div>
+              <input type="hidden" id="db-secured-${clientId}" value="${d.fundingSecured}" />
+              <div style="padding:8px 12px;background:var(--gray-50);border:1.5px solid var(--gray-100);border-radius:8px;font-size:13px;color:var(--gray-500)" id="db-secured-preview-${clientId}">${d.fundingApproved ? '$'+Number(d.fundingApproved).toLocaleString() : '—'}</div></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Credit Score</div>
               <input class="a-add-req-input" style="width:100%" type="number" id="db-fico-${clientId}" value="${d.creditScore}" oninput="previewScoreChange('${clientId}');debouncedPublish('${clientId}')" /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Score Change <span style="font-weight:400;color:var(--gray-400)">(auto-calculated)</span></div>
               <input class="a-add-req-input" style="width:100%;background:var(--gray-50);color:var(--gray-500)" id="db-ficochange-${clientId}" value="${d.creditChange}" readonly /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Approved ($)</div>
-              <input class="a-add-req-input" style="width:100%" type="number" id="db-approved-${clientId}" value="${d.fundingApproved}" oninput="debouncedPublish('${clientId}')" /></div>
+              <input class="a-add-req-input" style="width:100%" type="number" id="db-approved-${clientId}" value="${d.fundingApproved}" oninput="syncFundingPreview('${clientId}');debouncedPublish('${clientId}')" /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Goal ($)</div>
               <input class="a-add-req-input" style="width:100%" type="number" id="db-goal-${clientId}" value="${d.fundingGoal}" oninput="debouncedPublish('${clientId}')" /></div>
             <div style="grid-column:1/-1">
@@ -2410,6 +2411,12 @@
     renderClientDetail(clientId);
   }
 
+  function syncFundingPreview(clientId) {
+    const val = +document.getElementById('db-approved-'+clientId)?.value || 0;
+    const preview = document.getElementById('db-secured-preview-'+clientId);
+    if (preview) preview.textContent = val ? '$' + Number(val).toLocaleString() : '—';
+  }
+
   function previewScoreChange(clientId) {
     const d = getDashData(clientId);
     const oldScore = d.creditScore || 0;
@@ -2452,6 +2459,7 @@
       d.creditScore = newScore;
     }
     d.fundingApproved= +g('db-approved-'+clientId)?.value || d.fundingApproved;
+    d.fundingSecured = d.fundingApproved; // keep in sync
     d.fundingGoal   = +g('db-goal-'+clientId)?.value || d.fundingGoal;
     // applyingBanks are saved immediately on add/remove — just sync derived fields
     if (d.applyingBanks && d.applyingBanks.length) {
