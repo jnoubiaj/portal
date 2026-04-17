@@ -2529,6 +2529,11 @@
   </div><!-- /main-wrap -->
 </div><!-- /portal-wrap -->
 
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
 <script>
   // ── SESSION GUARD ─────────────────────────────────────
   (function() {
@@ -3133,7 +3138,9 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  let _fsUnsubscribe = null;
+
+  document.addEventListener('DOMContentLoaded', async () => {
     loadDashboardData();
     renderApplyingCard();
     renderFundingSequence();
@@ -3151,6 +3158,37 @@
         switchSection(lastSection, navEl);
       }
     } catch(e) {}
+
+    // ── FIREBASE REAL-TIME SYNC ──────────────────────────────────────────
+    const session = getClientSession();
+    if (session && session.clientId) {
+      // Fetch latest from Firestore once (initial load)
+      try {
+        const fsData = await fsGetDash(session.clientId);
+        if (fsData) {
+          try {
+            localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
+            if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
+          } catch(e) {}
+          loadDashboardData(); // re-render with Firestore data
+          renderApplyingCard();
+          renderFundingSequence();
+        }
+      } catch(e) {}
+
+      // Subscribe to real-time updates (admin changes → client sees instantly)
+      try {
+        _fsUnsubscribe = fsListenDash(session.clientId, (fsData) => {
+          try {
+            localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
+            if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
+          } catch(e) {}
+          loadDashboardData();
+          renderApplyingCard();
+          renderFundingSequence();
+        });
+      } catch(e) {}
+    }
   });
 
   const sectionTitles = {

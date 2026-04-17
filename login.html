@@ -856,6 +856,11 @@
     </div>
   </div>
 
+  <!-- Firebase compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
   <script>
     let _pendingSession = null;
 
@@ -944,7 +949,7 @@
       document.getElementById('login-error').style.display = 'none';
     }
 
-    function doLogin() {
+    async function doLogin() {
       hideLoginError();
       if (!document.getElementById('tosAgree').checked) {
         showLoginError('Please check the box to agree to the Privacy Policy & Terms of Service.');
@@ -957,39 +962,74 @@
         return;
       }
 
-      // STEP 1: Email must exist in admin-created client list (adminCreated flag required)
-      let adminClients = [];
-      try { adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]'); } catch(e) {}
-      const adminClient = adminClients.find(c => c.adminCreated === true && c.email && c.email.toLowerCase() === email);
-      if (!adminClient) {
-        showLoginError('No account found. Please contact your consultant.');
-        return;
-      }
+      // Disable button while checking
+      const btn = document.querySelector('.btn-signin');
+      if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
 
-      // STEP 2: Must have credentials set up by admin
-      let creds = {};
-      try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
-      const cred = creds[email];
-      if (!cred) {
-        showLoginError('Your account is not yet activated. Please contact your consultant.');
-        return;
-      }
+      try {
+        // PRIMARY: Check Firestore credential (works on all devices)
+        let fsCred = null;
+        let fsClient = null;
+        try {
+          fsCred = await fsGetCred(email);
+          const fsClients = await fsGetClients();
+          if (fsClients) fsClient = fsClients.find(c => c.adminCreated === true && c.email && c.email.toLowerCase() === email);
+        } catch(e) {}
 
-      // STEP 3: Password must match
-      if (cred.password !== pass) {
-        showLoginError('Incorrect password. Please try again.');
-        return;
-      }
+        // FALLBACK: localStorage (same device as admin)
+        let adminClients = [];
+        try { adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]'); } catch(e) {}
+        const localClient = adminClients.find(c => c.adminCreated === true && c.email && c.email.toLowerCase() === email);
 
-      // STEP 4: Force password change if flagged
-      if (cred.mustChange) {
-        _pendingSession = { clientId: adminClient.id, email };
-        showPage('page-change-password');
-        return;
-      }
+        let cred = fsCred;
+        let adminClient = fsClient || localClient;
 
-      startClientSession(adminClient.id, email);
-      redirectAfterLogin(adminClient.id);
+        // If not in Firestore, try localStorage credentials
+        if (!cred) {
+          let creds = {};
+          try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+          cred = creds[email] || null;
+        }
+
+        // STEP 1: Must be an admin-created account
+        if (!adminClient) {
+          showLoginError('No account found. Please contact your consultant.');
+          return;
+        }
+
+        // STEP 2: Must have credentials set up by admin
+        if (!cred) {
+          showLoginError('Your account is not yet activated. Please contact your consultant.');
+          return;
+        }
+
+        // STEP 3: Password must match
+        if (cred.password !== pass) {
+          showLoginError('Incorrect password. Please try again.');
+          return;
+        }
+
+        // Seed localStorage from Firestore for faster future loads
+        try {
+          const merged = [...adminClients.filter(c => c.email.toLowerCase() !== email), adminClient];
+          localStorage.setItem('cq_admin_clients', JSON.stringify(merged));
+          const creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}');
+          creds[email] = cred;
+          localStorage.setItem('cq_client_creds', JSON.stringify(creds));
+        } catch(e) {}
+
+        // STEP 4: Force password change if flagged
+        if (cred.mustChange) {
+          _pendingSession = { clientId: adminClient.id, email };
+          showPage('page-change-password');
+          return;
+        }
+
+        startClientSession(adminClient.id, email);
+        redirectAfterLogin(adminClient.id);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+      }
     }
 
     function demoLogin() {
@@ -1064,11 +1104,12 @@
       // Save new password and clear mustChange flag
       let creds = {};
       try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
-      if (creds[email]) {
-        creds[email].password   = pw1;
-        creds[email].mustChange = false;
-        try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
-      }
+      if (!creds[email]) creds[email] = { clientId: _pendingSession.clientId };
+      creds[email].password   = pw1;
+      creds[email].mustChange = false;
+      try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+      // Sync new password to Firestore
+      fsSetCred(email, { clientId: _pendingSession.clientId, password: pw1, mustChange: false }).catch(() => {});
 
       startClientSession(_pendingSession.clientId, email);
       redirectAfterLogin(_pendingSession.clientId);

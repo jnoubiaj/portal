@@ -831,6 +831,11 @@
   </div>
 </div>
 
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
 <script>
   // ── AUTH ──────────────────────────────────────────────────────────────
   const ADMIN_CREDS = [
@@ -895,9 +900,22 @@
       clients = (parsed && parsed.length > 0) ? parsed : [...DEFAULT_CLIENTS];
       if (!parsed || parsed.length === 0) saveClients();
     } catch(e) { clients = [...DEFAULT_CLIENTS]; saveClients(); }
+    // Background sync from Firestore — updates UI once fetched
+    fsGetClients().then(fsClients => {
+      if (fsClients && fsClients.length > 0) {
+        clients = fsClients;
+        try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+        renderClientList();
+      } else if (clients.length > 0) {
+        // Seed Firestore from localStorage on first run
+        clients.forEach(c => fsSetCred && fsSaveClient(c));
+      }
+    }).catch(() => {});
   }
   function saveClients() {
     try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+    // Sync each client to Firestore
+    clients.forEach(c => fsSaveClient(c).catch(() => {}));
   }
   function getClient(id) { return clients.find(c => c.id === id); }
 
@@ -1593,6 +1611,9 @@
       const creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}');
       if (c.email && creds[c.email]) { delete creds[c.email]; localStorage.setItem('cq_client_creds', JSON.stringify(creds)); }
     } catch(e) {}
+    // Delete from Firestore
+    fsDeleteClient(id).catch(() => {});
+    if (c.email) fsDeleteCred(c.email).catch(() => {});
     logActivity(`Client <strong>${c.fname} ${c.lname}</strong> deleted`, '#ef4444');
     selectedClientId = null;
     document.getElementById('a-detail-card').innerHTML = '<div style="padding:40px;text-align:center;color:var(--gray-400);font-size:13px">Select a client to view details</div>';
@@ -1733,6 +1754,8 @@
     try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
     creds[c.email] = { clientId, password: TEMP_PASSWORD, mustChange: true };
     try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+    // Sync to Firestore so client can login from any device
+    fsSetCred(c.email, { clientId, password: TEMP_PASSWORD, mustChange: true }).catch(() => {});
     renderClientDetail(clientId);
     showToast('Portal account created. Reset password sent.');
   }
@@ -1747,6 +1770,8 @@
     creds[c.email].password = TEMP_PASSWORD;
     creds[c.email].mustChange = true;
     try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+    // Sync to Firestore
+    fsSetCred(c.email, { clientId, password: TEMP_PASSWORD, mustChange: true }).catch(() => {});
     renderClientDetail(clientId);
     showToast('Password reset to temporary password.');
   }
@@ -2273,10 +2298,11 @@
     try {
       localStorage.setItem('cq_dash_'+clientId, JSON.stringify(data));
       localStorage.setItem('cq_dash_data', JSON.stringify(data));
-      // Also write by email so client portal always finds it regardless of clientId
       const c = getClient(clientId);
       if (c && c.email) localStorage.setItem('cq_dash_email_'+c.email.toLowerCase(), JSON.stringify(data));
     } catch(e) {}
+    // Sync to Firestore for cross-device access
+    fsSetDash(clientId, data).catch(() => {});
   }
 
   function renderDashboardEditor(clientId) {

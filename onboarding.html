@@ -1627,6 +1627,11 @@
 
 </div><!-- /page-wrap -->
 
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
 <script>
   const screenMap = {
     welcome:  { screen: 'screen-welcome',  ind: 'ind-welcome',  step: 1 },
@@ -2908,6 +2913,8 @@
     if (session && session.clientId) {
       // Save per-client onboarding data so admin can read it per-client
       try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(onboardData)); } catch(e) {}
+      // Sync onboarding data to Firestore
+      fsSetOnboarding(session.clientId, onboardData).catch(() => {});
 
       // Auto-update admin client record with real name, phone, onboarding status
       try {
@@ -2921,6 +2928,8 @@
           c.onboardingComplete = true;
           c.lastActivity = new Date().toISOString().split('T')[0];
           localStorage.setItem('cq_admin_clients', JSON.stringify(adminClients));
+          // Sync updated client to Firestore
+          fsSaveClient(c).catch(() => {});
         }
       } catch(e) {}
     }
