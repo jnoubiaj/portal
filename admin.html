@@ -2173,25 +2173,30 @@
     const d = getDashData(clientId);
     const cs = d.currentStage || 1;
     const stageCount = d.stageNames.length;
+    const dotR = 13; // dot radius px — used to inset track so dots align
+    const fillPct = stageCount > 1 ? ((cs - 1) / (stageCount - 1)) * 100 : 0;
     const stagesHTML = `
-      <div style="padding:4px 0 16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <span style="font-size:13px;font-weight:700;color:var(--navy)">Stage ${cs} of ${stageCount}: ${d.stageNames[cs-1]||''}</span>
-          <span style="font-size:11px;font-weight:600;color:var(--blue);background:var(--blue-light);padding:3px 10px;border-radius:999px">${Math.round((cs/stageCount)*100)}% Complete</span>
+      <div style="padding:4px 0 8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span id="stage-label-${clientId}" style="font-size:13px;font-weight:700;color:var(--navy)">Stage ${cs} of ${stageCount}: ${d.stageNames[cs-1]||''}</span>
+          <span id="stage-pct-${clientId}" style="font-size:11px;font-weight:600;color:var(--blue);background:var(--blue-light);padding:3px 10px;border-radius:999px">${Math.round(fillPct)}% Complete</span>
         </div>
-        <input type="range" id="stage-slider-${clientId}" min="1" max="${stageCount}" value="${cs}" step="1"
-          oninput="previewStageSlider('${clientId}')"
-          style="width:100%;height:6px;accent-color:var(--blue);cursor:pointer;margin-bottom:14px" />
-        <div style="display:flex;justify-content:space-between;margin-bottom:14px">
-          ${d.stageNames.map((name,i) => `
-            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;cursor:pointer" onclick="document.getElementById('stage-slider-${clientId}').value=${i+1};previewStageSlider('${clientId}')">
-              <div style="width:22px;height:22px;border-radius:50%;background:${i+1 < cs ? 'var(--success)' : i+1 === cs ? 'var(--blue)' : 'var(--gray-200)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;transition:background 0.2s">${i+1 < cs ? '✓' : i+1}</div>
-              <span style="font-size:9px;color:${i+1<=cs?'var(--navy)':'var(--gray-400)'};text-align:center;line-height:1.2;max-width:60px">${name}</span>
-            </div>`).join('')}
+        <!-- Custom aligned track -->
+        <div style="position:relative;padding:0 ${dotR}px;margin-bottom:8px">
+          <!-- Track background -->
+          <div style="position:absolute;top:50%;left:${dotR}px;right:${dotR}px;height:4px;background:var(--gray-200);border-radius:2px;transform:translateY(-50%)">
+            <div id="stage-fill-${clientId}" style="height:100%;background:var(--blue);border-radius:2px;width:${fillPct}%;transition:width 0.15s"></div>
+          </div>
+          <!-- Dots row — centers align with track edges -->
+          <div style="display:flex;justify-content:space-between;position:relative">
+            ${d.stageNames.map((name,i) => `
+              <div onclick="applyStageSlider('${clientId}',${i+1})" style="display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;user-select:none" title="${name}">
+                <div id="stage-dot-${clientId}-${i}" style="width:${dotR*2}px;height:${dotR*2}px;border-radius:50%;background:${i+1<cs?'var(--success)':i+1===cs?'var(--blue)':'white'};border:2px solid ${i+1<=cs?(i+1<cs?'var(--success)':'var(--blue)'):'var(--gray-200)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${i+1<=cs?'white':'var(--gray-400)'};box-shadow:0 0 0 3px white;transition:all 0.15s;position:relative;z-index:1">${i+1<cs?'✓':i+1}</div>
+                <span id="stage-name-lbl-${clientId}-${i}" style="font-size:9px;color:${i+1<=cs?'var(--navy)':'var(--gray-400)'};text-align:center;line-height:1.3;width:${dotR*2+14}px;word-break:break-word">${name}</span>
+              </div>`).join('')}
+          </div>
         </div>
-        <button onclick="applyStageSlider('${clientId}')" style="height:36px;padding:0 20px;background:var(--navy);border:none;border-radius:8px;font-size:12px;font-weight:700;color:white;cursor:pointer">
-          Set Stage
-        </button>
+        <div id="stage-saved-toast-${clientId}" style="font-size:12px;font-weight:600;color:var(--success);height:18px;opacity:0;transition:opacity 0.3s;margin-top:6px"></div>
       </div>`;
 
     const tasksHTML = d.tasks.map((t, i) => `
@@ -2319,36 +2324,38 @@
     renderClientDetail(clientId);
   }
 
-  function previewStageSlider(clientId) {
-    const slider = document.getElementById('stage-slider-'+clientId);
-    if (!slider) return;
+  function applyStageSlider(clientId, stage) {
     const d = getDashData(clientId);
-    const cs = +slider.value;
     const stageCount = d.stageNames.length;
-    const container = document.getElementById('dash-stages-'+clientId);
-    if (!container) return;
-    // Update label
-    const label = container.querySelector('span[style*="font-size:13px"]');
-    if (label) label.textContent = 'Stage ' + cs + ' of ' + stageCount + ': ' + (d.stageNames[cs-1]||'');
-    // Update pct badge
-    const badge = container.querySelector('span[style*="border-radius:999px"]');
-    if (badge) badge.textContent = Math.round((cs/stageCount)*100) + '% Complete';
-    // Update step dots
-    container.querySelectorAll('div[style*="flex-direction:column"]').forEach((dot, i) => {
-      const circle = dot.querySelector('div[style*="border-radius:50%"]');
-      const lbl = dot.querySelector('span');
-      if (!circle) return;
-      if (i+1 < cs) { circle.style.background = 'var(--success)'; circle.textContent = '✓'; }
-      else if (i+1 === cs) { circle.style.background = 'var(--blue)'; circle.textContent = i+1; }
-      else { circle.style.background = 'var(--gray-200)'; circle.textContent = i+1; }
-      if (lbl) lbl.style.color = i+1 <= cs ? 'var(--navy)' : 'var(--gray-400)';
-    });
-  }
-
-  function applyStageSlider(clientId) {
-    const slider = document.getElementById('stage-slider-'+clientId);
-    if (!slider) return;
-    setCurrentStage(clientId, +slider.value);
+    const cs = stage;
+    const fillPct = stageCount > 1 ? ((cs-1)/(stageCount-1))*100 : 0;
+    // Update fill bar
+    const fill = document.getElementById('stage-fill-'+clientId);
+    if (fill) fill.style.width = fillPct + '%';
+    // Update label + pct
+    const lbl = document.getElementById('stage-label-'+clientId);
+    if (lbl) lbl.textContent = 'Stage '+cs+' of '+stageCount+': '+(d.stageNames[cs-1]||'');
+    const pct = document.getElementById('stage-pct-'+clientId);
+    if (pct) pct.textContent = Math.round(fillPct)+'% Complete';
+    // Update each dot
+    for (let i = 0; i < stageCount; i++) {
+      const dot  = document.getElementById('stage-dot-'+clientId+'-'+i);
+      const name = document.getElementById('stage-name-lbl-'+clientId+'-'+i);
+      if (dot) {
+        if (i+1 < cs)      { dot.style.background='var(--success)'; dot.style.borderColor='var(--success)'; dot.style.color='white'; dot.textContent='✓'; }
+        else if (i+1 === cs){ dot.style.background='var(--blue)';    dot.style.borderColor='var(--blue)';    dot.style.color='white'; dot.textContent=cs; }
+        else                { dot.style.background='white';          dot.style.borderColor='var(--gray-200)';dot.style.color='var(--gray-400)'; dot.textContent=i+1; }
+      }
+      if (name) name.style.color = i+1 <= cs ? 'var(--navy)' : 'var(--gray-400)';
+    }
+    // Auto-save + publish immediately
+    d.currentStage = cs;
+    saveDashData(clientId, d);
+    const c = getClient(clientId);
+    logActivity(`Progress stage updated to <strong>${d.stageNames[cs-1]}</strong> for ${c?.fname||''}`, '#22A7F0');
+    // Toast
+    const toast = document.getElementById('stage-saved-toast-'+clientId);
+    if (toast) { toast.textContent = '✓ Stage updated & published'; toast.style.opacity='1'; setTimeout(()=>toast.style.opacity='0',2500); }
   }
 
   function addDashTask(clientId) {
