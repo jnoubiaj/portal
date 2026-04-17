@@ -2205,7 +2205,7 @@
           <input style="width:100%;height:30px;padding:0 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:13px;color:var(--navy);outline:none;margin-bottom:5px" value="${t.text}" id="task-text-${clientId}-${t.id}" placeholder="Task name" />
           <input style="width:100%;height:28px;padding:0 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:12px;color:var(--gray-500);outline:none" value="${t.desc||''}" id="task-desc-${clientId}-${t.id}" placeholder="Description (optional)" />
         </div>
-        <select id="task-status-${clientId}-${t.id}" style="height:30px;padding:0 8px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:12px;font-weight:600;color:var(--navy);outline:none;background:white;flex-shrink:0">
+        <select id="task-status-${clientId}-${t.id}" onchange="debouncedPublish('${clientId}')" style="height:30px;padding:0 8px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:12px;font-weight:600;color:var(--navy);outline:none;background:white;flex-shrink:0">
           <option value="todo" ${t.status==='todo'?'selected':''}>To-Do</option>
           <option value="progress" ${t.status==='progress'?'selected':''}>In Progress</option>
           <option value="done" ${t.status==='done'?'selected':''}>Done</option>
@@ -2287,8 +2287,9 @@
               </div>
             </div>
           </div>
-          <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Banner Subtitle</div>
-            <input class="a-add-req-input" style="width:100%" id="db-subtitle-${clientId}" value="${d.subtitle}" oninput="debouncedPublish('${clientId}')" /></div>
+          <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Banner Subtitle <span style="font-weight:400;color:var(--gray-400)">(auto-generated from tasks)</span></div>
+            <div id="db-subtitle-preview-${clientId}" style="padding:8px 12px;background:var(--gray-50);border:1.5px solid var(--gray-100);border-radius:8px;font-size:13px;color:var(--gray-500)">${d.subtitle || 'Your funding journey is in progress.'}</div>
+            <input type="hidden" id="db-subtitle-${clientId}" value="${d.subtitle}" /></div>
         </div>
 
         <!-- Progress Stages -->
@@ -2455,6 +2456,15 @@
       desc:   g('task-desc-'+clientId+'-'+t.id)?.value.trim() || '',
       status: g('task-status-'+clientId+'-'+t.id)?.value || t.status
     }));
+    // Auto-generate subtitle from pending task count
+    const pendingCount = d.tasks.filter(t => t.status !== 'done').length;
+    d.subtitle = pendingCount > 0
+      ? 'Your funding journey is in progress. ' + pendingCount + ' task' + (pendingCount !== 1 ? 's' : '') + ' need attention.'
+      : 'Your funding journey is in progress.';
+    const subPreview = g('db-subtitle-preview-'+clientId);
+    if (subPreview) subPreview.textContent = d.subtitle;
+    const subHidden = g('db-subtitle-'+clientId);
+    if (subHidden) subHidden.value = d.subtitle;
     saveDashData(clientId, d);
     // Update client FICO in the client list too
     const c = getClient(clientId);
