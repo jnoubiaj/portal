@@ -2931,17 +2931,37 @@
 
     const base = Object.assign({}, DEFAULT_DASH, saved || {});
 
-    // Auto-fill clientName from onboarding data if admin hasn't set it yet
-    if (!base.clientName && clientId) {
+    // Auto-fill clientName / lastName from onboarding data or admin record
+    let lastName = '';
+    if (clientId) {
       try {
         const od = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null')
                 || JSON.parse(localStorage.getItem('cq_onboard_data') || 'null');
-        if (od && od.firstName) base.clientName = od.firstName;
+        if (od) {
+          if (!base.clientName && od.firstName) base.clientName = od.firstName;
+          if (od.lastName) lastName = od.lastName;
+        }
       } catch(e) {}
-      // Final fallback: use email prefix
+      if (!lastName) {
+        try {
+          const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+          const ac = adminClients.find(cl => cl.id === clientId);
+          if (ac && ac.lname) lastName = ac.lname;
+          if (!base.clientName && ac && ac.fname) base.clientName = ac.fname;
+        } catch(e) {}
+      }
       if (!base.clientName && session && session.email) {
         base.clientName = session.email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
       }
+    }
+    base._lastName = lastName;
+
+    // Auto-advance to stage 2 (Onboarding Complete) once client has submitted forms
+    if ((!saved || !saved.currentStage) && base.currentStage <= 1 && clientId) {
+      try {
+        const od = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null');
+        if (od && od.submittedAt) base.currentStage = 2;
+      } catch(e) {}
     }
 
     return base;
@@ -2981,22 +3001,35 @@
 
   function loadDashboardData() {
     const d = getDashData();
+
+    // Build initials: first letter of firstName + first letter of lastName
+    const fn = d.clientName || '';
+    const ln = d._lastName || '';
+    const initials = (fn ? fn[0].toUpperCase() : '') + (ln ? ln[0].toUpperCase() : (fn.length > 1 ? fn[1].toUpperCase() : ''));
+    const displayInitials = initials || 'CQ';
+
     // Welcome banner
-    const wbg = document.getElementById('wb-greeting'); if(wbg) wbg.textContent = 'Welcome back, ' + d.clientName + '!';
-    const wbs = document.getElementById('wb-subtitle'); if(wbs) wbs.textContent = d.subtitle;
+    const wbg = document.getElementById('wb-greeting'); if(wbg) wbg.textContent = 'Welcome back, ' + (fn || 'there') + '!';
+    const wbs = document.getElementById('wb-subtitle'); if(wbs) wbs.textContent = d.subtitle || '';
+    // Total Funding Secured starts at $0
     const wbf = document.getElementById('wb-funding'); if(wbf) wbf.textContent = d.fundingSecured ? '$' + Number(d.fundingSecured).toLocaleString() : '$0';
-    // Stats
-    const sf = document.getElementById('s-fico'); if(sf) sf.textContent = d.creditScore || '—';
-    const sc = document.getElementById('s-fico-change'); if(sc) sc.textContent = d.creditChange || '';
-    const sa = document.getElementById('s-approved'); if(sa) sa.textContent = d.fundingApproved ? '$' + Math.round(d.fundingApproved/1000) + 'K' : '$0';
-    const sg = document.getElementById('s-goal'); if(sg) sg.textContent = d.fundingGoal ? 'of $' + Math.round(d.fundingGoal/1000) + 'K goal' : 'Goal not set';
-    const st = document.getElementById('s-tasks');
+
+    // Stats — show '—' when not yet set by admin
+    const sf = document.getElementById('s-fico'); if(sf) sf.textContent = d.creditScore ? d.creditScore : '—';
+    const sc = document.getElementById('s-fico-change');
+    if(sc) { sc.textContent = d.creditChange || ''; sc.style.display = d.creditChange ? '' : 'none'; }
+    const scSub = sc ? sc.closest('.stat-sub') : null;
+    if(scSub) scSub.style.visibility = d.creditChange ? '' : 'hidden';
+    const sa = document.getElementById('s-approved'); if(sa) sa.textContent = d.fundingApproved ? '$' + Math.round(d.fundingApproved/1000) + 'K' : '—';
+    const sg = document.getElementById('s-goal'); if(sg) sg.textContent = d.fundingGoal ? 'of $' + Math.round(d.fundingGoal/1000) + 'K goal' : '';
     const openTasks = (d.tasks||[]).filter(t => t.status !== 'done').length;
-    if(st) st.textContent = openTasks;
-    // Sidebar client name
-    const sn = document.querySelector('.client-info .name'); if(sn) sn.textContent = d.clientName;
-    const av = document.querySelector('.client-avatar'); if(av) av.textContent = d.clientName ? d.clientName.slice(0,2).toUpperCase() : 'JD';
-    const hav = document.querySelector('.header-avatar'); if(hav) hav.textContent = d.clientName ? d.clientName.slice(0,2).toUpperCase() : 'JD';
+    const st = document.getElementById('s-tasks'); if(st) st.textContent = (d.tasks && d.tasks.length) ? openTasks : '—';
+
+    // Sidebar client name + avatar initials
+    const sn = document.querySelector('.client-info .name'); if(sn) sn.textContent = fn;
+    const av = document.querySelector('.client-avatar'); if(av) av.textContent = displayInitials;
+    const hav = document.querySelector('.header-avatar'); if(hav) hav.textContent = displayInitials;
+
     // Progress
     const stages = d.stageNames || DEFAULT_DASH.stageNames;
     const cs = d.currentStage || 1;
@@ -3009,19 +3042,27 @@
     ['progress-pct-mini','progress-pct-full'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=pct+'% Complete'; });
     const psm = document.getElementById('progress-stage-mini'); if(psm) psm.textContent = 'Currently: ' + (stages[cs-1]||'');
     const pmiles = document.getElementById('progress-miles-full'); if(pmiles) pmiles.textContent = cs + ' of ' + stages.length + ' milestones completed';
+
     // Tasks
     renderTaskList('task-list-mini', d.tasks||[], true);
     renderTaskList('task-list-full', d.tasks||[], false);
     const tm = document.getElementById('tasks-meta');
     if(tm) tm.textContent = 'Admin-managed · ' + openTasks + ' open task' + (openTasks!==1?'s':'');
-    // Nav badge for tasks
     const nb = document.querySelector('[onclick*="tasks"] .nav-badge');
     if(nb) { nb.textContent = openTasks; nb.style.display = openTasks > 0 ? '' : 'none'; }
-    // Applying card — update from dash data if set
+
+    // Applying card — show '—' when not set, otherwise show admin-set bank
     if(d.applyingBank) {
-      APPLYING_TO = [{ name: d.applyingBank, count: d.applyingCount || '' }];
+      APPLYING_TO.splice(0, APPLYING_TO.length, { name: d.applyingBank, count: d.applyingCount || '' });
       applyIdx = 0;
       renderApplyingCard();
+    } else {
+      APPLYING_TO.splice(0, APPLYING_TO.length);
+      const nameEl = document.getElementById('applyingName'); if(nameEl) nameEl.textContent = '—';
+      const countEl = document.getElementById('applyingCount'); if(countEl) countEl.textContent = '';
+      const slot = document.getElementById('applyingSlot');
+      if(slot) { const badge = slot.querySelector('.bk-badge'); if(badge) badge.style.display = 'none'; }
+      const dots = document.getElementById('applyingDots'); if(dots) dots.innerHTML = '';
     }
   }
 
