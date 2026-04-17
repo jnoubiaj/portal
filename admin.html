@@ -2206,9 +2206,9 @@
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Total Funding Secured ($)</div>
               <input class="a-add-req-input" style="width:100%" type="number" id="db-secured-${clientId}" value="${d.fundingSecured}" /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Credit Score</div>
-              <input class="a-add-req-input" style="width:100%" type="number" id="db-fico-${clientId}" value="${d.creditScore}" /></div>
-            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Score Change (e.g. +18 pts)</div>
-              <input class="a-add-req-input" style="width:100%" id="db-ficochange-${clientId}" value="${d.creditChange}" /></div>
+              <input class="a-add-req-input" style="width:100%" type="number" id="db-fico-${clientId}" value="${d.creditScore}" oninput="previewScoreChange('${clientId}')" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Score Change <span style="font-weight:400;color:var(--gray-400)">(auto-calculated)</span></div>
+              <input class="a-add-req-input" style="width:100%;background:var(--gray-50);color:var(--gray-500)" id="db-ficochange-${clientId}" value="${d.creditChange}" readonly /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Approved ($)</div>
               <input class="a-add-req-input" style="width:100%" type="number" id="db-approved-${clientId}" value="${d.fundingApproved}" /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Goal ($)</div>
@@ -2273,6 +2273,20 @@
     renderClientDetail(clientId);
   }
 
+  function previewScoreChange(clientId) {
+    const d = getDashData(clientId);
+    const oldScore = d.creditScore || 0;
+    const newScore = +document.getElementById('db-fico-'+clientId)?.value || 0;
+    const changeEl = document.getElementById('db-ficochange-'+clientId);
+    if (!changeEl) return;
+    if (newScore && oldScore && newScore !== oldScore) {
+      const diff = newScore - oldScore;
+      changeEl.value = (diff > 0 ? '+' : '') + diff + ' pts';
+    } else if (!oldScore && newScore) {
+      changeEl.value = '';
+    }
+  }
+
   function publishDashboard(clientId) {
     const d = getDashData(clientId);
     // Collect all form values
@@ -2280,9 +2294,20 @@
     d.clientName    = g('db-name-'+clientId)?.value.trim() || d.clientName;
     d.subtitle      = g('db-subtitle-'+clientId)?.value.trim() || d.subtitle;
     d.fundingSecured= +g('db-secured-'+clientId)?.value || d.fundingSecured;
-    d.creditScore   = +g('db-fico-'+clientId)?.value || d.creditScore;
-    d.creditChange  = g('db-ficochange-'+clientId)?.value.trim() || d.creditChange;
-    if (d.creditChange) d.creditChangeDate = new Date().toISOString();
+
+    // Auto-calculate score change from old vs new score
+    const oldScore = d.creditScore || 0;
+    const newScore = +g('db-fico-'+clientId)?.value || 0;
+    if (newScore) {
+      if (oldScore && newScore !== oldScore) {
+        const diff = newScore - oldScore;
+        d.creditChange = (diff > 0 ? '+' : '') + diff + ' pts';
+        d.creditChangeDate = new Date().toISOString();
+      } else if (!oldScore) {
+        d.creditChange = '';
+      }
+      d.creditScore = newScore;
+    }
     d.fundingApproved= +g('db-approved-'+clientId)?.value || d.fundingApproved;
     d.fundingGoal   = +g('db-goal-'+clientId)?.value || d.fundingGoal;
     d.applyingBank  = g('db-bank-'+clientId)?.value.trim() || d.applyingBank;
