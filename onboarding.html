@@ -2643,9 +2643,15 @@
     const _resignMode = new URLSearchParams(window.location.search).get('resign') === '1';
     if (_resignMode) {
       goTo('contract');
-      // Hide back button — client should return to dashboard, not walk through onboarding
+      // Hide progress header, step badge, and back button — just show the clean contract
+      const hdr = document.querySelector('.onboard-header');
+      if (hdr) hdr.style.display = 'none';
+      const badge = document.querySelector('#screen-contract .card-badge');
+      if (badge) badge.style.display = 'none';
       const backBtn = document.getElementById('contract-back-btn');
       if (backBtn) backBtn.style.display = 'none';
+      // Remove top padding that accounts for the header
+      document.body.style.paddingTop = '0';
     } else {
       // Restore step from last session so refresh doesn't go back to welcome
       try {
