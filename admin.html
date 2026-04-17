@@ -1832,16 +1832,25 @@
     const type   = saved.type   || 'full';
     const amount = saved.amount || '';
     const pct    = saved.pct    || '8';
+    const isSigned = !!client.contractSigned;
     const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
     return `
-      <div style="background:var(--white);border:1.5px solid rgba(34,167,240,0.2);border-radius:14px;overflow:hidden;margin-top:12px;">
-        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;background:#f0f9ff;border-bottom:1px solid rgba(34,167,240,0.12);">
-          <div style="width:30px;height:30px;border-radius:8px;background:rgba(34,167,240,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <div style="background:var(--white);border:1.5px solid ${isSigned ? 'rgba(16,185,129,0.3)' : 'rgba(34,167,240,0.2)'};border-radius:14px;overflow:hidden;margin-top:12px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;background:${isSigned ? '#f0fdf4' : '#f0f9ff'};border-bottom:1px solid ${isSigned ? 'rgba(16,185,129,0.15)' : 'rgba(34,167,240,0.12)'};">
+          <div style="width:30px;height:30px;border-radius:8px;background:${isSigned ? 'rgba(16,185,129,0.12)' : 'rgba(34,167,240,0.12)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="${isSigned ? '#10b981' : '#22A7F0'}" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           </div>
           <div style="font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy);">Contract Setup</div>
-          <span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(34,167,240,0.1);color:#22A7F0;">${typeLabels[type]}</span>
+          ${isSigned
+            ? `<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#15803d;">✓ Signed — ${typeLabels[type]}</span>`
+            : `<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(34,167,240,0.1);color:#22A7F0;">${typeLabels[type]}</span>`
+          }
         </div>
+        ${isSigned ? `
+        <div style="margin:12px 18px 0;padding:10px 14px;background:#fefce8;border:1px solid #fde047;border-radius:8px;font-size:12px;color:#854d0e;display:flex;align-items:flex-start;gap:8px;">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          <span>Client has already signed this contract. If you save changes, a new contract will appear in their <strong>Latest Documents</strong> for them to sign. The original signed copy will remain in their Documents.</span>
+        </div>` : ''}
         <div style="padding:16px 18px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;">
           <div style="flex:1;min-width:160px;">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gray-500);margin-bottom:6px;">Contract Type</div>
@@ -1864,11 +1873,11 @@
           </div>
           <div style="flex-shrink:0;">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:transparent;margin-bottom:6px;">.</div>
-            <button onclick="saveContractSetup('${clientId}')" style="height:36px;padding:0 16px;background:var(--blue);border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer;">Save</button>
+            <button onclick="saveContractSetup('${clientId}')" style="height:36px;padding:0 16px;background:${isSigned ? '#f59e0b' : 'var(--blue)'};border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer;">${isSigned ? 'Re-issue' : 'Save'}</button>
           </div>
         </div>
         <div style="padding:0 18px 14px;font-size:12px;color:var(--gray-500);">
-          💡 This sets the <strong style="color:var(--blue)">blue payment clause</strong> the client sees in their contract. Save before copying the login link.
+          💡 This sets the <strong style="color:var(--blue)">blue payment clause</strong> the client sees in their contract.${isSigned ? '' : ' Save before copying the login link.'}
         </div>
       </div>`;
   }
@@ -1887,19 +1896,33 @@
     const type   = document.getElementById('cs-type-'+clientId)?.value   || 'full';
     const amount = document.getElementById('cs-amount-'+clientId)?.value.replace(/[^0-9.]/g,'') || '';
     const pct    = document.getElementById('cs-pct-'+clientId)?.value.replace(/[^0-9.]/g,'')    || '8';
+    const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
+
+    // If client already signed, confirm before re-issuing
+    if (c.contractSigned) {
+      const ok = confirm('This client has already signed their contract.\n\nRe-issuing will add the new "' + (typeLabels[type] || type) + '" contract to their Latest Documents for signing. Their original signed copy will remain visible.\n\nContinue?');
+      if (!ok) return;
+    }
+
     c.contractSetup = { type, amount, pct };
     saveClients();
     // Write to localStorage keys onboarding reads from
     localStorage.setItem('cq_contract_'+clientId, type);
     localStorage.setItem('cq_amount_'+clientId,   amount);
     localStorage.setItem('cq_pct_'+clientId,      pct);
+
     // Set pendingContract on dashboard so client sees "Sign" button in Latest Documents
     const dashData = getDashData(clientId);
     const updatedDash = Object.assign({}, dashData, {
       pendingContract: { type, amount, pct, issuedAt: new Date().toISOString() }
     });
     saveDashData(clientId, updatedDash);
-    showToast('Contract setup saved — client will see a Sign button in their dashboard');
+
+    if (c.contractSigned) {
+      showToast('New contract re-issued — client will see a Sign button in their Latest Documents');
+    } else {
+      showToast('Contract setup saved — copy the login link to send to client');
+    }
     renderClientDetail(clientId);
   }
 

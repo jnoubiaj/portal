@@ -1835,20 +1835,21 @@
 
         // Add signed contract to client's dashboard Latest Documents + clear pendingContract
         const typeLabel = {full:'Full Payment',split:'Split Payment (2x)',backend:'Backend / Success Fee'}[_contractKey] || _contractKey || 'Consulting Agreement';
-        fsGetDash(sess.clientId).then(dashData => {
-          const d = dashData || {};
-          const adminDocs = (d.adminDocs || []).concat([{
-            id: 'contract_' + Date.now(),
-            name: typeLabel + ' — Signed Agreement',
-            date: signedAt,
-            type: 'contract'
-          }]);
-          const updated = Object.assign({}, d, { adminDocs, pendingContract: null });
-          fsSetDash(sess.clientId, updated);
-          try {
-            localStorage.setItem('cq_dash_' + sess.clientId, JSON.stringify(updated));
-          } catch(e2) {}
-        }).catch(() => {});
+        try {
+          // Read from localStorage first (immediate, same device) then sync to Firestore
+          const localDash = JSON.parse(localStorage.getItem('cq_dash_' + sess.clientId) || '{}');
+          const newDoc = { id: 'contract_' + Date.now(), name: typeLabel + ' — Signed Agreement', date: signedAt, type: 'contract' };
+          const adminDocs = (localDash.adminDocs || []).concat([newDoc]);
+          const updatedDash = Object.assign({}, localDash, { adminDocs, pendingContract: null });
+          localStorage.setItem('cq_dash_' + sess.clientId, JSON.stringify(updatedDash));
+          // Also update email-keyed copy if available
+          if (sess.email) localStorage.setItem('cq_dash_email_' + sess.email.toLowerCase(), JSON.stringify(updatedDash));
+          // Sync to Firestore (merge with server copy to avoid clobbering other fields)
+          fsGetDash(sess.clientId).then(fsDash => {
+            const merged = Object.assign({}, fsDash || {}, updatedDash);
+            fsSetDash(sess.clientId, merged);
+          }).catch(() => { fsSetDash(sess.clientId, updatedDash); });
+        } catch(e2) {}
       }
     } catch(e) {}
 
