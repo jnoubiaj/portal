@@ -552,8 +552,10 @@
       padding: 3px 8px;
       border-radius: 999px;
     }
-    .badge-up { background: var(--success-bg); color: var(--success); }
+    .badge-up   { background: var(--success-bg); color: var(--success); }
+    .badge-down { background: #fee2e2; color: #dc2626; }
     .badge-pending { background: var(--warning-bg); color: var(--warning); }
+    .fico-grade { display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; margin-top:5px; }
 
     /* ── APPLYING TO CARD ────────────────────────────── */
     .applying-card { display: flex; flex-direction: column; gap: 0; }
@@ -2014,8 +2016,9 @@
         <div class="stats-row">
           <div class="stat-card">
             <div class="stat-label">Credit Score (Avg)</div>
-            <div class="stat-value" id="s-fico">712</div>
-            <div class="stat-sub"><span class="stat-badge badge-up" id="s-fico-change">+18 pts</span> since last month</div>
+            <div class="stat-value" id="s-fico">—</div>
+            <span class="fico-grade" id="s-fico-grade" style="display:none"></span>
+            <div class="stat-sub" id="s-fico-sub" style="visibility:hidden"><span class="stat-badge badge-up" id="s-fico-change"></span> since last month</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Funding Approved</div>
@@ -3016,10 +3019,35 @@
 
     // Stats — show '—' when not yet set by admin
     const sf = document.getElementById('s-fico'); if(sf) sf.textContent = d.creditScore ? d.creditScore : '—';
+
+    // Credit score grade badge
+    const sg2 = document.getElementById('s-fico-grade');
+    if (sg2) {
+      if (d.creditScore) {
+        const score = +d.creditScore;
+        let label, bg, color;
+        if (score >= 800)      { label='Exceptional'; bg='#d1fae5'; color='#065f46'; }
+        else if (score >= 740) { label='Very Good';   bg='#d1fae5'; color='#065f46'; }
+        else if (score >= 670) { label='Good';        bg='#dbeafe'; color='#1e40af'; }
+        else if (score >= 580) { label='Fair';        bg='#fef3c7'; color='#92400e'; }
+        else                   { label='Poor';        bg='#fee2e2'; color='#991b1b'; }
+        sg2.textContent = label; sg2.style.background = bg; sg2.style.color = color; sg2.style.display = 'inline-block';
+      } else { sg2.style.display = 'none'; }
+    }
+
+    // Score change — green for +, red for -
     const sc = document.getElementById('s-fico-change');
-    if(sc) { sc.textContent = d.creditChange || ''; sc.style.display = d.creditChange ? '' : 'none'; }
-    const scSub = sc ? sc.closest('.stat-sub') : null;
-    if(scSub) scSub.style.visibility = d.creditChange ? '' : 'hidden';
+    const scSub = document.getElementById('s-fico-sub');
+    if (sc && scSub) {
+      if (d.creditChange) {
+        sc.textContent = d.creditChange;
+        const isDown = d.creditChange.trim().startsWith('-');
+        sc.className = 'stat-badge ' + (isDown ? 'badge-down' : 'badge-up');
+        scSub.style.visibility = '';
+      } else {
+        scSub.style.visibility = 'hidden';
+      }
+    }
     const sa = document.getElementById('s-approved'); if(sa) sa.textContent = d.fundingApproved ? '$' + Math.round(d.fundingApproved/1000) + 'K' : '—';
     const sg = document.getElementById('s-goal'); if(sg) sg.textContent = d.fundingGoal ? 'of $' + Math.round(d.fundingGoal/1000) + 'K goal' : '';
     const openTasks = (d.tasks||[]).filter(t => t.status !== 'done').length;
