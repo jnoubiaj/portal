@@ -2120,26 +2120,32 @@
 
   // ── DASHBOARD EDITOR ──────────────────────────────────────────────────
   const DEFAULT_DASH = {
-    clientName:'James', subtitle:'Your funding journey is in progress. 3 tasks need attention.',
-    fundingSecured:45000, creditScore:712, creditChange:'+18 pts',
-    fundingApproved:45000, fundingGoal:150000,
-    applyingBank:'Amex Blue Cash Business', applyingCount:'2 of 2 applications',
-    currentStage:4,
+    clientName:'', subtitle:'',
+    fundingSecured:'', creditScore:'', creditChange:'',
+    fundingApproved:'', fundingGoal:'',
+    applyingBank:'', applyingCount:'',
+    currentStage:1,
     stageNames:['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
-    tasks:[
-      {id:'t1',text:'Upload Government-Issued ID',desc:"Driver's license or passport",status:'done'},
-      {id:'t2',text:'Sign Consulting Agreement',desc:'',status:'done'},
-      {id:'t3',text:'Disable Fraud Alerts on all 3 bureaus',desc:'',status:'done'},
-      {id:'t4',text:'Pay down Chase card to 10% utilization',desc:'Current balance: $1,200 / Limit: $2,000. Pay $680 to reach 10%',status:'progress'},
-      {id:'t5',text:'Pay down Bank of America card to 8%',desc:'Current: $520 / Limit: $1,500. Pay $360 to reach 8%',status:'progress'},
-      {id:'t6',text:'Dispute Equifax inquiry — Capital One Jan 2025',desc:'File dispute via Equifax.com. Reference: Bureau Method',status:'todo'},
-      {id:'t7',text:'Open dedicated business checking account',desc:'Required before funding applications are submitted',status:'todo'}
-    ]
+    tasks:[]
   };
 
   function getDashData(clientId) {
-    try { return Object.assign({}, DEFAULT_DASH, JSON.parse(localStorage.getItem('cq_dash_'+clientId) || '{}')); }
-    catch(e) { return Object.assign({}, DEFAULT_DASH); }
+    try {
+      const saved = JSON.parse(localStorage.getItem('cq_dash_'+clientId) || '{}');
+      const d = Object.assign({}, DEFAULT_DASH, saved);
+      // Auto-populate client name from admin record if not manually set
+      if (!d.clientName) {
+        const c = getClient(clientId);
+        if (c && c.fname) d.clientName = c.fname;
+      }
+      return d;
+    }
+    catch(e) {
+      const d = Object.assign({}, DEFAULT_DASH);
+      const c = getClient(clientId);
+      if (c && c.fname) d.clientName = c.fname;
+      return d;
+    }
   }
   function saveDashData(clientId, data) {
     try {
