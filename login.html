@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -1120,6 +1120,23 @@
       document.getElementById('loginPassword').addEventListener('keydown', e => {
         if (e.key === 'Enter') doLogin();
       });
+    });
+
+    // Fix iOS swipe-back: if client already has a valid session, redirect them away from login
+    window.addEventListener('pageshow', (e) => {
+      try {
+        const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
+                  || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+        if (sess && sess.clientId) {
+          const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+          const client = adminClients.find(c => c.id === sess.clientId);
+          if (client && client.onboardingComplete) {
+            window.location.replace('dashboard.html');
+          } else if (client) {
+            window.location.replace('onboarding.html');
+          }
+        }
+      } catch(e) {}
     });
   </script>
 </body>

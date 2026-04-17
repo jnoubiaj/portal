@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Onboarding — CapitalQuest Client Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -1643,6 +1643,15 @@
   const stepOrder = ['welcome','contract','personal','business','done'];
 
   let currentStep = 'welcome';
+
+  // Fix iOS swipe-back: redirect to login if session is gone
+  window.addEventListener('pageshow', () => {
+    try {
+      const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
+                || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+      if (!sess || !sess.clientId) window.location.replace('login.html');
+    } catch(e) {}
+  });
 
   function _getOnboardSession() {
     try {

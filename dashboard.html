@@ -5,7 +5,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Dashboard — CapitalQuest Client Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -2543,6 +2543,21 @@
       if (!sess || !sess.clientId) window.location.replace('login.html');
     } catch(e) { window.location.replace('login.html'); }
   })();
+
+  // Fix iOS swipe-back: re-validate session when page is restored from bfcache
+  window.addEventListener('pageshow', (e) => {
+    try {
+      const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
+                || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+      if (!sess || !sess.clientId) { window.location.replace('login.html'); return; }
+      // If page was restored from cache (persisted), reload data to show latest state
+      if (e.persisted) {
+        loadDashboardData();
+        renderApplyingCard();
+        renderFundingSequence();
+      }
+    } catch(e) {}
+  });
 
   // ── PORTAL CONFIG ─────────────────────────────────────
   // Change currentStage to update the entire dashboard at once
