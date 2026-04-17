@@ -2358,12 +2358,21 @@
     if (toast) { toast.textContent = '✓ Stage updated & published'; toast.style.opacity='1'; setTimeout(()=>toast.style.opacity='0',2500); }
   }
 
+  function recalcSubtitle(d) {
+    const pending = d.tasks.filter(t => t.status !== 'done').length;
+    d.subtitle = pending > 0
+      ? 'Your funding journey is in progress. ' + pending + ' task' + (pending !== 1 ? 's' : '') + ' need attention.'
+      : 'Your funding journey is in progress.';
+    return d;
+  }
+
   function addDashTask(clientId) {
     const inp = document.getElementById('new-task-text-'+clientId);
     const text = inp?.value.trim();
     if (!text) return;
     const d = getDashData(clientId);
     d.tasks.push({ id: 't'+Date.now(), text, desc: '', status: 'todo' });
+    recalcSubtitle(d);
     saveDashData(clientId, d);
     inp.value = '';
     renderClientDetail(clientId);
@@ -2372,6 +2381,7 @@
   function removeDashTask(clientId, taskId) {
     const d = getDashData(clientId);
     d.tasks = d.tasks.filter(t => t.id !== taskId);
+    recalcSubtitle(d);
     saveDashData(clientId, d);
     renderClientDetail(clientId);
   }
@@ -2457,10 +2467,7 @@
       status: g('task-status-'+clientId+'-'+t.id)?.value || t.status
     }));
     // Auto-generate subtitle from pending task count
-    const pendingCount = d.tasks.filter(t => t.status !== 'done').length;
-    d.subtitle = pendingCount > 0
-      ? 'Your funding journey is in progress. ' + pendingCount + ' task' + (pendingCount !== 1 ? 's' : '') + ' need attention.'
-      : 'Your funding journey is in progress.';
+    recalcSubtitle(d);
     const subPreview = g('db-subtitle-preview-'+clientId);
     if (subPreview) subPreview.textContent = d.subtitle;
     const subHidden = g('db-subtitle-'+clientId);
