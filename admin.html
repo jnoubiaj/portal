@@ -788,6 +788,34 @@
       </div>
     </div>
 
+    <!-- Contract Setup -->
+    <div style="border:1.5px solid rgba(34,167,240,0.25);border-radius:12px;overflow:hidden;margin-bottom:20px;">
+      <div style="background:#f0f9ff;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--blue);display:flex;align-items:center;gap:8px;">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Contract Setup
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;">
+        <div class="lf-group" style="margin:0">
+          <label>Contract Type</label>
+          <select id="nc-contract-type" onchange="toggleNcPct()" style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:14px;color:var(--navy);outline:none;background:white;">
+            <option value="full">Full Payment</option>
+            <option value="split">Split Payment (2x)</option>
+            <option value="backend">Backend / Success Fee</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="lf-group" style="margin:0">
+            <label>Fee Amount ($)</label>
+            <input type="text" id="nc-contract-amount" placeholder="e.g. 3500" style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:14px;color:var(--navy);outline:none;" />
+          </div>
+          <div class="lf-group" style="margin:0" id="nc-pct-wrap">
+            <label>Success Fee %</label>
+            <input type="text" id="nc-contract-pct" placeholder="e.g. 10" value="8" style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:14px;color:var(--navy);outline:none;" />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Temp password info box -->
     <div style="background:#f0f9ff;border:1.5px solid rgba(34,167,240,0.2);border-radius:12px;padding:14px 16px;margin-bottom:24px;display:flex;align-items:center;gap:14px;">
       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2" style="flex-shrink:0"><path d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
@@ -2312,6 +2340,12 @@
   }
   const TEMP_PASSWORD = 'cqconsulting123!';
 
+  function toggleNcPct() {
+    const type = document.getElementById('nc-contract-type')?.value;
+    const wrap = document.getElementById('nc-pct-wrap');
+    if (wrap) wrap.style.opacity = type === 'backend' ? '1' : '0.4';
+  }
+
   function closeAddClientModal() {
     document.getElementById('add-client-modal').style.display = 'none';
   }
@@ -2340,6 +2374,10 @@
     const clientId = 'c'+Date.now();
     // Use email prefix as display name until onboarding fills it in
     const displayName = email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+    const contractType   = document.getElementById('nc-contract-type')?.value  || 'full';
+    const contractAmount = document.getElementById('nc-contract-amount')?.value.replace(/[^0-9.]/g,'') || '';
+    const contractPct    = document.getElementById('nc-contract-pct')?.value.replace(/[^0-9.]/g,'')    || '8';
+
     const newClient = {
       id: clientId,
       fname: displayName, lname: '',
@@ -2356,8 +2394,13 @@
       color,
       fundingApprovedAmount: 0,
       fundingApprovedDate: null,
-      onboardingComplete: false
+      onboardingComplete: false,
+      contractSetup: { type: contractType, amount: contractAmount, pct: contractPct }
     };
+    // Save per-client contract keys so onboarding reads them
+    localStorage.setItem('cq_contract_'+clientId, contractType);
+    if (contractAmount) localStorage.setItem('cq_amount_'+clientId, contractAmount);
+    localStorage.setItem('cq_pct_'+clientId, contractPct);
     clients.push(newClient);
     saveClients();
 
@@ -2371,9 +2414,16 @@
     closeAddClientModal();
     document.getElementById('nc-email').value = '';
     document.getElementById('nc-phone').value = '';
+    document.getElementById('nc-contract-amount').value = '';
+    document.getElementById('nc-contract-pct').value = '8';
+    document.getElementById('nc-contract-type').value = 'full';
+    toggleNcPct();
 
     // Show confirmation modal with SMS preview
-    const portalUrl = window.location.origin + '/login.html';
+    const contractParams = contractAmount
+      ? `?contract=${contractType}&amount=${contractAmount}${contractType==='backend'?'&pct='+contractPct:''}`
+      : `?contract=${contractType}${contractType==='backend'?'&pct='+contractPct:''}`;
+    const portalUrl = window.location.origin + '/login.html' + contractParams;
     const smsText = `Hi! Your CapitalQuest client portal account has been created.\n\nPortal: ${portalUrl}\nEmail: ${email}\nTemp Password: ${TEMP_PASSWORD}\n\nYou will be asked to create a new password when you first log in.\n\n— CapitalQuest Consulting`;
     document.getElementById('nc-sms-preview').textContent = smsText;
     document.getElementById('client-created-modal').style.display = 'flex';
