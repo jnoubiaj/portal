@@ -1088,7 +1088,7 @@
         </div>
 
         <div class="btn-row">
-          <button class="btn-back" onclick="goTo('welcome')">← Back</button>
+          <button class="btn-back" onclick="goTo('welcome')" id="contract-back-btn">← Back</button>
           <button class="btn-next" onclick="signContract()">
             Sign &amp; Continue
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>
@@ -1853,7 +1853,13 @@
       }
     } catch(e) {}
 
-    goTo('personal');
+    // If re-signing from dashboard, go back to dashboard instead of continuing onboarding
+    const resignParam = new URLSearchParams(window.location.search).get('resign') === '1';
+    if (resignParam) {
+      window.location.replace('dashboard.html');
+    } else {
+      goTo('personal');
+    }
   }
 
   // ── LIVE BANK + CU LOADER (FDIC + NCUA APIs) ─────────
@@ -2633,14 +2639,23 @@
       }
     } catch(e) {}
 
-    // Restore step from last session so refresh doesn't go back to welcome
-    try {
-      const sess = _getOnboardSession();
-      if (sess && sess.clientId) {
-        const saved = localStorage.getItem('cq_onboard_step_' + sess.clientId);
-        if (saved && screenMap[saved]) goTo(saved);
-      }
-    } catch(e) {}
+    // If coming from dashboard to re-sign a contract, skip straight to contract step
+    const _resignMode = new URLSearchParams(window.location.search).get('resign') === '1';
+    if (_resignMode) {
+      goTo('contract');
+      // Hide back button — client should return to dashboard, not walk through onboarding
+      const backBtn = document.getElementById('contract-back-btn');
+      if (backBtn) backBtn.style.display = 'none';
+    } else {
+      // Restore step from last session so refresh doesn't go back to welcome
+      try {
+        const sess = _getOnboardSession();
+        if (sess && sess.clientId) {
+          const saved = localStorage.getItem('cq_onboard_step_' + sess.clientId);
+          if (saved && screenMap[saved]) goTo(saved);
+        }
+      } catch(e) {}
+    }
 
     document.getElementById('bankOtherInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); addOtherBank(); }
