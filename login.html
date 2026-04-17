@@ -1049,23 +1049,32 @@
       } catch(e) {}
     }
 
-    function redirectAfterLogin(clientId) {
-      // If client already completed onboarding, go straight to dashboard
+    async function redirectAfterLogin(clientId) {
       try {
+        // Check Firestore first (most up-to-date, works across devices)
+        const fsClients = await fsGetClients().catch(() => null);
+        if (fsClients) {
+          const fsClient = fsClients.find(c => c.id === clientId);
+          if (fsClient && fsClient.onboardingComplete) {
+            window.location.replace('dashboard.html');
+            return;
+          }
+        }
+        // Fallback: localStorage
         const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
         const client = adminClients.find(c => c.id === clientId);
         if (client && client.onboardingComplete) {
-          window.location.href = 'dashboard.html';
+          window.location.replace('dashboard.html');
           return;
         }
-        // Also check per-client onboarding data key as fallback
+        // Fallback: check if onboarding data exists
         const onboardData = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null');
         if (onboardData && onboardData.businessName) {
-          window.location.href = 'dashboard.html';
+          window.location.replace('dashboard.html');
           return;
         }
       } catch(e) {}
-      window.location.href = 'onboarding.html';
+      window.location.replace('onboarding.html');
     }
 
     function checkPwReqs(val) {
