@@ -1786,7 +1786,77 @@
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- CONTRACT SETUP -->
+      ${renderContractSetupCard(clientId, client)}`;
+  }
+
+  function renderContractSetupCard(clientId, client) {
+    const saved = client.contractSetup || {};
+    const type   = saved.type   || 'full';
+    const amount = saved.amount || '';
+    const pct    = saved.pct    || '8';
+    const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
+    return `
+      <div style="background:var(--white);border:1.5px solid rgba(34,167,240,0.2);border-radius:14px;overflow:hidden;margin-top:12px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;background:#f0f9ff;border-bottom:1px solid rgba(34,167,240,0.12);">
+          <div style="width:30px;height:30px;border-radius:8px;background:rgba(34,167,240,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          </div>
+          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy);">Contract Setup</div>
+          <span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(34,167,240,0.1);color:#22A7F0;">${typeLabels[type]}</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;">
+          <div style="flex:1;min-width:160px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gray-500);margin-bottom:6px;">Contract Type</div>
+            <select id="cs-type-${clientId}" onchange="updateContractSetup('${clientId}')" style="width:100%;height:36px;border:1.5px solid var(--gray-200);border-radius:8px;padding:0 10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;">
+              <option value="full"    ${type==='full'   ?'selected':''}>Full Payment</option>
+              <option value="split"   ${type==='split'  ?'selected':''}>Split Payment (2x)</option>
+              <option value="backend" ${type==='backend'?'selected':''}>Backend / Success Fee</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:130px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gray-500);margin-bottom:6px;">Fee Amount ($)</div>
+            <input id="cs-amount-${clientId}" type="text" value="${amount}" placeholder="e.g. 3500" oninput="updateContractSetup('${clientId}')"
+              style="width:100%;height:36px;border:1.5px solid var(--gray-200);border-radius:8px;padding:0 10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;" />
+          </div>
+          <div id="cs-pct-wrap-${clientId}" style="flex:1;min-width:110px;${type!=='backend'?'display:none':''}">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gray-500);margin-bottom:6px;">Success Fee %</div>
+            <input id="cs-pct-${clientId}" type="text" value="${pct}" placeholder="e.g. 10" oninput="updateContractSetup('${clientId}')"
+              style="width:100%;height:36px;border:1.5px solid var(--gray-200);border-radius:8px;padding:0 10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;" />
+          </div>
+          <div style="flex-shrink:0;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:transparent;margin-bottom:6px;">.</div>
+            <button onclick="saveContractSetup('${clientId}')" style="height:36px;padding:0 16px;background:var(--blue);border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer;">Save</button>
+          </div>
+        </div>
+        <div style="padding:0 18px 14px;font-size:12px;color:var(--gray-500);">
+          💡 This sets the <strong style="color:var(--blue)">blue payment clause</strong> the client sees in their contract. Save before copying the login link.
+        </div>
       </div>`;
+  }
+
+  function updateContractSetup(clientId) {
+    const type = document.getElementById('cs-type-'+clientId)?.value;
+    const pctWrap = document.getElementById('cs-pct-wrap-'+clientId);
+    if (pctWrap) pctWrap.style.display = type === 'backend' ? '' : 'none';
+  }
+
+  function saveContractSetup(clientId) {
+    const c = getClient(clientId);
+    if (!c) return;
+    const type   = document.getElementById('cs-type-'+clientId)?.value   || 'full';
+    const amount = document.getElementById('cs-amount-'+clientId)?.value.replace(/[^0-9.]/g,'') || '';
+    const pct    = document.getElementById('cs-pct-'+clientId)?.value.replace(/[^0-9.]/g,'')    || '8';
+    c.contractSetup = { type, amount, pct };
+    saveClients();
+    // Write to localStorage keys onboarding reads from
+    localStorage.setItem('cq_contract_'+clientId, type);
+    localStorage.setItem('cq_amount_'+clientId,   amount);
+    localStorage.setItem('cq_pct_'+clientId,      pct);
+    showToast('Contract setup saved — copy the login link to send to client');
+    renderClientDetail(clientId);
   }
 
   function createPortalAccess(clientId) {
@@ -1847,7 +1917,11 @@
     }
 
     const base = window.location.origin + window.location.pathname.replace('admin.html','');
-    const link = `${base}login.html?access=${clientId}`;
+    const cs = c.contractSetup || {};
+    const contractParams = cs.type
+      ? `&contract=${cs.type}${cs.amount?'&amount='+cs.amount:''}${cs.type==='backend'&&cs.pct?'&pct='+cs.pct:''}`
+      : '';
+    const link = `${base}login.html?access=${clientId}${contractParams}`;
     navigator.clipboard.writeText(link).then(() => {
       const btn = document.getElementById('magic-btn-' + clientId);
       if (btn) {

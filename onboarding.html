@@ -1698,16 +1698,25 @@
   }
 
   // ── CONTRACT SETUP ───────────────────────────────────
-  // Admin assigns contract via URL params:
-  //   ?contract=full|split|backend  — contract type
-  //   &amount=3500                  — fee amount (no $ sign needed)
-  //   &pct=10                       — backend success % (backend only)
-  // When admin panel is built these will be set automatically per client.
+  // Contract type/amount come from URL params (embedded in login link by admin)
+  // or from per-client localStorage keys set by admin's "Contract Setup" panel.
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const contractKey = urlParams.get('contract') || localStorage.getItem('cq_contract') || 'full';
-  const feeAmount   = urlParams.get('amount')   || localStorage.getItem('cq_amount')   || '____________';
-  const feePct      = urlParams.get('pct')      || localStorage.getItem('cq_pct')      || '8';
+  const urlParams  = new URLSearchParams(window.location.search);
+  const _sess      = (() => { try { return JSON.parse(sessionStorage.getItem('cq_client_session')||'null') || JSON.parse(localStorage.getItem('cq_active_client_session')||'null'); } catch(e){return null;} })();
+  const _cid       = _sess ? _sess.clientId : null;
+
+  const contractKey = urlParams.get('contract')
+    || (_cid && localStorage.getItem('cq_contract_'+_cid))
+    || localStorage.getItem('cq_contract')
+    || 'full';
+  const feeAmount   = urlParams.get('amount')
+    || (_cid && localStorage.getItem('cq_amount_'+_cid))
+    || localStorage.getItem('cq_amount')
+    || '____________';
+  const feePct      = urlParams.get('pct')
+    || (_cid && localStorage.getItem('cq_pct_'+_cid))
+    || localStorage.getItem('cq_pct')
+    || '8';
 
   localStorage.setItem('cq_contract', contractKey);
   localStorage.setItem('cq_amount',   feeAmount);
