@@ -2171,12 +2171,28 @@
 
   function renderDashboardEditor(clientId) {
     const d = getDashData(clientId);
-    const stagesHTML = d.stageNames.map((name, i) => `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="width:20px;height:20px;border-radius:50%;background:${i+1 < d.currentStage ? 'var(--success)' : i+1 === d.currentStage ? 'var(--blue)' : 'var(--gray-200)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0">${i+1 < d.currentStage ? '✓' : i+1}</span>
-        <input style="flex:1;height:32px;padding:0 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none" value="${name}" id="stage-name-${clientId}-${i}" />
-        <button onclick="setCurrentStage('${clientId}',${i+1})" style="height:32px;padding:0 10px;border-radius:7px;border:1.5px solid ${i+1===d.currentStage?'var(--blue)':'var(--gray-200)'};background:${i+1===d.currentStage?'var(--blue-light)':'none'};font-size:11px;font-weight:700;color:${i+1===d.currentStage?'var(--blue)':'var(--gray-400)'};cursor:pointer;white-space:nowrap">${i+1===d.currentStage?'ACTIVE':'Set Active'}</button>
-      </div>`).join('');
+    const cs = d.currentStage || 1;
+    const stageCount = d.stageNames.length;
+    const stagesHTML = `
+      <div style="padding:4px 0 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:13px;font-weight:700;color:var(--navy)">Stage ${cs} of ${stageCount}: ${d.stageNames[cs-1]||''}</span>
+          <span style="font-size:11px;font-weight:600;color:var(--blue);background:var(--blue-light);padding:3px 10px;border-radius:999px">${Math.round((cs/stageCount)*100)}% Complete</span>
+        </div>
+        <input type="range" id="stage-slider-${clientId}" min="1" max="${stageCount}" value="${cs}" step="1"
+          oninput="previewStageSlider('${clientId}')"
+          style="width:100%;height:6px;accent-color:var(--blue);cursor:pointer;margin-bottom:14px" />
+        <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+          ${d.stageNames.map((name,i) => `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;cursor:pointer" onclick="document.getElementById('stage-slider-${clientId}').value=${i+1};previewStageSlider('${clientId}')">
+              <div style="width:22px;height:22px;border-radius:50%;background:${i+1 < cs ? 'var(--success)' : i+1 === cs ? 'var(--blue)' : 'var(--gray-200)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;transition:background 0.2s">${i+1 < cs ? '✓' : i+1}</div>
+              <span style="font-size:9px;color:${i+1<=cs?'var(--navy)':'var(--gray-400)'};text-align:center;line-height:1.2;max-width:60px">${name}</span>
+            </div>`).join('')}
+        </div>
+        <button onclick="applyStageSlider('${clientId}')" style="height:36px;padding:0 20px;background:var(--navy);border:none;border-radius:8px;font-size:12px;font-weight:700;color:white;cursor:pointer">
+          Set Stage
+        </button>
+      </div>`;
 
     const tasksHTML = d.tasks.map((t, i) => `
       <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;margin-bottom:8px" id="dash-task-row-${clientId}-${t.id}">
@@ -2272,7 +2288,7 @@
 
         <!-- Progress Stages -->
         <div>
-          <div class="a-doc-section-title" style="margin-bottom:14px">Funding Progress Stages</div>
+          <div class="a-doc-section-title" style="margin-bottom:10px">Funding Progress Stage</div>
           <div id="dash-stages-${clientId}">${stagesHTML}</div>
         </div>
 
@@ -2301,6 +2317,38 @@
     d.currentStage = stage;
     saveDashData(clientId, d);
     renderClientDetail(clientId);
+  }
+
+  function previewStageSlider(clientId) {
+    const slider = document.getElementById('stage-slider-'+clientId);
+    if (!slider) return;
+    const d = getDashData(clientId);
+    const cs = +slider.value;
+    const stageCount = d.stageNames.length;
+    const container = document.getElementById('dash-stages-'+clientId);
+    if (!container) return;
+    // Update label
+    const label = container.querySelector('span[style*="font-size:13px"]');
+    if (label) label.textContent = 'Stage ' + cs + ' of ' + stageCount + ': ' + (d.stageNames[cs-1]||'');
+    // Update pct badge
+    const badge = container.querySelector('span[style*="border-radius:999px"]');
+    if (badge) badge.textContent = Math.round((cs/stageCount)*100) + '% Complete';
+    // Update step dots
+    container.querySelectorAll('div[style*="flex-direction:column"]').forEach((dot, i) => {
+      const circle = dot.querySelector('div[style*="border-radius:50%"]');
+      const lbl = dot.querySelector('span');
+      if (!circle) return;
+      if (i+1 < cs) { circle.style.background = 'var(--success)'; circle.textContent = '✓'; }
+      else if (i+1 === cs) { circle.style.background = 'var(--blue)'; circle.textContent = i+1; }
+      else { circle.style.background = 'var(--gray-200)'; circle.textContent = i+1; }
+      if (lbl) lbl.style.color = i+1 <= cs ? 'var(--navy)' : 'var(--gray-400)';
+    });
+  }
+
+  function applyStageSlider(clientId) {
+    const slider = document.getElementById('stage-slider-'+clientId);
+    if (!slider) return;
+    setCurrentStage(clientId, +slider.value);
   }
 
   function addDashTask(clientId) {
@@ -2387,8 +2435,7 @@
       d.applyingBank  = d.applyingBanks[0];
       d.applyingCount = d.applyingBanks.length + ' of ' + d.applyingBanks.length + ' applications';
     }
-    // Collect stage names
-    d.stageNames = d.stageNames.map((_, i) => g('stage-name-'+clientId+'-'+i)?.value.trim() || d.stageNames[i]);
+    // Stage is set via the slider (applyStageSlider), already saved — just keep current value
     // Collect tasks
     d.tasks = d.tasks.map(t => ({
       ...t,
