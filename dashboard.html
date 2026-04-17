@@ -3163,64 +3163,77 @@
     modal.id = 'contract-view-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px';
     modal.innerHTML = `
-      <div style="background:white;border-radius:16px;width:100%;max-width:700px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.4)">
-        <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <style>
+        #contract-view-modal .cv-body p { margin-bottom: 12px; font-size: 13.5px; line-height: 1.75; color: #374151; }
+        #contract-view-modal .cv-body h3 { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #0A1628; margin: 24px 0 10px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+        #contract-view-modal .cv-body h3:first-of-type { margin-top: 16px; }
+        #contract-view-modal .cv-body ul, #contract-view-modal .cv-body ol { padding-left: 22px; margin-bottom: 12px; }
+        #contract-view-modal .cv-body li { font-size: 13.5px; line-height: 1.75; color: #374151; margin-bottom: 6px; }
+        #contract-view-modal .cv-body strong { color: #0A1628; }
+        #contract-view-modal .cv-pay { background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 10px; padding: 14px 18px; margin: 0 0 16px; color: #0369a1; font-size: 13.5px; line-height: 1.75; }
+        #contract-view-modal .cv-sig { margin-top: 32px; padding: 22px 24px; background: #f8fafc; border-radius: 12px; border: 1.5px solid #e2e8f0; }
+        #contract-view-modal .cv-sig-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #94a3b8; margin-bottom: 8px; }
+        #contract-view-modal .cv-sig-value { font-size: 14px; font-weight: 600; color: #0A1628; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 6px; }
+        #contract-view-modal .cv-sig-name { font-family: 'Dancing Script', cursive; font-size: 24px; color: #0A1628; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 6px; }
+      </style>
+      <div style="background:white;border-radius:16px;width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.35);font-family:'Inter',sans-serif">
+        <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#fff">
           <div>
-            <div style="font-weight:700;font-size:16px;color:#070F1E">Signed Consulting Agreement</div>
-            <div style="font-size:12px;color:#6b7280;margin-top:2px">${typeLabel} · Signed ${signedDate}</div>
+            <div style="font-weight:700;font-size:15px;color:#0A1628;letter-spacing:-0.01em">Signed Consulting Agreement</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:3px">${typeLabel} &nbsp;·&nbsp; Signed ${signedDate}</div>
           </div>
-          <button onclick="document.getElementById('contract-view-modal').remove()" style="width:32px;height:32px;border-radius:8px;border:none;background:#f3f4f6;cursor:pointer;font-size:18px;color:#6b7280;display:flex;align-items:center;justify-content:center">&times;</button>
+          <button onclick="document.getElementById('contract-view-modal').remove()" style="width:34px;height:34px;border-radius:8px;border:none;background:#f1f5f9;cursor:pointer;font-size:20px;color:#64748b;display:flex;align-items:center;justify-content:center;line-height:1">&times;</button>
         </div>
-        <div style="overflow-y:auto;padding:28px 32px;font-size:13px;line-height:1.7;color:#1f2937">
-          <div style="text-align:center;margin-bottom:24px">
-            <div style="font-weight:800;font-size:17px;color:#070F1E">CLIENT SERVICES AGREEMENT</div>
-            <div style="font-size:12px;color:#6b7280;margin-top:4px">CapitalQuest Funding LLC</div>
+        <div class="cv-body" style="overflow-y:auto;padding:32px 36px 40px">
+          <div style="text-align:center;margin-bottom:28px;padding-bottom:24px;border-bottom:2px solid #0A1628">
+            <div style="font-weight:800;font-size:16px;color:#0A1628;letter-spacing:0.04em">CLIENT SERVICES AGREEMENT</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:6px;font-weight:500">CapitalQuest Funding LLC</div>
           </div>
           <p>The undersigned <strong>${o.contractName}</strong> (name of Client), hereafter known as "Client", appoints and authorizes CapitalQuest Funding LLC, known as the "Consultant" or "Company", to find lender(s) and to submit financial data and information supplied by the Client, for the purpose of obtaining 0% interest personal or business credit cards, lines of credit, and/or term loans. CapitalQuest Funding is keenly aware of those lenders who are seeking customers with a specific credit profile. The approach for financing taken will be based upon the information supplied by the Client. Once the client is "cleared for funding" Client agrees to complete the soon to be provided "Questionnaire" truthfully to the best of their knowledge.</p>
-          <h3 style="font-weight:700;font-size:13px;margin:20px 0 8px;padding-top:16px;border-top:1px solid #e5e7eb">PROGRAM OUTLINE</h3>
+          <h3>Program Outline</h3>
           <p>1 on 1 onboarding call with the Team to discuss funding rounds.</p>
           <p>We will provide Client 0% interest business funding, loans, business lines of credit, and/or business term loan funding.</p>
           <p>We will provide Client access to our step by step process on how to get funding on their own after they are approved from their funding rounds.</p>
           <p>Direct access to the Team for any updates or questions.</p>
           <p>Specifically, we will not apply for any short-term loans, credit facilities, or credit cards that accrue interest without obtaining explicit permission from the client involved. This policy underscores our commitment to upholding our clients' best interests and maintaining a high standard of fiduciary responsibility. Applications are completed by Consultant both online and over the phone. Some applications may require the client to go in person to the bank as directed by the Consultant in pursuit to help the Client achieve funding for their business.</p>
           <p>Upon completion of the funding process, all client data will be deleted from our records. This includes personal identification information, financial records, and any other sensitive data collected during the funding process. This measure is taken to ensure the privacy and security of our clients' information.</p>
-          <h3 style="font-weight:700;font-size:13px;margin:20px 0 8px;padding-top:16px;border-top:1px solid #e5e7eb">PAYMENT</h3>
-          <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#0369a1">${payClause}</div>
+          <h3>Payment</h3>
+          <div class="cv-pay">${payClause}</div>
           <p>The Client agrees to pay CapitalQuest Funding LLC for the 0% interest funding service and consulting.</p>
           <p>The Client understands there may be additional costs to help optimize their personal credit profile. This will be determined during the optimization phase and does not apply to everyone. These costs include but are not limited to: paying credit card usage down, paying derogatory collections on the report as directed, adding authorized user tradelines, maintaining required credit monitoring, paying for any business credit reports deemed necessary, and anything else deemed necessary in the pursuit of preparing the client for funding during the optimization phase. In the event the client needs authorized user tradelines to bolster their credit report, this will be invoiced separately.</p>
-          <h3 style="font-weight:700;font-size:13px;margin:20px 0 8px;padding-top:16px;border-top:1px solid #e5e7eb">LIABILITY</h3>
+          <h3>Liability</h3>
           <p>Client understands and agrees that there is no guarantee of success for each individual application or that a lender will issue a commitment. Consultant is not an employee of any financial institution and is not authorized to make any financial commitments on behalf of any Lender. The APR (annual percentage rate of interest charged by the lender) of all financing is determined individually by scoring; underwriting methods utilized by each lender. There are no guarantees made by the Consultant as to the terms of your approvals.</p>
           <p>Client understands CapitalQuest Funding LLC shall not be held responsible or liable for any losses, damages, or consequences that may arise due to the client's default on any credit facilities, including but not limited to business credit cards, loans, or lines of credit, obtained with the assistance of CapitalQuest Funding LLC. The client acknowledges and agrees that their financial obligations with respect to these credit facilities are solely their responsibility, and they shall hold CapitalQuest Funding LLC harmless from any claims, demands, or actions arising out of their default on any such credit facilities.</p>
           <p>Client understands and agrees to all terms of this Agreement. This agreement and the interpretation of its terms shall be governed by and construed in accordance with the laws of the State of Michigan, without regard to its conflicts of laws and rules. The parties irrevocably submit and consent to the exclusive jurisdiction and venue of the Michigan. The parties waive all rights to a trial by jury in any action or proceeding instituted in connection with this Agreement. It is understood all information is mutually proprietary and confidential and will not be disclosed by either party.</p>
           <p>By signing this agreement, the client fully understands and agrees to all of the provisions included in this agreement. Client also understands that if the payment is not received within seven (7) days of being invoiced that the client's unpaid invoice could be sent to a collection agency. In the event that CapitalQuest Funding LLC is forced to use collections/legal services to secure payment owed or to recover an unlawful chargeback, client agrees to pay the collection/legal costs incurred to recover said funds. Not to exceed 25% of the balance owed.</p>
-          <h3 style="font-weight:700;font-size:13px;margin:20px 0 8px;padding-top:16px;border-top:1px solid #e5e7eb">NO CHARGEBACK CLAUSE</h3>
+          <h3>No Chargeback Clause</h3>
           <p>The Client agrees not to initiate any chargeback on the investment paid to CapitalQuest Funding LLC. In the event of a chargeback, the Client will be subject to legal action, and the Company will pursue all necessary legal remedies to recover the chargeback amount.</p>
-          <h3 style="font-weight:700;font-size:13px;margin:20px 0 8px;padding-top:16px;border-top:1px solid #e5e7eb">ADDITIONAL TERMS</h3>
+          <h3>Additional Terms</h3>
           <p>The Client also agrees to create a MyScoreIQ or Experian 3-bureau account and provide CapitalQuest Funding LLC with logins and passwords for the purpose of the Consultant making best recommendations to the Client and monitoring updates that will help the Client optimize their personal credit profile. Failure to have an active MyScoreIQ account or provide valid login will result in delayed funding results. Client also agrees to not apply for any uninstructed revolving credit accounts until the funding service is complete, as this would negatively impact Client's funding results. If Client needs to apply for credit products such as auto loans or a mortgage during this process, it's important that the client notify the Consultant, as the extra inquiries could have a negative impact on funding results.</p>
-          <h3 style="font-weight:700;font-size:13px;margin:20px 0 8px;padding-top:16px;border-top:1px solid #e5e7eb">PERSONAL GUARANTEE &amp; AUTHORITY</h3>
+          <h3>Personal Guarantee &amp; Authority</h3>
           <p><strong>PERSONAL GUARANTEE:</strong><br>If the Client is an LLC, Corporation, LLP or other entity, then the individuals signing this Agreement hereby agree to, jointly and severally as applicable, personally guarantee the payment and collection of all fees and costs payable under this Agreement, on behalf of said entity.</p>
           <p>By executing this Agreement, Client hereby authorizes Company to:</p>
-          <ul style="padding-left:20px;margin-bottom:12px">
+          <ul>
             <li>act on behalf of the Client to obtain any financial and/or credit history from the credit reporting agencies for the purpose of determining the Client's creditworthiness;</li>
             <li>access financial information and account statements related to Client's lines of credit;</li>
             <li>forward Client's financial information to Company's business partners and affiliates to engage the services of professional advisors, lenders, etc. for the purpose of obtaining credit approval on behalf of Client;</li>
             <li>do all other acts necessary or incidental to the foregoing, including executing all documentation necessary to assist Client in obtaining credit approval.</li>
           </ul>
           <p><strong>SIGNATURE AUTHORITY:</strong><br>If the Client is an LLC, Corporation, LLP, or other entity, the undersigned hereby attests that he/she is an Officer or Director or Member with at least 25% ownership of the entity they are submitting information for and has authority to bind the entity and enter into agreements on its behalf.</p>
-          <div style="margin-top:32px;padding:20px 24px;background:#f9fafb;border-radius:12px;border:1.5px solid #e5e7eb">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="cv-sig">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px">
               <div>
-                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:6px">Client Signature</div>
-                <div style="font-family:'Dancing Script',cursive;font-size:22px;color:#070F1E;border-bottom:1.5px solid #d1d5db;padding-bottom:4px">${o.contractName}</div>
+                <div class="cv-sig-label">Client Signature</div>
+                <div class="cv-sig-name">${o.contractName}</div>
               </div>
               <div>
-                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:6px">Date Signed</div>
-                <div style="font-size:14px;font-weight:600;color:#070F1E;padding-bottom:4px;border-bottom:1.5px solid #d1d5db">${signedDate}</div>
+                <div class="cv-sig-label">Date Signed</div>
+                <div class="cv-sig-value">${signedDate}</div>
               </div>
             </div>
-            <div style="margin-top:12px">
-              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:4px">Contract Type</div>
-              <div style="font-size:13px;font-weight:600;color:#070F1E">${typeLabel}</div>
+            <div>
+              <div class="cv-sig-label">Contract Type</div>
+              <div class="cv-sig-value">${typeLabel}</div>
             </div>
           </div>
         </div>
