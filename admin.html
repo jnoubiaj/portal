@@ -1389,6 +1389,7 @@
   function selectClient(id) {
     selectedClientId = id;
     activeDetailTab = 'overview';
+    loadClients(); // re-read from localStorage to pick up any client-side updates
     renderClientList();
     renderClientDetail(id);
     // Switch to clients section if not already
@@ -1725,6 +1726,19 @@
       try {
         const global = JSON.parse(localStorage.getItem('cq_onboard_data') || 'null');
         if (global && global.email && global.email.toLowerCase() === client.email.toLowerCase()) o = global;
+      } catch(e) {}
+    }
+    // Final fallback: scan all cq_onboard_data_* keys for a matching email
+    if (!o && client.email) {
+      try {
+        const prefix = 'cq_onboard_data_';
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(prefix) && key !== 'cq_onboard_data_') {
+            const val = JSON.parse(localStorage.getItem(key) || 'null');
+            if (val && val.email && val.email.toLowerCase() === client.email.toLowerCase()) { o = val; break; }
+          }
+        }
       } catch(e) {}
     }
 

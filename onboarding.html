@@ -2885,6 +2885,26 @@
       if (!session) session = JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
     } catch(e) {}
 
+    // Fallback: resolve clientId from cq_client_creds or cq_admin_clients by email
+    if ((!session || !session.clientId) && onboardData.email) {
+      try {
+        const email = onboardData.email.toLowerCase();
+        const creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}');
+        const credEntry = Object.entries(creds).find(([k]) => k.toLowerCase() === email);
+        if (credEntry && credEntry[1].clientId) {
+          session = { clientId: credEntry[1].clientId, email: onboardData.email };
+        }
+      } catch(e) {}
+    }
+    if ((!session || !session.clientId) && onboardData.email) {
+      try {
+        const email = onboardData.email.toLowerCase();
+        const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+        const match = adminClients.find(cl => cl.email && cl.email.toLowerCase() === email);
+        if (match) session = { clientId: match.id, email: onboardData.email };
+      } catch(e) {}
+    }
+
     if (session && session.clientId) {
       // Save per-client onboarding data so admin can read it per-client
       try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(onboardData)); } catch(e) {}
@@ -2897,8 +2917,6 @@
           if (onboardData.firstName) c.fname = onboardData.firstName;
           if (onboardData.lastName)  c.lname = onboardData.lastName;
           if (onboardData.phone)     c.phone = onboardData.phone;
-          // Never overwrite the login email — it's the key used in cq_client_creds.
-          // Only fill it in if it was never set (e.g. imported client with no email).
           if (onboardData.email && !c.email) c.email = onboardData.email;
           c.onboardingComplete = true;
           c.lastActivity = new Date().toISOString().split('T')[0];
