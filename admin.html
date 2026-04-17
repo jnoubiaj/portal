@@ -1821,10 +1821,11 @@
             <input id="cs-amount-${clientId}" type="text" value="${amount}" placeholder="e.g. 3500" oninput="updateContractSetup('${clientId}')"
               style="width:100%;height:36px;border:1.5px solid var(--gray-200);border-radius:8px;padding:0 10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;" />
           </div>
-          <div id="cs-pct-wrap-${clientId}" style="flex:1;min-width:110px;${type!=='backend'?'display:none':''}">
+          <div id="cs-pct-wrap-${clientId}" style="flex:1;min-width:110px;">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gray-500);margin-bottom:6px;">Success Fee %</div>
             <input id="cs-pct-${clientId}" type="text" value="${pct}" placeholder="e.g. 10" oninput="updateContractSetup('${clientId}')"
-              style="width:100%;height:36px;border:1.5px solid var(--gray-200);border-radius:8px;padding:0 10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;" />
+              style="width:100%;height:36px;border:1.5px solid var(--gray-200);border-radius:8px;padding:0 10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;${type!=='backend'?'opacity:0.4;':''}"/>
+            <div style="font-size:10px;color:var(--gray-400);margin-top:3px;">${type!=='backend'?'Only used for Backend type':''}</div>
           </div>
           <div style="flex-shrink:0;">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:transparent;margin-bottom:6px;">.</div>
@@ -1838,9 +1839,11 @@
   }
 
   function updateContractSetup(clientId) {
-    const type = document.getElementById('cs-type-'+clientId)?.value;
-    const pctWrap = document.getElementById('cs-pct-wrap-'+clientId);
-    if (pctWrap) pctWrap.style.display = type === 'backend' ? '' : 'none';
+    const type    = document.getElementById('cs-type-'+clientId)?.value;
+    const pctEl   = document.getElementById('cs-pct-'+clientId);
+    const pctHint = document.getElementById('cs-pct-wrap-'+clientId)?.querySelector('div:last-child');
+    if (pctEl)   pctEl.style.opacity   = type === 'backend' ? '1' : '0.4';
+    if (pctHint) pctHint.textContent   = type === 'backend' ? '' : 'Only used for Backend type';
   }
 
   function saveContractSetup(clientId) {
