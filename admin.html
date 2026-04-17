@@ -2427,6 +2427,9 @@
     try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
     creds[email] = { clientId, password: TEMP_PASSWORD, mustChange: true };
     try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
+    // Sync to Firestore so client can log in from any device
+    fsSetCred(email, { clientId, password: TEMP_PASSWORD, mustChange: true }).catch(() => {});
+    fsSaveClient(newClient).catch(() => {});
 
     logActivity(`New client account created: <strong>${email}</strong>`, color);
     closeAddClientModal();
