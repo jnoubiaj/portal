@@ -1832,6 +1832,23 @@
           const fc = fsClients.find(c => c.id === sess.clientId);
           if (fc) fsSaveClient({ ...fc, contractSigned: true, lastActivity: signedAt.split('T')[0] });
         }).catch(() => {});
+
+        // Add signed contract to client's dashboard Latest Documents + clear pendingContract
+        const typeLabel = {full:'Full Payment',split:'Split Payment (2x)',backend:'Backend / Success Fee'}[_contractKey] || _contractKey || 'Consulting Agreement';
+        fsGetDash(sess.clientId).then(dashData => {
+          const d = dashData || {};
+          const adminDocs = (d.adminDocs || []).concat([{
+            id: 'contract_' + Date.now(),
+            name: typeLabel + ' — Signed Agreement',
+            date: signedAt,
+            type: 'contract'
+          }]);
+          const updated = Object.assign({}, d, { adminDocs, pendingContract: null });
+          fsSetDash(sess.clientId, updated);
+          try {
+            localStorage.setItem('cq_dash_' + sess.clientId, JSON.stringify(updated));
+          } catch(e2) {}
+        }).catch(() => {});
       }
     } catch(e) {}
 

@@ -1893,7 +1893,13 @@
     localStorage.setItem('cq_contract_'+clientId, type);
     localStorage.setItem('cq_amount_'+clientId,   amount);
     localStorage.setItem('cq_pct_'+clientId,      pct);
-    showToast('Contract setup saved — copy the login link to send to client');
+    // Set pendingContract on dashboard so client sees "Sign" button in Latest Documents
+    const dashData = getDashData(clientId);
+    const updatedDash = Object.assign({}, dashData, {
+      pendingContract: { type, amount, pct, issuedAt: new Date().toISOString() }
+    });
+    saveDashData(clientId, updatedDash);
+    showToast('Contract setup saved — client will see a Sign button in their dashboard');
     renderClientDetail(clientId);
   }
 
@@ -2470,7 +2476,9 @@
     applyingBank:'', applyingCount:'', applyingBanks:[],
     currentStage:1,
     stageNames:['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
-    tasks:[]
+    tasks:[],
+    adminDocs:[],
+    pendingContract:null
   };
 
   function getDashData(clientId) {
