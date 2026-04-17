@@ -3148,15 +3148,40 @@
       const pc = d.pendingContract;
       const typeLabel = {full:'Full Payment',split:'Split Payment (2x)',backend:'Backend / Success Fee'}[pc.type] || pc.type || 'Consulting Agreement';
       const issued = pc.issuedAt ? new Date(pc.issuedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-      rows.push(`
-        <div class="doc-item" style="border-left:3px solid #f59e0b;padding-left:10px;">
-          <div class="doc-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
-          <div class="doc-info">
-            <div class="doc-name">Updated Agreement — ${typeLabel}</div>
-            <div class="doc-meta">Action required · ${issued}</div>
-          </div>
-          <button class="doc-btn" style="background:#f59e0b;color:#fff;border-color:#f59e0b;" onclick="window.location.href='onboarding.html?resign=1'">Sign</button>
-        </div>`);
+
+      // Check if client already signed this contract (date after issuedAt) — guards against Firestore sync lag
+      let alreadySigned = false;
+      try {
+        const sess = getClientSession();
+        const od = sess ? JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || '{}') : {};
+        if (od.contractSigned === 'signed' && od.contractDate && pc.issuedAt) {
+          alreadySigned = new Date(od.contractDate) >= new Date(pc.issuedAt);
+        }
+      } catch(e) {}
+
+      if (alreadySigned) {
+        // Already signed — show as "View" with green border
+        rows.push(`
+          <div class="doc-item" style="border-left:3px solid #10b981;padding-left:10px;">
+            <div class="doc-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+            <div class="doc-info">
+              <div class="doc-name">${typeLabel} — Signed Agreement</div>
+              <div class="doc-meta">Signed · ${issued}</div>
+            </div>
+            <button class="doc-btn" style="opacity:0.5;cursor:default">View</button>
+          </div>`);
+      } else {
+        // Not yet signed — show amber Sign button
+        rows.push(`
+          <div class="doc-item" style="border-left:3px solid #f59e0b;padding-left:10px;">
+            <div class="doc-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+            <div class="doc-info">
+              <div class="doc-name">Updated Agreement — ${typeLabel}</div>
+              <div class="doc-meta">Action required · ${issued}</div>
+            </div>
+            <button class="doc-btn" style="background:#f59e0b;color:#fff;border-color:#f59e0b;" onclick="window.location.href='onboarding.html?resign=1'">Sign</button>
+          </div>`);
+      }
     }
 
     // Admin-added documents
@@ -3170,7 +3195,7 @@
             <div class="doc-name">${doc.name}</div>
             <div class="doc-meta">Uploaded by Admin · ${dateStr}</div>
           </div>
-          ${doc.url ? `<button class="doc-btn" onclick="window.open('${doc.url}','_blank')">View</button>` : '<button class="doc-btn" style="opacity:0.4;cursor:default">View</button>'}
+          ${doc.url ? `<button class="doc-btn" onclick="window.open('${doc.url}','_blank')">View</button>` : `<button class="doc-btn" style="background:#10b981;color:#fff;border-color:#10b981;opacity:0.7;cursor:default">Signed</button>`}
         </div>`);
     });
 
