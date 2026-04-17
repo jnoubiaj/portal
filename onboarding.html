@@ -1787,24 +1787,38 @@
       return;
     }
     const signedAt = new Date().toISOString();
-    localStorage.setItem('cq_signed_contract', contractKey);
+    localStorage.setItem('cq_signed_contract', _contractKey);
     localStorage.setItem('cq_signed_name', name);
 
-    // Immediately push contract data to per-client onboarding record so admin sees it right away
     try {
       const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
                || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
       if (sess && sess.clientId) {
+        const contractData = {
+          contractSigned: 'signed',
+          contractName:   name,
+          contractType:   _contractKey,
+          contractAmount: _feeAmount,
+          contractPct:    _feePct,
+          contractDate:   signedAt,
+          submittedAt:    signedAt
+        };
+
+        // Save to localStorage
         const key = 'cq_onboard_data_' + sess.clientId;
         const existing = JSON.parse(localStorage.getItem(key) || '{}');
-        existing.contractSigned = 'signed';
-        existing.contractName   = name;
-        existing.contractType   = contractKey;
-        existing.contractDate   = signedAt;
-        existing.submittedAt    = existing.submittedAt || signedAt;
+        Object.assign(existing, contractData);
         localStorage.setItem(key, JSON.stringify(existing));
 
-        // Also update admin client record to flag contract signed
+        // Push to Firestore immediately so admin sees it on any device
+        fsGetOnboarding(sess.clientId).then(fsOd => {
+          const merged = Object.assign({}, fsOd || {}, contractData);
+          fsSetOnboarding(sess.clientId, merged);
+        }).catch(() => {
+          fsSetOnboarding(sess.clientId, contractData);
+        });
+
+        // Update admin client record
         const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
         const idx = adminClients.findIndex(c => c.id === sess.clientId);
         if (idx !== -1) {
@@ -1812,6 +1826,12 @@
           adminClients[idx].lastActivity = signedAt.split('T')[0];
           localStorage.setItem('cq_admin_clients', JSON.stringify(adminClients));
         }
+        // Also update client record in Firestore
+        fsGetClients().then(fsClients => {
+          if (!fsClients) return;
+          const fc = fsClients.find(c => c.id === sess.clientId);
+          if (fc) fsSaveClient({ ...fc, contractSigned: true, lastActivity: signedAt.split('T')[0] });
+        }).catch(() => {});
       }
     } catch(e) {}
 

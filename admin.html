@@ -1396,15 +1396,18 @@
       </div>`;
   }
 
-  function viewContract(clientId) {
+  async function viewContract(clientId) {
     const c = getClient(clientId);
     let o = null;
-    try { o = JSON.parse(localStorage.getItem('cq_onboard_data_'+clientId) || 'null'); } catch(e) {}
+    // Try Firestore first (works cross-device), fall back to localStorage
+    try { o = await fsGetOnboarding(clientId); } catch(e) {}
+    if (!o) try { o = JSON.parse(localStorage.getItem('cq_onboard_data_'+clientId) || 'null'); } catch(e) {}
     if (!o || o.contractSigned !== 'signed') return;
     const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
     const typeLabel = typeLabels[o.contractType] || o.contractType || '—';
     const signedDate = o.contractDate ? new Date(o.contractDate).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
-    const amount = o.contractAmount ? '$'+Number(o.contractAmount).toLocaleString() : '____________';
+    const rawAmt = o.contractAmount ?? (c && c.contractSetup ? c.contractSetup.amount : '');
+    const amount = rawAmt !== '' && rawAmt !== null ? '$'+Number(rawAmt).toLocaleString() : '$____________';
     const pct = o.contractPct || '8';
     const paymentClauses = {
       full:    `Client acknowledges the program investment will be the amount of ${amount}. The Client agrees to pay CapitalQuest Funding LLC the full amount at the execution of this agreement.`,
@@ -1984,19 +1987,23 @@
 
   function renderOverviewTab(clientId, client) {
     let o = null;
-    // Try per-client key first (set when client submits onboarding after login)
     try { o = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null'); } catch(e) {}
-    // Fall back to global key for demo client (c1) or if per-client not yet saved
-    if (!o && clientId === 'c1') {
-      try { o = JSON.parse(localStorage.getItem('cq_onboard_data') || 'null'); } catch(e) {}
-    }
-    // Last resort: check if global key email matches this client
     if (!o && client.email) {
       try {
         const global = JSON.parse(localStorage.getItem('cq_onboard_data') || 'null');
         if (global && global.email && global.email.toLowerCase() === client.email.toLowerCase()) o = global;
       } catch(e) {}
     }
+    // Background: fetch from Firestore and re-render if newer data found
+    fsGetOnboarding(clientId).then(fsOd => {
+      if (!fsOd) return;
+      // Merge: Firestore is authoritative for contract fields
+      const merged = Object.assign({}, o || {}, fsOd);
+      try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(merged)); } catch(e) {}
+      // Re-render tab with fresh data
+      const tab = document.getElementById('dtab-overview');
+      if (tab && selectedClientId === clientId) tab.innerHTML = renderOverviewTab(clientId, client);
+    }).catch(() => {});
     // Final fallback: scan all cq_onboard_data_* keys for a matching email
     if (!o && client.email) {
       try {
