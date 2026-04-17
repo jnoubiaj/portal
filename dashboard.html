@@ -1928,7 +1928,7 @@
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
         </span>
         My Tasks
-        <span class="nav-badge red">3</span>
+        <span class="nav-badge red" id="nb-tasks" style="display:none"></span>
       </div>
 
       <div class="nav-section-label">Funding</div>
@@ -1957,14 +1957,14 @@
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
         </span>
         Documents
-        <span class="nav-badge">2</span>
+        <span class="nav-badge" id="nb-docs" style="display:none"></span>
       </div>
       <div class="nav-item" onclick="switchSection('chat', this)">
         <span class="nav-icon">
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
         </span>
         Messages
-        <span class="nav-badge red">1</span>
+        <span class="nav-badge red" id="nb-msgs" style="display:none"></span>
       </div>
       <div class="nav-item" onclick="switchSection('profile', this)">
         <span class="nav-icon">
@@ -2013,7 +2013,7 @@
             <p id="wb-subtitle">Your funding journey is in progress. 3 tasks need attention.</p>
           </div>
           <div class="welcome-funding">
-            <div class="amount" id="wb-funding">$45,000</div>
+            <div class="amount" id="wb-funding">$0</div>
             <div class="label">Total Funding Secured</div>
           </div>
         </div>
@@ -2027,12 +2027,12 @@
           </div>
           <div class="stat-card">
             <div class="stat-label">Funding Approved</div>
-            <div class="stat-value" id="s-approved">$45K</div>
+            <div class="stat-value" id="s-approved">—</div>
             <div class="stat-sub" id="s-goal">of $150K goal</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Pending Tasks</div>
-            <div class="stat-value" id="s-tasks">3</div>
+            <div class="stat-value" id="s-tasks">—</div>
             <div class="stat-sub"><span class="stat-badge badge-pending">Action needed</span></div>
           </div>
           <div class="stat-card applying-card">
@@ -2181,8 +2181,8 @@
                 <tfoot>
                   <tr>
                     <td colspan="4"><strong>Total Secured</strong></td>
-                    <td><strong>$45,000</strong></td>
-                    <td>2 approvals</td>
+                    <td><strong id="funding-table-total">$0</strong></td>
+                    <td id="funding-table-approvals">—</td>
                   </tr>
                 </tfoot>
               </table>
@@ -2910,6 +2910,7 @@
     fundingGoal: 0,
     applyingBank: '',
     applyingCount: '',
+    applyingBanks: [],
     currentStage: 1,
     stageNames: ['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
     tasks: []
@@ -3111,7 +3112,7 @@
     renderTaskList('task-list-full', d.tasks||[], false);
     const tm = document.getElementById('tasks-meta');
     if(tm) tm.textContent = 'Admin-managed · ' + openTasks + ' open task' + (openTasks!==1?'s':'');
-    const nb = document.querySelector('[onclick*="tasks"] .nav-badge');
+    const nb = document.getElementById('nb-tasks');
     if(nb) { nb.textContent = openTasks; nb.style.display = openTasks > 0 ? '' : 'none'; }
 
     // Applying card — use ordered banks array, fall back to single bank, else show '—'
