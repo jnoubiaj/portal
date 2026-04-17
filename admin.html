@@ -724,6 +724,7 @@
                 <button class="a-filter-btn" onclick="setFilter('progress',this)">In Progress</button>
                 <button class="a-filter-btn" onclick="setFilter('approved',this)">Approved</button>
                 <button class="a-filter-btn" onclick="setFilter('disqualified',this)">Disqualified</button>
+                <button class="a-filter-btn" id="filter-archived-btn" onclick="setFilter('archived',this)" style="border-color:#8b5cf6;color:#8b5cf6" onmouseover="this.style.background='#8b5cf6';this.style.color='white'" onmouseout="if(!this.classList.contains('active')){this.style.background='';this.style.color='#8b5cf6'}">Archived</button>
               </div>
               <div class="a-cl-list" id="a-cl-list"></div>
             </div>
@@ -868,14 +869,7 @@
 
   // ── DATA ──────────────────────────────────────────────────────────────
   const AVATAR_COLORS = ['#22A7F0','#10b981','#f59e0b','#8b5cf6','#ef4444','#1a3a6b','#059669','#d97706'];
-  const DEFAULT_CLIENTS = [
-    { id:'c1', fname:'James',  lname:'Wilson',   email:'james.wilson@email.com', phone:'(305) 555-0192', status:'progress',     fico:767, createdAt:'2025-03-15', notes:'Strong profile. Currently in Round 1 funding.', color:'#22A7F0', serviceType:'Both',          assignedTo:'Sam', isActive:true,  adminCreated:true, fundingApprovedAmount:0,     fundingApprovedDate:null,       lastActivity:'2025-04-15' },
-    { id:'c2', fname:'Marcus', lname:'Thompson', email:'marcus.t@email.com',     phone:'(404) 555-0284', status:'pending',      fico:690, createdAt:'2025-03-28', notes:'Needs credit report review before proceeding.', color:'#8b5cf6', serviceType:'Credit Repair', assignedTo:'Ali', isActive:true,  adminCreated:true, fundingApprovedAmount:0,     fundingApprovedDate:null,       lastActivity:'2025-04-10' },
-    { id:'c3', fname:'Sofia',  lname:'Rodriguez',email:'sofia.r@email.com',      phone:'(786) 555-0371', status:'approved',     fico:742, createdAt:'2025-02-10', notes:'Approved for $50k business line of credit.', color:'#10b981',  serviceType:'Funding',       assignedTo:'Sam', isActive:true,  adminCreated:true, fundingApprovedAmount:50000,  fundingApprovedDate:'2025-04-01', lastActivity:'2025-04-14' },
-    { id:'c4', fname:'David',  lname:'Kim',      email:'david.kim@email.com',    phone:'(213) 555-0453', status:'disqualified', fico:580, createdAt:'2025-03-01', notes:'Score below threshold. Advised to reapply in 90 days.', color:'#ef4444', serviceType:'Credit Repair', assignedTo:'Ali', isActive:false, adminCreated:true, fundingApprovedAmount:0,     fundingApprovedDate:null,       lastActivity:'2025-03-28' },
-    { id:'c5', fname:'Priya',  lname:'Patel',    email:'priya.p@email.com',      phone:'(312) 555-0567', status:'progress',     fico:715, createdAt:'2025-04-02', notes:'Round 2 underway. Chase & Amex applied.', color:'#f59e0b',   serviceType:'Funding',       assignedTo:'Sam', isActive:true,  adminCreated:true, fundingApprovedAmount:0,     fundingApprovedDate:null,       lastActivity:'2025-04-13' },
-    { id:'c6', fname:'Jordan', lname:'Lee',      email:'jordan.l@email.com',     phone:'(646) 555-0618', status:'new',          fico:null, createdAt:'2025-04-14', notes:'', color:'#1a3a6b',                                             serviceType:'Both',          assignedTo:'Ali', isActive:true,  adminCreated:true, fundingApprovedAmount:0,     fundingApprovedDate:null,       lastActivity:'2025-04-14' },
-  ];
+  const DEFAULT_CLIENTS = []; // No demo data — real clients only
 
   const DEFAULT_TASKS = [
     { id:'t1', clientId:'c1', name:'Submit bank statements',        status:'done',        priority:'high',   dueDate:'2025-04-10', responsible:'Sam', updatedAt:'2025-04-10' },
@@ -893,28 +887,37 @@
   let activeMsgClientId = null;
   let activeDetailTab = 'overview';
 
+  function getDeletedIds() {
+    try { return JSON.parse(localStorage.getItem('cq_deleted_ids') || '[]'); } catch(e) { return []; }
+  }
+  function addDeletedId(id) {
+    const ids = getDeletedIds();
+    if (!ids.includes(id)) { ids.push(id); localStorage.setItem('cq_deleted_ids', JSON.stringify(ids)); }
+  }
+
   function loadClients() {
+    const deletedIds = getDeletedIds();
     try {
       const saved = localStorage.getItem('cq_admin_clients');
       const parsed = saved ? JSON.parse(saved) : null;
-      clients = (parsed && parsed.length > 0) ? parsed : [...DEFAULT_CLIENTS];
-      if (!parsed || parsed.length === 0) saveClients();
-    } catch(e) { clients = [...DEFAULT_CLIENTS]; saveClients(); }
-    // Background sync from Firestore — updates UI once fetched
+      // Never fall back to DEFAULT_CLIENTS — start empty if nothing saved
+      clients = parsed ? parsed.filter(c => !deletedIds.includes(c.id)) : [];
+    } catch(e) { clients = []; }
+    // Background sync from Firestore — filter out any deleted IDs
     fsGetClients().then(fsClients => {
       if (fsClients && fsClients.length > 0) {
-        clients = fsClients;
+        const ids = getDeletedIds();
+        clients = fsClients.filter(c => !ids.includes(c.id));
         try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
         renderClientList();
+        renderOverview();
       } else if (clients.length > 0) {
-        // Seed Firestore from localStorage on first run
-        clients.forEach(c => fsSetCred && fsSaveClient(c));
+        clients.forEach(c => fsSaveClient(c));
       }
     }).catch(() => {});
   }
   function saveClients() {
     try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
-    // Sync each client to Firestore
     clients.forEach(c => fsSaveClient(c).catch(() => {}));
   }
   function getClient(id) { return clients.find(c => c.id === id); }
@@ -1446,23 +1449,33 @@
 
   function renderClientList() {
     const q = (document.getElementById('client-search')?.value || '').toLowerCase();
+    const showArchived = activeFilter === 'archived';
     let filtered = clients.filter(c => {
+      if (showArchived) return !!c.archived;
+      if (c.archived) return false; // hide archived from all other views
       const name = (c.fname+' '+c.lname).toLowerCase();
-      const matchQ = !q || name.includes(q) || c.email.toLowerCase().includes(q);
+      const matchQ = !q || name.includes(q) || (c.email||'').toLowerCase().includes(q);
       const matchF = activeFilter === 'all' || c.status === activeFilter;
       return matchQ && matchF;
     });
+    const archivedCount = clients.filter(c => c.archived).length;
+    // Update archived tab badge
+    const archTab = document.getElementById('filter-archived-btn');
+    if (archTab) archTab.textContent = archivedCount > 0 ? `Archived (${archivedCount})` : 'Archived';
+
     document.getElementById('a-cl-list').innerHTML = filtered.length === 0
-      ? `<div style="padding:24px;text-align:center;font-size:13px;color:var(--gray-400)">No clients found</div>`
+      ? `<div style="padding:24px;text-align:center;font-size:13px;color:var(--gray-400)">${showArchived ? 'No archived clients' : 'No clients found'}</div>`
       : filtered.map(c => `
         <div class="a-client-row ${selectedClientId===c.id?'active':''}" onclick="selectClient('${c.id}')">
-          <div class="a-cl-avatar" style="background:${c.color}">${c.fname[0]}${c.lname[0]}</div>
+          <div class="a-cl-avatar" style="background:${c.archived?'#8b5cf6':c.color}">${c.fname[0]}${c.lname[0]}</div>
           <div style="min-width:0">
-            <div class="a-cl-name">${c.fname} ${c.lname}</div>
+            <div class="a-cl-name">${c.fname} ${c.lname}${c.archived?` <span style="font-size:10px;background:#f5f3ff;color:#8b5cf6;padding:1px 6px;border-radius:4px;font-weight:700;vertical-align:middle">ARCHIVED</span>`:''}</div>
             <div class="a-cl-info">${c.email}</div>
           </div>
           <div class="a-cl-right">
-            <span class="status-pill sp-${c.status==='progress'?'progress':c.status==='approved'?'approved':c.status==='disqualified'?'disqual':c.status==='new'?'new':'pending'}">${statusLabel(c.status)}</span>
+            ${c.archived
+              ? `<span class="status-pill" style="background:#f5f3ff;color:#8b5cf6;border:1px solid #ede9fe">Archived</span>`
+              : `<span class="status-pill sp-${c.status==='progress'?'progress':c.status==='approved'?'approved':c.status==='disqualified'?'disqual':c.status==='new'?'new':'pending'}">${statusLabel(c.status)}</span>`}
             ${c.fico ? `<div class="a-cl-fico">FICO ${c.fico}</div>` : ''}
           </div>
         </div>`).join('');
@@ -1508,6 +1521,9 @@
             ${c.status !== 'approved'    ? `<button class="a-action-btn approve" onclick="updateStatus('${id}','approved')">Approve</button>` : ''}
             ${c.status !== 'disqualified'? `<button class="a-action-btn disqual" onclick="updateStatus('${id}','disqualified')">Disqualify</button>` : ''}
             <button class="a-action-btn primary" onclick="switchDetailTab('messages')">Message</button>
+            ${c.archived
+              ? `<button class="a-action-btn" onclick="restoreClient('${id}')" style="border-color:#10b981;color:#10b981;background:transparent" onmouseover="this.style.background='#10b981';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#10b981'">↩ Restore</button>`
+              : `<button class="a-action-btn" onclick="archiveClient('${id}')" style="border-color:#8b5cf6;color:#8b5cf6;background:transparent" onmouseover="this.style.background='#8b5cf6';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#8b5cf6'">Archive</button>`}
             <button class="a-action-btn" onclick="deleteClient('${id}')" style="border-color:#ef4444;color:#ef4444;background:transparent" onmouseover="this.style.background='#ef4444';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#ef4444'">Delete</button>
           </div>
         </div>
@@ -1611,12 +1627,38 @@
       const creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}');
       if (c.email && creds[c.email]) { delete creds[c.email]; localStorage.setItem('cq_client_creds', JSON.stringify(creds)); }
     } catch(e) {}
+    // Permanently record deleted ID so it never comes back from Firestore
+    addDeletedId(id);
     // Delete from Firestore
     fsDeleteClient(id).catch(() => {});
     if (c.email) fsDeleteCred(c.email).catch(() => {});
     logActivity(`Client <strong>${c.fname} ${c.lname}</strong> deleted`, '#ef4444');
     selectedClientId = null;
     document.getElementById('a-detail-card').innerHTML = '<div style="padding:40px;text-align:center;color:var(--gray-400);font-size:13px">Select a client to view details</div>';
+    renderClientList();
+    renderOverview();
+  }
+
+  // ── ARCHIVE / RESTORE ────────────────────────────────────────────────
+  function archiveClient(id) {
+    const c = getClient(id);
+    if (!c) return;
+    if (!confirm(`Archive ${c.fname} ${c.lname}? They'll be hidden from the active list but can be restored later.`)) return;
+    c.archived = true;
+    saveClients();
+    logActivity(`Client <strong>${c.fname} ${c.lname}</strong> archived`, '#8b5cf6');
+    selectedClientId = null;
+    document.getElementById('a-detail-card').innerHTML = '<div style="padding:40px;text-align:center;color:var(--gray-400);font-size:13px">Select a client to view details</div>';
+    renderClientList();
+    renderOverview();
+  }
+
+  function restoreClient(id) {
+    const c = getClient(id);
+    if (!c) return;
+    c.archived = false;
+    saveClients();
+    logActivity(`Client <strong>${c.fname} ${c.lname}</strong> restored from archive`, '#10b981');
     renderClientList();
     renderOverview();
   }
