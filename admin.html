@@ -1793,13 +1793,18 @@
       <!-- STATUS CHANGER -->
       <div class="prof-sc-row">
         <span style="font-size:12px;font-weight:600;color:var(--gray-500)">Client Status:</span>
-        ${['lead','active','approved','disqualified'].map(s => `
-          <button onclick="updateStatus('${clientId}','${s}')" style="
-            height:28px;padding:0 12px;border-radius:999px;border:1.5px solid;font-size:11px;font-weight:700;cursor:pointer;
-            background:${client.status===s ? (s==='approved'?'var(--success)':s==='disqualified'?'var(--danger)':s==='active'?'var(--blue)':'var(--navy)') : 'transparent'};
-            color:${client.status===s ? 'white' : 'var(--gray-400)'};
-            border-color:${s==='approved'?'var(--success)':s==='disqualified'?'var(--danger)':s==='active'?'var(--blue)':'var(--gray-200)'};
-            text-transform:capitalize">${s}</button>`).join('')}
+        ${[
+          {key:'new',      label:'New',         color:'#8b5cf6'},
+          {key:'pending',  label:'Pending',      color:'#f59e0b'},
+          {key:'progress', label:'In Progress',  color:'#22A7F0'},
+          {key:'approved', label:'Approved',     color:'#10b981'},
+          {key:'disqualified', label:'Disqualified', color:'#ef4444'}
+        ].map(({key,label,color}) => `
+          <button onclick="updateStatus('${clientId}','${key}')" style="
+            height:28px;padding:0 12px;border-radius:999px;border:1.5px solid ${color};font-size:11px;font-weight:700;cursor:pointer;
+            background:${client.status===key ? color : 'transparent'};
+            color:${client.status===key ? 'white' : color};
+            transition:all 0.15s">${label}</button>`).join('')}
       </div>
 
       <!-- PERSONAL INFORMATION -->
