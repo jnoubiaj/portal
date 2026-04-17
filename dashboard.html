@@ -555,7 +555,9 @@
     .badge-up   { background: var(--success-bg); color: var(--success); }
     .badge-down { background: #fee2e2; color: #dc2626; }
     .badge-pending { background: var(--warning-bg); color: var(--warning); }
-    .fico-grade { display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; margin-top:5px; }
+    .fico-grade { display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; margin-top:5px; margin-bottom:6px; }
+    .fico-change-row { display:flex; align-items:center; gap:7px; }
+    .fico-change-date { font-size:11px; color:var(--gray-400); }
 
     /* ── APPLYING TO CARD ────────────────────────────── */
     .applying-card { display: flex; flex-direction: column; gap: 0; }
@@ -2018,7 +2020,7 @@
             <div class="stat-label">Credit Score (Avg)</div>
             <div class="stat-value" id="s-fico">—</div>
             <span class="fico-grade" id="s-fico-grade" style="display:none"></span>
-            <div class="stat-sub" id="s-fico-sub" style="visibility:hidden"><span class="stat-badge badge-up" id="s-fico-change"></span></div>
+            <div class="stat-sub fico-change-row" id="s-fico-sub" style="visibility:hidden"><span class="stat-badge badge-up" id="s-fico-change"></span><span class="fico-change-date" id="s-fico-date"></span></div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Funding Approved</div>
@@ -3038,11 +3040,15 @@
     // Score change — green for +, red for -
     const sc = document.getElementById('s-fico-change');
     const scSub = document.getElementById('s-fico-sub');
+    const scDate = document.getElementById('s-fico-date');
     if (sc && scSub) {
       if (d.creditChange) {
         sc.textContent = d.creditChange;
         const isDown = d.creditChange.trim().startsWith('-');
         sc.className = 'stat-badge ' + (isDown ? 'badge-down' : 'badge-up');
+        if (scDate && d.creditChangeDate) {
+          scDate.textContent = new Date(d.creditChangeDate).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+        }
         scSub.style.visibility = '';
       } else {
         scSub.style.visibility = 'hidden';

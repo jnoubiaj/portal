@@ -2282,6 +2282,7 @@
     d.fundingSecured= +g('db-secured-'+clientId)?.value || d.fundingSecured;
     d.creditScore   = +g('db-fico-'+clientId)?.value || d.creditScore;
     d.creditChange  = g('db-ficochange-'+clientId)?.value.trim() || d.creditChange;
+    if (d.creditChange) d.creditChangeDate = new Date().toISOString();
     d.fundingApproved= +g('db-approved-'+clientId)?.value || d.fundingApproved;
     d.fundingGoal   = +g('db-goal-'+clientId)?.value || d.fundingGoal;
     d.applyingBank  = g('db-bank-'+clientId)?.value.trim() || d.applyingBank;
