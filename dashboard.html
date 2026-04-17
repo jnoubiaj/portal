@@ -3156,6 +3156,15 @@
   let _fsUnsubscribe = null;
 
   document.addEventListener('DOMContentLoaded', async () => {
+    // Seed initial history state so back button stays in portal
+    const initSection = (() => {
+      try {
+        const hash = window.location.hash.replace('#','');
+        if (hash && document.getElementById('section-' + hash)) return hash;
+        return localStorage.getItem('cq_dash_section') || 'dashboard';
+      } catch(e) { return 'dashboard'; }
+    })();
+    history.replaceState({ section: initSection }, '', '#' + initSection);
     loadDashboardData();
     renderApplyingCard();
     renderFundingSequence();
@@ -3167,10 +3176,8 @@
     }
     // Restore last active section on refresh
     try {
-      const lastSection = localStorage.getItem('cq_dash_section');
-      if (lastSection && document.getElementById('section-' + lastSection)) {
-        const navEl = document.querySelector(`.nav-item[onclick*="'${lastSection}'"]`);
-        switchSection(lastSection, navEl);
+      if (initSection && document.getElementById('section-' + initSection)) {
+        switchSection(initSection, null, true);
       }
     } catch(e) {}
 
@@ -4420,7 +4427,7 @@
     document.body.style.overflow = '';
   }
 
-  function switchSection(name, el) {
+  function switchSection(name, el, skipHistory) {
     // hide all
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -4428,9 +4435,17 @@
     const sec = document.getElementById('section-' + name);
     if (sec) sec.classList.add('active');
     if (el) el.classList.add('active');
+    else {
+      const navEl = document.querySelector(`.nav-item[onclick*="'${name}'"]`);
+      if (navEl) navEl.classList.add('active');
+    }
     document.getElementById('pageTitleText').textContent = sectionTitles[name] || name;
     // Persist active section so refresh returns to same section
     try { localStorage.setItem('cq_dash_section', name); } catch(e) {}
+    // Push to browser history so back button navigates between sections
+    if (!skipHistory) {
+      history.pushState({ section: name }, '', '#' + name);
+    }
     // Close sidebar on mobile after nav
     if (window.innerWidth <= 768) closeSidebar();
     // Auto-load persisted credit report (admin uploads once, client sees it)
@@ -4438,6 +4453,12 @@
       caAutoLoadFromStorage();
     }
   }
+
+  // Handle browser back/forward within the portal
+  window.addEventListener('popstate', (e) => {
+    const name = (e.state && e.state.section) || 'dashboard';
+    switchSection(name, null, true);
+  });
 
   function caAutoLoadFromStorage() {
     // Only auto-show if the report panel is currently hidden (not already showing)
