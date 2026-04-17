@@ -2137,7 +2137,7 @@
     clientName:'', subtitle:'',
     fundingSecured:'', creditScore:'', creditChange:'',
     fundingApproved:'', fundingGoal:'',
-    applyingBank:'', applyingCount:'',
+    applyingBank:'', applyingCount:'', applyingBanks:[],
     currentStage:1,
     stageNames:['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
     tasks:[]
@@ -2213,10 +2213,58 @@
               <input class="a-add-req-input" style="width:100%" type="number" id="db-approved-${clientId}" value="${d.fundingApproved}" /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Goal ($)</div>
               <input class="a-add-req-input" style="width:100%" type="number" id="db-goal-${clientId}" value="${d.fundingGoal}" /></div>
-            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Applying To (Bank)</div>
-              <input class="a-add-req-input" style="width:100%" id="db-bank-${clientId}" value="${d.applyingBank}" /></div>
-            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Application Count (e.g. 2 of 2)</div>
-              <input class="a-add-req-input" style="width:100%" id="db-bankcount-${clientId}" value="${d.applyingCount}" /></div>
+            <div style="grid-column:1/-1">
+              <div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:6px">
+                Applying To (Banks) — in order
+                ${(d.applyingBanks||[]).length ? `<span style="color:var(--blue);font-weight:700">${(d.applyingBanks||[]).length} bank${(d.applyingBanks||[]).length!==1?'s':''} selected</span>` : ''}
+              </div>
+              <div style="display:flex;gap:8px;margin-bottom:8px">
+                <select id="db-bank-select-${clientId}" class="a-add-req-input" style="flex:1;cursor:pointer">
+                  <option value="">— Choose a bank to add —</option>
+                  <optgroup label="Chase">
+                    <option>Chase Ink Business Cash</option>
+                    <option>Chase Ink Business Unlimited</option>
+                    <option>Chase Ink Business Preferred</option>
+                  </optgroup>
+                  <optgroup label="American Express">
+                    <option>Amex Blue Business Cash</option>
+                    <option>Amex Blue Business Plus</option>
+                    <option>Amex Business Gold</option>
+                  </optgroup>
+                  <optgroup label="Bank of America">
+                    <option>Bank of America Business</option>
+                  </optgroup>
+                  <optgroup label="Wells Fargo">
+                    <option>Wells Fargo Signify Business Cash</option>
+                    <option>Wells Fargo Business LOC</option>
+                  </optgroup>
+                  <optgroup label="US Bank">
+                    <option>US Bank Triple Cash</option>
+                    <option>US Bank Business Platinum</option>
+                  </optgroup>
+                  <optgroup label="Other">
+                    <option>Capital One Spark Cash</option>
+                    <option>Citi Business</option>
+                    <option>Truist Business</option>
+                    <option>PNC Business</option>
+                    <option>Citizens Bank Business</option>
+                    <option>First Citizens Business</option>
+                    <option>Discover Business</option>
+                  </optgroup>
+                </select>
+                <button onclick="addApplyingBank('${clientId}')" style="padding:0 16px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">+ Add</button>
+              </div>
+              <div id="db-bank-list-${clientId}" style="display:flex;flex-direction:column;gap:6px">
+                ${(d.applyingBanks||[]).length === 0
+                  ? `<div style="font-size:12px;color:var(--gray-400);padding:8px 0;font-style:italic">No banks added yet</div>`
+                  : (d.applyingBanks||[]).map((b,i) => `
+                  <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:8px">
+                    <span style="min-width:20px;height:20px;background:var(--navy);color:white;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</span>
+                    <span style="flex:1;font-size:13px;font-weight:600;color:var(--navy)">${b}</span>
+                    <button onclick="removeApplyingBank('${clientId}',${i})" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:16px;line-height:1;padding:0" title="Remove">×</button>
+                  </div>`).join('')}
+              </div>
+            </div>
           </div>
           <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Banner Subtitle</div>
             <input class="a-add-req-input" style="width:100%" id="db-subtitle-${clientId}" value="${d.subtitle}" /></div>
@@ -2273,6 +2321,30 @@
     renderClientDetail(clientId);
   }
 
+  function addApplyingBank(clientId) {
+    const sel = document.getElementById('db-bank-select-'+clientId);
+    const bank = sel ? sel.value : '';
+    if (!bank) return;
+    const d = getDashData(clientId);
+    if (!d.applyingBanks) d.applyingBanks = [];
+    if (d.applyingBanks.includes(bank)) return;
+    d.applyingBanks.push(bank);
+    d.applyingBank = d.applyingBanks[0];
+    d.applyingCount = d.applyingBanks.length + ' of ' + d.applyingBanks.length + ' applications';
+    saveDashData(clientId, d);
+    renderClientDetail(clientId);
+  }
+
+  function removeApplyingBank(clientId, idx) {
+    const d = getDashData(clientId);
+    if (!d.applyingBanks) return;
+    d.applyingBanks.splice(idx, 1);
+    d.applyingBank = d.applyingBanks[0] || '';
+    d.applyingCount = d.applyingBanks.length ? d.applyingBanks.length + ' of ' + d.applyingBanks.length + ' applications' : '';
+    saveDashData(clientId, d);
+    renderClientDetail(clientId);
+  }
+
   function previewScoreChange(clientId) {
     const d = getDashData(clientId);
     const oldScore = d.creditScore || 0;
@@ -2310,8 +2382,11 @@
     }
     d.fundingApproved= +g('db-approved-'+clientId)?.value || d.fundingApproved;
     d.fundingGoal   = +g('db-goal-'+clientId)?.value || d.fundingGoal;
-    d.applyingBank  = g('db-bank-'+clientId)?.value.trim() || d.applyingBank;
-    d.applyingCount = g('db-bankcount-'+clientId)?.value.trim() || d.applyingCount;
+    // applyingBanks are saved immediately on add/remove — just sync derived fields
+    if (d.applyingBanks && d.applyingBanks.length) {
+      d.applyingBank  = d.applyingBanks[0];
+      d.applyingCount = d.applyingBanks.length + ' of ' + d.applyingBanks.length + ' applications';
+    }
     // Collect stage names
     d.stageNames = d.stageNames.map((_, i) => g('stage-name-'+clientId+'-'+i)?.value.trim() || d.stageNames[i]);
     // Collect tasks

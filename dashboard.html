@@ -2669,7 +2669,7 @@
     }
 
     nameEl.textContent = item.name;
-    count.textContent  = (applyIdx + 1) + ' of ' + APPLYING_TO.length + ' application' + (APPLYING_TO.length !== 1 ? 's' : '');
+    count.textContent  = 'Application ' + (applyIdx + 1) + ' of ' + APPLYING_TO.length;
 
     dots.innerHTML = '';
     APPLYING_TO.forEach((_, i) => {
@@ -3085,9 +3085,12 @@
     const nb = document.querySelector('[onclick*="tasks"] .nav-badge');
     if(nb) { nb.textContent = openTasks; nb.style.display = openTasks > 0 ? '' : 'none'; }
 
-    // Applying card — show '—' when not set, otherwise show admin-set bank
-    if(d.applyingBank) {
-      APPLYING_TO.splice(0, APPLYING_TO.length, { name: d.applyingBank, count: d.applyingCount || '' });
+    // Applying card — use ordered banks array, fall back to single bank, else show '—'
+    const banks = (d.applyingBanks && d.applyingBanks.length)
+      ? d.applyingBanks.map(b => ({ name: b }))
+      : (d.applyingBank ? [{ name: d.applyingBank }] : []);
+    if (banks.length) {
+      APPLYING_TO.splice(0, APPLYING_TO.length, ...banks);
       applyIdx = 0;
       renderApplyingCard();
     } else {
