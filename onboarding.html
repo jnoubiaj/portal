@@ -2895,7 +2895,7 @@
   }
 
   // ── PERSONAL FORM SUBMIT ─────────────────────────────
-  function submitPersonal() {
+  async function submitPersonal() {
     const fields = [
       'p_firstName','p_lastName','p_email','p_phone',
       'p_dob','p_ssn','p_street','p_city','p_state','p_zip',
@@ -2922,13 +2922,73 @@
     const banner = document.getElementById('personalErrorBanner');
     if (!valid) {
       banner.classList.add('visible');
-      // scroll to first error
       const firstErr = document.querySelector('#screen-personal .field-error');
       if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     banner.classList.remove('visible');
+
+    // ── DUPLICATE ACCOUNT CHECK ──────────────────────────
+    const ssn    = document.getElementById('p_ssn').value.trim();
+    const dob    = document.getElementById('p_dob').value.trim();
+    const street = document.getElementById('p_street').value.trim().toLowerCase();
+    const currentSession = _getOnboardSession();
+
+    // Show a checking state on the button
+    const nextBtn = document.querySelector('#screen-personal .btn-next');
+    if (nextBtn) { nextBtn.disabled = true; nextBtn.textContent = 'Checking…'; }
+
+    try {
+      const allOnboarding = await fsGetAllOnboarding();
+      if (allOnboarding) {
+        for (const od of allOnboarding) {
+          // Skip the current client's own record
+          if (currentSession && od._clientId === currentSession.clientId) continue;
+          const matchSSN    = od.ssn    && od.ssn.trim()                      === ssn;
+          const matchDOB    = od.dob    && od.dob.trim()                      === dob;
+          const matchStreet = od.street && od.street.trim().toLowerCase()     === street;
+          if (matchSSN && matchDOB && matchStreet) {
+            showDuplicateAccountModal(od.email || '');
+            if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = 'Continue'; }
+            return;
+          }
+        }
+      }
+    } catch(e) {}
+
+    if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = 'Continue'; }
     goTo('business');
+  }
+
+  function showDuplicateAccountModal(oldEmail) {
+    const existing = document.getElementById('duplicate-account-modal');
+    if (existing) existing.remove();
+    const masked = oldEmail
+      ? oldEmail.replace(/(.{2}).+(@.+)/, '$1•••$2')
+      : 'a previous email';
+    const modal = document.createElement('div');
+    modal.id = 'duplicate-account-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(7,15,30,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:36px;max-width:420px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,0.3);text-align:center;">
+        <div style="width:56px;height:56px;border-radius:50%;background:#fef3c7;border:3px solid rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+          <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2.5"><path d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        </div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800;color:#070F1E;margin-bottom:10px;">Account Already Exists</div>
+        <p style="font-size:14px;color:#627090;line-height:1.6;margin-bottom:20px;">
+          It looks like you already have an account with us under <strong style="color:#070F1E;">${masked}</strong>.
+        </p>
+        <p style="font-size:13px;color:#627090;line-height:1.6;margin-bottom:28px;">
+          Please reach out to your CapitalQuest consultant to restore your existing account.
+        </p>
+        <a href="mailto:info@capitalquestfunding.com" style="display:block;width:100%;height:46px;line-height:46px;border-radius:12px;background:#0A1628;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;text-decoration:none;margin-bottom:10px;">
+          Contact Us to Restore Account
+        </a>
+        <button onclick="document.getElementById('duplicate-account-modal').remove()" style="width:100%;height:42px;border-radius:12px;border:1.5px solid #D4DCE8;background:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;color:#627090;cursor:pointer;">
+          Go Back
+        </button>
+      </div>`;
+    document.body.appendChild(modal);
   }
 
   // ── BUSINESS FORM SUBMIT ─────────────────────────────

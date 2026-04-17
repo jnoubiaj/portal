@@ -92,3 +92,10 @@ async function fsSetOnboarding(clientId, data) {
     await db.collection('onboarding').doc(clientId).set(data);
   } catch(e) {}
 }
+
+async function fsGetAllOnboarding() {
+  try {
+    const snap = await db.collection('onboarding').get();
+    return snap.docs.map(d => ({ ...d.data(), _clientId: d.id }));
+  } catch(e) { return null; }
+}

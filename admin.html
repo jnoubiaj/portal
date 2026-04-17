@@ -767,7 +767,11 @@
     <div style="font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--navy);margin-bottom:4px;">Add New Client</div>
     <div style="font-size:13px;color:var(--gray-400);margin-bottom:24px;">Enter their email and phone — their profile auto-fills once they complete onboarding</div>
 
-    <div class="lf-group"><label>Client Email (Portal Login)</label><input type="email" id="nc-email" placeholder="client@email.com" /></div>
+    <div class="lf-group">
+      <label>Client Email (Portal Login)</label>
+      <input type="email" id="nc-email" placeholder="client@email.com" oninput="document.getElementById('nc-email-error').style.display='none'" />
+      <div id="nc-email-error" style="display:none;font-size:12px;color:var(--danger);margin-top:6px;padding:8px 12px;background:var(--danger-bg);border-radius:8px;border:1px solid rgba(239,68,68,0.2);"></div>
+    </div>
     <div class="lf-group"><label>Phone Number (for SMS)</label><input type="tel" id="nc-phone" placeholder="(555) 000-0000" /></div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
@@ -2367,8 +2371,22 @@
     const phone  = document.getElementById('nc-phone').value.trim();
     const service = document.getElementById('nc-service').value;
     const assignTo = document.getElementById('nc-assign').value;
-    if (!email) { alert('Please enter the client\'s email address.'); return; }
-    if (clients.find(c => c.email === email)) { alert('A client with this email already exists.'); return; }
+    const emailErrEl = document.getElementById('nc-email-error');
+    if (emailErrEl) emailErrEl.style.display = 'none';
+    if (!email) {
+      if (emailErrEl) { emailErrEl.textContent = 'Please enter the client\'s email address.'; emailErrEl.style.display = 'block'; }
+      return;
+    }
+    const existingClient = clients.find(c => c.email && c.email.toLowerCase() === email);
+    if (existingClient) {
+      if (emailErrEl) {
+        emailErrEl.textContent = existingClient.archived
+          ? `This email belongs to an archived client (${existingClient.fname} ${existingClient.lname}). Restore them from the Archived tab instead.`
+          : `A client with this email already exists (${existingClient.fname} ${existingClient.lname}).`;
+        emailErrEl.style.display = 'block';
+      }
+      return;
+    }
 
     const color = AVATAR_COLORS[clients.length % AVATAR_COLORS.length];
     const clientId = 'c'+Date.now();
