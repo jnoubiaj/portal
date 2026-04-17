@@ -2417,7 +2417,7 @@
     };
     // Save per-client contract keys so onboarding reads them
     localStorage.setItem('cq_contract_'+clientId, contractType);
-    if (contractAmount) localStorage.setItem('cq_amount_'+clientId, contractAmount);
+    localStorage.setItem('cq_amount_'+clientId, contractAmount);
     localStorage.setItem('cq_pct_'+clientId, contractPct);
     clients.push(newClient);
     saveClients();

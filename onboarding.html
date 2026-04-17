@@ -1698,40 +1698,49 @@
   }
 
   // ── CONTRACT SETUP ───────────────────────────────────
-  // Contract type/amount come from URL params (embedded in login link by admin)
-  // or from per-client localStorage keys set by admin's "Contract Setup" panel.
+  const urlParams = new URLSearchParams(window.location.search);
+  const _sess     = (() => { try { return JSON.parse(sessionStorage.getItem('cq_client_session')||'null') || JSON.parse(localStorage.getItem('cq_active_client_session')||'null'); } catch(e){return null;} })();
+  const _cid      = _sess ? _sess.clientId : null;
 
-  const urlParams  = new URLSearchParams(window.location.search);
-  const _sess      = (() => { try { return JSON.parse(sessionStorage.getItem('cq_client_session')||'null') || JSON.parse(localStorage.getItem('cq_active_client_session')||'null'); } catch(e){return null;} })();
-  const _cid       = _sess ? _sess.clientId : null;
+  function buildPaymentClause(contractKey, feeAmount, feePct) {
+    const amountStr = (feeAmount && feeAmount !== '____________')
+      ? '$' + Number(feeAmount).toLocaleString()
+      : '$____________';
+    return {
+      full:    `Client acknowledges the program investment will be the amount of ${amountStr}. The Client agrees to pay CapitalQuest Funding LLC the full amount at the execution of this agreement.`,
+      split:   `Client acknowledges the program investment will be the total amount of ${amountStr}. The payment will be split into 2 (two) equal payments. Half will be due at the execution of this agreement, the other half will be due in 30 (thirty) days.`,
+      backend: `Client acknowledges the program SET UP FEE is the amount of ${amountStr}. The client will also be responsible for paying ${feePct}% of the total funded amount as a success fee. If cards come at different times, client will be responsible for paying the ${feePct}% success fee as each one arrives. Client agrees to pay within 24 hours of receiving the cards.`
+    }[contractKey] || `Client acknowledges the program investment will be the amount of ${amountStr}. The Client agrees to pay CapitalQuest Funding LLC the full amount at the execution of this agreement.`;
+  }
 
-  const contractKey = urlParams.get('contract')
-    || (_cid && localStorage.getItem('cq_contract_'+_cid))
-    || localStorage.getItem('cq_contract')
-    || 'full';
-  const feeAmount   = urlParams.get('amount')
-    || (_cid && localStorage.getItem('cq_amount_'+_cid))
-    || localStorage.getItem('cq_amount')
-    || '____________';
-  const feePct      = urlParams.get('pct')
-    || (_cid && localStorage.getItem('cq_pct_'+_cid))
-    || localStorage.getItem('cq_pct')
-    || '8';
+  function applyContractClause(contractKey, feeAmount, feePct) {
+    const el = document.getElementById('contractPaymentClause');
+    if (el) el.textContent = buildPaymentClause(contractKey, feeAmount, feePct);
+  }
 
-  localStorage.setItem('cq_contract', contractKey);
-  localStorage.setItem('cq_amount',   feeAmount);
-  localStorage.setItem('cq_pct',      feePct);
+  // Load immediately from URL params or localStorage (instant, no flicker)
+  let _contractKey = urlParams.get('contract') || (_cid && localStorage.getItem('cq_contract_'+_cid)) || localStorage.getItem('cq_contract') || 'full';
+  let _feeAmount   = urlParams.get('amount')   || (_cid && localStorage.getItem('cq_amount_'+_cid))   || localStorage.getItem('cq_amount')   || '';
+  let _feePct      = urlParams.get('pct')      || (_cid && localStorage.getItem('cq_pct_'+_cid))      || localStorage.getItem('cq_pct')      || '8';
+  applyContractClause(_contractKey, _feeAmount, _feePct);
 
-  const amountStr = feeAmount === '____________' ? '$____________' : '$' + Number(feeAmount).toLocaleString();
-
-  const paymentClauses = {
-    full:    `Client acknowledges the program investment will be the amount of ${amountStr}. The Client agrees to pay CapitalQuest Funding LLC the full amount at the execution of this agreement.`,
-    split:   `Client acknowledges the program investment will be the total amount of ${amountStr}. The payment will be split into 2 (two) equal payments. Half will be due at the execution of this agreement, the other half will be due in 30 (thirty) days.`,
-    backend: `Client acknowledges the program SET UP FEE is the amount of ${amountStr}. The client will also be responsible for paying ${feePct}% of the total funded amount as a success fee. If cards come at different times, client will be responsible for paying the ${feePct}% success fee as each one arrives. Client agrees to pay within 24 hours of receiving the cards.`
-  };
-
-  // Inject the correct payment clause
-  document.getElementById('contractPaymentClause').textContent = paymentClauses[contractKey] || paymentClauses.full;
+  // Then fetch from Firestore (authoritative — works cross-device)
+  if (_cid) {
+    fsGetClients().then(fsClients => {
+      if (!fsClients) return;
+      const fsClient = fsClients.find(c => c.id === _cid);
+      if (!fsClient || !fsClient.contractSetup) return;
+      const cs = fsClient.contractSetup;
+      _contractKey = cs.type   || _contractKey;
+      _feeAmount   = cs.amount || _feeAmount;
+      _feePct      = cs.pct    || _feePct;
+      // Cache locally for offline fallback
+      localStorage.setItem('cq_contract_'+_cid, _contractKey);
+      if (_feeAmount) localStorage.setItem('cq_amount_'+_cid, _feeAmount);
+      localStorage.setItem('cq_pct_'+_cid, _feePct);
+      applyContractClause(_contractKey, _feeAmount, _feePct);
+    }).catch(() => {});
+  }
 
   // ── SCROLL TO UNLOCK ─────────────────────────────────
   function checkScroll() {
