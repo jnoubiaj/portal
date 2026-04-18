@@ -1917,12 +1917,6 @@
         </span>
         Dashboard
       </div>
-      <div class="nav-item" onclick="switchSection('progress', this)">
-        <span class="nav-icon">
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-        </span>
-        My Progress
-      </div>
       <div class="nav-item" onclick="switchSection('tasks', this)">
         <span class="nav-icon">
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
@@ -2092,25 +2086,6 @@
 
       </div><!-- /section-dashboard -->
 
-      <!-- ── PROGRESS SECTION ──────────────────────────── -->
-      <div class="section" id="section-progress">
-        <div class="section-card">
-          <div class="card-header">
-            <div class="card-title">Your Funding Journey</div>
-            <div class="card-meta" id="progress-meta-full">Admin-controlled</div>
-          </div>
-          <div class="card-body">
-            <div class="progress-steps" id="progress-steps-full"></div>
-            <div class="progress-bar-wrap" style="margin-top:24px">
-              <div class="progress-bar-fill" id="progress-bar-full" style="width:44%"></div>
-            </div>
-            <div class="progress-meta">
-              <span class="progress-pct" id="progress-pct-full">44% Complete</span>
-              <span class="progress-stage milestones-completed" id="progress-miles-full">4 of 9 milestones completed</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- ── TASKS SECTION ────────────────────────────── -->
       <div class="section" id="section-tasks">
@@ -3364,7 +3339,6 @@
   const sectionTitles = {
     dashboard: 'Dashboard',
     sequence: 'Funding Sequence',
-    progress: 'My Progress',
     tasks: 'My Tasks',
     funding: 'Funding Details',
     credit: 'Credit Analyzer',
