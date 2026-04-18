@@ -264,6 +264,8 @@
     /* ── SECTIONS (tab routing) ───────────────────────── */
     .section { display: none; }
     .section.active { display: block; }
+    .content-area { visibility: hidden; }
+    .content-area.ready { visibility: visible; }
 
     /* ── FUNDING SEQUENCE ─────────────────────────────── */
     .fs-state-bar {
@@ -2080,7 +2082,7 @@
     <div class="content-area">
 
       <!-- ── DASHBOARD HOME ──────────────────────────── -->
-      <div class="section active" id="section-dashboard">
+      <div class="section" id="section-dashboard">
 
         <div class="welcome-banner">
           <div class="welcome-text">
@@ -2580,6 +2582,7 @@
       const _sec  = (_hash && document.getElementById('section-' + _hash)) ? _hash
                   : (sessionStorage.getItem('cq_dash_section') || localStorage.getItem('cq_dash_section') || 'dashboard');
       switchSection(_sec, null, true);
+      try { document.querySelector('.content-area').classList.add('ready'); } catch(e) {}
       // If page was restored from bfcache, also reload data
       if (e.persisted) {
         loadDashboardData();
@@ -3634,12 +3637,12 @@
         renderApplyingCard();
       }, 3000);
     }
-    // Restore last active section on refresh
+    // Restore last active section on refresh, then reveal content
     try {
-      if (initSection && document.getElementById('section-' + initSection)) {
-        switchSection(initSection, null, true);
-      }
-    } catch(e) {}
+      const _sec = initSection && document.getElementById('section-' + initSection) ? initSection : 'dashboard';
+      switchSection(_sec, null, true);
+    } catch(e) { switchSection('dashboard', null, true); }
+    try { document.querySelector('.content-area').classList.add('ready'); } catch(e) {}
 
     // ── FIREBASE REAL-TIME SYNC ──────────────────────────────────────────
     const session = getClientSession();
