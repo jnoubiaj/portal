@@ -2340,6 +2340,37 @@
       <!-- ── DOCUMENTS ─────────────────────────────────── -->
       <div class="section" id="section-documents">
 
+        <!-- Upload Zone — top -->
+        <div class="section-card">
+          <div class="card-header">
+            <div class="card-title">Upload Documents</div>
+            <div class="card-meta">PDF, JPG, PNG — max 20 MB</div>
+          </div>
+          <div class="card-body">
+            <div class="doc-dropzone" id="doc-dropzone"
+              onclick="document.getElementById('doc-file-input').click()"
+              ondragover="docDragOver(event)" ondragleave="docDragLeave(event)" ondrop="docDrop(event)">
+              <div class="doc-dropzone-icon">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              </div>
+              <h4>Drag &amp; drop files here</h4>
+              <p>or click to browse from your device</p>
+              <button class="doc-dropzone-btn" onclick="event.stopPropagation();document.getElementById('doc-file-input').click()">Browse Files</button>
+              <div class="doc-dropzone-note">Supported: PDF, JPG, PNG, DOCX</div>
+            </div>
+            <div class="doc-upload-progress" id="doc-upload-progress">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2" style="flex-shrink:0"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              <div class="doc-up-bar-wrap">
+                <div class="doc-up-filename" id="doc-up-filename">document.pdf</div>
+                <div class="doc-up-bar"><div class="doc-up-bar-fill" id="doc-up-bar-fill"></div></div>
+              </div>
+              <div class="doc-up-pct" id="doc-up-pct">0%</div>
+            </div>
+            <input type="file" id="doc-file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.docx" style="display:none" onchange="docHandleFiles(this.files,'general')">
+            <input type="file" id="doc-req-input" accept=".pdf,.jpg,.jpeg,.png,.docx" style="display:none" onchange="docHandleFiles(this.files, window.__docReqTarget)">
+          </div>
+        </div>
+
         <!-- Document Requests -->
         <div class="section-card">
           <div class="card-header">
@@ -2374,55 +2405,14 @@
           </div>
         </div>
 
-        <!-- Upload Zone -->
-        <div class="section-card">
-          <div class="card-header">
-            <div class="card-title">Upload Documents</div>
-            <div class="card-meta">PDF, JPG, PNG — max 20 MB</div>
-          </div>
-          <div class="card-body">
-            <div class="doc-dropzone" id="doc-dropzone"
-              onclick="document.getElementById('doc-file-input').click()"
-              ondragover="docDragOver(event)" ondragleave="docDragLeave(event)" ondrop="docDrop(event)">
-              <div class="doc-dropzone-icon">
-                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-              </div>
-              <h4>Drag &amp; drop files here</h4>
-              <p>or click to browse from your device</p>
-              <button class="doc-dropzone-btn" onclick="event.stopPropagation();document.getElementById('doc-file-input').click()">Browse Files</button>
-              <div class="doc-dropzone-note">Supported: PDF, JPG, PNG, DOCX</div>
-            </div>
-            <div class="doc-upload-progress" id="doc-upload-progress">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2" style="flex-shrink:0"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-              <div class="doc-up-bar-wrap">
-                <div class="doc-up-filename" id="doc-up-filename">document.pdf</div>
-                <div class="doc-up-bar"><div class="doc-up-bar-fill" id="doc-up-bar-fill"></div></div>
-              </div>
-              <div class="doc-up-pct" id="doc-up-pct">0%</div>
-            </div>
-            <input type="file" id="doc-file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.docx" style="display:none" onchange="docHandleFiles(this.files,'general')">
-            <!-- Hidden inputs for per-request uploads -->
-            <input type="file" id="doc-req-input" accept=".pdf,.jpg,.jpeg,.png,.docx" style="display:none" onchange="docHandleFiles(this.files, window.__docReqTarget)">
-          </div>
-        </div>
-
-        <!-- All Documents -->
+        <!-- All Documents — dynamic -->
         <div class="section-card">
           <div class="card-header">
             <div class="card-title">All Documents</div>
-            <div class="card-meta" id="doc-all-meta">2 files</div>
+            <div class="card-meta" id="doc-all-meta">0 files</div>
           </div>
           <div class="card-body">
-            <div class="doc-list" id="doc-all-list">
-              <div class="doc-item">
-                <div class="doc-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
-                <div class="doc-info"><div class="doc-name">Credit Report — March 2025</div><div class="doc-meta">PDF · Uploaded by Admin · Apr 2, 2025</div></div>
-              </div>
-              <div class="doc-item">
-                <div class="doc-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
-                <div class="doc-info"><div class="doc-name">Signed Consulting Agreement</div><div class="doc-meta">PDF · Uploaded by Admin · Mar 28, 2025</div></div>
-              </div>
-            </div>
+            <div class="doc-list" id="doc-all-list"></div>
           </div>
         </div>
 
@@ -3136,6 +3126,7 @@
     }
 
     renderLatestDocs(d);
+    renderAllDocs();
   }
 
   async function viewSignedContract() {
@@ -4649,9 +4640,7 @@
     Object.keys(docFulfilled).forEach(id => {
       if (docFulfilled[id]) docMarkRequestDone(id, docFulfilled[id], false);
     });
-    // Restore uploaded files
-    docClientFiles.forEach(f => docAddFileRow(f.name, f.size, f.date, f.reqId));
-    docUpdateMeta();
+    renderAllDocs();
   }
 
   function docTriggerUpload(reqId) {
@@ -4728,18 +4717,78 @@
   }
 
   function docAddFileRow(name, size, date, reqId) {
+    // After a new client upload, re-render the full list so it appears in order
+    renderAllDocs();
+  }
+
+  function renderAllDocs() {
     const list = document.getElementById('doc-all-list');
-    const div = document.createElement('div');
-    div.className = 'doc-item';
-    const ext = name.split('.').pop().toLowerCase();
-    const iconColor = ext === 'pdf' ? '#ef4444' : ext === 'docx' ? '#2563eb' : '#22A7F0';
-    div.innerHTML = `
-      <div class="doc-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="${iconColor}" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
-      <div class="doc-info">
-        <div class="doc-name">${name}</div>
-        <div class="doc-meta">${ext.toUpperCase()} · ${size} · Uploaded by You · ${date}</div>
-      </div>`;
-    list.appendChild(div);
+    if (!list) return;
+    const rows = [];
+    const svgDoc = (color) => `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="${color}" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>`;
+
+    // 1. Signed contract(s) from onboarding data
+    try {
+      const sess = getClientSession();
+      const od = sess ? JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || '{}') : {};
+      if (od.contractSigned === 'signed') {
+        const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
+        const tLabel = typeLabels[od.contractType] || od.contractType || 'Consulting Agreement';
+        const dateStr = od.contractDate ? new Date(od.contractDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+        rows.push(`
+          <div class="doc-item">
+            <div class="doc-icon">${svgDoc('#10b981')}</div>
+            <div class="doc-info">
+              <div class="doc-name">Signed Consulting Agreement — ${tLabel}</div>
+              <div class="doc-meta">Signed by you · ${dateStr}</div>
+            </div>
+            <button class="doc-btn" onclick="viewSignedContract()">View</button>
+          </div>`);
+      }
+    } catch(e) {}
+
+    // 2. Admin-added documents from dashboard data
+    const d = getDashData();
+    (d.adminDocs || []).slice().reverse().forEach(doc => {
+      const dateStr = doc.date ? new Date(doc.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+      const ext = doc.name ? doc.name.split('.').pop().toUpperCase() : 'DOC';
+      rows.push(`
+        <div class="doc-item">
+          <div class="doc-icon">${svgDoc('#22A7F0')}</div>
+          <div class="doc-info">
+            <div class="doc-name">${doc.name}</div>
+            <div class="doc-meta">Uploaded by Admin · ${dateStr}</div>
+          </div>
+          ${doc.url
+            ? `<button class="doc-btn" onclick="window.open('${doc.url}','_blank')">View</button>`
+            : (doc.type === 'contract'
+                ? `<button class="doc-btn" onclick="viewSignedContract()">View</button>`
+                : `<button class="doc-btn" style="opacity:0.35;cursor:default">View</button>`)
+          }
+        </div>`);
+    });
+
+    // 3. Client-uploaded files
+    docClientFiles.forEach(f => {
+      const ext = f.name ? f.name.split('.').pop().toLowerCase() : '';
+      const iconColor = ext === 'pdf' ? '#ef4444' : ext === 'docx' ? '#2563eb' : '#22A7F0';
+      rows.push(`
+        <div class="doc-item">
+          <div class="doc-icon">${svgDoc(iconColor)}</div>
+          <div class="doc-info">
+            <div class="doc-name">${f.name}</div>
+            <div class="doc-meta">${ext.toUpperCase()} · ${f.size} · Uploaded by You · ${f.date}</div>
+          </div>
+          <button class="doc-btn" style="opacity:0.35;cursor:default">View</button>
+        </div>`);
+    });
+
+    if (rows.length === 0) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:8px 0">No documents yet.</div>';
+    } else {
+      list.innerHTML = rows.join('');
+    }
+    docUpdateMeta();
   }
 
   function docMarkRequestDone(reqId, fileName, save) {
@@ -4766,9 +4815,10 @@
   }
 
   function docUpdateMeta() {
-    const adminCount = 2; // fixed admin docs
-    const total = adminCount + docClientFiles.length;
-    document.getElementById('doc-all-meta').textContent = total + ' file' + (total !== 1 ? 's' : '');
+    const list = document.getElementById('doc-all-list');
+    const total = list ? list.querySelectorAll('.doc-item').length : 0;
+    const el = document.getElementById('doc-all-meta');
+    if (el) el.textContent = total + ' file' + (total !== 1 ? 's' : '');
     docUpdateReqMeta();
   }
 
