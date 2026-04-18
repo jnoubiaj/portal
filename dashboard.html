@@ -920,139 +920,70 @@
     }
     .doc-btn.primary:hover { background: var(--blue-dark); }
 
-    /* ── FUNDING APPLICATIONS TABLE ───────────────────── */
-    .fa-section { margin-bottom: 0; }
-    .fa-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .fa-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    .fa-table thead th {
-      padding: 11px 16px;
-      text-align: left;
-      font-size: 10.5px;
-      font-weight: 700;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      color: var(--gray-400);
-      background: var(--gray-50);
-      border-bottom: 1px solid var(--gray-100);
-      white-space: nowrap;
-    }
-    .fa-table tbody tr {
-      border-bottom: 1px solid var(--gray-100);
-      transition: background 0.12s;
-    }
-    .fa-table tbody tr:last-child { border-bottom: none; }
-    .fa-table tbody tr:hover { background: #f8fafc; }
-    .fa-table td {
+    /* ── FUNDING APPLICATIONS LIST ───────────────────── */
+    .fa-list { display: flex; flex-direction: column; gap: 10px; }
+    .fa-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
       padding: 14px 16px;
-      vertical-align: middle;
+      border-radius: 10px;
+      border: 1px solid var(--gray-100);
+      transition: border-color 0.15s;
     }
-    /* Number cell */
-    .fa-num {
-      width: 28px; height: 28px;
-      background: var(--navy);
-      color: white;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 700;
+    .fa-row:hover { border-color: var(--gray-200); }
+    .fa-logo {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid var(--gray-100);
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
     }
-    /* Bank badge */
+    .fa-logo img { width: 24px; height: 24px; object-fit: contain; }
+    .fa-info { flex: 1; min-width: 0; }
     .fa-bank-tag {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      padding: 3px 8px 3px 6px;
-      border-radius: 6px;
-      font-size: 10.5px;
+      gap: 4px;
+      padding: 2px 7px 2px 5px;
+      border-radius: 5px;
+      font-size: 10px;
       font-weight: 700;
-      letter-spacing: 0.02em;
-      margin-bottom: 5px;
+      letter-spacing: 0.03em;
+      margin-bottom: 3px;
     }
-    .fa-bank-tag-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .fa-card-name {
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--navy);
-      line-height: 1.3;
-    }
-    .fa-period {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--gray-600);
-      white-space: nowrap;
-    }
-    .fa-amount {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--navy);
-      white-space: nowrap;
-    }
+    .fa-bank-tag-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .fa-card-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+    .fa-card-sub { font-size: 11px; color: var(--gray-400); margin-top: 1px; }
+    .fa-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .fa-amount { font-size: 13px; font-weight: 700; color: var(--navy); }
     .fa-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 5px 11px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; white-space: nowrap;
     }
-    .fa-status::before {
-      content: '';
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
+    .fa-status::before { content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+    .fa-status.pending  { background:#FFF8E1; color:#B45309; }
+    .fa-status.pending::before  { background:#F59E0B; }
+    .fa-status.applied  { background:#EFF6FF; color:#1D4ED8; }
+    .fa-status.applied::before  { background:#3B82F6; }
+    .fa-status.approved { background:#F0FDF4; color:#15803D; }
+    .fa-status.approved::before { background:#22C55E; }
+    .fa-status.denied   { background:#FEF2F2; color:#B91C1C; }
+    .fa-status.denied::before   { background:#EF4444; }
+    .fa-period-tag {
+      font-size: 11px; font-weight: 600; color: var(--gray-500);
+      background: var(--gray-50); border: 1px solid var(--gray-100);
+      padding: 3px 8px; border-radius: 6px; white-space: nowrap;
     }
-    .fa-status.pending  { background: #FFF8E1; color: #B45309; }
-    .fa-status.pending::before  { background: #F59E0B; }
-    .fa-status.applied  { background: #EFF6FF; color: #1D4ED8; }
-    .fa-status.applied::before  { background: #3B82F6; }
-    .fa-status.approved { background: #F0FDF4; color: #15803D; }
-    .fa-status.approved::before { background: #22C55E; }
-    .fa-status.denied   { background: #FEF2F2; color: #B91C1C; }
-    .fa-status.denied::before   { background: #EF4444; }
-    .fa-instructions {
-      font-size: 12px;
-      color: var(--gray-500);
-      line-height: 1.6;
-    }
-    .fa-dash { color: var(--gray-300); font-size: 16px; }
-    /* Mobile: stack as cards */
-    @media (max-width: 640px) {
-      .fa-table thead { display: none; }
-      .fa-table, .fa-table tbody, .fa-table tr, .fa-table td { display: block; width: 100%; box-sizing: border-box; }
-      .fa-table tbody tr {
-        margin: 0 0 10px;
-        border: 1px solid var(--gray-100);
-        border-radius: 12px;
-        overflow: hidden;
-        background: var(--white);
-      }
-      .fa-table tbody tr:last-child { border: 1px solid var(--gray-100); }
-      .fa-table td { padding: 10px 14px; border-bottom: 1px solid var(--gray-100); }
-      .fa-table td:last-child { border-bottom: none; }
-      .fa-table td::before {
-        content: attr(data-label);
-        display: block;
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--gray-400);
-        margin-bottom: 4px;
-      }
-      .fa-table td:first-child { display: none; }
+    .fa-instructions-text { font-size: 11px; color: var(--gray-400); margin-top: 4px; line-height: 1.5; }
+    @media (max-width: 560px) {
+      .fa-right { flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+      .fa-period-tag { display: none; }
     }
 
     /* ── DOCUMENT REQUESTS ────────────────────────────── */
@@ -2199,24 +2130,8 @@
             <div class="card-title">Funding Applications</div>
             <div class="card-meta" id="funding-apps-meta"></div>
           </div>
-          <div class="card-body" style="padding:0">
-            <div class="fa-table-wrap">
-              <table class="fa-table">
-                <thead>
-                  <tr>
-                    <th style="width:44px"></th>
-                    <th>Bank / Card</th>
-                    <th>0% Period</th>
-                    <th>Status</th>
-                    <th>Amount</th>
-                    <th>Instructions</th>
-                  </tr>
-                </thead>
-                <tbody id="fa-tbody">
-                  <tr><td colspan="6" class="fa-empty">No funding applications yet.</td></tr>
-                </tbody>
-              </table>
-            </div>
+          <div class="card-body">
+            <div class="fa-list" id="fa-tbody"></div>
           </div>
         </div>
 
@@ -3416,32 +3331,30 @@
         (totalApproved ? ' · $' + totalApproved.toLocaleString() + ' approved' : '');
     }
 
-    tbody.innerHTML = rows.map((r, i) => {
+    tbody.innerHTML = rows.map((r) => {
       const bankColor = BANK_COLORS[r.bank] || '#64748b';
-      const bankBg = bankColor + '15';
+      const bankBg = bankColor + '18';
       const statusClass = r.status || 'pending';
       const label = statusLabel[statusClass] || 'Pending';
       const brand = getBankBrand(r.bank);
-      const faviconId = 'fa-icon-' + r.id;
-      const bankTag = `<div class="fa-bank-tag" style="background:${bankBg};color:${bankColor}">
-        <span class="fa-bank-tag-dot" style="background:${bankColor}"></span>${r.bank}
-      </div>`;
-      return `<tr>
-        <td style="width:44px;padding-right:4px">
-          <div class="fa-logo-wrap" id="${faviconId}" style="width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid #EDF1F7;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-            <img src="https://www.google.com/s2/favicons?domain=${brand.domain}&sz=64" alt="${r.bank}" style="width:22px;height:22px;object-fit:contain"
-              onerror="this.style.display='none';this.parentElement.style.background='${brand.bg}';this.parentElement.style.border='none';this.parentElement.innerHTML='<span style=\\'font-size:11px;font-weight:700;color:white\\'>${brand.initials}</span>'" />
+      return `<div class="fa-row">
+        <div class="fa-logo">
+          <img src="https://www.google.com/s2/favicons?domain=${brand.domain}&sz=64" alt="${r.bank}"
+            onerror="this.style.display='none';this.parentElement.style.background='${brand.bg}';this.parentElement.style.border='none';this.parentElement.innerHTML='<span style=\\'font-size:11px;font-weight:700;color:white\\'>${brand.initials}</span>'" />
+        </div>
+        <div class="fa-info">
+          <div class="fa-bank-tag" style="background:${bankBg};color:${bankColor}">
+            <span class="fa-bank-tag-dot" style="background:${bankColor}"></span>${r.bank}
           </div>
-        </td>
-        <td data-label="Bank / Card">
-          ${bankTag}
           <div class="fa-card-name">${r.cardName || '—'}</div>
-        </td>
-        <td data-label="0% Period"><span class="fa-period">${r.introPeriod || '—'}</span></td>
-        <td data-label="Status"><span class="fa-status ${statusClass}">${label}</span></td>
-        <td data-label="Amount">${r.amount ? `<span class="fa-amount">$${Number(r.amount).toLocaleString()}</span>` : `<span class="fa-dash">—</span>`}</td>
-        <td data-label="Instructions"><div class="fa-instructions">${r.instructions || '<span class="fa-dash">—</span>'}</div></td>
-      </tr>`;
+          ${r.instructions ? `<div class="fa-instructions-text">${r.instructions}</div>` : ''}
+        </div>
+        <div class="fa-right">
+          <span class="fa-period-tag">${r.introPeriod || 'N/A'}</span>
+          ${r.amount ? `<span class="fa-amount">$${Number(r.amount).toLocaleString()}</span>` : ''}
+          <span class="fa-status ${statusClass}">${label}</span>
+        </div>
+      </div>`;
     }).join('');
   }
 
