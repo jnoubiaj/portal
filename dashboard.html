@@ -2575,7 +2575,12 @@
     try {
       const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null');
       if (!sess || !sess.clientId) { window.location.replace('login.html'); return; }
-      // If page was restored from cache (persisted), reload data to show latest state
+      // Always restore the active section (covers refresh + bfcache restore)
+      const _hash = window.location.hash.replace('#','');
+      const _sec  = (_hash && document.getElementById('section-' + _hash)) ? _hash
+                  : (sessionStorage.getItem('cq_dash_section') || localStorage.getItem('cq_dash_section') || 'dashboard');
+      switchSection(_sec, null, true);
+      // If page was restored from bfcache, also reload data
       if (e.persisted) {
         loadDashboardData();
         renderApplyingCard();
@@ -3650,6 +3655,8 @@
           loadDashboardData(); // re-render with Firestore data
           renderApplyingCard();
           renderFundingSequence();
+          // Re-pin section after async re-render so it doesn't snap back to dashboard
+          try { switchSection(initSection, null, true); } catch(e) {}
         }
       } catch(e) {}
 
@@ -4895,7 +4902,7 @@
     }
     document.getElementById('pageTitleText').textContent = sectionTitles[name] || name;
     // Persist active section so refresh returns to same section
-    try { localStorage.setItem('cq_dash_section', name); } catch(e) {}
+    try { localStorage.setItem('cq_dash_section', name); sessionStorage.setItem('cq_dash_section', name); } catch(e) {}
     // Push to browser history so back button navigates between sections
     if (!skipHistory) {
       history.pushState({ section: name }, '', '#' + name);
