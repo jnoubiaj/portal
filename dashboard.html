@@ -3324,11 +3324,13 @@
     card.style.display = '';
 
     const statusLabel = { pending: 'Pending', applied: 'Applied', approved: 'Approved', denied: 'Denied' };
-    const approved = rows.filter(r => r.status === 'approved');
-    const totalApproved = approved.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const totalApproved = rows.filter(r => r.status === 'approved').reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const totalFunding  = rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
     if (meta) {
-      meta.textContent = rows.length + ' application' + (rows.length !== 1 ? 's' : '') +
-        (totalApproved ? ' · $' + totalApproved.toLocaleString() + ' approved' : '');
+      let metaStr = rows.length + ' application' + (rows.length !== 1 ? 's' : '');
+      if (totalApproved) metaStr += ' · $' + totalApproved.toLocaleString() + ' approved';
+      else if (totalFunding) metaStr += ' · $' + totalFunding.toLocaleString() + ' in funding';
+      meta.textContent = metaStr;
     }
 
     tbody.innerHTML = rows.map((r) => {
@@ -3347,7 +3349,7 @@
             <span class="fa-bank-tag-dot" style="background:${bankColor}"></span>${r.bank}
           </div>
           <div class="fa-card-name">${r.cardName || '—'}</div>
-          ${r.instructions ? `<div class="fa-instructions-text">${r.instructions}</div>` : ''}
+          <div class="fa-instructions-text">${r.instructions || '<span style="color:var(--gray-300)">No instructions added yet</span>'}</div>
         </div>
         <div class="fa-right">
           <span class="fa-period-tag">${r.introPeriod || 'N/A'}</span>
