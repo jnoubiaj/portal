@@ -920,47 +920,36 @@
     }
     .doc-btn.primary:hover { background: var(--blue-dark); }
 
-    /* ── FUNDING APPLICATIONS LIST ───────────────────── */
-    .fa-list { display: flex; flex-direction: column; gap: 10px; }
-    .fa-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 14px 16px;
-      border-radius: 10px;
-      border: 1px solid var(--gray-100);
-      transition: border-color 0.15s;
-    }
-    .fa-row:hover { border-color: var(--gray-200); }
-    .fa-logo {
-      width: 40px; height: 40px;
-      border-radius: 10px;
-      background: #fff;
-      border: 1px solid var(--gray-100);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      overflow: hidden;
-    }
-    .fa-logo img { width: 24px; height: 24px; object-fit: contain; }
-    .fa-info { flex: 1; min-width: 0; }
-    .fa-bank-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 7px 2px 5px;
-      border-radius: 5px;
+    /* ── FUNDING APPLICATIONS TABLE ─────────────────── */
+    .fa-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .fa-table thead th {
+      padding: 10px 16px;
+      text-align: left;
       font-size: 10px;
       font-weight: 700;
-      letter-spacing: 0.03em;
-      margin-bottom: 3px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      border-bottom: 1px solid var(--gray-100);
+      white-space: nowrap;
     }
-    .fa-bank-tag-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-    .fa-card-name { font-size: 13px; font-weight: 600; color: var(--navy); }
-    .fa-card-sub { font-size: 11px; color: var(--gray-400); margin-top: 1px; }
-    .fa-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .fa-table tbody tr { border-bottom: 1px solid var(--gray-100); transition: background 0.1s; }
+    .fa-table tbody tr:last-child { border-bottom: none; }
+    .fa-table tbody tr:hover { background: var(--gray-50); }
+    .fa-table td { padding: 13px 16px; vertical-align: middle; }
+    .fa-bank-cell { display: flex; align-items: center; gap: 10px; }
+    .fa-logo {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: #fff; border: 1px solid var(--gray-100);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .fa-logo img { width: 18px; height: 18px; object-fit: contain; }
+    .fa-bank-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+    .fa-product { font-size: 13px; font-weight: 500; color: var(--navy); }
+    .fa-period { font-size: 12px; color: var(--gray-600); white-space: nowrap; }
     .fa-amount { font-size: 13px; font-weight: 700; color: var(--navy); }
+    .fa-notes { font-size: 12px; color: var(--gray-500); line-height: 1.5; max-width: 220px; }
     .fa-status {
       display: inline-flex; align-items: center; gap: 5px;
       padding: 4px 10px; border-radius: 20px;
@@ -975,15 +964,14 @@
     .fa-status.approved::before { background:#22C55E; }
     .fa-status.denied   { background:#FEF2F2; color:#B91C1C; }
     .fa-status.denied::before   { background:#EF4444; }
-    .fa-period-tag {
-      font-size: 11px; font-weight: 600; color: var(--gray-500);
-      background: var(--gray-50); border: 1px solid var(--gray-100);
-      padding: 3px 8px; border-radius: 6px; white-space: nowrap;
-    }
-    .fa-instructions-text { font-size: 11px; color: var(--gray-400); margin-top: 4px; line-height: 1.5; }
-    @media (max-width: 560px) {
-      .fa-right { flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
-      .fa-period-tag { display: none; }
+    @media (max-width: 600px) {
+      .fa-table thead { display: none; }
+      .fa-table, .fa-table tbody, .fa-table tr, .fa-table td { display: block; width: 100%; box-sizing: border-box; }
+      .fa-table tbody tr { border: 1px solid var(--gray-100); border-radius: 10px; margin-bottom: 10px; padding: 4px 0; }
+      .fa-table tbody tr:last-child { border: 1px solid var(--gray-100); }
+      .fa-table td { padding: 8px 14px; border-bottom: 1px solid var(--gray-50); }
+      .fa-table td:last-child { border-bottom: none; }
+      .fa-table td::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); margin-bottom: 3px; }
     }
 
     /* ── DOCUMENT REQUESTS ────────────────────────────── */
@@ -2130,8 +2118,20 @@
             <div class="card-title">Funding Applications</div>
             <div class="card-meta" id="funding-apps-meta"></div>
           </div>
-          <div class="card-body">
-            <div class="fa-list" id="fa-tbody"></div>
+          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+            <table class="fa-table" id="fa-tbody-table">
+              <thead>
+                <tr>
+                  <th>Bank</th>
+                  <th>Product</th>
+                  <th>0% Intro Period</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="fa-tbody"></tbody>
+            </table>
           </div>
         </div>
 
@@ -3334,29 +3334,25 @@
     }
 
     tbody.innerHTML = rows.map((r) => {
-      const bankColor = BANK_COLORS[r.bank] || '#64748b';
-      const bankBg = bankColor + '18';
       const statusClass = r.status || 'pending';
       const label = statusLabel[statusClass] || 'Pending';
       const brand = getBankBrand(r.bank);
-      return `<div class="fa-row">
-        <div class="fa-logo">
-          <img src="https://www.google.com/s2/favicons?domain=${brand.domain}&sz=64" alt="${r.bank}"
-            onerror="this.style.display='none';this.parentElement.style.background='${brand.bg}';this.parentElement.style.border='none';this.parentElement.innerHTML='<span style=\\'font-size:11px;font-weight:700;color:white\\'>${brand.initials}</span>'" />
-        </div>
-        <div class="fa-info">
-          <div class="fa-bank-tag" style="background:${bankBg};color:${bankColor}">
-            <span class="fa-bank-tag-dot" style="background:${bankColor}"></span>${r.bank}
+      return `<tr>
+        <td data-label="Bank">
+          <div class="fa-bank-cell">
+            <div class="fa-logo">
+              <img src="https://www.google.com/s2/favicons?domain=${brand.domain}&sz=64" alt="${r.bank}"
+                onerror="this.style.display='none';this.parentElement.style.background='${brand.bg}';this.parentElement.style.border='none';this.parentElement.innerHTML='<span style=\\'font-size:10px;font-weight:700;color:white\\'>${brand.initials}</span>'" />
+            </div>
+            <span class="fa-bank-name">${r.bank}</span>
           </div>
-          <div class="fa-card-name">${r.cardName || '—'}</div>
-          <div class="fa-instructions-text">${r.instructions || '<span style="color:var(--gray-300)">No instructions added yet</span>'}</div>
-        </div>
-        <div class="fa-right">
-          <span class="fa-period-tag">${r.introPeriod || 'N/A'}</span>
-          ${r.amount ? `<span class="fa-amount">$${Number(r.amount).toLocaleString()}</span>` : ''}
-          <span class="fa-status ${statusClass}">${label}</span>
-        </div>
-      </div>`;
+        </td>
+        <td data-label="Product"><span class="fa-product">${r.cardName || '—'}</span></td>
+        <td data-label="0% Intro Period"><span class="fa-period">${r.introPeriod || '—'}</span></td>
+        <td data-label="Status"><span class="fa-status ${statusClass}">${label}</span></td>
+        <td data-label="Amount"><span class="fa-amount">${r.amount ? '$' + Number(r.amount).toLocaleString() : '—'}</span></td>
+        <td data-label="Notes"><div class="fa-notes">${r.instructions || '<span style="color:var(--gray-300)">—</span>'}</div></td>
+      </tr>`;
     }).join('');
   }
 
