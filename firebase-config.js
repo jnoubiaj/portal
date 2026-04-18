@@ -99,3 +99,9 @@ async function fsGetAllOnboarding() {
     return snap.docs.map(d => ({ ...d.data(), _clientId: d.id }));
   } catch(e) { return null; }
 }
+
+function fsListenOnboarding(clientId, callback) {
+  return db.collection('onboarding').doc(clientId).onSnapshot(snap => {
+    if (snap.exists) callback(snap.data());
+  });
+}

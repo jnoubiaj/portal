@@ -1344,6 +1344,33 @@
       font-weight: 500;
       color: var(--navy);
     }
+    .field-value.empty { color: var(--gray-300); font-style: italic; font-size: 13px; }
+    .profile-edit-input {
+      width: 100%;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-family: var(--font-body);
+      color: var(--navy);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .profile-edit-input:focus { border-color: var(--blue); }
+    .profile-edit-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      border: none; cursor: pointer; transition: background 0.15s, transform 0.1s;
+    }
+    .profile-edit-btn:active { transform: scale(0.97); }
+    .profile-edit-btn.primary { background: var(--blue); color: #fff; }
+    .profile-edit-btn.primary:hover { background: var(--blue-dark); }
+    .profile-edit-btn.ghost { background: var(--gray-100); color: var(--gray-600); }
+    .profile-edit-btn.ghost:hover { background: var(--gray-200); }
+    .profile-save-row { display: flex; gap: 10px; margin-top: 8px; }
+    .profile-save-toast { font-size: 12px; font-weight: 600; color: var(--success); align-self: center; opacity: 0; transition: opacity 0.3s; }
+    .profile-section-divider { height: 1px; background: var(--gray-100); margin: 0 -24px 20px; }
 
     /* ── DISQUALIFIED ─────────────────────────────────── */
     #section-disqualified {
@@ -2520,31 +2547,8 @@
 
       <!-- ── PROFILE ────────────────────────────────────── -->
       <div class="section" id="section-profile">
-        <div class="profile-grid">
-          <div class="section-card">
-            <div class="card-header"><div class="card-title">Personal Information</div></div>
-            <div class="card-body">
-              <div class="field-group"><div class="field-label">Full Name</div><div class="field-value">James Davis</div></div>
-              <div class="field-group"><div class="field-label">Email</div><div class="field-value">james.davis@email.com</div></div>
-              <div class="field-group"><div class="field-label">Phone</div><div class="field-value">347-555-0192</div></div>
-              <div class="field-group"><div class="field-label">Date of Birth</div><div class="field-value">March 14, 1988</div></div>
-              <div class="field-group"><div class="field-label">Street Address</div><div class="field-value">421 Park Avenue, Apt 8B</div></div>
-              <div class="field-group"><div class="field-label">City / State / ZIP</div><div class="field-value">New York, NY 10022</div></div>
-              <div class="field-group"><div class="field-label">Personal Bank Relationships</div><div class="field-value">Chase, Bank of America</div></div>
-            </div>
-          </div>
-          <div class="section-card">
-            <div class="card-header"><div class="card-title">Business Information</div></div>
-            <div class="card-body">
-              <div class="field-group"><div class="field-label">Business Name</div><div class="field-value">Davis Ventures LLC</div></div>
-              <div class="field-group"><div class="field-label">Business Type</div><div class="field-value">LLC</div></div>
-              <div class="field-group"><div class="field-label">Industry</div><div class="field-value">Real Estate</div></div>
-              <div class="field-group"><div class="field-label">EIN</div><div class="field-value">82-4571039</div></div>
-              <div class="field-group"><div class="field-label">Years in Operation</div><div class="field-value">3 years</div></div>
-              <div class="field-group"><div class="field-label">Annual Revenue</div><div class="field-value">$185,000</div></div>
-              <div class="field-group"><div class="field-label">Business Address</div><div class="field-value">421 Park Ave, New York, NY 10022</div></div>
-            </div>
-          </div>
+        <div id="profile-content">
+          <div class="empty-state"><p>Loading profile…</p></div>
         </div>
       </div>
 
@@ -3041,6 +3045,190 @@
     return base;
   }
 
+  // ── MY PROFILE ───────────────────────────────────────────────────────────
+
+  let _profileUnsubscribe = null;
+
+  function getOnboardData() {
+    const session = getClientSession();
+    if (!session) return null;
+    const cid = session.clientId;
+    let od = null;
+    try { od = JSON.parse(localStorage.getItem('cq_onboard_data_' + cid) || 'null'); } catch(e) {}
+    if (!od) { try { od = JSON.parse(localStorage.getItem('cq_onboard_data') || 'null'); } catch(e) {} }
+    return od || {};
+  }
+
+  function fmtVal(v) {
+    if (v === null || v === undefined || v === '') return '<span class="field-value empty">—</span>';
+    return `<div class="field-value">${v}</div>`;
+  }
+
+  function fmtArr(arr) {
+    if (!arr || !arr.length) return '<span class="field-value empty">—</span>';
+    const a = Array.isArray(arr) ? arr : arr.split(',').map(s=>s.trim()).filter(Boolean);
+    if (!a.length) return '<span class="field-value empty">—</span>';
+    return `<div class="field-value">${a.join(', ')}</div>`;
+  }
+
+  function renderProfileSection() {
+    const od = getOnboardData();
+    const el = document.getElementById('profile-content');
+    if (!el) return;
+
+    const personalBanks = Array.isArray(od.personalBanks) ? od.personalBanks
+      : (od.personalBanks ? od.personalBanks.split(',').map(s=>s.trim()).filter(Boolean) : []);
+    const homeAddress = od.address || [od.street, od.city, od.state, od.zip].filter(Boolean).join(', ') || '';
+    const bizAddress = od.bizAddress || [od.bizStreet, od.bizCity, od.bizState, od.bizZip].filter(Boolean).join(', ') || '';
+
+    el.innerHTML = `
+      <div class="profile-grid">
+        <!-- Personal Information -->
+        <div class="section-card">
+          <div class="card-header">
+            <div class="card-title">Personal Information</div>
+            <button class="profile-edit-btn ghost" onclick="startProfileEdit('personal')" style="padding:5px 12px;font-size:12px">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit
+            </button>
+          </div>
+          <div class="card-body" id="profile-personal-view">
+            <div class="field-group"><div class="field-label">Full Name</div>${fmtVal([od.firstName, od.lastName].filter(Boolean).join(' '))}</div>
+            <div class="field-group"><div class="field-label">Email</div>${fmtVal(od.email)}</div>
+            <div class="field-group"><div class="field-label">Phone</div>${fmtVal(od.phone)}</div>
+            <div class="field-group"><div class="field-label">Date of Birth</div>${fmtVal(od.dob)}</div>
+            <div class="field-group"><div class="field-label">Home Address</div>${fmtVal(homeAddress)}</div>
+            <div class="field-group"><div class="field-label">Annual Income</div>${fmtVal(od.annualIncome ? '$'+Number(od.annualIncome).toLocaleString() : '')}</div>
+            <div class="field-group"><div class="field-label">Personal Bank Relationships</div>${fmtArr(personalBanks)}</div>
+          </div>
+        </div>
+        <!-- Business Information -->
+        <div class="section-card">
+          <div class="card-header">
+            <div class="card-title">Business Information</div>
+            <button class="profile-edit-btn ghost" onclick="startProfileEdit('business')" style="padding:5px 12px;font-size:12px">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit
+            </button>
+          </div>
+          <div class="card-body" id="profile-business-view">
+            <div class="field-group"><div class="field-label">Business Name</div>${fmtVal(od.bizName)}</div>
+            <div class="field-group"><div class="field-label">Business Type</div>${fmtVal(od.bizType)}</div>
+            <div class="field-group"><div class="field-label">Industry</div>${fmtVal(od.industry)}</div>
+            <div class="field-group"><div class="field-label">EIN</div>${fmtVal(od.ein)}</div>
+            <div class="field-group"><div class="field-label">Monthly Sales</div>${fmtVal(od.monthlySales ? '$'+Number(od.monthlySales).toLocaleString() : '')}</div>
+            <div class="field-group"><div class="field-label">Date Established</div>${fmtVal(od.dateEstablished)}</div>
+            <div class="field-group"><div class="field-label">Business Phone</div>${fmtVal(od.bizPhone)}</div>
+            <div class="field-group"><div class="field-label">Business Address</div>${fmtVal(bizAddress)}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function startProfileEdit(section) {
+    const od = getOnboardData();
+    const personalBanks = Array.isArray(od.personalBanks) ? od.personalBanks.join(', ')
+      : (od.personalBanks || '');
+    const homeAddress = od.address || [od.street, od.city, od.state, od.zip].filter(Boolean).join(', ') || '';
+    const bizAddress = od.bizAddress || [od.bizStreet, od.bizCity, od.bizState, od.bizZip].filter(Boolean).join(', ') || '';
+
+    const inp = (id, val, placeholder) =>
+      `<input class="profile-edit-input" id="pe-${id}" value="${(val||'').replace(/"/g,'&quot;')}" placeholder="${placeholder||''}" />`;
+
+    if (section === 'personal') {
+      document.getElementById('profile-personal-view').innerHTML = `
+        <div class="field-group"><div class="field-label">First Name</div>${inp('firstName', od.firstName, 'First name')}</div>
+        <div class="field-group"><div class="field-label">Last Name</div>${inp('lastName', od.lastName, 'Last name')}</div>
+        <div class="field-group"><div class="field-label">Email</div>${inp('email', od.email, 'Email address')}</div>
+        <div class="field-group"><div class="field-label">Phone</div>${inp('phone', od.phone, 'Phone number')}</div>
+        <div class="field-group"><div class="field-label">Date of Birth</div>${inp('dob', od.dob, 'YYYY-MM-DD')}</div>
+        <div class="field-group"><div class="field-label">Home Address</div>${inp('address', homeAddress, 'Full address')}</div>
+        <div class="field-group"><div class="field-label">Annual Income</div>${inp('annualIncome', od.annualIncome, '75000')}</div>
+        <div class="field-group"><div class="field-label">Personal Banks (comma-separated)</div>${inp('personalBanks', personalBanks, 'Chase, Bank of America')}</div>
+        <div class="profile-save-row">
+          <button class="profile-edit-btn primary" onclick="saveProfileEdits('personal')">Save Changes</button>
+          <button class="profile-edit-btn ghost" onclick="renderProfileSection()">Cancel</button>
+          <span class="profile-save-toast" id="profile-toast-personal">✓ Saved</span>
+        </div>`;
+    } else {
+      document.getElementById('profile-business-view').innerHTML = `
+        <div class="field-group"><div class="field-label">Business Name</div>${inp('bizName', od.bizName, 'Business name')}</div>
+        <div class="field-group"><div class="field-label">Business Type</div>${inp('bizType', od.bizType, 'LLC, S-Corp, Sole Prop…')}</div>
+        <div class="field-group"><div class="field-label">Industry</div>${inp('industry', od.industry, 'Industry')}</div>
+        <div class="field-group"><div class="field-label">EIN</div>${inp('ein', od.ein, 'XX-XXXXXXX')}</div>
+        <div class="field-group"><div class="field-label">Monthly Sales</div>${inp('monthlySales', od.monthlySales, '10000')}</div>
+        <div class="field-group"><div class="field-label">Date Established</div>${inp('dateEstablished', od.dateEstablished, 'YYYY-MM-DD')}</div>
+        <div class="field-group"><div class="field-label">Business Phone</div>${inp('bizPhone', od.bizPhone, 'Business phone')}</div>
+        <div class="field-group"><div class="field-label">Business Address</div>${inp('bizAddress', bizAddress, 'Full business address')}</div>
+        <div class="profile-save-row">
+          <button class="profile-edit-btn primary" onclick="saveProfileEdits('business')">Save Changes</button>
+          <button class="profile-edit-btn ghost" onclick="renderProfileSection()">Cancel</button>
+          <span class="profile-save-toast" id="profile-toast-business">✓ Saved</span>
+        </div>`;
+    }
+  }
+
+  async function saveProfileEdits(section) {
+    const session = getClientSession();
+    if (!session) return;
+    const cid = session.clientId;
+    let od = getOnboardData() || {};
+
+    const g = id => (document.getElementById('pe-' + id) || {}).value || '';
+
+    if (section === 'personal') {
+      od.firstName    = g('firstName');
+      od.lastName     = g('lastName');
+      od.email        = g('email');
+      od.phone        = g('phone');
+      od.dob          = g('dob');
+      od.address      = g('address');
+      od.annualIncome = g('annualIncome');
+      od.personalBanks = g('personalBanks').split(',').map(s=>s.trim()).filter(Boolean);
+    } else {
+      od.bizName        = g('bizName');
+      od.bizType        = g('bizType');
+      od.industry       = g('industry');
+      od.ein            = g('ein');
+      od.monthlySales   = g('monthlySales');
+      od.dateEstablished= g('dateEstablished');
+      od.bizPhone       = g('bizPhone');
+      od.bizAddress     = g('bizAddress');
+    }
+
+    // Save to localStorage
+    try {
+      localStorage.setItem('cq_onboard_data_' + cid, JSON.stringify(od));
+      localStorage.setItem('cq_onboard_data', JSON.stringify(od));
+    } catch(e) {}
+
+    // Save to Firebase
+    try { await fsSetOnboarding(cid, od); } catch(e) {}
+
+    // Show toast then re-render
+    const toast = document.getElementById('profile-toast-' + section);
+    if (toast) { toast.style.opacity = '1'; setTimeout(() => { toast.style.opacity = '0'; renderProfileSection(); }, 1200); }
+    else renderProfileSection();
+  }
+
+  function initProfileSync() {
+    const session = getClientSession();
+    if (!session || !session.clientId) return;
+    // Load initial Firebase data
+    fsGetOnboarding(session.clientId).then(od => {
+      if (od) {
+        try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od)); } catch(e) {}
+        renderProfileSection();
+      }
+    }).catch(()=>{});
+    // Real-time listener (admin edits → client sees instantly)
+    if (_profileUnsubscribe) { try { _profileUnsubscribe(); } catch(e) {} }
+    _profileUnsubscribe = fsListenOnboarding(session.clientId, (od) => {
+      try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od)); } catch(e) {}
+      renderProfileSection();
+    });
+  }
+
   function renderProgressSteps(containerId, stages, currentStage) {
     const el = document.getElementById(containerId);
     if (!el) return;
@@ -3433,6 +3621,8 @@
     loadDashboardData();
     renderApplyingCard();
     renderFundingSequence();
+    renderProfileSection();
+    initProfileSync();
     if (APPLYING_TO.length > 1) {
       setInterval(() => {
         applyIdx = (applyIdx + 1) % APPLYING_TO.length;
@@ -4715,6 +4905,10 @@
     // Auto-load persisted credit report (admin uploads once, client sees it)
     if (name === 'credit') {
       caAutoLoadFromStorage();
+    }
+    // Render profile when switching to it
+    if (name === 'profile') {
+      renderProfileSection();
     }
   }
 
