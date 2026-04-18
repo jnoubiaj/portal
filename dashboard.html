@@ -920,6 +920,129 @@
     }
     .doc-btn.primary:hover { background: var(--blue-dark); }
 
+    /* ── FUNDING APPLICATIONS TABLE ───────────────────── */
+    .fa-section { margin-bottom: 0; }
+    .fa-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .fa-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .fa-table thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      background: var(--gray-50);
+      border-bottom: 1.5px solid var(--gray-100);
+    }
+    .fa-table thead th:first-child { border-radius: 8px 0 0 0; }
+    .fa-table thead th:last-child  { border-radius: 0 8px 0 0; }
+    .fa-table tbody tr {
+      border-bottom: 1px solid var(--gray-100);
+      transition: background 0.12s;
+    }
+    .fa-table tbody tr:last-child { border-bottom: none; }
+    .fa-table tbody tr:hover { background: var(--gray-50); }
+    .fa-table td {
+      padding: 13px 14px;
+      vertical-align: middle;
+      color: var(--navy);
+    }
+    .fa-bank-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .fa-bank-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .fa-card-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--navy);
+      line-height: 1.3;
+    }
+    .fa-card-sub {
+      font-size: 11px;
+      color: var(--gray-400);
+      margin-top: 2px;
+    }
+    .fa-period {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-600);
+    }
+    .fa-amount {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .fa-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .fa-status.pending  { background: #FFF8E1; color: #F57F17; }
+    .fa-status.applied  { background: var(--blue-light); color: var(--blue-dark); }
+    .fa-status.approved { background: #E8F5E9; color: #2E7D32; }
+    .fa-status.denied   { background: var(--danger-bg); color: var(--danger); }
+    .fa-instructions {
+      font-size: 12px;
+      color: var(--gray-500);
+      line-height: 1.5;
+      max-width: 200px;
+    }
+    .fa-empty {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--gray-400);
+      font-size: 13px;
+    }
+    /* Mobile: stack rows as cards */
+    @media (max-width: 640px) {
+      .fa-table thead { display: none; }
+      .fa-table, .fa-table tbody, .fa-table tr, .fa-table td { display: block; width: 100%; }
+      .fa-table tbody tr {
+        margin-bottom: 12px;
+        border: 1px solid var(--gray-100);
+        border-radius: 12px;
+        padding: 12px;
+        background: var(--white);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      }
+      .fa-table tbody tr:last-child { border: 1px solid var(--gray-100); }
+      .fa-table td {
+        padding: 5px 0;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .fa-table td::before {
+        content: attr(data-label);
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gray-400);
+        min-width: 80px;
+        padding-top: 2px;
+        flex-shrink: 0;
+      }
+    }
+
     /* ── DOCUMENT REQUESTS ────────────────────────────── */
     .doc-req-list { display: flex; flex-direction: column; gap: 10px; }
     .doc-req-item {
@@ -2058,6 +2181,33 @@
           </div>
         </div>
 
+        <!-- Funding Applications Table -->
+        <div class="section-card fa-section" id="funding-apps-card" style="display:none">
+          <div class="card-header">
+            <div class="card-title">Funding Applications</div>
+            <div class="card-meta" id="funding-apps-meta"></div>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="fa-table-wrap">
+              <table class="fa-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Bank / Card</th>
+                    <th>0% Period</th>
+                    <th>Status</th>
+                    <th>Amount</th>
+                    <th>Instructions</th>
+                  </tr>
+                </thead>
+                <tbody id="fa-tbody">
+                  <tr><td colspan="6" class="fa-empty">No funding applications yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <div class="two-col">
           <!-- Tasks preview -->
           <div class="section-card">
@@ -2881,7 +3031,8 @@
     stageNames: ['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
     tasks: [],
     adminDocs: [],        // { id, name, date, type } — admin-uploaded docs shown to client
-    pendingContract: null // { type, amount, pct, issuedAt } — set by admin when contract changes; cleared on client sign
+    pendingContract: null, // { type, amount, pct, issuedAt } — set by admin when contract changes; cleared on client sign
+    fundingRows: []       // { id, bank, cardName, introPeriod, status, amount, instructions }
   };
 
   // Resolve client session — check sessionStorage first, then localStorage backup
@@ -3083,10 +3234,18 @@
     const nb = document.getElementById('nb-tasks');
     if(nb) { nb.textContent = openTasks; nb.style.display = openTasks > 0 ? '' : 'none'; }
 
-    // Applying card — use ordered banks array, fall back to single bank, else show '—'
-    const banks = (d.applyingBanks && d.applyingBanks.length)
-      ? d.applyingBanks.map(b => ({ name: b }))
-      : (d.applyingBank ? [{ name: d.applyingBank }] : []);
+    // Applying card — derive from fundingRows (active rows) or fall back to applyingBanks array
+    const activeRows = (d.fundingRows || []).filter(r => r.status === 'applied' || r.status === 'pending' || r.status === 'approved');
+    let banks;
+    if (activeRows.length) {
+      const seenBanks = [];
+      activeRows.forEach(r => { if (r.bank && !seenBanks.includes(r.bank)) seenBanks.push(r.bank); });
+      banks = seenBanks.map(b => ({ name: b }));
+    } else {
+      banks = (d.applyingBanks && d.applyingBanks.length)
+        ? d.applyingBanks.map(b => ({ name: b }))
+        : (d.applyingBank ? [{ name: d.applyingBank }] : []);
+    }
     if (banks.length) {
       APPLYING_TO.splice(0, APPLYING_TO.length, ...banks);
       applyIdx = 0;
@@ -3100,6 +3259,7 @@
       const dots = document.getElementById('applyingDots'); if(dots) dots.innerHTML = '';
     }
 
+    renderFundingTable(d);
     renderLatestDocs(d);
     renderAllDocs();
   }
@@ -3206,6 +3366,63 @@
       </div>`;
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  }
+
+  const BANK_COLORS = {
+    'Chase': '#1a3a6b',
+    'American Express': '#007bc1',
+    'Bank of America': '#e31837',
+    'Wells Fargo': '#d71e28',
+    'US Bank': '#0c2074',
+    'Capital One': '#d03027',
+    'Citi': '#003b8e',
+    'Truist': '#56007e',
+    'PNC': '#f58025',
+    'Citizens Bank': '#005eb8',
+    'First Citizens': '#00a651',
+    'Discover': '#f76211',
+  };
+
+  function renderFundingTable(d) {
+    const rows = (d.fundingRows || []);
+    const card = document.getElementById('funding-apps-card');
+    const tbody = document.getElementById('fa-tbody');
+    const meta = document.getElementById('funding-apps-meta');
+    if (!card || !tbody) return;
+
+    if (!rows.length) {
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+
+    const statusLabel = { pending: 'Pending', applied: 'Applied', approved: 'Approved', denied: 'Denied' };
+    const approved = rows.filter(r => r.status === 'approved');
+    const totalApproved = approved.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    if (meta) {
+      meta.textContent = rows.length + ' application' + (rows.length !== 1 ? 's' : '') +
+        (totalApproved ? ' · $' + totalApproved.toLocaleString() + ' approved' : '');
+    }
+
+    tbody.innerHTML = rows.map((r, i) => {
+      const bankColor = BANK_COLORS[r.bank] || '#64748b';
+      const statusClass = r.status || 'pending';
+      const label = statusLabel[statusClass] || 'Pending';
+      const dot = `<span class="fa-bank-dot" style="background:${bankColor}"></span>`;
+      return `<tr>
+        <td data-label="#">
+          <span style="width:22px;height:22px;background:var(--navy);color:white;border-radius:50%;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">${i+1}</span>
+        </td>
+        <td data-label="Bank / Card">
+          <div class="fa-bank-pill">${dot}<span style="color:${bankColor};font-size:11px">${r.bank}</span></div>
+          <div class="fa-card-name" style="margin-top:3px">${r.cardName || '—'}</div>
+        </td>
+        <td data-label="0% Period"><span class="fa-period">${r.introPeriod || '—'}</span></td>
+        <td data-label="Status"><span class="fa-status ${statusClass}">${label}</span></td>
+        <td data-label="Amount"><span class="fa-amount">${r.amount ? '$' + Number(r.amount).toLocaleString() : '—'}</span></td>
+        <td data-label="Instructions"><div class="fa-instructions">${r.instructions || '—'}</div></td>
+      </tr>`;
+    }).join('');
   }
 
   function renderLatestDocs(d) {

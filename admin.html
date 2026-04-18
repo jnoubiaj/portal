@@ -2523,7 +2523,60 @@
     stageNames:['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
     tasks:[],
     adminDocs:[],
-    pendingContract:null
+    pendingContract:null,
+    fundingRows:[]
+  };
+
+  const CARD_LIBRARY = {
+    'Chase': [
+      { name: 'Chase Ink Business Cash',       introPeriod: '12 months 0% APR' },
+      { name: 'Chase Ink Business Unlimited',  introPeriod: '12 months 0% APR' },
+      { name: 'Chase Ink Business Preferred',  introPeriod: 'N/A' },
+      { name: 'Chase Sapphire Business',       introPeriod: 'N/A' },
+    ],
+    'American Express': [
+      { name: 'Amex Blue Business Cash',       introPeriod: '12 months 0% APR' },
+      { name: 'Amex Blue Business Plus',       introPeriod: '12 months 0% APR' },
+      { name: 'Amex Business Gold',            introPeriod: 'N/A' },
+      { name: 'Amex Business Platinum',        introPeriod: 'N/A' },
+    ],
+    'Bank of America': [
+      { name: 'BofA Business Advantage Customized Cash', introPeriod: '9 billing cycles 0% APR' },
+      { name: 'BofA Business Advantage Unlimited Cash',  introPeriod: '9 billing cycles 0% APR' },
+      { name: 'BofA Business Advantage Travel Rewards',  introPeriod: 'N/A' },
+    ],
+    'Wells Fargo': [
+      { name: 'Wells Fargo Signify Business Cash',  introPeriod: '12 months 0% APR' },
+      { name: 'Wells Fargo Business Platinum Card', introPeriod: '9 months 0% APR' },
+      { name: 'Wells Fargo Business LOC',           introPeriod: 'N/A' },
+    ],
+    'US Bank': [
+      { name: 'US Bank Triple Cash',           introPeriod: '15 billing cycles 0% APR' },
+      { name: 'US Bank Business Platinum',     introPeriod: '18 billing cycles 0% APR' },
+      { name: 'US Bank Business Cash Rewards', introPeriod: '12 billing cycles 0% APR' },
+    ],
+    'Capital One': [
+      { name: 'Capital One Spark Cash Plus',   introPeriod: 'N/A' },
+      { name: 'Capital One Spark Cash Select', introPeriod: '12 months 0% APR' },
+      { name: 'Capital One Spark Miles',       introPeriod: 'N/A' },
+    ],
+    'Citi': [
+      { name: 'Citi Business AAdvantage Platinum', introPeriod: 'N/A' },
+      { name: 'CitiBusiness Double Cash',           introPeriod: 'N/A' },
+    ],
+    'Truist': [
+      { name: 'Truist Business Cash Rewards',  introPeriod: '12 months 0% APR' },
+    ],
+    'PNC': [
+      { name: 'PNC Cash Rewards Visa Business', introPeriod: '13 billing cycles 0% APR' },
+      { name: 'PNC Business LOC',               introPeriod: 'N/A' },
+    ],
+    'Citizens Bank': [
+      { name: 'Citizens Bank Business Rewards', introPeriod: '12 months 0% APR' },
+    ],
+    'Discover': [
+      { name: 'Discover it Business',           introPeriod: '12 months 0% APR' },
+    ],
   };
 
   function getDashData(clientId) {
@@ -2622,55 +2675,24 @@
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Goal ($)</div>
               <input class="a-add-req-input" style="width:100%" type="number" id="db-goal-${clientId}" value="${d.fundingGoal}" oninput="debouncedPublish('${clientId}')" /></div>
             <div style="grid-column:1/-1">
-              <div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:6px">
-                Applying To (Banks) — in order
-                ${(d.applyingBanks||[]).length ? `<span style="color:var(--blue);font-weight:700">${(d.applyingBanks||[]).length} bank${(d.applyingBanks||[]).length!==1?'s':''} selected</span>` : ''}
+              <div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:8px">
+                Funding Applications
+                ${(d.fundingRows||[]).length ? `<span style="color:var(--blue);font-weight:700;margin-left:6px">${(d.fundingRows||[]).length} row${(d.fundingRows||[]).length!==1?'s':''}</span>` : ''}
               </div>
-              <div style="display:flex;gap:8px;margin-bottom:8px">
-                <select id="db-bank-select-${clientId}" class="a-add-req-input" style="flex:1;cursor:pointer">
-                  <option value="">— Choose a bank to add —</option>
-                  <optgroup label="Chase">
-                    <option>Chase Ink Business Cash</option>
-                    <option>Chase Ink Business Unlimited</option>
-                    <option>Chase Ink Business Preferred</option>
-                  </optgroup>
-                  <optgroup label="American Express">
-                    <option>Amex Blue Business Cash</option>
-                    <option>Amex Blue Business Plus</option>
-                    <option>Amex Business Gold</option>
-                  </optgroup>
-                  <optgroup label="Bank of America">
-                    <option>Bank of America Business</option>
-                  </optgroup>
-                  <optgroup label="Wells Fargo">
-                    <option>Wells Fargo Signify Business Cash</option>
-                    <option>Wells Fargo Business LOC</option>
-                  </optgroup>
-                  <optgroup label="US Bank">
-                    <option>US Bank Triple Cash</option>
-                    <option>US Bank Business Platinum</option>
-                  </optgroup>
-                  <optgroup label="Other">
-                    <option>Capital One Spark Cash</option>
-                    <option>Citi Business</option>
-                    <option>Truist Business</option>
-                    <option>PNC Business</option>
-                    <option>Citizens Bank Business</option>
-                    <option>First Citizens Business</option>
-                    <option>Discover Business</option>
-                  </optgroup>
+              <!-- Cascading bank → card selector -->
+              <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+                <select id="fa-bank-sel-${clientId}" class="a-add-req-input" style="flex:1;min-width:140px;cursor:pointer" onchange="faPopulateCards('${clientId}')">
+                  <option value="">— Select bank —</option>
+                  ${Object.keys(CARD_LIBRARY).map(bank => `<option value="${bank}">${bank}</option>`).join('')}
                 </select>
-                <button onclick="addApplyingBank('${clientId}')" style="padding:0 16px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">+ Add</button>
+                <select id="fa-card-sel-${clientId}" class="a-add-req-input" style="flex:2;min-width:180px;cursor:pointer">
+                  <option value="">— Select card —</option>
+                </select>
+                <button onclick="addFundingRow('${clientId}')" style="padding:0 16px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;height:38px">+ Add</button>
               </div>
-              <div id="db-bank-list-${clientId}" style="display:flex;flex-direction:column;gap:6px">
-                ${(d.applyingBanks||[]).length === 0
-                  ? `<div style="font-size:12px;color:var(--gray-400);padding:8px 0;font-style:italic">No banks added yet</div>`
-                  : (d.applyingBanks||[]).map((b,i) => `
-                  <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:8px">
-                    <span style="min-width:20px;height:20px;background:var(--navy);color:white;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</span>
-                    <span style="flex:1;font-size:13px;font-weight:600;color:var(--navy)">${b}</span>
-                    <button onclick="removeApplyingBank('${clientId}',${i})" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:16px;line-height:1;padding:0" title="Remove">×</button>
-                  </div>`).join('')}
+              <!-- Funding rows list -->
+              <div id="fa-rows-${clientId}" style="display:flex;flex-direction:column;gap:8px">
+                ${renderFundingRowsAdmin(clientId, d.fundingRows||[])}
               </div>
             </div>
           </div>
@@ -2798,6 +2820,99 @@
     renderClientDetail(clientId);
   }
 
+  function faPopulateCards(clientId) {
+    const bankSel = document.getElementById('fa-bank-sel-'+clientId);
+    const cardSel = document.getElementById('fa-card-sel-'+clientId);
+    if (!bankSel || !cardSel) return;
+    const bank = bankSel.value;
+    const cards = (bank && CARD_LIBRARY[bank]) || [];
+    cardSel.innerHTML = '<option value="">— Select card —</option>' +
+      cards.map(c => `<option value="${c.name}" data-period="${c.introPeriod}">${c.name} (${c.introPeriod})</option>`).join('');
+  }
+
+  function renderFundingRowsAdmin(clientId, rows) {
+    if (!rows.length) return `<div style="font-size:12px;color:var(--gray-400);padding:8px 0;font-style:italic">No applications added yet. Choose a bank and card above.</div>`;
+    const statusOpts = ['pending','applied','approved','denied'].map(s =>
+      `<option value="${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('');
+    return rows.map((r, i) => `
+      <div style="border:1px solid var(--gray-100);border-radius:10px;padding:12px 14px;background:var(--gray-50)">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <span style="width:22px;height:22px;background:var(--navy);color:white;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">${i+1}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px;color:var(--navy)">${r.bank}</div>
+            <div style="font-size:12px;color:var(--gray-500);margin-top:1px">${r.cardName}</div>
+            <div style="font-size:11px;color:var(--blue-dark);margin-top:2px">${r.introPeriod || 'N/A'}</div>
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
+              <select onchange="faUpdateRow('${clientId}','${r.id}','status',this.value)" style="height:30px;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;padding:0 6px;cursor:pointer;background:white">
+                ${['pending','applied','approved','denied'].map(s => `<option value="${s}"${r.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+              </select>
+              <input type="number" placeholder="Amount $" value="${r.amount||''}" onchange="faUpdateRow('${clientId}','${r.id}','amount',this.value)"
+                style="height:30px;width:110px;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;padding:0 8px" />
+            </div>
+            <div style="margin-top:8px">
+              <textarea placeholder="Instructions (optional)…" rows="2" onchange="faUpdateRow('${clientId}','${r.id}','instructions',this.value)"
+                style="width:100%;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;padding:6px 8px;resize:vertical;font-family:inherit">${r.instructions||''}</textarea>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+            ${i > 0 ? `<button onclick="faMove('${clientId}','${r.id}',-1)" title="Move up" style="background:var(--gray-100);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center">↑</button>` : '<span style="width:26px;height:26px"></span>'}
+            ${i < rows.length-1 ? `<button onclick="faMove('${clientId}','${r.id}',1)" title="Move down" style="background:var(--gray-100);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center">↓</button>` : '<span style="width:26px;height:26px"></span>'}
+            <button onclick="faRemove('${clientId}','${r.id}')" title="Delete" style="background:var(--danger-bg);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--danger);font-size:15px;display:flex;align-items:center;justify-content:center">×</button>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function addFundingRow(clientId) {
+    const bankSel = document.getElementById('fa-bank-sel-'+clientId);
+    const cardSel = document.getElementById('fa-card-sel-'+clientId);
+    if (!bankSel || !cardSel) return;
+    const bank = bankSel.value;
+    const cardOpt = cardSel.options[cardSel.selectedIndex];
+    const cardName = cardSel.value;
+    if (!bank || !cardName) { alert('Please select a bank and card.'); return; }
+    const introPeriod = cardOpt ? (cardOpt.getAttribute('data-period') || 'N/A') : 'N/A';
+    const d = getDashData(clientId);
+    if (!d.fundingRows) d.fundingRows = [];
+    d.fundingRows.push({ id: 'fr_' + Date.now(), bank, cardName, introPeriod, status: 'pending', amount: '', instructions: '' });
+    saveDashData(clientId, d);
+    const container = document.getElementById('fa-rows-'+clientId);
+    if (container) container.innerHTML = renderFundingRowsAdmin(clientId, d.fundingRows);
+    bankSel.value = ''; cardSel.innerHTML = '<option value="">— Select card —</option>';
+  }
+
+  function faUpdateRow(clientId, rowId, field, value) {
+    const d = getDashData(clientId);
+    if (!d.fundingRows) return;
+    const row = d.fundingRows.find(r => r.id === rowId);
+    if (!row) return;
+    row[field] = value;
+    saveDashData(clientId, d);
+  }
+
+  function faRemove(clientId, rowId) {
+    const d = getDashData(clientId);
+    if (!d.fundingRows) return;
+    d.fundingRows = d.fundingRows.filter(r => r.id !== rowId);
+    saveDashData(clientId, d);
+    const container = document.getElementById('fa-rows-'+clientId);
+    if (container) container.innerHTML = renderFundingRowsAdmin(clientId, d.fundingRows);
+  }
+
+  function faMove(clientId, rowId, dir) {
+    const d = getDashData(clientId);
+    if (!d.fundingRows) return;
+    const idx = d.fundingRows.findIndex(r => r.id === rowId);
+    if (idx < 0) return;
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= d.fundingRows.length) return;
+    const [row] = d.fundingRows.splice(idx, 1);
+    d.fundingRows.splice(newIdx, 0, row);
+    saveDashData(clientId, d);
+    const container = document.getElementById('fa-rows-'+clientId);
+    if (container) container.innerHTML = renderFundingRowsAdmin(clientId, d.fundingRows);
+  }
+
   function syncFundingPreview(clientId) {
     const val = +document.getElementById('db-approved-'+clientId)?.value || 0;
     const preview = document.getElementById('db-secured-preview-'+clientId);
@@ -2848,8 +2963,14 @@
     d.fundingApproved= +g('db-approved-'+clientId)?.value || d.fundingApproved;
     d.fundingSecured = d.fundingApproved; // keep in sync
     d.fundingGoal   = +g('db-goal-'+clientId)?.value || d.fundingGoal;
-    // applyingBanks are saved immediately on add/remove — just sync derived fields
-    if (d.applyingBanks && d.applyingBanks.length) {
+    // Derive applyingBanks from fundingRows if any rows exist
+    if (d.fundingRows && d.fundingRows.length) {
+      const activeBanks = [];
+      d.fundingRows.forEach(r => { if (r.bank && !activeBanks.includes(r.bank)) activeBanks.push(r.bank); });
+      d.applyingBanks = activeBanks;
+      d.applyingBank  = activeBanks[0] || '';
+      d.applyingCount = activeBanks.length ? activeBanks.length + ' of ' + activeBanks.length + ' applications' : '';
+    } else if (d.applyingBanks && d.applyingBanks.length) {
       d.applyingBank  = d.applyingBanks[0];
       d.applyingCount = d.applyingBanks.length + ' of ' + d.applyingBanks.length + ' applications';
     }
