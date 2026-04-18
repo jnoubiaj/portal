@@ -886,7 +886,7 @@
       return;
     }
     currentAdmin = user;
-    try { localStorage.setItem('cq_admin_session', JSON.stringify(user)); } catch(e) {}
+    try { sessionStorage.setItem('cq_admin_session', JSON.stringify(user)); } catch(e) {}
     document.getElementById('admin-login').style.display = 'none';
     document.getElementById('admin-app').style.display = 'block';
     document.getElementById('sb-avatar').textContent = user.initials;
@@ -895,7 +895,7 @@
   }
 
   function adminLogout() {
-    try { localStorage.removeItem('cq_admin_session'); } catch(e) {}
+    try { sessionStorage.removeItem('cq_admin_session'); } catch(e) {}
     location.reload();
   }
 
@@ -1034,7 +1034,7 @@
   // Auto-restore admin session — runs here so all data/functions are defined first
   (function() {
     try {
-      const s = localStorage.getItem('cq_admin_session');
+      const s = sessionStorage.getItem('cq_admin_session');
       if (s) {
         currentAdmin = JSON.parse(s);
         document.getElementById('admin-login').style.display = 'none';
@@ -1044,7 +1044,7 @@
         initAdminApp();
         return;
       }
-    } catch(e) { localStorage.removeItem('cq_admin_session'); }
+    } catch(e) { sessionStorage.removeItem('cq_admin_session'); }
   })();
   if (currentAdmin) initAdminApp();
 

@@ -2561,8 +2561,7 @@
   // ── SESSION GUARD ─────────────────────────────────────
   (function() {
     try {
-      const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
-                || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+      const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null');
       if (!sess || !sess.clientId) window.location.replace('login.html');
     } catch(e) { window.location.replace('login.html'); }
   })();
@@ -2570,8 +2569,7 @@
   // Fix iOS swipe-back: re-validate session when page is restored from bfcache
   window.addEventListener('pageshow', (e) => {
     try {
-      const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
-                || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+      const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null');
       if (!sess || !sess.clientId) { window.location.replace('login.html'); return; }
       // If page was restored from cache (persisted), reload data to show latest state
       if (e.persisted) {
@@ -2962,11 +2960,9 @@
     fundingRows: []       // { id, bank, cardName, introPeriod, status, amount, instructions }
   };
 
-  // Resolve client session — check sessionStorage first, then localStorage backup
   function getClientSession() {
     try {
-      return JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
-          || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+      return JSON.parse(sessionStorage.getItem('cq_client_session') || 'null');
     } catch(e) { return null; }
   }
 
@@ -2984,12 +2980,10 @@
         if (ac) resolvedClientId = ac.id;
       } catch(e) {}
     }
-    // If resolution found a different id, update the session backup so future loads are correct
     if (resolvedClientId && resolvedClientId !== clientId) {
       try {
         const s = { ...(session || {}), clientId: resolvedClientId };
         sessionStorage.setItem('cq_client_session', JSON.stringify(s));
-        localStorage.setItem('cq_active_client_session', JSON.stringify(s));
       } catch(e) {}
       clientId = resolvedClientId;
     }

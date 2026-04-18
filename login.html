@@ -1042,10 +1042,6 @@
         sessionStorage.setItem('cq_client_session', JSON.stringify({
           clientId, email, loggedInAt: new Date().toISOString()
         }));
-        // Also persist to localStorage as backup (sessionStorage clears on tab close)
-        localStorage.setItem('cq_active_client_session', JSON.stringify({
-          clientId, email, loggedInAt: new Date().toISOString()
-        }));
       } catch(e) {}
     }
 
@@ -1134,8 +1130,7 @@
     // Fix iOS swipe-back: if client already has a valid session, redirect them away from login
     window.addEventListener('pageshow', (e) => {
       try {
-        const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
-                  || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+        const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null');
         if (sess && sess.clientId) {
           const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
           const client = adminClients.find(c => c.id === sess.clientId);
