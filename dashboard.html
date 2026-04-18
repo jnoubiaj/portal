@@ -1322,55 +1322,33 @@
     .util-pct.mid { color: var(--warning); }
     .util-pct.high { color: var(--danger); }
 
-    /* ── PROFILE / SETTINGS ───────────────────────────── */
-    .profile-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-    }
-    .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin-bottom: 16px;
-    }
-    .field-label {
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--gray-400);
-    }
-    .field-value {
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--navy);
-    }
-    .field-value.empty { color: var(--gray-300); font-style: italic; font-size: 13px; }
-    .profile-edit-input {
-      width: 100%;
-      border: 1.5px solid var(--gray-200);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 14px;
-      font-family: var(--font-body);
-      color: var(--navy);
-      background: var(--white);
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    .profile-edit-input:focus { border-color: var(--blue); }
-    .profile-edit-btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
-      border: none; cursor: pointer; transition: background 0.15s, transform 0.1s;
-    }
-    .profile-edit-btn:active { transform: scale(0.97); }
-    .profile-edit-btn.primary { background: var(--blue); color: #fff; }
-    .profile-edit-btn.primary:hover { background: var(--blue-dark); }
-    .profile-edit-btn.ghost { background: var(--gray-100); color: var(--gray-600); }
-    .profile-edit-btn.ghost:hover { background: var(--gray-200); }
-    .profile-save-row { display: flex; gap: 10px; margin-top: 8px; }
+    /* ── PROFILE ─────────────────────────────────────── */
+    .cp-section { background:var(--white); border:1px solid var(--gray-200); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+    .cp-section-header { display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--gray-100); background:var(--gray-50); }
+    .cp-section-icon { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .cp-section-title { font-family:var(--font-head); font-size:13px; font-weight:700; color:var(--navy); }
+    .cp-section-badge { margin-left:auto; font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px; }
+    .cp-section-edit { margin-left:auto; display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 12px; border-radius:7px; border:1.5px solid var(--gray-200); background:transparent; font-size:11px; font-weight:700; color:var(--gray-500); cursor:pointer; font-family:var(--font-head); transition:all 0.15s; }
+    .cp-section-edit:hover { border-color:var(--blue); color:var(--blue); }
+    .cp-grid { display:grid; grid-template-columns:repeat(3,1fr); }
+    .cp-field { padding:12px 16px; border-right:1px solid var(--gray-100); border-bottom:1px solid var(--gray-100); }
+    .cp-field:nth-child(3n) { border-right:none; }
+    .cp-field-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--gray-400); margin-bottom:3px; }
+    .cp-field-val { font-size:13px; font-weight:600; color:var(--navy); word-break:break-word; line-height:1.4; }
+    .cp-field-val.empty { color:var(--gray-300); font-weight:400; font-style:italic; }
+    .cp-full-row { padding:12px 16px; border-bottom:1px solid var(--gray-100); }
+    .cp-full-row:last-child { border-bottom:none; }
+    .cp-tags { display:flex; flex-wrap:wrap; gap:5px; }
+    .cp-tag-bank { font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; background:var(--success-bg); color:var(--success); border:1px solid rgba(16,185,129,0.15); }
+    .cp-tag-card { font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; background:var(--pending-bg); color:var(--pending); border:1px solid rgba(139,92,246,0.15); }
+    /* edit mode */
+    .cp-edit-input { width:100%; height:34px; border:1.5px solid var(--gray-200); border-radius:8px; padding:0 10px; font-size:13px; font-family:var(--font-body); color:var(--navy); outline:none; transition:border-color 0.15s; background:var(--white); }
+    .cp-edit-input:focus { border-color:var(--blue); }
+    .cp-save-row { display:flex; gap:10px; align-items:center; padding:14px 16px; border-top:1px solid var(--gray-100); background:var(--gray-50); }
+    .cp-save-btn { height:34px; padding:0 20px; border-radius:8px; border:none; background:var(--navy); color:white; font-size:12px; font-weight:700; font-family:var(--font-head); cursor:pointer; transition:background 0.15s; }
+    .cp-save-btn:hover { background:var(--blue); }
+    .cp-cancel-btn { height:34px; padding:0 16px; border-radius:8px; border:1.5px solid var(--gray-200); background:transparent; color:var(--gray-500); font-size:12px; font-weight:600; font-family:var(--font-head); cursor:pointer; }
+    .cp-save-toast { font-size:12px; font-weight:600; color:var(--success); opacity:0; transition:opacity 0.3s; }
     .profile-save-toast { font-size: 12px; font-weight: 600; color: var(--success); align-self: center; opacity: 0; transition: opacity 0.3s; }
     .profile-section-divider { height: 1px; background: var(--gray-100); margin: 0 -24px 20px; }
 
@@ -3067,16 +3045,52 @@
     return od || {};
   }
 
-  function fmtVal(v) {
-    if (v === null || v === undefined || v === '') return '<span class="field-value empty">—</span>';
-    return `<div class="field-value">${v}</div>`;
+  // Formatting helpers
+  function cpFmt(v) {
+    if (v === null || v === undefined || v === '') return `<span class="cp-field-val empty">—</span>`;
+    return `<span class="cp-field-val">${v}</span>`;
   }
-
-  function fmtArr(arr) {
-    if (!arr || !arr.length) return '<span class="field-value empty">—</span>';
+  function cpFmtPhone(v) {
+    if (!v) return cpFmt('');
+    const d = v.replace(/\D/g,'');
+    if (d.length === 10) return cpFmt(`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`);
+    if (d.length === 11 && d[0]==='1') return cpFmt(`+1 (${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`);
+    return cpFmt(v);
+  }
+  function cpFmtMoney(v) {
+    if (!v && v !== 0) return cpFmt('');
+    const n = parseFloat(String(v).replace(/[^0-9.]/g,''));
+    return isNaN(n) ? cpFmt(v) : cpFmt('$' + n.toLocaleString());
+  }
+  function cpFmtDate(v) {
+    if (!v) return cpFmt('');
+    try {
+      // Handle YYYY-MM-DD or other date strings
+      const d = new Date(v.includes('T') ? v : v + 'T12:00:00');
+      if (isNaN(d)) return cpFmt(v);
+      return cpFmt(d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+    } catch(e) { return cpFmt(v); }
+  }
+  function cpField(label, valHtml) {
+    return `<div class="cp-field"><div class="cp-field-label">${label}</div>${valHtml}</div>`;
+  }
+  function cpTags(arr, cls) {
+    if (!arr || !arr.length) return `<span class="cp-field-val empty">None listed</span>`;
     const a = Array.isArray(arr) ? arr : arr.split(',').map(s=>s.trim()).filter(Boolean);
-    if (!a.length) return '<span class="field-value empty">—</span>';
-    return `<div class="field-value">${a.join(', ')}</div>`;
+    if (!a.length) return `<span class="cp-field-val empty">None listed</span>`;
+    return `<div class="cp-tags">${a.map(t=>`<span class="cp-tag-${cls}">${t}</span>`).join('')}</div>`;
+  }
+  function cpSectionHeader(icon, title, color, editFn, badgeText, badgeColor) {
+    return `
+      <div class="cp-section-header">
+        <div class="cp-section-icon" style="background:${color}20">${icon}</div>
+        <div class="cp-section-title">${title}</div>
+        ${badgeText ? `<span class="cp-section-badge" style="background:${badgeColor||color}20;color:${badgeColor||color}">${badgeText}</span>` : ''}
+        ${editFn ? `<button class="cp-section-edit" onclick="${editFn}" style="${badgeText?'margin-left:8px':''}">
+          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>` : ''}
+      </div>`;
   }
 
   function renderProfileSection() {
@@ -3086,92 +3100,126 @@
 
     const personalBanks = Array.isArray(od.personalBanks) ? od.personalBanks
       : (od.personalBanks ? od.personalBanks.split(',').map(s=>s.trim()).filter(Boolean) : []);
+    const bizBanks = Array.isArray(od.bizBanks) ? od.bizBanks
+      : (od.bizBanks ? od.bizBanks.split(',').map(s=>s.trim()).filter(Boolean) : []);
+    const bizCards = Array.isArray(od.bizCreditCards) ? od.bizCreditCards
+      : (od.bizCreditCards ? od.bizCreditCards.split(',').map(s=>s.trim()).filter(Boolean) : []);
     const homeAddress = od.address || [od.street, od.city, od.state, od.zip].filter(Boolean).join(', ') || '';
     const bizAddress = od.bizAddress || [od.bizStreet, od.bizCity, od.bizState, od.bizZip].filter(Boolean).join(', ') || '';
 
     el.innerHTML = `
-      <div class="profile-grid">
-        <!-- Personal Information -->
-        <div class="section-card">
-          <div class="card-header">
-            <div class="card-title">Personal Information</div>
-            <button class="profile-edit-btn ghost" onclick="startProfileEdit('personal')" style="padding:5px 12px;font-size:12px">
-              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              Edit
-            </button>
+      <!-- Personal Information -->
+      <div class="cp-section" id="cp-personal-section">
+        ${cpSectionHeader(`<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`,'Personal Information','#22A7F0','startProfileEdit("personal")')}
+        <div id="cp-personal-body">
+          <div class="cp-grid">
+            ${cpField('First Name', cpFmt(od.firstName))}
+            ${cpField('Last Name', cpFmt(od.lastName))}
+            ${cpField('Email', cpFmt(od.email))}
+            ${cpField('Phone', cpFmtPhone(od.phone))}
+            ${cpField('Date of Birth', cpFmtDate(od.dob))}
+            ${cpField('Annual Income', cpFmtMoney(od.annualIncome))}
           </div>
-          <div class="card-body" id="profile-personal-view">
-            <div class="field-group"><div class="field-label">Full Name</div>${fmtVal([od.firstName, od.lastName].filter(Boolean).join(' '))}</div>
-            <div class="field-group"><div class="field-label">Email</div>${fmtVal(od.email)}</div>
-            <div class="field-group"><div class="field-label">Phone</div>${fmtVal(od.phone)}</div>
-            <div class="field-group"><div class="field-label">Date of Birth</div>${fmtVal(od.dob)}</div>
-            <div class="field-group"><div class="field-label">Home Address</div>${fmtVal(homeAddress)}</div>
-            <div class="field-group"><div class="field-label">Annual Income</div>${fmtVal(od.annualIncome ? '$'+Number(od.annualIncome).toLocaleString() : '')}</div>
-            <div class="field-group"><div class="field-label">Personal Bank Relationships</div>${fmtArr(personalBanks)}</div>
-          </div>
+          <div class="cp-full-row"><div class="cp-field-label" style="margin-bottom:4px">Home Address</div>${cpFmt(homeAddress)}</div>
         </div>
-        <!-- Business Information -->
-        <div class="section-card">
-          <div class="card-header">
-            <div class="card-title">Business Information</div>
-            <button class="profile-edit-btn ghost" onclick="startProfileEdit('business')" style="padding:5px 12px;font-size:12px">
-              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              Edit
-            </button>
+      </div>
+
+      <!-- Personal Banks -->
+      <div class="cp-section">
+        ${cpSectionHeader(`<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>`,'Personal Banks & New Credit','#10b981',null,personalBanks.length ? personalBanks.length+' banks' : null,'#10b981')}
+        <div style="padding:12px 16px 4px">
+          <div class="cp-field-label" style="margin-bottom:6px">Personal Banks</div>
+          ${cpTags(personalBanks,'bank')}
+        </div>
+        <div style="padding:10px 16px 14px">
+          <div class="cp-field-label" style="margin-bottom:4px">New Credit Accounts Opened</div>
+          ${cpFmt(od.newCreditAccts)}
+        </div>
+      </div>
+
+      <!-- Business Information -->
+      <div class="cp-section" id="cp-business-section">
+        ${cpSectionHeader(`<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#8b5cf6" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`,'Business Information','#8b5cf6','startProfileEdit("business")')}
+        <div id="cp-business-body">
+          <div class="cp-grid">
+            ${cpField('Business Name', cpFmt(od.bizName))}
+            ${cpField('DBA / Trade Name', cpFmt(od.dba))}
+            ${cpField('EIN', cpFmt(od.ein))}
+            ${cpField('Business Type', cpFmt(od.bizType))}
+            ${cpField('Industry', cpFmt(od.industry))}
+            ${cpField('# of Employees', cpFmt(od.employees))}
+            ${cpField('Monthly Sales', cpFmtMoney(od.monthlySales))}
+            ${cpField('Ownership %', od.ownership ? cpFmt(od.ownership+'%') : cpFmt(''))}
+            ${cpField('Business Phone', cpFmtPhone(od.bizPhone))}
+            ${cpField('Date Established', cpFmtDate(od.dateEstablished))}
+            ${cpField('Loan Amount', cpFmtMoney(od.loanAmount))}
+            ${cpField('Loan Purpose', cpFmt(od.loanReason))}
           </div>
-          <div class="card-body" id="profile-business-view">
-            <div class="field-group"><div class="field-label">Business Name</div>${fmtVal(od.bizName)}</div>
-            <div class="field-group"><div class="field-label">Business Type</div>${fmtVal(od.bizType)}</div>
-            <div class="field-group"><div class="field-label">Industry</div>${fmtVal(od.industry)}</div>
-            <div class="field-group"><div class="field-label">EIN</div>${fmtVal(od.ein)}</div>
-            <div class="field-group"><div class="field-label">Monthly Sales</div>${fmtVal(od.monthlySales ? '$'+Number(od.monthlySales).toLocaleString() : '')}</div>
-            <div class="field-group"><div class="field-label">Date Established</div>${fmtVal(od.dateEstablished)}</div>
-            <div class="field-group"><div class="field-label">Business Phone</div>${fmtVal(od.bizPhone)}</div>
-            <div class="field-group"><div class="field-label">Business Address</div>${fmtVal(bizAddress)}</div>
-          </div>
+          <div class="cp-full-row"><div class="cp-field-label" style="margin-bottom:4px">Business Address</div>${cpFmt(bizAddress)}</div>
+        </div>
+      </div>
+
+      <!-- Business Banks & Cards -->
+      <div class="cp-section">
+        ${cpSectionHeader(`<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>`,'Business Banks & Credit Cards','#f59e0b',null)}
+        <div style="padding:12px 16px 4px">
+          <div class="cp-field-label" style="margin-bottom:6px">Business Banks</div>
+          ${cpTags(bizBanks,'bank')}
+        </div>
+        <div style="padding:10px 16px 14px">
+          <div class="cp-field-label" style="margin-bottom:6px">Business Credit Cards</div>
+          ${cpTags(bizCards,'card')}
         </div>
       </div>`;
   }
 
   function startProfileEdit(section) {
     const od = getOnboardData();
-    const personalBanks = Array.isArray(od.personalBanks) ? od.personalBanks.join(', ')
-      : (od.personalBanks || '');
     const homeAddress = od.address || [od.street, od.city, od.state, od.zip].filter(Boolean).join(', ') || '';
     const bizAddress = od.bizAddress || [od.bizStreet, od.bizCity, od.bizState, od.bizZip].filter(Boolean).join(', ') || '';
 
-    const inp = (id, val, placeholder) =>
-      `<input class="profile-edit-input" id="pe-${id}" value="${(val||'').replace(/"/g,'&quot;')}" placeholder="${placeholder||''}" />`;
+    const inp = (id, val, ph) =>
+      `<input class="cp-edit-input" id="pe-${id}" value="${(val||'').replace(/"/g,'&quot;')}" placeholder="${ph||''}" />`;
+    const row = (label, inputHtml) =>
+      `<div class="cp-field" style="border-right:none"><div class="cp-field-label" style="margin-bottom:5px">${label}</div>${inputHtml}</div>`;
 
     if (section === 'personal') {
-      document.getElementById('profile-personal-view').innerHTML = `
-        <div class="field-group"><div class="field-label">First Name</div>${inp('firstName', od.firstName, 'First name')}</div>
-        <div class="field-group"><div class="field-label">Last Name</div>${inp('lastName', od.lastName, 'Last name')}</div>
-        <div class="field-group"><div class="field-label">Email</div>${inp('email', od.email, 'Email address')}</div>
-        <div class="field-group"><div class="field-label">Phone</div>${inp('phone', od.phone, 'Phone number')}</div>
-        <div class="field-group"><div class="field-label">Date of Birth</div>${inp('dob', od.dob, 'YYYY-MM-DD')}</div>
-        <div class="field-group"><div class="field-label">Home Address</div>${inp('address', homeAddress, 'Full address')}</div>
-        <div class="field-group"><div class="field-label">Annual Income</div>${inp('annualIncome', od.annualIncome, '75000')}</div>
-        <div class="field-group"><div class="field-label">Personal Banks (comma-separated)</div>${inp('personalBanks', personalBanks, 'Chase, Bank of America')}</div>
-        <div class="profile-save-row">
-          <button class="profile-edit-btn primary" onclick="saveProfileEdits('personal')">Save Changes</button>
-          <button class="profile-edit-btn ghost" onclick="renderProfileSection()">Cancel</button>
-          <span class="profile-save-toast" id="profile-toast-personal">✓ Saved</span>
+      document.getElementById('cp-personal-body').innerHTML = `
+        <div class="cp-grid">
+          ${row('First Name', inp('firstName', od.firstName, 'First name'))}
+          ${row('Last Name', inp('lastName', od.lastName, 'Last name'))}
+          ${row('Email', inp('email', od.email, 'Email'))}
+          ${row('Phone', inp('phone', od.phone, '(313) 000-0000'))}
+          ${row('Date of Birth', inp('dob', od.dob, 'YYYY-MM-DD'))}
+          ${row('Annual Income', inp('annualIncome', od.annualIncome, '75000'))}
+        </div>
+        <div class="cp-full-row"><div class="cp-field-label" style="margin-bottom:5px">Home Address</div>${inp('address', homeAddress, 'Full home address')}</div>
+        <div class="cp-save-row">
+          <button class="cp-save-btn" onclick="saveProfileEdits('personal')">Save Changes</button>
+          <button class="cp-cancel-btn" onclick="renderProfileSection()">Cancel</button>
+          <span class="cp-save-toast" id="cp-toast-personal">✓ Saved</span>
         </div>`;
     } else {
-      document.getElementById('profile-business-view').innerHTML = `
-        <div class="field-group"><div class="field-label">Business Name</div>${inp('bizName', od.bizName, 'Business name')}</div>
-        <div class="field-group"><div class="field-label">Business Type</div>${inp('bizType', od.bizType, 'LLC, S-Corp, Sole Prop…')}</div>
-        <div class="field-group"><div class="field-label">Industry</div>${inp('industry', od.industry, 'Industry')}</div>
-        <div class="field-group"><div class="field-label">EIN</div>${inp('ein', od.ein, 'XX-XXXXXXX')}</div>
-        <div class="field-group"><div class="field-label">Monthly Sales</div>${inp('monthlySales', od.monthlySales, '10000')}</div>
-        <div class="field-group"><div class="field-label">Date Established</div>${inp('dateEstablished', od.dateEstablished, 'YYYY-MM-DD')}</div>
-        <div class="field-group"><div class="field-label">Business Phone</div>${inp('bizPhone', od.bizPhone, 'Business phone')}</div>
-        <div class="field-group"><div class="field-label">Business Address</div>${inp('bizAddress', bizAddress, 'Full business address')}</div>
-        <div class="profile-save-row">
-          <button class="profile-edit-btn primary" onclick="saveProfileEdits('business')">Save Changes</button>
-          <button class="profile-edit-btn ghost" onclick="renderProfileSection()">Cancel</button>
-          <span class="profile-save-toast" id="profile-toast-business">✓ Saved</span>
+      document.getElementById('cp-business-body').innerHTML = `
+        <div class="cp-grid">
+          ${row('Business Name', inp('bizName', od.bizName, 'Business name'))}
+          ${row('DBA / Trade Name', inp('dba', od.dba, 'DBA name'))}
+          ${row('EIN', inp('ein', od.ein, 'XX-XXXXXXX'))}
+          ${row('Business Type', inp('bizType', od.bizType, 'LLC, S-Corp…'))}
+          ${row('Industry', inp('industry', od.industry, 'Industry'))}
+          ${row('# of Employees', inp('employees', od.employees, '1'))}
+          ${row('Monthly Sales', inp('monthlySales', od.monthlySales, '10000'))}
+          ${row('Ownership %', inp('ownership', od.ownership, '100'))}
+          ${row('Business Phone', inp('bizPhone', od.bizPhone, '(313) 000-0000'))}
+          ${row('Date Established', inp('dateEstablished', od.dateEstablished, 'YYYY-MM-DD'))}
+          ${row('Loan Amount', inp('loanAmount', od.loanAmount, '50000'))}
+          ${row('Loan Purpose', inp('loanReason', od.loanReason, 'Working Capital'))}
+        </div>
+        <div class="cp-full-row"><div class="cp-field-label" style="margin-bottom:5px">Business Address</div>${inp('bizAddress', bizAddress, 'Full business address')}</div>
+        <div class="cp-save-row">
+          <button class="cp-save-btn" onclick="saveProfileEdits('business')">Save Changes</button>
+          <button class="cp-cancel-btn" onclick="renderProfileSection()">Cancel</button>
+          <span class="cp-save-toast" id="cp-toast-business">✓ Saved</span>
         </div>`;
     }
   }
@@ -3181,40 +3229,24 @@
     if (!session) return;
     const cid = session.clientId;
     let od = getOnboardData() || {};
-
     const g = id => (document.getElementById('pe-' + id) || {}).value || '';
 
     if (section === 'personal') {
-      od.firstName    = g('firstName');
-      od.lastName     = g('lastName');
-      od.email        = g('email');
-      od.phone        = g('phone');
-      od.dob          = g('dob');
-      od.address      = g('address');
+      od.firstName = g('firstName'); od.lastName = g('lastName');
+      od.email = g('email'); od.phone = g('phone');
+      od.dob = g('dob'); od.address = g('address');
       od.annualIncome = g('annualIncome');
-      od.personalBanks = g('personalBanks').split(',').map(s=>s.trim()).filter(Boolean);
     } else {
-      od.bizName        = g('bizName');
-      od.bizType        = g('bizType');
-      od.industry       = g('industry');
-      od.ein            = g('ein');
-      od.monthlySales   = g('monthlySales');
-      od.dateEstablished= g('dateEstablished');
-      od.bizPhone       = g('bizPhone');
-      od.bizAddress     = g('bizAddress');
+      od.bizName = g('bizName'); od.dba = g('dba'); od.ein = g('ein');
+      od.bizType = g('bizType'); od.industry = g('industry'); od.employees = g('employees');
+      od.monthlySales = g('monthlySales'); od.ownership = g('ownership');
+      od.bizPhone = g('bizPhone'); od.dateEstablished = g('dateEstablished');
+      od.loanAmount = g('loanAmount'); od.loanReason = g('loanReason');
+      od.bizAddress = g('bizAddress');
     }
-
-    // Save to localStorage
-    try {
-      localStorage.setItem('cq_onboard_data_' + cid, JSON.stringify(od));
-      localStorage.setItem('cq_onboard_data', JSON.stringify(od));
-    } catch(e) {}
-
-    // Save to Firebase
+    try { localStorage.setItem('cq_onboard_data_' + cid, JSON.stringify(od)); localStorage.setItem('cq_onboard_data', JSON.stringify(od)); } catch(e) {}
     try { await fsSetOnboarding(cid, od); } catch(e) {}
-
-    // Show toast then re-render
-    const toast = document.getElementById('profile-toast-' + section);
+    const toast = document.getElementById('cp-toast-' + section);
     if (toast) { toast.style.opacity = '1'; setTimeout(() => { toast.style.opacity = '0'; renderProfileSection(); }, 1200); }
     else renderProfileSection();
   }
@@ -3222,14 +3254,12 @@
   function initProfileSync() {
     const session = getClientSession();
     if (!session || !session.clientId) return;
-    // Load initial Firebase data
     fsGetOnboarding(session.clientId).then(od => {
       if (od) {
         try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od)); } catch(e) {}
         renderProfileSection();
       }
     }).catch(()=>{});
-    // Real-time listener (admin edits → client sees instantly)
     if (_profileUnsubscribe) { try { _profileUnsubscribe(); } catch(e) {} }
     _profileUnsubscribe = fsListenOnboarding(session.clientId, (od) => {
       try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od)); } catch(e) {}

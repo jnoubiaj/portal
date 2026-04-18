@@ -2073,6 +2073,21 @@
       if (val === undefined || val === null || val === '') return `<span class="prof-field-val empty">${fallback || '—'}</span>`;
       return `<span class="prof-field-val">${val}</span>`;
     };
+    const fmtPhone = v => {
+      if (!v) return fv('');
+      const d = v.replace(/\D/g,'');
+      if (d.length === 10) return fv(`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`);
+      if (d.length === 11 && d[0]==='1') return fv(`+1 (${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`);
+      return fv(v);
+    };
+    const fmtDate = v => {
+      if (!v) return fv('');
+      try {
+        const d = new Date(v.includes('T') ? v : v + 'T12:00:00');
+        if (isNaN(d)) return fv(v);
+        return fv(d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+      } catch(e) { return fv(v); }
+    };
     const field = (label, val) => `<div class="prof-field"><div class="prof-field-label">${label}</div>${fv(val)}</div>`;
     const tags = (arr, cls) => {
       if (!arr || !arr.length) return `<span style="font-size:12px;color:var(--gray-300);font-style:italic">None listed</span>`;
@@ -2149,8 +2164,8 @@
           ${field('First Name', o.firstName)}
           ${field('Last Name', o.lastName)}
           ${field('Email', o.email)}
-          ${field('Phone', o.phone)}
-          ${field('Date of Birth', o.dob)}
+          <div class="prof-field"><div class="prof-field-label">Phone</div>${fmtPhone(o.phone)}</div>
+          <div class="prof-field"><div class="prof-field-label">Date of Birth</div>${fmtDate(o.dob)}</div>
           ${field('SSN', o.ssn ? '•••-••-'+o.ssn.slice(-4) : null)}
           ${field('Mother\'s Maiden Name', o.maidenName)}
           ${field('Annual Income', o.annualIncome ? '$'+Number(o.annualIncome).toLocaleString() : null)}
@@ -2187,8 +2202,8 @@
           ${field('# of Employees', o.employees)}
           ${field('Monthly Sales', o.monthlySales ? '$'+Number(o.monthlySales).toLocaleString() : null)}
           ${field('Ownership %', o.ownership ? o.ownership+'%' : null)}
-          ${field('Business Phone', o.bizPhone)}
-          ${field('Date Established', o.dateEstablished)}
+          <div class="prof-field"><div class="prof-field-label">Business Phone</div>${fmtPhone(o.bizPhone)}</div>
+          <div class="prof-field"><div class="prof-field-label">Date Established</div>${fmtDate(o.dateEstablished)}</div>
           ${field('Loan Amount', o.loanAmount ? '$'+Number(o.loanAmount).toLocaleString() : null)}
           ${field('Loan Purpose', o.loanReason)}
         </div>
