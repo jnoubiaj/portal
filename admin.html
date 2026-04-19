@@ -3025,8 +3025,8 @@
               <input class="a-add-req-input" style="width:100%" type="number" id="db-fico-${clientId}" value="${d.creditScore}" oninput="previewScoreChange('${clientId}');debouncedPublish('${clientId}')" /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Score Change <span style="font-weight:400;color:var(--gray-400)">(auto-calculated)</span></div>
               <input class="a-add-req-input" style="width:100%;background:var(--gray-50);color:var(--gray-500)" id="db-ficochange-${clientId}" value="${d.creditChange}" readonly /></div>
-            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Approved ($)</div>
-              <input class="a-add-req-input" style="width:100%" type="number" id="db-approved-${clientId}" value="${d.fundingApproved}" oninput="syncFundingPreview('${clientId}');debouncedPublish('${clientId}')" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Approved ($) <span style="font-weight:400;color:var(--gray-400)">(auto-calculated from approvals)</span></div>
+              <input class="a-add-req-input" style="width:100%;background:var(--gray-50);color:var(--gray-500)" type="number" id="db-approved-${clientId}" value="${d.fundingApproved}" readonly /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Goal ($)</div>
               <input class="a-add-req-input" style="width:100%" type="number" id="db-goal-${clientId}" value="${d.fundingGoal}" oninput="debouncedPublish('${clientId}')" /></div>
             <div style="grid-column:1/-1">
@@ -3243,6 +3243,7 @@
     if (!row) return;
     row[field] = value;
     saveDashData(clientId, d);
+    if (field === 'status' || field === 'amount') autoCalcFundingApproved(clientId);
   }
 
   function faRemove(clientId, rowId) {
@@ -3252,6 +3253,7 @@
     saveDashData(clientId, d);
     const container = document.getElementById('fa-rows-'+clientId);
     if (container) container.innerHTML = renderFundingRowsAdmin(clientId, d.fundingRows);
+    autoCalcFundingApproved(clientId);
   }
 
   function faMove(clientId, rowId, dir) {
@@ -3272,6 +3274,17 @@
     const val = +document.getElementById('db-approved-'+clientId)?.value || 0;
     const preview = document.getElementById('db-secured-preview-'+clientId);
     if (preview) preview.textContent = val ? '$' + Number(val).toLocaleString() : '—';
+  }
+
+  function autoCalcFundingApproved(clientId) {
+    const d = getDashData(clientId);
+    const total = (d.fundingRows || []).reduce((sum, r) => {
+      return r.status === 'approved' ? sum + (+r.amount || 0) : sum;
+    }, 0);
+    const inp = document.getElementById('db-approved-' + clientId);
+    if (inp) inp.value = total || '';
+    syncFundingPreview(clientId);
+    debouncedPublish(clientId);
   }
 
   function previewScoreChange(clientId) {
