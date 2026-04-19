@@ -1728,13 +1728,14 @@
         fsGetOnboarding(clientId).catch(() => null),
         fsGetDash(clientId).catch(() => null)
       ]);
-      const extraRows = [];
-      // Signed contract from onboarding
+      const rows = [];
+
+      // 1. Signed contract
       if (fsOnboard && (fsOnboard.contractSigned === 'signed' || fsOnboard.contractName)) {
         const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
         const tLabel = typeLabels[fsOnboard.contractType] || fsOnboard.contractType || 'Consulting Agreement';
         const dateStr = fsOnboard.contractDate ? new Date(fsOnboard.contractDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-        extraRows.push(`
+        rows.push(`
           <div class="a-doc-file-row" style="border-left:3px solid #10b981;padding-left:10px;">
             <div class="a-doc-file-icon" style="color:#10b981">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
@@ -1746,17 +1747,51 @@
             <button class="a-doc-view-btn" onclick="viewContract('${clientId}')">View</button>
           </div>`);
       }
-      // Client-uploaded files from Firestore dashboard
+
+      // 2. Admin-uploaded docs (from localStorage — this device)
+      const adminDocs = getAdminDocs(clientId);
+      // Also merge any adminDocs stored in Firestore dash (uploaded from other devices)
+      const fsDashAdminDocs = (fsDash && fsDash.adminDocs) ? fsDash.adminDocs : [];
+      const allAdminIds = new Set(adminDocs.map(d => d.id));
+      const mergedAdminDocs = [...adminDocs, ...fsDashAdminDocs.filter(d => !allAdminIds.has(d.id))];
+      mergedAdminDocs.forEach(d => {
+        rows.push(docFileRowHTML(d.name, d.size, d.date, 'admin', d.url || null));
+      });
+
+      // 3. Client-uploaded files from Firestore
       if (fsDash && fsDash.clientFiles && fsDash.clientFiles.length) {
         fsDash.clientFiles.forEach(f => {
-          extraRows.push(docFileRowHTML(f.name, f.size, f.date, 'client', f.url || null));
+          rows.push(docFileRowHTML(f.name, f.size, f.date, 'client', f.url || null));
         });
       }
-      if (extraRows.length) {
-        // Remove "No documents yet" placeholder if present
-        const empty = listEl.querySelector('div[style*="color:var(--gray-400)"]');
-        if (empty) empty.remove();
-        listEl.insertAdjacentHTML('afterbegin', extraRows.join(''));
+
+      // Full replace — prevents duplicates on repeated calls
+      listEl.innerHTML = rows.length
+        ? rows.join('')
+        : '<div style="font-size:13px;color:var(--gray-400);padding:8px 0">No documents yet</div>';
+
+      // Update doc request rows with green badge + View button if client fulfilled them
+      if (fsDash && fsDash.clientFiles && fsDash.clientFiles.length) {
+        const fulfilledMap = {};
+        fsDash.clientFiles.forEach(f => {
+          if (f.reqId && f.reqId !== 'general') fulfilledMap[f.reqId] = f;
+        });
+        Object.entries(fulfilledMap).forEach(([reqId, file]) => {
+          const rowEl = document.getElementById('areq-' + reqId);
+          if (!rowEl) return;
+          const badge = rowEl.querySelector('.a-req-status');
+          if (badge) { badge.className = 'a-req-status ars-received'; badge.textContent = 'Received'; }
+          if (!rowEl.querySelector('.a-req-view-btn') && file.url) {
+            const key = 'dreq-view-' + reqId;
+            _docUrlStore[key] = file.url;
+            const btn = document.createElement('button');
+            btn.className = 'a-doc-view-btn a-req-view-btn';
+            btn.textContent = 'View';
+            btn.setAttribute('onclick', `openDocUrl('${key}')`);
+            const delBtn = rowEl.querySelector('.a-req-del');
+            if (delBtn) rowEl.insertBefore(btn, delBtn); else rowEl.appendChild(btn);
+          }
+        });
       }
     } catch(e) {}
   }
