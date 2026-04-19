@@ -921,6 +921,7 @@
 
   let clients = [];
   let selectedClientId = null;
+  let _clientDashUnsub = null;
   let activeFilter = 'all';
   let activeMsgClientId = null;
   let activeDetailTab = 'overview';
@@ -1585,6 +1586,9 @@
     loadClients(); // re-read from localStorage to pick up any client-side updates
     renderClientList();
     renderClientDetail(id);
+    // Real-time listener: refresh docs when client uploads or admin data changes
+    if (_clientDashUnsub) { try { _clientDashUnsub(); } catch(e) {} }
+    _clientDashUnsub = fsListenDash(id, () => { loadClientDocsFromFirestore(id); });
     // Switch to clients section if not already
     document.querySelectorAll('.a-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.a-nav-item').forEach(n => n.classList.remove('active'));

@@ -3436,11 +3436,39 @@
     renderAllDocs();
     renderDocRequests(d.docRequests || []);
 
-    // Direct Firestore fetch for latest doc requests (don't wait for listener)
+    // Direct Firestore fetch for latest data (don't wait for listener)
     const _sess = getClientSession();
     if (_sess && _sess.clientId) {
       fsGetDash(_sess.clientId).then(fd => {
-        if (fd && fd.docRequests) renderDocRequests(fd.docRequests);
+        if (!fd) return;
+        let rerender = false;
+        // Doc requests
+        if (fd.docRequests) renderDocRequests(fd.docRequests);
+        // Admin docs — update localStorage cache if changed
+        if (fd.adminDocs) {
+          try {
+            const k = 'cq_dash_' + _sess.clientId;
+            const cached = JSON.parse(localStorage.getItem(k) || '{}');
+            if (JSON.stringify(cached.adminDocs) !== JSON.stringify(fd.adminDocs)) {
+              cached.adminDocs = fd.adminDocs;
+              localStorage.setItem(k, JSON.stringify(cached));
+              if (_sess.email) {
+                const ek = 'cq_dash_email_' + _sess.email.toLowerCase();
+                const ec = JSON.parse(localStorage.getItem(ek) || '{}');
+                ec.adminDocs = fd.adminDocs;
+                localStorage.setItem(ek, JSON.stringify(ec));
+              }
+              rerender = true;
+            }
+          } catch(e) {}
+        }
+        // Client files — restore from Firestore if local is empty
+        if (fd.clientFiles && fd.clientFiles.length > 0 && docClientFiles.length === 0) {
+          docClientFiles = fd.clientFiles;
+          try { localStorage.setItem(_docFilesKey, JSON.stringify(docClientFiles)); } catch(e) {}
+          rerender = true;
+        }
+        if (rerender) { renderAllDocs(); renderLatestDocs(fd); }
       }).catch(()=>{});
     }
   }
