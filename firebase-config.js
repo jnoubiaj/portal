@@ -10,6 +10,7 @@ const firebaseConfig = {
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 // ── FIRESTORE HELPERS ─────────────────────────────────────────────────────
 
@@ -78,8 +79,19 @@ async function fsGetDash(clientId) {
 
 async function fsSetDash(clientId, data) {
   try {
-    await db.collection('dashboards').doc(clientId).set(data);
+    await db.collection('dashboards').doc(clientId).set(data, { merge: true });
   } catch(e) {}
+}
+
+// ── FILE STORAGE ──────────────────────────────────────────────────────────
+// Upload a file to Firebase Storage and return its permanent download URL.
+// Returns null if the upload fails (e.g. Storage rules not yet configured).
+async function fsUploadFile(path, file) {
+  try {
+    const ref = storage.ref(path);
+    await ref.put(file);
+    return await ref.getDownloadURL();
+  } catch(e) { return null; }
 }
 
 // Real-time listener for dashboard — calls callback whenever data changes

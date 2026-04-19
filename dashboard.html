@@ -2518,6 +2518,7 @@
 <!-- Firebase compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 
 <script>
@@ -5158,8 +5159,14 @@
           const now = new Date();
           const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           const sizeStr = file.size > 1024*1024 ? (file.size/1024/1024).toFixed(1)+' MB' : Math.round(file.size/1024)+' KB';
-          // Store dataURL for files ≤ 700KB so both client and admin can view cross-device
-          const url = file.size <= 700 * 1024 ? await docReadAsDataURL(file) : null;
+          // Upload to Firebase Storage for a permanent cross-device URL; fall back to base64 for small files
+          const _sess2 = getClientSession();
+          let url = null;
+          if (_sess2 && _sess2.clientId) {
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            url = await fsUploadFile(`docs/${_sess2.clientId}/client_${Date.now()}_${safeName}`, file);
+          }
+          if (!url && file.size <= 700 * 1024) url = await docReadAsDataURL(file);
           const meta = { name: file.name, size: sizeStr, date: dateStr, reqId, url };
           docClientFiles.push(meta);
           try { localStorage.setItem(_docFilesKey, JSON.stringify(docClientFiles)); } catch(e) {}

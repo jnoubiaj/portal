@@ -873,6 +873,7 @@
 <!-- Firebase compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 
 <script>
@@ -1940,14 +1941,17 @@
     const newDocs = [];
     for (const f of Array.from(files)) {
       const sizeStr = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' MB' : Math.round(f.size/1024)+' KB';
-      // Store dataURL for files ≤ 700KB so client can view them cross-device via Firestore
-      const url = f.size <= 700 * 1024 ? await readAsDataURL(f) : null;
+      const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storagePath = `docs/${clientId}/admin_${Date.now()}_${safeName}`;
+      // Try Firebase Storage for a permanent cross-device URL; fall back to base64 for small files
+      let url = await fsUploadFile(storagePath, f);
+      if (!url && f.size <= 700 * 1024) url = await readAsDataURL(f);
       const doc = { id: 'adoc_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), name: f.name, size: sizeStr, date: dateStr, url };
       docs.push(doc);
       newDocs.push(doc);
     }
     saveAdminDocs(clientId, docs);
-    // Merge into local dash data — saveDashData will push to Firestore (url stripped to stay under 1MB)
+    // Merge into local dash data — saveDashData will push to Firestore
     const localDash = getDashData(clientId);
     const existingIds = new Set((localDash.adminDocs || []).map(d => d.id));
     localDash.adminDocs = [...(localDash.adminDocs || []), ...newDocs.filter(d => !existingIds.has(d.id))];
@@ -3009,10 +3013,13 @@
       const c = getClient(clientId);
       if (c && c.email) localStorage.setItem('cq_dash_email_'+c.email.toLowerCase(), JSON.stringify(data));
     } catch(e) {}
-    // Strip url from adminDocs before Firestore write — base64 urls can exceed 1MB Firestore limit
+    // Strip base64 data URLs from adminDocs before Firestore write (they exceed 1MB limit).
+    // Firebase Storage URLs (https://...) are kept — they're short and work cross-device.
     const fsData = Object.assign({}, data);
     if (fsData.adminDocs && fsData.adminDocs.length) {
-      fsData.adminDocs = fsData.adminDocs.map(d => ({ id: d.id, name: d.name, size: d.size, date: d.date }));
+      fsData.adminDocs = fsData.adminDocs.map(d => ({
+        ...d, url: (d.url && !d.url.startsWith('data:')) ? d.url : null
+      }));
     }
     fsSetDash(clientId, fsData).catch(() => {});
   }
