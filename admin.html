@@ -3280,15 +3280,17 @@
   }
 
   function autoCalcFundingApproved(clientId) {
-    const d = getDashData(clientId);
+    const container = document.getElementById('fa-rows-' + clientId);
     let total = 0;
-    (d.fundingRows || []).forEach(r => {
-      const statusEl = document.getElementById('fr-status-' + r.id);
-      const amountEl = document.getElementById('fr-amount-' + r.id);
-      const status = statusEl ? statusEl.value : r.status;
-      const amount = amountEl ? (+amountEl.value || 0) : (+r.amount || 0);
-      if (status === 'approved') total += amount;
-    });
+    if (container) {
+      container.querySelectorAll('select[id^="fr-status-"]').forEach(sel => {
+        if (sel.value === 'approved') {
+          const rowId = sel.id.replace('fr-status-', '');
+          const amountEl = document.getElementById('fr-amount-' + rowId);
+          total += amountEl ? (+amountEl.value || 0) : 0;
+        }
+      });
+    }
     const inp = document.getElementById('db-approved-' + clientId);
     const disp = document.getElementById('db-approved-display-' + clientId);
     if (inp) inp.value = total || '';
