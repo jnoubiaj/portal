@@ -1709,6 +1709,9 @@
     autoCalcFundingApproved(id);
     // Sync funding goal from onboarding desired loan amount
     syncFundingGoalFromOnboarding(id);
+    // Always push current doc requests to Firestore so client sees them
+    const _reqs = getDocRequests(id);
+    fsGetDash(id).then(fd => fsSetDash(id, Object.assign({}, fd||{}, { docRequests: _reqs }))).catch(()=>{});
   }
 
   async function loadClientDocsFromFirestore(clientId) {

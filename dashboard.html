@@ -3745,6 +3745,11 @@
             }
             localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
             if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
+            // Restore client-uploaded files from Firestore if local list is empty
+            if (fsData.clientFiles && fsData.clientFiles.length > 0 && docClientFiles.length === 0) {
+              docClientFiles = fsData.clientFiles;
+              try { localStorage.setItem(_docFilesKey, JSON.stringify(docClientFiles)); } catch(e2) {}
+            }
           } catch(e) {}
           loadDashboardData();
           renderApplyingCard();
