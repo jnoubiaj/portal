@@ -3290,11 +3290,20 @@
     if (_profileUnsubscribe) { try { _profileUnsubscribe(); } catch(e) {} }
     _profileUnsubscribe = fsListenOnboarding(session.clientId, (od) => {
       try {
-        // Preserve a newer local contractDate so a just-signed contract isn't overwritten
-        // by stale Firestore data before the onboarding.html save propagates
+        // Preserve local contract signing data if it's newer than Firestore —
+        // guards against stale Firestore overwriting a just-signed contract
         const localOd = JSON.parse(localStorage.getItem('cq_onboard_data_' + session.clientId) || '{}');
-        if (localOd.contractDate && od.contractDate && new Date(localOd.contractDate) > new Date(od.contractDate)) {
-          od = Object.assign({}, od, { contractDate: localOd.contractDate, contractSigned: localOd.contractSigned });
+        const localSigned = localOd.contractSigned === 'signed';
+        const fsSigned = od.contractSigned === 'signed';
+        const localNewer = localOd.contractDate && (!od.contractDate || new Date(localOd.contractDate) > new Date(od.contractDate));
+        if (localSigned && (!fsSigned || localNewer)) {
+          od = Object.assign({}, od, {
+            contractSigned: localOd.contractSigned,
+            contractDate:   localOd.contractDate,
+            contractType:   localOd.contractType   || od.contractType,
+            contractAmount: localOd.contractAmount || od.contractAmount,
+            contractName:   localOd.contractName   || od.contractName,
+          });
         }
         localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od));
       } catch(e) {}
@@ -3449,10 +3458,14 @@
   async function viewSignedContract() {
     const sess = getClientSession();
     if (!sess || !sess.clientId) return;
-    let o = null;
-    try { o = await fsGetOnboarding(sess.clientId); } catch(e) {}
-    if (!o) try { o = JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || 'null'); } catch(e) {}
-    if (!o || o.contractSigned !== 'signed') { alert('Signed contract not found.'); return; }
+    let fsO = null, lsO = null;
+    try { fsO = await fsGetOnboarding(sess.clientId); } catch(e) {}
+    try { lsO = JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || 'null'); } catch(e) {}
+    // Prefer whichever copy has the signed contract — local may be newer than Firestore
+    const o = (fsO && fsO.contractSigned === 'signed') ? Object.assign({}, lsO || {}, fsO)
+            : (lsO && lsO.contractSigned === 'signed') ? Object.assign({}, fsO || {}, lsO)
+            : null;
+    if (!o) { alert('Signed contract not found.'); return; }
     const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
     const typeLabel = typeLabels[o.contractType] || o.contractType || '—';
     const signedDate = o.contractDate ? new Date(o.contractDate).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
