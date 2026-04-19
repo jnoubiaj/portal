@@ -1951,11 +1951,21 @@
       newDocs.push(doc);
     }
     saveAdminDocs(clientId, docs);
-    // Merge into local dash data — saveDashData will push to Firestore
+    // Update local dash data so publishDashboard preserves these docs
     const localDash = getDashData(clientId);
     const existingIds = new Set((localDash.adminDocs || []).map(d => d.id));
     localDash.adminDocs = [...(localDash.adminDocs || []), ...newDocs.filter(d => !existingIds.has(d.id))];
     saveDashData(clientId, localDash);
+    // ALSO directly write adminDocs to Firestore — don't rely on the async saveDashData write
+    // completing before loadClientDocsFromFirestore reads stale data
+    const fsNewDocs = newDocs.map(d => ({ ...d, url: (d.url && !d.url.startsWith('data:')) ? d.url : null }));
+    await fsGetDash(clientId).then(fd => {
+      const ex = (fd && fd.adminDocs) ? fd.adminDocs : [];
+      const seen = new Set(ex.map(d => d.id));
+      return fsSetDash(clientId, Object.assign({}, fd || {}, {
+        adminDocs: [...ex, ...fsNewDocs.filter(d => !seen.has(d.id))]
+      }));
+    }).catch(() => {});
     document.getElementById('adf-'+clientId).value = '';
     renderClientDetail(clientId);
     const c = getClient(clientId);
