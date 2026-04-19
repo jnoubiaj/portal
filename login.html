@@ -1047,8 +1047,11 @@
 
     async function redirectAfterLogin(clientId) {
       try {
-        // Check Firestore first (most up-to-date, works across devices)
-        const fsClients = await fsGetClients().catch(() => null);
+        // 1. Firestore client record — most reliable across devices
+        const [fsClients, fsOnboard] = await Promise.all([
+          fsGetClients().catch(() => null),
+          fsGetOnboarding(clientId).catch(() => null)
+        ]);
         if (fsClients) {
           const fsClient = fsClients.find(c => c.id === clientId);
           if (fsClient && fsClient.onboardingComplete) {
@@ -1056,16 +1059,21 @@
             return;
           }
         }
-        // Fallback: localStorage
+        // 2. Firestore onboarding data — form was submitted (has bizName) or contract signed
+        if (fsOnboard && (fsOnboard.bizName || fsOnboard.contractSigned === 'signed')) {
+          window.location.replace('dashboard.html');
+          return;
+        }
+        // 3. localStorage admin clients
         const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
         const client = adminClients.find(c => c.id === clientId);
         if (client && client.onboardingComplete) {
           window.location.replace('dashboard.html');
           return;
         }
-        // Fallback: check if onboarding data exists
+        // 4. localStorage onboarding data (bizName = full form submitted, contractSigned = signed)
         const onboardData = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null');
-        if (onboardData && onboardData.businessName) {
+        if (onboardData && (onboardData.bizName || onboardData.contractSigned === 'signed')) {
           window.location.replace('dashboard.html');
           return;
         }
