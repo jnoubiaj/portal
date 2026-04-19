@@ -1349,52 +1349,49 @@
           ${groupedClients.length === 0 ? `
             <div style="padding:32px;text-align:center;color:var(--gray-400);font-size:13px">No tasks match your filters</div>` : ''}
 
-          ${groupedClients.map(({c, tasks}) => {
-            const open = tasks.filter(t => t.status !== 'done').length;
-            const done = tasks.filter(t => t.status === 'done').length;
-            return `
-            <div style="border-bottom:1px solid var(--gray-100)">
-              <div onclick="toggleCtPanel('${c.id}')" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 80px;gap:0;padding:12px 16px;cursor:pointer;align-items:center;transition:background 0.12s" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''">
-                <div style="display:flex;align-items:center;gap:8px">
-                  <svg id="ct-arrow-${c.id}" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:var(--gray-400);transition:transform 0.2s;flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
-                  <span class="ov-avatar-sm" style="background:${c.color}">${c.fname[0]}${c.lname[0]}</span>
-                  <span style="font-weight:600;color:var(--navy);font-size:13px" class="ov-client-link" onclick="event.stopPropagation();selectClientFromOv('${c.id}')">${c.fname} ${c.lname}</span>
-                </div>
-                <div>${svcBadge(c.serviceType)}</div>
-                <div>${statusPill(c.status)}</div>
-                <div style="font-weight:600;color:var(--gray-600);font-size:13px">${c.assignedTo||'—'}</div>
-                <div style="text-align:right;display:flex;gap:4px;justify-content:flex-end;align-items:center">
-                  ${open > 0 ? `<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px">${open} open</span>` : ''}
-                  ${done > 0 ? `<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px">${done} done</span>` : ''}
-                </div>
-              </div>
-
-              <div id="ct-panel-${c.id}" style="display:none;background:var(--gray-50);border-top:1px solid var(--gray-100)">
-                <table style="width:100%;border-collapse:collapse;font-size:12px">
-                  <thead>
-                    <tr style="background:var(--gray-100)">
-                      <th style="padding:7px 16px 7px 40px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray-500)">Task</th>
-                      <th style="padding:7px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray-500)">Status</th>
-                      <th style="padding:7px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray-500)">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${tasks.map(t => {
-                      const sMap = { todo:'To-Do', progress:'In Progress', done:'Done' };
-                      const cMap = { todo:'#fef3c7', progress:'#dbeafe', done:'#d1fae5' };
-                      const tMap = { todo:'#92400e', progress:'#1e40af', done:'#065f46' };
-                      const s = t.status || 'todo';
-                      return `<tr style="border-top:1px solid var(--gray-200)">
-                        <td style="padding:9px 16px 9px 40px;font-weight:600;color:var(--navy)">${t.text||''}</td>
-                        <td style="padding:9px 12px"><span style="background:${cMap[s]};color:${tMap[s]};font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px">${sMap[s]||s}</span></td>
-                        <td style="padding:9px 12px;color:var(--gray-500);font-size:12px">${t.desc||'—'}</td>
-                      </tr>`;
-                    }).join('')}
-                  </tbody>
-                </table>
-              </div>
-            </div>`;
-          }).join('')}
+          ${(() => {
+            return groupedClients.map(function(entry) {
+              var c = entry.c, tasks = entry.tasks;
+              var open = tasks.filter(function(t){ return t.status !== 'done'; }).length;
+              var doneCount = tasks.filter(function(t){ return t.status === 'done'; }).length;
+              var openBadge = open > 0 ? '<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px">' + open + ' open</span>' : '';
+              var doneBadge = doneCount > 0 ? '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px">' + doneCount + ' done</span>' : '';
+              var taskRows = tasks.map(function(t) {
+                var sMap = { todo:'To-Do', progress:'In Progress', done:'Done' };
+                var cMap = { todo:'#fef3c7', progress:'#dbeafe', done:'#d1fae5' };
+                var tMap = { todo:'#92400e', progress:'#1e40af', done:'#065f46' };
+                var s = t.status || 'todo';
+                return '<tr style="border-top:1px solid var(--gray-200)">' +
+                  '<td style="padding:9px 16px 9px 40px;font-weight:600;color:var(--navy)">' + (t.text||'') + '</td>' +
+                  '<td style="padding:9px 12px"><span style="background:' + cMap[s] + ';color:' + tMap[s] + ';font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px">' + (sMap[s]||s) + '</span></td>' +
+                  '<td style="padding:9px 12px;color:var(--gray-500);font-size:12px">' + (t.desc||'—') + '</td>' +
+                  '</tr>';
+              }).join('');
+              return '<div style="border-bottom:1px solid var(--gray-100)">' +
+                '<div onclick="toggleCtPanel(\'' + c.id + '\')" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 80px;gap:0;padding:12px 16px;cursor:pointer;align-items:center;transition:background 0.12s" onmouseover="this.style.background=\'var(--gray-50)\'" onmouseout="this.style.background=\'\'">' +
+                  '<div style="display:flex;align-items:center;gap:8px">' +
+                    '<svg id="ct-arrow-' + c.id + '" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:var(--gray-400);transition:transform 0.2s;flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>' +
+                    '<span class="ov-avatar-sm" style="background:' + c.color + '">' + c.fname[0] + c.lname[0] + '</span>' +
+                    '<span style="font-weight:600;color:var(--navy);font-size:13px" class="ov-client-link" onclick="event.stopPropagation();selectClientFromOv(\'' + c.id + '\')">' + c.fname + ' ' + c.lname + '</span>' +
+                  '</div>' +
+                  '<div>' + svcBadge(c.serviceType) + '</div>' +
+                  '<div>' + statusPill(c.status) + '</div>' +
+                  '<div style="font-weight:600;color:var(--gray-600);font-size:13px">' + (c.assignedTo||'—') + '</div>' +
+                  '<div style="text-align:right;display:flex;gap:4px;justify-content:flex-end;align-items:center">' + openBadge + doneBadge + '</div>' +
+                '</div>' +
+                '<div id="ct-panel-' + c.id + '" style="display:none;background:var(--gray-50);border-top:1px solid var(--gray-100)">' +
+                  '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+                    '<thead><tr style="background:var(--gray-100)">' +
+                      '<th style="padding:7px 16px 7px 40px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray-500)">Task</th>' +
+                      '<th style="padding:7px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray-500)">Status</th>' +
+                      '<th style="padding:7px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray-500)">Description</th>' +
+                    '</tr></thead>' +
+                    '<tbody>' + taskRows + '</tbody>' +
+                  '</table>' +
+                '</div>' +
+              '</div>';
+            }).join('');
+          })()}
         </div>
       </div>`;
   }
@@ -1524,21 +1521,23 @@
     if (archTab) archTab.textContent = archivedCount > 0 ? `Archived (${archivedCount})` : 'Archived';
 
     document.getElementById('a-cl-list').innerHTML = filtered.length === 0
-      ? `<div style="padding:24px;text-align:center;font-size:13px;color:var(--gray-400)">${showArchived ? 'No archived clients' : 'No clients found'}</div>`
-      : filtered.map(c => `
-        <div class="a-client-row ${selectedClientId===c.id?'active':''}" onclick="selectClient('${c.id}')">
-          <div class="a-cl-avatar" style="background:${c.archived?'#8b5cf6':c.color}">${c.fname[0]}${c.lname[0]}</div>
-          <div style="min-width:0">
-            <div class="a-cl-name">${c.fname} ${c.lname}${c.archived?` <span style="font-size:10px;background:#f5f3ff;color:#8b5cf6;padding:1px 6px;border-radius:4px;font-weight:700;vertical-align:middle">ARCHIVED</span>`:''}</div>
-            <div class="a-cl-info">${c.email}</div>
-          </div>
-          <div class="a-cl-right">
-            ${c.archived
-              ? `<span class="status-pill" style="background:#f5f3ff;color:#8b5cf6;border:1px solid #ede9fe">Archived</span>`
-              : `<span class="status-pill sp-${c.status==='progress'?'progress':c.status==='approved'?'approved':c.status==='disqualified'?'disqual':c.status==='new'?'new':'pending'}">${statusLabel(c.status)}</span>`}
-            ${c.fico ? `<div class="a-cl-fico">FICO ${c.fico}</div>` : ''}
-          </div>
-        </div>`).join('');
+      ? '<div style="padding:24px;text-align:center;font-size:13px;color:var(--gray-400)">' + (showArchived ? 'No archived clients' : 'No clients found') + '</div>'
+      : filtered.map(function(c) {
+          var archivedBadge = c.archived ? ' <span style="font-size:10px;background:#f5f3ff;color:#8b5cf6;padding:1px 6px;border-radius:4px;font-weight:700;vertical-align:middle">ARCHIVED</span>' : '';
+          var statusClass = c.status==='progress'?'progress':c.status==='approved'?'approved':c.status==='disqualified'?'disqual':c.status==='new'?'new':'pending';
+          var statusBadge = c.archived
+            ? '<span class="status-pill" style="background:#f5f3ff;color:#8b5cf6;border:1px solid #ede9fe">Archived</span>'
+            : '<span class="status-pill sp-' + statusClass + '">' + statusLabel(c.status) + '</span>';
+          var ficoBadge = c.fico ? '<div class="a-cl-fico">FICO ' + c.fico + '</div>' : '';
+          return '<div class="a-client-row ' + (selectedClientId===c.id?'active':'') + '" onclick="selectClient(\'' + c.id + '\')">' +
+            '<div class="a-cl-avatar" style="background:' + (c.archived?'#8b5cf6':c.color) + '">' + c.fname[0] + c.lname[0] + '</div>' +
+            '<div style="min-width:0">' +
+              '<div class="a-cl-name">' + c.fname + ' ' + c.lname + archivedBadge + '</div>' +
+              '<div class="a-cl-info">' + c.email + '</div>' +
+            '</div>' +
+            '<div class="a-cl-right">' + statusBadge + ficoBadge + '</div>' +
+          '</div>';
+        }).join('');
   }
 
   function statusLabel(s) {
@@ -1839,13 +1838,9 @@
             </div>
           </div>
           <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;">
-            ${!hasAccount ? `
-              <button onclick="createPortalAccess('${clientId}')" style="height:34px;padding:0 14px;background:var(--navy);border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer;">
-                Create Account
-              </button>` : `
-              <button onclick="resetToTempPassword('${clientId}')" style="height:34px;padding:0 14px;background:var(--danger-bg);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--danger);cursor:pointer;">
-                Reset Password
-              </button>`}
+            ${!hasAccount
+              ? '<button onclick="createPortalAccess(\'' + clientId + '\')" style="height:34px;padding:0 14px;background:var(--navy);border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer;">Create Account</button>'
+              : '<button onclick="resetToTempPassword(\'' + clientId + '\')" style="height:34px;padding:0 14px;background:var(--danger-bg);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--danger);cursor:pointer;">Reset Password</button>'}
             <button onclick="copyMagicLink('${clientId}')" id="magic-btn-${clientId}" style="height:34px;padding:0 14px;background:var(--navy);border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer;">
               📋 Copy Login Link
             </button>
@@ -1872,8 +1867,8 @@
           </div>
           <div style="font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy);">Contract Setup</div>
           ${isSigned
-            ? `<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#15803d;">✓ Signed — ${typeLabels[type]}</span>`
-            : `<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(34,167,240,0.1);color:#22A7F0;">${typeLabels[type]}</span>`
+            ? '<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#15803d;">✓ Signed — ' + typeLabels[type] + '</span>'
+            : '<span style="margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(34,167,240,0.1);color:#22A7F0;">' + typeLabels[type] + '</span>'
           }
         </div>
         ${isSigned ? `
@@ -1965,8 +1960,23 @@
     try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
     // Sync to Firestore so client can login from any device
     fsSetCred(c.email, { clientId, password: TEMP_PASSWORD, mustChange: true }).catch(() => {});
+    // Copy any existing onboarding data (by email) to the new clientId in Firestore
+    // so when the client opens onboarding it auto-populates regardless of old ID
+    if (c.email) {
+      fsGetAllOnboarding().then(all => {
+        if (!all) return;
+        const matches = all.filter(od => od.email && od.email.toLowerCase() === c.email.toLowerCase() && od._clientId !== clientId);
+        if (!matches.length) return;
+        // Prefer the most complete record (has SSN), fall back to first match
+        const prev = matches.find(od => od.ssn) || matches[0];
+        const prevData = Object.assign({}, prev);
+        delete prevData._clientId;
+        fsSetOnboarding(clientId, prevData).catch(() => {});
+        try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(prevData)); } catch(e) {}
+      }).catch(() => {});
+    }
     renderClientDetail(clientId);
-    showToast('Portal account created. Reset password sent.');
+    showToast('Portal account created. Previous profile data linked.');
   }
 
   function resetToTempPassword(clientId) {
@@ -1981,6 +1991,19 @@
     try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
     // Sync to Firestore
     fsSetCred(c.email, { clientId, password: TEMP_PASSWORD, mustChange: true }).catch(() => {});
+    // Re-link onboarding data to this clientId
+    if (c.email) {
+      fsGetAllOnboarding().then(all => {
+        if (!all) return;
+        const matches2 = all.filter(od => od.email && od.email.toLowerCase() === c.email.toLowerCase() && od._clientId !== clientId);
+        if (!matches2.length) return;
+        const prev = matches2.find(od => od.ssn) || matches2[0];
+        const prevData = Object.assign({}, prev);
+        delete prevData._clientId;
+        fsSetOnboarding(clientId, prevData).catch(() => {});
+        try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(prevData)); } catch(e) {}
+      }).catch(() => {});
+    }
     renderClientDetail(clientId);
     showToast('Password reset to temporary password.');
   }
@@ -2044,7 +2067,7 @@
     t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
   }
 
-  function renderOverviewTab(clientId, client) {
+  function renderOverviewTab(clientId, client, _skipSync) {
     let o = null;
     try { o = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null'); } catch(e) {}
     if (!o && client.email) {
@@ -2053,16 +2076,19 @@
         if (global && global.email && global.email.toLowerCase() === client.email.toLowerCase()) o = global;
       } catch(e) {}
     }
-    // Background: fetch from Firestore and re-render if newer data found
-    fsGetOnboarding(clientId).then(fsOd => {
-      if (!fsOd) return;
-      // Merge: Firestore is authoritative for contract fields
-      const merged = Object.assign({}, o || {}, fsOd);
-      try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(merged)); } catch(e) {}
-      // Re-render tab with fresh data
-      const tab = document.getElementById('dtab-overview');
-      if (tab && selectedClientId === clientId) tab.innerHTML = renderOverviewTab(clientId, client);
-    }).catch(() => {});
+    // Background: fetch from Firestore once (no recursion) and re-render with fresh client ref
+    if (!_skipSync) {
+      fsGetOnboarding(clientId).then(fsOd => {
+        if (!fsOd) return;
+        const merged = Object.assign({}, o || {}, fsOd);
+        try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(merged)); } catch(e) {}
+        const tab = document.getElementById('dtab-overview');
+        const freshClient = getClient(clientId);
+        if (tab && selectedClientId === clientId && freshClient) {
+          tab.innerHTML = renderOverviewTab(clientId, freshClient, true);
+        }
+      }).catch(() => {});
+    }
     // Final fallback: scan all cq_onboard_data_* keys for a matching email
     if (!o && client.email) {
       try {
@@ -2238,6 +2264,33 @@
           <div class="prof-field"></div>
         </div>
       </div>
+
+      ${(() => {
+        if (!Array.isArray(o.additionalBusinesses) || !o.additionalBusinesses.length) return '';
+        const bizIcon = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#8b5cf6" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>';
+        return o.additionalBusinesses.map(function(biz, idx) {
+          const addr = [biz.bizStreet, biz.bizCity, biz.bizState, biz.bizZip].filter(Boolean).join(', ');
+          return '<div class="prof-section">' +
+            sectionHeader(bizIcon, 'Business #' + (idx + 2), '#8b5cf6', biz.bizType || '', '#8b5cf6') +
+            '<div class="prof-grid">' +
+              field('Business Name', biz.bizName) +
+              field('DBA / Trade Name', biz.dba) +
+              field('EIN', biz.ein) +
+              '<div class="prof-field"><div class="prof-field-label">Date Established</div>' + fmtDate(biz.dateEstablished) + '</div>' +
+              field('Business Type', biz.bizType) +
+              field('Industry', biz.industry) +
+              field('Employees', biz.employees) +
+              field('Monthly Sales', biz.monthlySales ? '$' + Number(biz.monthlySales).toLocaleString() : null) +
+              field('Ownership %', biz.ownership) +
+              '<div class="prof-field"><div class="prof-field-label">Company Phone</div>' + fmtPhone(biz.bizPhone) + '</div>' +
+              field('Loan Amount', biz.loanAmount ? '$' + Number(biz.loanAmount).toLocaleString() : null) +
+              field('Loan Reason', biz.loanReason) +
+            '</div>' +
+            (addr ? '<div class="prof-full-row"><div class="prof-field-label" style="margin-bottom:4px">Business Address</div>' + fv(addr) + '</div>' : '') +
+            (biz.banks ? '<div style="padding:10px 16px 12px"><div class="prof-field-label" style="margin-bottom:6px">Banks / Credit Cards</div>' + fv(biz.banks) + '</div>' : '') +
+          '</div>';
+        }).join('');
+      })()}
 
       <!-- CONTRACT -->
       <div class="prof-section">

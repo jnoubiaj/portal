@@ -850,7 +850,7 @@
         <input class="f-input" type="password" id="newPw2" placeholder="Confirm your new password" />
       </div>
       <div id="cp-error" style="display:none;font-size:12px;color:#f87171;margin-bottom:14px;padding:10px 14px;background:rgba(239,68,68,0.1);border-radius:8px;border:1px solid rgba(239,68,68,0.2);"></div>
-      <button onclick="submitNewPassword()" style="width:100%;height:50px;background:var(--blue);border:none;border-radius:12px;font-family:var(--font-head);font-size:14px;font-weight:700;color:white;cursor:pointer;box-shadow:0 6px 24px rgba(34,167,240,0.35);transition:background 0.15s;">
+      <button id="cp-submit-btn" onclick="submitNewPassword()" style="width:100%;height:50px;background:var(--blue);border:none;border-radius:12px;font-family:var(--font-head);font-size:14px;font-weight:700;color:white;cursor:pointer;box-shadow:0 6px 24px rgba(34,167,240,0.35);transition:background 0.15s;">
         Set Password &amp; Enter Portal
       </button>
     </div>
@@ -1093,10 +1093,11 @@
       if (!/[!?@#$%^&*]/.test(pw)) return 'Password must contain at least one special character (!?@#$%^&*).';
       return null;
     }
-    function submitNewPassword() {
+    async function submitNewPassword() {
       const pw1   = document.getElementById('newPw1').value;
       const pw2   = document.getElementById('newPw2').value;
       const errEl = document.getElementById('cp-error');
+      const btn   = document.getElementById('cp-submit-btn');
       errEl.style.display = 'none';
 
       const err = validatePassword(pw1);
@@ -1106,15 +1107,22 @@
       const email = _pendingSession ? _pendingSession.email : '';
       if (!email) { errEl.textContent = 'Session expired. Please log in again.'; errEl.style.display = 'block'; return; }
 
-      // Save new password and clear mustChange flag
+      if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+      // Save new password and clear mustChange flag in localStorage
       let creds = {};
       try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
       if (!creds[email]) creds[email] = { clientId: _pendingSession.clientId };
       creds[email].password   = pw1;
       creds[email].mustChange = false;
       try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
-      // Sync new password to Firestore
-      fsSetCred(email, { clientId: _pendingSession.clientId, password: pw1, mustChange: false }).catch(() => {});
+
+      // Await Firestore save so password persists across devices/browsers
+      try {
+        await fsSetCred(email, { clientId: _pendingSession.clientId, password: pw1, mustChange: false });
+      } catch(e) {
+        // localStorage already updated — proceed even if Firestore fails
+      }
 
       startClientSession(_pendingSession.clientId, email);
       redirectAfterLogin(_pendingSession.clientId);

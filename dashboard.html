@@ -3159,6 +3159,33 @@
         </div>
       </div>
 
+      ${(() => {
+        if (!Array.isArray(od.additionalBusinesses) || !od.additionalBusinesses.length) return '';
+        const bizSvg = '<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#8b5cf6" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>';
+        return od.additionalBusinesses.map(function(biz, idx) {
+          const addr = [biz.bizStreet, biz.bizCity, biz.bizState, biz.bizZip].filter(Boolean).join(', ');
+          return '<div class="cp-section">' +
+            cpSectionHeader(bizSvg, 'Business #' + (idx + 2), '#8b5cf6', null) +
+            '<div class="cp-grid">' +
+              cpField('Business Name', cpFmt(biz.bizName)) +
+              cpField('DBA / Trade Name', cpFmt(biz.dba)) +
+              cpField('EIN', cpFmt(biz.ein)) +
+              cpField('Date Established', cpFmtDate(biz.dateEstablished)) +
+              cpField('Business Type', cpFmt(biz.bizType)) +
+              cpField('Industry', cpFmt(biz.industry)) +
+              cpField('Employees', cpFmt(biz.employees)) +
+              cpField('Monthly Sales', cpFmtMoney(biz.monthlySales)) +
+              cpField('Ownership %', cpFmt(biz.ownership)) +
+              cpField('Company Phone', cpFmtPhone(biz.bizPhone)) +
+              cpField('Loan Amount', cpFmtMoney(biz.loanAmount)) +
+              cpField('Loan Purpose', cpFmt(biz.loanReason)) +
+            '</div>' +
+            (addr ? '<div class="cp-full-row"><div class="cp-field-label" style="margin-bottom:4px">Business Address</div>' + cpFmt(addr) + '</div>' : '') +
+            (biz.banks ? '<div style="padding:10px 16px 12px"><div class="cp-field-label" style="margin-bottom:4px">Banks / Credit Cards</div>' + cpFmt(biz.banks) + '</div>' : '') +
+          '</div>';
+        }).join('');
+      })()}
+
       <!-- Business Banks & Cards -->
       <div class="cp-section">
         ${cpSectionHeader(`<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>`,'Business Banks & Credit Cards','#f59e0b',null)}
