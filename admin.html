@@ -1947,13 +1947,11 @@
       newDocs.push(doc);
     }
     saveAdminDocs(clientId, docs);
-    // Push to Firestore dashboard adminDocs so client sees them
-    fsGetDash(clientId).then(fd => {
-      const existing = fd || {};
-      const existingDocs = existing.adminDocs || [];
-      const merged = Object.assign({}, existing, { adminDocs: [...existingDocs, ...newDocs] });
-      fsSetDash(clientId, merged);
-    }).catch(() => {});
+    // Merge into local dash data — saveDashData will push to Firestore (url stripped to stay under 1MB)
+    const localDash = getDashData(clientId);
+    const existingIds = new Set((localDash.adminDocs || []).map(d => d.id));
+    localDash.adminDocs = [...(localDash.adminDocs || []), ...newDocs.filter(d => !existingIds.has(d.id))];
+    saveDashData(clientId, localDash);
     document.getElementById('adf-'+clientId).value = '';
     renderClientDetail(clientId);
     const c = getClient(clientId);
@@ -1961,20 +1959,24 @@
   }
 
   function docFileRowHTML(name, size, date, source, url) {
-    const ext = name.split('.').pop().toLowerCase();
+    const safeName = name || 'Document';
+    const ext = safeName.split('.').pop().toLowerCase();
     const iconColor = ext==='pdf'?'#ef4444':ext==='docx'?'#2563eb':'#22A7F0';
-    let action;
+    const safeSize = (size && size !== 'undefined') ? size : '';
+    let dateDisplay = '';
+    if (date) { try { dateDisplay = new Date(date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } catch(e) { dateDisplay = date; } }
+    const meta = [safeSize, dateDisplay].filter(Boolean).join(' · ');
+    const badge = `<span class="a-doc-file-badge ${source==='admin'?'adfb-admin':'adfb-client'}">${source==='admin'?'Admin':'Client'}</span>`;
+    let viewBtn = '';
     if (url) {
       const key = 'dk_' + Math.random().toString(36).slice(2, 10);
       _docUrlStore[key] = url;
-      action = `<button class="a-doc-view-btn" onclick="openDocUrl('${key}')">View</button>`;
-    } else {
-      action = `<span class="a-doc-file-badge ${source==='admin'?'adfb-admin':'adfb-client'}">${source==='admin'?'Admin Upload':'Client Upload'}</span>`;
+      viewBtn = `<button class="a-doc-view-btn" onclick="openDocUrl('${key}')">View</button>`;
     }
     return `<div class="a-doc-file-row">
       <div class="a-doc-file-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="${iconColor}" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
-      <div style="flex:1;min-width:0"><div class="a-doc-file-name">${name}</div><div class="a-doc-file-meta">${size} · ${date}</div></div>
-      ${action}
+      <div style="flex:1;min-width:0"><div class="a-doc-file-name">${safeName}</div><div class="a-doc-file-meta">${meta}</div></div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${badge}${viewBtn}</div>
     </div>`;
   }
 
@@ -3007,8 +3009,12 @@
       const c = getClient(clientId);
       if (c && c.email) localStorage.setItem('cq_dash_email_'+c.email.toLowerCase(), JSON.stringify(data));
     } catch(e) {}
-    // Sync to Firestore for cross-device access
-    fsSetDash(clientId, data).catch(() => {});
+    // Strip url from adminDocs before Firestore write — base64 urls can exceed 1MB Firestore limit
+    const fsData = Object.assign({}, data);
+    if (fsData.adminDocs && fsData.adminDocs.length) {
+      fsData.adminDocs = fsData.adminDocs.map(d => ({ id: d.id, name: d.name, size: d.size, date: d.date }));
+    }
+    fsSetDash(clientId, fsData).catch(() => {});
   }
 
   function renderDashboardEditor(clientId) {
