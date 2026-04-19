@@ -3141,8 +3141,9 @@
       const allOnboarding = await fsGetAllOnboarding();
       if (allOnboarding) {
         for (const od of allOnboarding) {
-          // Skip the current client's own record
+          // Skip the current client's own record (by clientId or by email — same person, different account)
           if (currentSession && od._clientId === currentSession.clientId) continue;
+          if (currentSession && currentSession.email && od.email && od.email.toLowerCase() === currentSession.email.toLowerCase()) continue;
           const matchSSN    = od.ssn    && od.ssn.trim()                      === ssn;
           const matchDOB    = od.dob    && od.dob.trim()                      === dob;
           const matchStreet = od.street && od.street.trim().toLowerCase()     === street;
