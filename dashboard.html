@@ -3285,6 +3285,7 @@
       if (od) {
         try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od)); } catch(e) {}
         renderProfileSection();
+        renderAllDocs();
       }
     }).catch(()=>{});
     if (_profileUnsubscribe) { try { _profileUnsubscribe(); } catch(e) {} }
@@ -3308,6 +3309,7 @@
         localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od));
       } catch(e) {}
       renderProfileSection();
+      renderAllDocs();
     });
   }
 
@@ -5143,7 +5145,8 @@
     try {
       const sess = getClientSession();
       const od = sess ? JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || '{}') : {};
-      if (od.contractSigned === 'signed') {
+      const hasContract = od.contractSigned === 'signed' || (od.contractType && od.contractDate);
+      if (hasContract) {
         const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
         const tLabel = typeLabels[od.contractType] || od.contractType || 'Consulting Agreement';
         const dateStr = od.contractDate ? new Date(od.contractDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
