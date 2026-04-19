@@ -3435,6 +3435,14 @@
     renderLatestDocs(d);
     renderAllDocs();
     renderDocRequests(d.docRequests || []);
+
+    // Direct Firestore fetch for latest doc requests (don't wait for listener)
+    const _sess = getClientSession();
+    if (_sess && _sess.clientId) {
+      fsGetDash(_sess.clientId).then(fd => {
+        if (fd && fd.docRequests) renderDocRequests(fd.docRequests);
+      }).catch(()=>{});
+    }
   }
 
   async function viewSignedContract() {
