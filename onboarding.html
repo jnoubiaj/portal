@@ -3379,7 +3379,10 @@
     // Personal
     set('p_firstName',      data.firstName);
     set('p_lastName',       data.lastName);
-    set('p_phone',          data.phone);
+    if (data.phone) {
+      const phoneEl = document.getElementById('p_phone');
+      if (phoneEl) { phoneEl.value = data.phone; phoneEl.dispatchEvent(new Event('input')); }
+    }
     set('p_dob',            data.dob);
     // SSN: set value then fire input event so mask formats it
     if (data.ssn) {
@@ -3415,7 +3418,10 @@
     set('b_employees',       data.employees);
     set('b_monthlySales',    data.monthlySales);
     set('b_ownership',       data.ownership);
-    set('b_phone',           data.bizPhone);
+    if (data.bizPhone) {
+      const bizPhoneEl = document.getElementById('b_phone');
+      if (bizPhoneEl) { bizPhoneEl.value = data.bizPhone; bizPhoneEl.dispatchEvent(new Event('input')); }
+    }
     set('b_loanAmount',      data.loanAmount);
     set('b_loanReason',      data.loanReason);
     set('b_street',          data.bizStreet);
