@@ -3689,7 +3689,7 @@
             <div class="doc-name">${doc.name}</div>
             <div class="doc-meta">Uploaded by Admin · ${dateStr}</div>
           </div>
-          ${doc.url ? `<button class="doc-btn" onclick="window.open('${doc.url}','_blank')">View</button>` : (doc.type === 'contract' ? `<button class="doc-btn" onclick="viewSignedContract()">View</button>` : `<button class="doc-btn" style="opacity:0.4;cursor:default">View</button>`)}
+          ${doc.url ? (() => { const k='dk_'+Math.random().toString(36).slice(2,10); _docUrlStore[k]=doc.url; return `<button class="doc-btn" onclick="openDocUrl('${k}')">View</button>`; })() : (doc.type === 'contract' ? `<button class="doc-btn" onclick="viewSignedContract()">View</button>` : `<button class="doc-btn" style="opacity:0.4;cursor:default">View</button>`)}
         </div>`);
     });
 
@@ -5087,6 +5087,23 @@
     });
   }
 
+  const _docUrlStore = {};
+  function openDocUrl(key) {
+    const url = _docUrlStore[key];
+    if (!url) return;
+    if (url.startsWith('data:')) {
+      const [header, b64] = url.split(',');
+      const mime = header.match(/:(.*?);/)[1];
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      window.open(URL.createObjectURL(blob), '_blank');
+    } else {
+      window.open(url, '_blank');
+    }
+  }
+
   function docHandleFiles(files, reqId) {
     if (!files || !files.length) return;
     const file = files[0]; // process first file
@@ -5198,7 +5215,7 @@
             <div class="doc-meta">Uploaded by Admin · ${dateStr}</div>
           </div>
           ${doc.url
-            ? `<button class="doc-btn" onclick="window.open('${doc.url}','_blank')">View</button>`
+            ? (() => { const k='dk_'+Math.random().toString(36).slice(2,10); _docUrlStore[k]=doc.url; return `<button class="doc-btn" onclick="openDocUrl('${k}')">View</button>`; })()
             : (doc.type === 'contract'
                 ? `<button class="doc-btn" onclick="viewSignedContract()">View</button>`
                 : `<button class="doc-btn" style="opacity:0.35;cursor:default">View</button>`)
@@ -5211,7 +5228,7 @@
       const ext = f.name ? f.name.split('.').pop().toLowerCase() : '';
       const iconColor = ext === 'pdf' ? '#ef4444' : ext === 'docx' ? '#2563eb' : '#22A7F0';
       const viewBtn = f.url
-        ? `<button class="doc-btn" onclick="window.open('${f.url}','_blank')">View</button>`
+        ? (() => { const k='dk_'+Math.random().toString(36).slice(2,10); _docUrlStore[k]=f.url; return `<button class="doc-btn" onclick="openDocUrl('${k}')">View</button>`; })()
         : `<button class="doc-btn" style="opacity:0.35;cursor:default">View</button>`;
       rows.push(`
         <div class="doc-item">

@@ -1857,6 +1857,24 @@
   function adzDragLeave(id) { document.getElementById('adz-'+id)?.classList.remove('drag-over'); }
   function adzDrop(e, id) { e.preventDefault(); adzDragLeave(id); adminUploadDocs(id, e.dataTransfer.files); }
 
+  // Store dataURLs by key so we avoid embedding huge base64 in onclick attrs
+  const _docUrlStore = {};
+  function openDocUrl(key) {
+    const url = _docUrlStore[key];
+    if (!url) return;
+    if (url.startsWith('data:')) {
+      const [header, b64] = url.split(',');
+      const mime = header.match(/:(.*?);/)[1];
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      window.open(URL.createObjectURL(blob), '_blank');
+    } else {
+      window.open(url, '_blank');
+    }
+  }
+
   function readAsDataURL(file) {
     return new Promise(resolve => {
       const r = new FileReader();
@@ -1897,9 +1915,14 @@
   function docFileRowHTML(name, size, date, source, url) {
     const ext = name.split('.').pop().toLowerCase();
     const iconColor = ext==='pdf'?'#ef4444':ext==='docx'?'#2563eb':'#22A7F0';
-    const action = url
-      ? `<button class="a-doc-view-btn" onclick="window.open('${url}','_blank')">View</button>`
-      : `<span class="a-doc-file-badge ${source==='admin'?'adfb-admin':'adfb-client'}">${source==='admin'?'Admin Upload':'Client Upload'}</span>`;
+    let action;
+    if (url) {
+      const key = 'dk_' + Math.random().toString(36).slice(2, 10);
+      _docUrlStore[key] = url;
+      action = `<button class="a-doc-view-btn" onclick="openDocUrl('${key}')">View</button>`;
+    } else {
+      action = `<span class="a-doc-file-badge ${source==='admin'?'adfb-admin':'adfb-client'}">${source==='admin'?'Admin Upload':'Client Upload'}</span>`;
+    }
     return `<div class="a-doc-file-row">
       <div class="a-doc-file-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="${iconColor}" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
       <div style="flex:1;min-width:0"><div class="a-doc-file-name">${name}</div><div class="a-doc-file-meta">${size} · ${date}</div></div>
