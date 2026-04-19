@@ -3023,6 +3023,7 @@
     maskEIN(document.getElementById('b_ein'));
     maskCurrency(document.getElementById('p_income'));
     maskCurrency(document.getElementById('b_monthlySales'));
+    maskCurrency(document.getElementById('b_loanAmount'));
     maskPercent(document.getElementById('b_ownership'));
   });
 
@@ -3240,7 +3241,7 @@
       const el = document.getElementById(id);
       if (!el) return '';
       // For masked fields, return raw numeric value stored in dataset
-      if ((id === 'p_income' || id === 'b_monthlySales') && el.dataset.raw !== undefined) return el.dataset.raw;
+      if ((id === 'p_income' || id === 'b_monthlySales' || id === 'b_loanAmount') && el.dataset.raw !== undefined) return el.dataset.raw;
       if (id === 'b_ownership' && el.dataset.raw !== undefined) return el.dataset.raw;
       return el.value.trim();
     };
@@ -3393,7 +3394,10 @@
     set('p_city',           data.city);
     set('p_zip',            data.zip);
     set('p_maiden',         data.maidenName);
-    set('p_income',         data.annualIncome);
+    if (data.annualIncome !== undefined && data.annualIncome !== null && data.annualIncome !== '') {
+      const incEl = document.getElementById('p_income');
+      if (incEl) { incEl.value = data.annualIncome; incEl.dispatchEvent(new Event('input')); }
+    }
     set('p_citizen',        data.citizen);
     set('p_creditAccounts', data.newCreditAccts);
     // Personal state + banks
@@ -3411,18 +3415,30 @@
     // Business
     set('b_bizName',         data.bizName);
     set('b_dba',             data.dba);
-    set('b_ein',             data.ein);
+    if (data.ein) {
+      const einEl = document.getElementById('b_ein');
+      if (einEl) { einEl.value = data.ein; einEl.dispatchEvent(new Event('input')); }
+    }
     set('b_dateEstablished', data.dateEstablished);
     set('b_bizType',         data.bizType);
     set('b_industry',        data.industry);
     set('b_employees',       data.employees);
-    set('b_monthlySales',    data.monthlySales);
-    set('b_ownership',       data.ownership);
+    if (data.monthlySales !== undefined && data.monthlySales !== null && data.monthlySales !== '') {
+      const msEl = document.getElementById('b_monthlySales');
+      if (msEl) { msEl.value = data.monthlySales; msEl.dispatchEvent(new Event('input')); }
+    }
+    if (data.ownership !== undefined && data.ownership !== null && data.ownership !== '') {
+      const ownEl = document.getElementById('b_ownership');
+      if (ownEl) { ownEl.value = data.ownership; ownEl.dispatchEvent(new Event('input')); }
+    }
     if (data.bizPhone) {
       const bizPhoneEl = document.getElementById('b_phone');
       if (bizPhoneEl) { bizPhoneEl.value = data.bizPhone; bizPhoneEl.dispatchEvent(new Event('input')); }
     }
-    set('b_loanAmount',      data.loanAmount);
+    if (data.loanAmount !== undefined && data.loanAmount !== null && data.loanAmount !== '') {
+      const laEl = document.getElementById('b_loanAmount');
+      if (laEl) { laEl.value = data.loanAmount; laEl.dispatchEvent(new Event('input')); }
+    }
     set('b_loanReason',      data.loanReason);
     set('b_street',          data.bizStreet);
     set('b_city',            data.bizCity);
