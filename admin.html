@@ -3017,7 +3017,7 @@
           <div class="a-doc-section-title" style="margin-bottom:14px">Banner & Stats</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Client First Name</div>
-              <input class="a-add-req-input" style="width:100%" id="db-name-${clientId}" value="${d.clientName}" oninput="debouncedPublish('${clientId}')" /></div>
+              <input class="a-add-req-input" style="width:100%" id="db-name-${clientId}" value="${d.clientName || c.fname || ''}" oninput="debouncedPublish('${clientId}')" /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Total Funding Secured ($) <span style="font-weight:400;color:var(--gray-400)">(synced with Funding Approved)</span></div>
               <input type="hidden" id="db-secured-${clientId}" value="${d.fundingSecured}" />
               <div style="padding:8px 12px;background:var(--gray-50);border:1.5px solid var(--gray-100);border-radius:8px;font-size:13px;color:var(--gray-500)" id="db-secured-preview-${clientId}">${d.fundingApproved ? '$'+Number(d.fundingApproved).toLocaleString() : '—'}</div></div>
