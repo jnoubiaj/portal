@@ -1843,8 +1843,7 @@
     const newReq = { id: 'r'+Date.now(), name, received: false };
     reqs.push(newReq);
     saveDocRequests(clientId, reqs);
-    // Also update the shared requests key so client portal picks it up
-    try { localStorage.setItem('cq_doc_requests', JSON.stringify(reqs)); } catch(e) {}
+    fsGetDash(clientId).then(fd => fsSetDash(clientId, Object.assign({}, fd||{}, { docRequests: reqs }))).catch(()=>{});
     inp.value = '';
     renderClientDetail(clientId);
     const c = getClient(clientId);
@@ -1854,6 +1853,7 @@
   function removeDocReq(clientId, reqId) {
     const reqs = getDocRequests(clientId).filter(r => r.id !== reqId);
     saveDocRequests(clientId, reqs);
+    fsGetDash(clientId).then(fd => fsSetDash(clientId, Object.assign({}, fd||{}, { docRequests: reqs }))).catch(()=>{});
     renderClientDetail(clientId);
   }
 

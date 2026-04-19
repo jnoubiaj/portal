@@ -2438,28 +2438,7 @@
           </div>
           <div class="card-body">
             <div class="doc-req-list" id="doc-req-list">
-              <div class="doc-req-item" id="dreq-bankstmt">
-                <div class="doc-req-icon">
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                </div>
-                <div class="doc-req-info">
-                  <div class="doc-req-name">Bank Statements — Last 3 Months</div>
-                  <div class="doc-req-desc">All checking &amp; savings accounts</div>
-                </div>
-                <span class="doc-req-badge" id="dreq-bankstmt-badge">Pending</span>
-                <button class="doc-btn primary" onclick="docTriggerUpload('bankstmt')">Upload</button>
-              </div>
-              <div class="doc-req-item" id="dreq-photoid">
-                <div class="doc-req-icon">
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>
-                </div>
-                <div class="doc-req-info">
-                  <div class="doc-req-name">Government-Issued Photo ID</div>
-                  <div class="doc-req-desc">Driver's license or passport</div>
-                </div>
-                <span class="doc-req-badge" id="dreq-photoid-badge">Pending</span>
-                <button class="doc-btn primary" onclick="docTriggerUpload('photoid')">Upload</button>
-              </div>
+              <div style="font-size:13px;color:var(--gray-400);padding:8px 0">No document requests yet.</div>
             </div>
           </div>
         </div>
@@ -3455,6 +3434,7 @@
     renderFundingTable(d);
     renderLatestDocs(d);
     renderAllDocs();
+    renderDocRequests(d.docRequests || []);
   }
 
   async function viewSignedContract() {
@@ -5046,10 +5026,14 @@
   // Track which request an upload belongs to
   window.__docReqTarget = 'general';
 
+  // Use client-specific localStorage keys so clients don't share data
+  const _docCid = (function(){ try { return JSON.parse(sessionStorage.getItem('cq_client_session')||'null')?.clientId || 'anon'; } catch(e){ return 'anon'; } })();
+  const _docFulfilledKey = 'cq_doc_fulfilled_' + _docCid;
+  const _docFilesKey     = 'cq_doc_files_'     + _docCid;
   // Fulfilled requests (persisted in localStorage)
-  const docFulfilled = JSON.parse(localStorage.getItem('cq_doc_fulfilled') || '{}');
+  const docFulfilled = JSON.parse(localStorage.getItem(_docFulfilledKey) || '{}');
   // Client-uploaded files list
-  let docClientFiles = JSON.parse(localStorage.getItem('cq_doc_files') || '[]');
+  let docClientFiles = JSON.parse(localStorage.getItem(_docFilesKey) || '[]');
 
   function docInit() {
     // Restore fulfilled request states
@@ -5137,7 +5121,7 @@
           const url = file.size <= 700 * 1024 ? await docReadAsDataURL(file) : null;
           const meta = { name: file.name, size: sizeStr, date: dateStr, reqId, url };
           docClientFiles.push(meta);
-          try { localStorage.setItem('cq_doc_files', JSON.stringify(docClientFiles)); } catch(e) {}
+          try { localStorage.setItem(_docFilesKey, JSON.stringify(docClientFiles)); } catch(e) {}
           // Sync to Firestore so admin can see and view client uploads cross-device
           try {
             const _sess = getClientSession();
@@ -5164,7 +5148,7 @@
         docClientFiles.push(meta);
         docAddFileRow(f.name, sizeStr, dateStr, 'general');
       });
-      try { localStorage.setItem('cq_doc_files', JSON.stringify(docClientFiles)); } catch(e) {}
+      try { localStorage.setItem(_docFilesKey, JSON.stringify(docClientFiles)); } catch(e) {}
     }
     // Reset input
     document.getElementById('doc-file-input').value = '';
@@ -5261,8 +5245,36 @@
     if (btn) btn.remove();
     if (save) {
       docFulfilled[reqId] = fileName;
-      try { localStorage.setItem('cq_doc_fulfilled', JSON.stringify(docFulfilled)); } catch(e) {}
+      try { localStorage.setItem(_docFulfilledKey, JSON.stringify(docFulfilled)); } catch(e) {}
     }
+    docUpdateReqMeta();
+  }
+
+  function renderDocRequests(reqs) {
+    const list = document.getElementById('doc-req-list');
+    if (!list) return;
+    const svgDoc = `<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`;
+    const svgCheck = `<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>`;
+    if (!reqs || reqs.length === 0) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:8px 0">No document requests yet.</div>';
+      docUpdateReqMeta();
+      return;
+    }
+    list.innerHTML = reqs.map(r => {
+      const fulfilled = docFulfilled[r.id];
+      const uploaded = !!fulfilled;
+      return `<div class="doc-req-item${uploaded ? ' uploaded' : ''}" id="dreq-${r.id}">
+        <div class="doc-req-icon">${uploaded ? svgCheck : svgDoc}</div>
+        <div class="doc-req-info">
+          <div class="doc-req-name">${r.name}</div>
+          ${fulfilled ? `<div class="doc-req-desc" style="color:#10b981">${fulfilled}</div>` : ''}
+        </div>
+        ${uploaded
+          ? `<span class="doc-req-badge uploaded" id="dreq-${r.id}-badge">Uploaded</span>`
+          : `<span class="doc-req-badge" id="dreq-${r.id}-badge">Pending</span><button class="doc-btn primary" onclick="docTriggerUpload('${r.id}')">Upload</button>`
+        }
+      </div>`;
+    }).join('');
     docUpdateReqMeta();
   }
 
