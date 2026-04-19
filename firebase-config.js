@@ -10,7 +10,6 @@ const firebaseConfig = {
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 // ── FIRESTORE HELPERS ─────────────────────────────────────────────────────
 
@@ -85,10 +84,11 @@ async function fsSetDash(clientId, data) {
 
 // ── FILE STORAGE ──────────────────────────────────────────────────────────
 // Upload a file to Firebase Storage and return its permanent download URL.
-// Returns null if the upload fails (e.g. Storage rules not yet configured).
+// Returns null if Storage SDK isn't loaded or upload fails.
 async function fsUploadFile(path, file) {
   try {
-    const ref = storage.ref(path);
+    if (typeof firebase.storage !== 'function') return null;
+    const ref = firebase.storage().ref(path);
     await ref.put(file);
     return await ref.getDownloadURL();
   } catch(e) { return null; }
