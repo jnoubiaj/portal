@@ -3343,10 +3343,24 @@
     }
 
     if (session && session.clientId) {
+      // Preserve existing contract signed fields — form assembly reads from wrong key and would wipe them
+      const CONTRACT_FIELDS = ['contractSigned','contractName','contractType','contractAmount','contractPct','contractDate'];
+      try {
+        const existingLs = JSON.parse(localStorage.getItem('cq_onboard_data_' + session.clientId) || '{}');
+        if (existingLs.contractSigned === 'signed') {
+          CONTRACT_FIELDS.forEach(f => { if (existingLs[f]) onboardData[f] = existingLs[f]; });
+        }
+      } catch(e) {}
       // Save per-client onboarding data so admin can read it per-client
       try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(onboardData)); } catch(e) {}
-      // Sync onboarding data to Firestore
-      fsSetOnboarding(session.clientId, onboardData).catch(() => {});
+      // Sync onboarding data to Firestore — merge with existing to preserve contractSigned
+      fsGetOnboarding(session.clientId).then(fsExisting => {
+        const toSave = Object.assign({}, onboardData);
+        if (fsExisting && fsExisting.contractSigned === 'signed' && toSave.contractSigned !== 'signed') {
+          CONTRACT_FIELDS.forEach(f => { if (fsExisting[f]) toSave[f] = fsExisting[f]; });
+        }
+        fsSetOnboarding(session.clientId, toSave);
+      }).catch(() => { fsSetOnboarding(session.clientId, onboardData); });
 
       // Auto-update admin client record with real name, phone, onboarding status
       try {
