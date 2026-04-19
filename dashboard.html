@@ -5108,6 +5108,16 @@
           const meta = { name: file.name, size: sizeStr, date: dateStr, reqId };
           docClientFiles.push(meta);
           try { localStorage.setItem('cq_doc_files', JSON.stringify(docClientFiles)); } catch(e) {}
+          // Sync client files to Firestore so admin can see them cross-device
+          try {
+            const _sess = getClientSession();
+            if (_sess && _sess.clientId) {
+              fsGetDash(_sess.clientId).then(fd => {
+                const updated = Object.assign({}, fd || {}, { clientFiles: docClientFiles });
+                fsSetDash(_sess.clientId, updated);
+              }).catch(()=>{});
+            }
+          } catch(e) {}
           docAddFileRow(file.name, sizeStr, dateStr, reqId);
           if (reqId && reqId !== 'general') docMarkRequestDone(reqId, file.name, true);
           docUpdateMeta();
