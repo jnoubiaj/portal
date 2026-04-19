@@ -3465,7 +3465,7 @@
     try { lsO = JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || 'null'); } catch(e) {}
     // Prefer whichever copy has the signed contract — local may be newer than Firestore
     // Also accept contracts that have contractType+contractDate even if contractSigned field was overwritten
-    const hasContract = (d) => d && (d.contractSigned === 'signed' || (d.contractType && d.contractDate));
+    const hasContract = (d) => d && (d.contractSigned === 'signed' || (d.contractType && d.contractDate) || d.contractName);
     const o = (fsO && fsO.contractSigned === 'signed') ? Object.assign({}, lsO || {}, fsO)
             : (lsO && lsO.contractSigned === 'signed') ? Object.assign({}, fsO || {}, lsO)
             : hasContract(fsO) ? Object.assign({}, lsO || {}, fsO)
@@ -5145,7 +5145,7 @@
     try {
       const sess = getClientSession();
       const od = sess ? JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || '{}') : {};
-      const hasContract = od.contractSigned === 'signed' || (od.contractType && od.contractDate);
+      const hasContract = od.contractSigned === 'signed' || (od.contractType && od.contractDate) || od.contractName;
       if (hasContract) {
         const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
         const tLabel = typeLabels[od.contractType] || od.contractType || 'Consulting Agreement';

@@ -1424,7 +1424,7 @@
     // Try Firestore first (works cross-device), fall back to localStorage
     try { o = await fsGetOnboarding(clientId); } catch(e) {}
     if (!o) try { o = JSON.parse(localStorage.getItem('cq_onboard_data_'+clientId) || 'null'); } catch(e) {}
-    if (!o || o.contractSigned !== 'signed') return;
+    if (!o || !(o.contractSigned === 'signed' || o.contractType || o.contractName)) return;
     const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
     const typeLabel = typeLabels[o.contractType] || o.contractType || '—';
     const signedDate = o.contractDate ? new Date(o.contractDate).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
