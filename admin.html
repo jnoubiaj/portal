@@ -566,7 +566,7 @@
     .a-act-time { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
 
     /* ── PROFILE SECTIONS ──────────────────────── */
-    .prof-section { background:var(--white); border:1px solid var(--gray-100); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+    .prof-section { background:var(--white); border:1px solid var(--gray-100); border-radius:14px; margin-bottom:14px; }
     .prof-section-header { display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--gray-100); background:var(--gray-50); }
     .prof-section-icon { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
     .prof-section-title { font-family:var(--font-h); font-size:13px; font-weight:700; color:var(--navy); }
@@ -934,20 +934,24 @@
       // Never fall back to DEFAULT_CLIENTS — start empty if nothing saved
       clients = parsed ? parsed.filter(c => !deletedIds.includes(c.id)) : [];
     } catch(e) { clients = []; }
-    // Background sync from Firestore — filter out any deleted IDs
+    // Background sync from Firestore — only update if no local changes made yet
     fsGetClients().then(fsClients => {
+      if (_adminLocalChanged) return; // user already made changes, don't overwrite
       if (fsClients && fsClients.length > 0) {
         const ids = getDeletedIds();
         clients = fsClients.filter(c => !ids.includes(c.id));
         try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
         renderClientList();
         renderOverview();
+        if (selectedClientId) renderClientDetail(selectedClientId);
       } else if (clients.length > 0) {
         clients.forEach(c => fsSaveClient(c));
       }
     }).catch(() => {});
   }
+  let _adminLocalChanged = false;
   function saveClients() {
+    _adminLocalChanged = true;
     try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
     clients.forEach(c => fsSaveClient(c).catch(() => {}));
   }
