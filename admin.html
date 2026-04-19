@@ -1439,12 +1439,12 @@
     const amount = rawAmt !== '' && rawAmt !== null ? '$'+Number(rawAmt).toLocaleString() : '$____________';
     const pct = o.contractPct || '8';
     const paymentClauses = {
-      full:    `<strong>Client acknowledges the program investment will be the amount of ${amount}. The Client agrees to pay CapitalQuest Funding LLC the full amount at the execution of this agreement.</strong>`,
-      split:   `<strong>Client acknowledges the program investment will be the total amount of ${amount}. The payment will be split into 2 (two) equal payments. Half will be due at the execution of this agreement, the other half will be due in 30 (thirty) days.</strong>`,
-      backend: `<strong>Client acknowledges the program SET UP FEE is the amount of ${amount}. The client will also be responsible for paying ${pct}% of total funded amount as a success fee.</strong>`
+      full:    `Client acknowledges the program investment will be the amount of ${amount}. The Client agrees to pay CapitalQuest Funding LLC the full amount at the execution of this agreement.`,
+      split:   `Client acknowledges the program investment will be the total amount of ${amount}. The payment will be split into 2 (two) equal payments. Half will be due at the execution of this agreement, the other half will be due in 30 (thirty) days.`,
+      backend: `Client acknowledges the program SET UP FEE is the amount of ${amount}. The client will also be responsible for paying ${pct}% of total funded amount as a success fee. If cards come at different times, client will be responsible for paying the ${pct}% success fee as each one arrives. Client agrees to pay within 24 hours of receiving the cards.`
     };
     const payClause = paymentClauses[o.contractType] || paymentClauses.full;
-    const cardsClause = o.contractType === 'backend' ? `<p style="font-style:italic;margin-bottom:12px">If cards come at different times, client will be responsible for paying the ${pct}% success fee as each one arrives. Client agrees to pay within 24 hours of receiving the cards.</p>` : '';
+    const cardsClause = '';
     const existing = document.getElementById('contract-view-modal');
     if (existing) existing.remove();
     const modal = document.createElement('div');
@@ -1474,8 +1474,8 @@
           <p style="margin-bottom:12px">Specifically, we will not apply for any short-term loans, credit facilities, or credit cards that accrue interest without obtaining explicit permission from the client involved. This policy underscores our commitment to upholding our clients' best interests and maintaining a high standard of fiduciary responsibility. Applications are completed by Consultant both online and over the phone. Some applications may require the client to go in person to the bank as directed by the Consultant in pursuit to help the Client achieve funding for their business.</p>
           <p style="margin-bottom:16px">Upon completion of the funding process, all client data will be deleted from our records. This includes personal identification information, financial records, and any other sensitive data collected during the funding process. This measure is taken to ensure the privacy and security of our clients' information.</p>
           <p style="font-weight:700;margin:20px 0 8px">Payment:</p>
-          <p style="margin-bottom:12px">The Client agrees to pay CapitalQuest Funding LLC for the 0% interest funding service and consulting. ${payClause}</p>
-          ${cardsClause}
+          <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#0369a1">${payClause}</div>
+          <p style="margin-bottom:12px">The Client agrees to pay CapitalQuest Funding LLC for the 0% interest funding service and consulting.</p>
           <p style="margin-bottom:16px">The Client understands there may be additional costs to help optimize their personal credit profile. This will be determined during the optimization phase and does not apply to everyone. These costs include but are not limited to: paying credit card usage down, paying derogatory collections on the report as directed, adding authorized user tradelines, maintaining required credit monitoring, paying for any business credit reports deemed necessary, and anything else deemed necessary in the pursuit of preparing the client for funding during the optimization phase. In the event the client needs authorized user tradelines to bolster their credit report, this will be invoiced separately.</p>
           <p style="font-weight:700;margin:20px 0 8px">Liability:</p>
           <p style="margin-bottom:12px">Client understands and agrees that there is no guarantee of success for each individual application or that a lender will issue a commitment. Consultant is not an employee of any financial institution and is not authorized to make any financial commitments on behalf of any Lender. The APR (annual percentage rate of interest charged by the lender) of all financing is determined individually by scoring; underwriting methods utilized by each lender. There are no guarantees made by the Consultant as to the terms of your approvals.</p>
