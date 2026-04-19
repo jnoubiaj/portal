@@ -926,6 +926,27 @@
     if (!ids.includes(id)) { ids.push(id); localStorage.setItem('cq_deleted_ids', JSON.stringify(ids)); }
   }
 
+  // Cache for Firestore credentials — keyed by emailToDocId(email) (dots replaced with commas)
+  let _fsCreds = {};
+  function _syncFsCreds() {
+    fsGetAllCreds().then(all => {
+      if (!all) return;
+      _fsCreds = all;
+      // Merge into localStorage so renderPortalAccessCard picks them up
+      let lsCreds = {};
+      try { lsCreds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+      Object.entries(all).forEach(([docId, cred]) => {
+        if (!cred || !cred.clientId) return;
+        // docId is email with dots→commas; reverse to get email
+        const email = docId.replace(/,/g, '.');
+        if (!lsCreds[email]) lsCreds[email] = cred;
+      });
+      try { localStorage.setItem('cq_client_creds', JSON.stringify(lsCreds)); } catch(e) {}
+      // Re-render open client detail to show correct portal access status
+      if (selectedClientId) renderClientDetail(selectedClientId);
+    }).catch(() => {});
+  }
+
   function loadClients() {
     const deletedIds = getDeletedIds();
     try {
@@ -1017,6 +1038,7 @@
   // ── INIT ──────────────────────────────────────────────────────────────
   function initAdminApp() {
     loadClients();
+    _syncFsCreds();
     renderOverview();
     renderClientList();
     renderMsgThreads();
@@ -2078,9 +2100,22 @@
     }
     // Background: fetch from Firestore once (no recursion) and re-render with fresh client ref
     if (!_skipSync) {
+      const hasPersonalData = d => d && (d.firstName || d.ssn || d.street);
       fsGetOnboarding(clientId).then(fsOd => {
-        if (!fsOd) return;
-        const merged = Object.assign({}, o || {}, fsOd);
+        const mergedBase = Object.assign({}, o || {}, fsOd || {});
+        // If merged still has no personal data but client has email, scan all Firestore records
+        if (!hasPersonalData(mergedBase) && client.email) {
+          return fsGetAllOnboarding().then(all => {
+            if (!all) return mergedBase;
+            const matches = all.filter(od => od.email && od.email.toLowerCase() === client.email.toLowerCase() && hasPersonalData(od));
+            if (!matches.length) return mergedBase;
+            const best = matches.find(od => od.ssn) || matches[0];
+            return Object.assign({}, best, o || {}, fsOd || {});
+          });
+        }
+        return mergedBase;
+      }).then(merged => {
+        if (!merged || Object.keys(merged).length === 0) return;
         try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(merged)); } catch(e) {}
         const tab = document.getElementById('dtab-overview');
         const freshClient = getClient(clientId);

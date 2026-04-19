@@ -58,6 +58,16 @@ async function fsDeleteCred(email) {
   } catch(e) {}
 }
 
+// Returns all credentials as { emailDocId: credData }
+async function fsGetAllCreds() {
+  try {
+    const snap = await db.collection('credentials').get();
+    const result = {};
+    snap.docs.forEach(d => { result[d.id] = d.data(); });
+    return result;
+  } catch(e) { return null; }
+}
+
 // ── DASHBOARD DATA ────────────────────────────────────────────────────────
 async function fsGetDash(clientId) {
   try {

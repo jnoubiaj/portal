@@ -1871,14 +1871,14 @@
         Object.assign(existing, contractData);
         localStorage.setItem(key, JSON.stringify(existing));
 
-        // Push to Firestore — always merge so we never wipe copied personal data
+        // Push to Firestore — always merge localStorage + Firestore to never wipe personal data
+        const _lsKey = 'cq_onboard_data_' + sess.clientId;
+        const _getLsData = () => { try { return JSON.parse(localStorage.getItem(_lsKey) || '{}'); } catch(e) { return {}; } };
         fsGetOnboarding(sess.clientId).then(fsOd => {
-          const merged = Object.assign({}, fsOd || {}, contractData);
+          const merged = Object.assign({}, _getLsData(), fsOd || {}, contractData);
           fsSetOnboarding(sess.clientId, merged);
         }).catch(() => {
-          // Firestore read failed — merge with localStorage data instead of overwriting
-          const lsData = (() => { try { return JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || '{}'); } catch(e) { return {}; } })();
-          fsSetOnboarding(sess.clientId, Object.assign({}, lsData, contractData));
+          fsSetOnboarding(sess.clientId, Object.assign({}, _getLsData(), contractData));
         });
 
         // Update admin client record
