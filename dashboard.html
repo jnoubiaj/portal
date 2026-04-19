@@ -3289,7 +3289,15 @@
     }).catch(()=>{});
     if (_profileUnsubscribe) { try { _profileUnsubscribe(); } catch(e) {} }
     _profileUnsubscribe = fsListenOnboarding(session.clientId, (od) => {
-      try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od)); } catch(e) {}
+      try {
+        // Preserve a newer local contractDate so a just-signed contract isn't overwritten
+        // by stale Firestore data before the onboarding.html save propagates
+        const localOd = JSON.parse(localStorage.getItem('cq_onboard_data_' + session.clientId) || '{}');
+        if (localOd.contractDate && od.contractDate && new Date(localOd.contractDate) > new Date(od.contractDate)) {
+          od = Object.assign({}, od, { contractDate: localOd.contractDate, contractSigned: localOd.contractSigned });
+        }
+        localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od));
+      } catch(e) {}
       renderProfileSection();
     });
   }
@@ -3706,9 +3714,13 @@
     if (session && session.clientId) {
       // Fetch latest from Firestore once (initial load)
       try {
-        const fsData = await fsGetDash(session.clientId);
+        let fsData = await fsGetDash(session.clientId);
         if (fsData) {
           try {
+            const localDash = JSON.parse(localStorage.getItem('cq_dash_' + session.clientId) || '{}');
+            if ('pendingContract' in localDash && localDash.pendingContract === null && fsData.pendingContract) {
+              fsData = Object.assign({}, fsData, { pendingContract: null });
+            }
             localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
             if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
           } catch(e) {}
@@ -3724,6 +3736,12 @@
       try {
         _fsUnsubscribe = fsListenDash(session.clientId, (fsData) => {
           try {
+            // If client just signed (local pendingContract=null), don't let stale Firestore
+            // data restore pendingContract before the onboarding.html Firestore save propagates
+            const localDash = JSON.parse(localStorage.getItem('cq_dash_' + session.clientId) || '{}');
+            if ('pendingContract' in localDash && localDash.pendingContract === null && fsData.pendingContract) {
+              fsData = Object.assign({}, fsData, { pendingContract: null });
+            }
             localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
             if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
           } catch(e) {}
