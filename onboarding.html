@@ -3360,10 +3360,26 @@
           c.onboardingComplete = true;
           c.lastActivity = new Date().toISOString().split('T')[0];
           localStorage.setItem('cq_admin_clients', JSON.stringify(adminClients));
-          // Sync updated client to Firestore
           fsSaveClient(c).catch(() => {});
         }
       } catch(e) {}
+      // Always save onboardingComplete to Firestore — cq_admin_clients is empty on client's browser
+      if (session && session.clientId) {
+        fsGetClients().then(fsClients => {
+          if (!fsClients) return;
+          const fc = fsClients.find(cl => cl.id === session.clientId);
+          if (fc) {
+            const updated = Object.assign({}, fc, {
+              onboardingComplete: true,
+              lastActivity: new Date().toISOString().split('T')[0]
+            });
+            if (onboardData.firstName) updated.fname = onboardData.firstName;
+            if (onboardData.lastName)  updated.lname = onboardData.lastName;
+            if (onboardData.phone)     updated.phone = onboardData.phone;
+            fsSaveClient(updated).catch(() => {});
+          }
+        }).catch(() => {});
+      }
     }
 
     goTo('done');
