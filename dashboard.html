@@ -5078,6 +5078,15 @@
     docHandleFiles(e.dataTransfer.files, 'general');
   }
 
+  function docReadAsDataURL(file) {
+    return new Promise(resolve => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.onerror = () => resolve(null);
+      r.readAsDataURL(file);
+    });
+  }
+
   function docHandleFiles(files, reqId) {
     if (!files || !files.length) return;
     const file = files[0]; // process first file
@@ -5102,15 +5111,17 @@
       bar.style.width = p + '%';
       pct.textContent = Math.round(p) + '%';
       if (p >= 100) {
-        setTimeout(() => {
+        setTimeout(async () => {
           prog.classList.remove('show');
           const now = new Date();
           const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           const sizeStr = file.size > 1024*1024 ? (file.size/1024/1024).toFixed(1)+' MB' : Math.round(file.size/1024)+' KB';
-          const meta = { name: file.name, size: sizeStr, date: dateStr, reqId };
+          // Store dataURL for files ≤ 700KB so both client and admin can view cross-device
+          const url = file.size <= 700 * 1024 ? await docReadAsDataURL(file) : null;
+          const meta = { name: file.name, size: sizeStr, date: dateStr, reqId, url };
           docClientFiles.push(meta);
           try { localStorage.setItem('cq_doc_files', JSON.stringify(docClientFiles)); } catch(e) {}
-          // Sync client files to Firestore so admin can see them cross-device
+          // Sync to Firestore so admin can see and view client uploads cross-device
           try {
             const _sess = getClientSession();
             if (_sess && _sess.clientId) {
@@ -5199,6 +5210,9 @@
     docClientFiles.forEach(f => {
       const ext = f.name ? f.name.split('.').pop().toLowerCase() : '';
       const iconColor = ext === 'pdf' ? '#ef4444' : ext === 'docx' ? '#2563eb' : '#22A7F0';
+      const viewBtn = f.url
+        ? `<button class="doc-btn" onclick="window.open('${f.url}','_blank')">View</button>`
+        : `<button class="doc-btn" style="opacity:0.35;cursor:default">View</button>`;
       rows.push(`
         <div class="doc-item">
           <div class="doc-icon">${svgDoc(iconColor)}</div>
@@ -5206,7 +5220,7 @@
             <div class="doc-name">${f.name}</div>
             <div class="doc-meta">${ext.toUpperCase()} · ${f.size} · Uploaded by You · ${f.date}</div>
           </div>
-          <button class="doc-btn" style="opacity:0.35;cursor:default">View</button>
+          ${viewBtn}
         </div>`);
     });
 

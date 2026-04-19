@@ -472,6 +472,13 @@
     }
     .adfb-admin  { background: var(--blue-light); color: var(--blue); }
     .adfb-client { background: var(--success-bg); color: var(--success); }
+    .a-doc-view-btn {
+      margin-left: auto; height: 30px; padding: 0 14px; flex-shrink: 0;
+      border: 1.5px solid var(--blue); border-radius: 8px; background: transparent;
+      color: var(--blue); font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .a-doc-view-btn:hover { background: var(--blue); color: white; }
 
     /* ── CREDIT TAB ────────────────────────────── */
     .a-credit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
@@ -1659,8 +1666,8 @@
         </div>
         <input type="file" id="adf-${id}" multiple accept=".pdf,.jpg,.jpeg,.png,.docx" style="display:none" onchange="adminUploadDocs('${id}',this.files)" />
         <div class="a-doc-file-list" id="adoc-list-${id}">
-          ${[...adminDocs.map(d => docFileRowHTML(d.name, d.size, d.date, 'admin')),
-             ...clientDocs.map(d => docFileRowHTML(d.name, d.size, d.date, 'client'))].join('')}
+          ${[...adminDocs.map(d => docFileRowHTML(d.name, d.size, d.date, 'admin', d.url || null)),
+             ...clientDocs.map(d => docFileRowHTML(d.name, d.size, d.date, 'client', d.url || null))].join('')}
           ${(adminDocs.length + clientDocs.length) === 0 ? '<div style="font-size:13px;color:var(--gray-400);padding:8px 0">No documents yet</div>' : ''}
         </div>
       </div>
@@ -1729,7 +1736,7 @@
       // Client-uploaded files from Firestore dashboard
       if (fsDash && fsDash.clientFiles && fsDash.clientFiles.length) {
         fsDash.clientFiles.forEach(f => {
-          extraRows.push(docFileRowHTML(f.name, f.size, f.date, 'client'));
+          extraRows.push(docFileRowHTML(f.name, f.size, f.date, 'client', f.url || null));
         });
       }
       if (extraRows.length) {
@@ -1850,29 +1857,53 @@
   function adzDragLeave(id) { document.getElementById('adz-'+id)?.classList.remove('drag-over'); }
   function adzDrop(e, id) { e.preventDefault(); adzDragLeave(id); adminUploadDocs(id, e.dataTransfer.files); }
 
-  function adminUploadDocs(clientId, files) {
+  function readAsDataURL(file) {
+    return new Promise(resolve => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.onerror = () => resolve(null);
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function adminUploadDocs(clientId, files) {
     if (!files?.length) return;
     const docs = getAdminDocs(clientId);
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-    Array.from(files).forEach(f => {
+    const newDocs = [];
+    for (const f of Array.from(files)) {
       const sizeStr = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' MB' : Math.round(f.size/1024)+' KB';
-      docs.push({ name: f.name, size: sizeStr, date: dateStr });
-    });
+      // Store dataURL for files ≤ 700KB so client can view them cross-device via Firestore
+      const url = f.size <= 700 * 1024 ? await readAsDataURL(f) : null;
+      const doc = { id: 'adoc_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), name: f.name, size: sizeStr, date: dateStr, url };
+      docs.push(doc);
+      newDocs.push(doc);
+    }
     saveAdminDocs(clientId, docs);
+    // Push to Firestore dashboard adminDocs so client sees them
+    fsGetDash(clientId).then(fd => {
+      const existing = fd || {};
+      const existingDocs = existing.adminDocs || [];
+      const merged = Object.assign({}, existing, { adminDocs: [...existingDocs, ...newDocs] });
+      fsSetDash(clientId, merged);
+    }).catch(() => {});
     document.getElementById('adf-'+clientId).value = '';
     renderClientDetail(clientId);
     const c = getClient(clientId);
     logActivity(`Document uploaded for ${c.fname} ${c.lname}: <strong>${files[0].name}</strong>`, '#22A7F0');
   }
 
-  function docFileRowHTML(name, size, date, source) {
+  function docFileRowHTML(name, size, date, source, url) {
     const ext = name.split('.').pop().toLowerCase();
     const iconColor = ext==='pdf'?'#ef4444':ext==='docx'?'#2563eb':'#22A7F0';
+    const action = url
+      ? `<button class="a-doc-view-btn" onclick="window.open('${url}','_blank')">View</button>`
+      : `<span class="a-doc-file-badge ${source==='admin'?'adfb-admin':'adfb-client'}">${source==='admin'?'Admin Upload':'Client Upload'}</span>`;
     return `<div class="a-doc-file-row">
       <div class="a-doc-file-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="${iconColor}" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
-      <div><div class="a-doc-file-name">${name}</div><div class="a-doc-file-meta">${size} · ${date}</div></div>
-      <span class="a-doc-file-badge ${source==='admin'?'adfb-admin':'adfb-client'}">${source==='admin'?'Admin Upload':'Client Upload'}</span>
+      <div style="flex:1;min-width:0"><div class="a-doc-file-name">${name}</div><div class="a-doc-file-meta">${size} · ${date}</div></div>
+      ${action}
     </div>`;
   }
 
