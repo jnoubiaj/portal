@@ -1919,7 +1919,20 @@
     // If re-signing from dashboard, go back to dashboard instead of continuing onboarding
     const resignParam = new URLSearchParams(window.location.search).get('resign') === '1';
     if (resignParam) {
-      window.location.replace('dashboard.html');
+      // Wait for Firestore saves to complete before navigating — otherwise browser cancels them mid-save
+      const _lsKey2 = 'cq_onboard_data_' + (JSON.parse(sessionStorage.getItem('cq_client_session') || localStorage.getItem('cq_active_client_session') || 'null') || {}).clientId;
+      const _sess2 = JSON.parse(sessionStorage.getItem('cq_client_session') || null) || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+      if (_sess2 && _sess2.clientId) {
+        const _cd = JSON.parse(localStorage.getItem('cq_onboard_data_' + _sess2.clientId) || '{}');
+        fsGetOnboarding(_sess2.clientId).then(fsOd => {
+          const merged = Object.assign({}, _cd, fsOd || {}, _cd);
+          return fsSetOnboarding(_sess2.clientId, merged);
+        }).catch(() => fsSetOnboarding(_sess2.clientId, _cd)).finally(() => {
+          window.location.replace('dashboard.html');
+        });
+      } else {
+        window.location.replace('dashboard.html');
+      }
     } else {
       goTo('personal');
     }
