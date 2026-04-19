@@ -1707,6 +1707,8 @@
     loadClientDocsFromFirestore(id);
     // Auto-calc funding approved from current approved rows on load
     autoCalcFundingApproved(id);
+    // Sync funding goal from onboarding desired loan amount
+    syncFundingGoalFromOnboarding(id);
   }
 
   async function loadClientDocsFromFirestore(clientId) {
@@ -3030,8 +3032,8 @@
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Approved ($) <span style="font-weight:400;color:var(--gray-400)">(auto-calculated from approvals)</span></div>
               <input type="hidden" id="db-approved-${clientId}" value="${d.fundingApproved||''}" />
               <div class="a-add-req-input" style="width:100%;background:var(--gray-50);color:var(--gray-500);display:flex;align-items:center" id="db-approved-display-${clientId}">${d.fundingApproved ? Number(d.fundingApproved).toLocaleString() : '—'}</div></div>
-            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Goal ($)</div>
-              <input class="a-add-req-input" style="width:100%" type="text" id="db-goal-${clientId}" value="${d.fundingGoal ? Number(d.fundingGoal).toLocaleString() : ''}" oninput="debouncedPublish('${clientId}')" onfocus="this.value=this.value.replace(/,/g,'')" onblur="if(this.value)this.value=Number(this.value.replace(/,/g,'')).toLocaleString()" /></div>
+            <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Goal ($) <span style="font-weight:400;color:var(--gray-400)">(from onboarding)</span></div>
+              <input class="a-add-req-input" style="width:100%;background:var(--gray-50);color:var(--gray-500)" type="text" id="db-goal-${clientId}" value="${d.fundingGoal ? Number(d.fundingGoal).toLocaleString() : ''}" readonly /></div>
             <div style="grid-column:1/-1">
               <div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:8px">
                 Funding Applications
@@ -3277,6 +3279,22 @@
     const val = +document.getElementById('db-approved-'+clientId)?.value || 0;
     const preview = document.getElementById('db-secured-preview-'+clientId);
     if (preview) preview.textContent = val ? '$' + Number(val).toLocaleString() : '—';
+  }
+
+  async function syncFundingGoalFromOnboarding(clientId) {
+    let o = null;
+    try { o = await fsGetOnboarding(clientId); } catch(e) {}
+    if (!o) try { o = JSON.parse(localStorage.getItem('cq_onboard_data_'+clientId) || 'null'); } catch(e) {}
+    if (!o || !o.loanAmount) return;
+    const raw = +(String(o.loanAmount).replace(/[^0-9.]/g,'')) || 0;
+    if (!raw) return;
+    const goalEl = document.getElementById('db-goal-' + clientId);
+    if (goalEl) goalEl.value = Number(raw).toLocaleString();
+    // Persist to dash data
+    const d = getDashData(clientId);
+    d.fundingGoal = raw;
+    saveDashData(clientId, d);
+    fsSetDash(clientId, d).catch(() => {});
   }
 
   function autoCalcFundingApproved(clientId) {
