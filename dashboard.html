@@ -3435,17 +3435,14 @@
     renderFundingTable(d);
     renderLatestDocs(d);
     renderAllDocs();
-    renderDocRequests(d.docRequests || []);
+    renderDocRequests(_docRequests.length ? _docRequests : (d.docRequests || []));
 
-    // Direct Firestore fetch for latest data (don't wait for listener)
+    // Direct Firestore fetch for latest data (don't wait for real-time listener)
     const _sess = getClientSession();
     if (_sess && _sess.clientId) {
       fsGetDash(_sess.clientId).then(fd => {
         if (!fd) return;
-        let rerender = false;
-        // Doc requests
-        if (fd.docRequests) renderDocRequests(fd.docRequests);
-        // Always sync admin docs from Firestore — source of truth for admin-uploaded files
+        // Sync adminDocs into localStorage so renderAllDocs can display them
         if (fd.adminDocs !== undefined) {
           try {
             const k = 'cq_dash_' + _sess.clientId;
@@ -3459,15 +3456,10 @@
               localStorage.setItem(ek, JSON.stringify(ec));
             }
           } catch(e) {}
-          rerender = true;
+          renderAllDocs();
+          renderLatestDocs(fd);
         }
-        // Client files — restore from Firestore if local is empty
-        if (fd.clientFiles && fd.clientFiles.length > 0 && docClientFiles.length === 0) {
-          docClientFiles = fd.clientFiles;
-          try { localStorage.setItem(_docFilesKey, JSON.stringify(docClientFiles)); } catch(e) {}
-          rerender = true;
-        }
-        if (rerender) { renderAllDocs(); renderLatestDocs(fd); }
+        docUpdateFromFirestore(fd);
       }).catch(()=>{});
     }
   }
@@ -3747,10 +3739,12 @@
 
     // ── FIREBASE REAL-TIME SYNC ──────────────────────────────────────────
     const session = getClientSession();
+    console.log('[DOC] session clientId:', session?.clientId);
     if (session && session.clientId) {
       // Fetch latest from Firestore once (initial load)
       try {
         let fsData = await fsGetDash(session.clientId);
+        console.log('[DOC] initial Firestore fetch:', fsData ? 'got data' : 'null');
         if (fsData) {
           try {
             const localDash = JSON.parse(localStorage.getItem('cq_dash_' + session.clientId) || '{}');
@@ -3760,6 +3754,7 @@
             localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
             if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
           } catch(e) {}
+          docUpdateFromFirestore(fsData);
           loadDashboardData(); // re-render with Firestore data
           renderApplyingCard();
           renderFundingSequence();
@@ -3780,12 +3775,8 @@
             }
             localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
             if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
-            // Restore client-uploaded files from Firestore if local list is empty
-            if (fsData.clientFiles && fsData.clientFiles.length > 0 && docClientFiles.length === 0) {
-              docClientFiles = fsData.clientFiles;
-              try { localStorage.setItem(_docFilesKey, JSON.stringify(docClientFiles)); } catch(e2) {}
-            }
           } catch(e) {}
+          docUpdateFromFirestore(fsData);
           loadDashboardData();
           renderApplyingCard();
           renderFundingSequence();
@@ -5063,253 +5054,169 @@
 
   // ── DOCUMENT UPLOAD ──────────────────────────────────────────────────────
 
-  // Track which request an upload belongs to
-  window.__docReqTarget = 'general';
+  // ── DOCUMENTS MODULE (rebuilt) ────────────────────────────────────────
+  const _docCid = (() => { try { return JSON.parse(sessionStorage.getItem('cq_client_session')||'null')?.clientId || 'anon'; } catch(e){ return 'anon'; } })();
+  const _docFilesKey     = 'cqdoc_files_'     + _docCid;
+  const _docFulfilledKey = 'cqdoc_fulfilled_' + _docCid;
+  let docClientFiles = (() => { try { return JSON.parse(localStorage.getItem(_docFilesKey) || '[]'); } catch(e) { return []; } })();
+  let docFulfilled   = (() => { try { return JSON.parse(localStorage.getItem(_docFulfilledKey) || '{}'); } catch(e) { return {}; } })();
+  let _docRequests   = [];
+  const _docUrlStore = {};
 
-  // Use client-specific localStorage keys so clients don't share data
-  const _docCid = (function(){ try { return JSON.parse(sessionStorage.getItem('cq_client_session')||'null')?.clientId || 'anon'; } catch(e){ return 'anon'; } })();
-  const _docFulfilledKey = 'cq_doc_fulfilled_' + _docCid;
-  const _docFilesKey     = 'cq_doc_files_'     + _docCid;
-  // Fulfilled requests (persisted in localStorage)
-  const docFulfilled = JSON.parse(localStorage.getItem(_docFulfilledKey) || '{}');
-  // Client-uploaded files list
-  let docClientFiles = JSON.parse(localStorage.getItem(_docFilesKey) || '[]');
+  function _docSaveFiles()     { try { localStorage.setItem(_docFilesKey,     JSON.stringify(docClientFiles)); } catch(e) {} }
+  function _docSaveFulfilled() { try { localStorage.setItem(_docFulfilledKey, JSON.stringify(docFulfilled));   } catch(e) {} }
 
-  function docInit() {
-    // Restore fulfilled request states
-    Object.keys(docFulfilled).forEach(id => {
-      if (docFulfilled[id]) docMarkRequestDone(id, docFulfilled[id], false);
-    });
-    renderAllDocs();
+  function _docToast(msg) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;font-family:Inter,sans-serif;font-size:13px;font-weight:600;padding:10px 20px;border-radius:10px;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.2);pointer-events:none;opacity:0;transition:opacity .2s';
+    document.body.appendChild(t);
+    requestAnimationFrame(() => { t.style.opacity = '1'; });
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
   }
 
-  function docTriggerUpload(reqId) {
-    window.__docReqTarget = reqId;
-    document.getElementById('doc-req-input').value = '';
-    document.getElementById('doc-req-input').click();
-  }
-
-  function docDragOver(e) {
-    e.preventDefault();
-    document.getElementById('doc-dropzone').classList.add('drag-over');
-  }
-  function docDragLeave(e) {
-    document.getElementById('doc-dropzone').classList.remove('drag-over');
-  }
-  function docDrop(e) {
-    e.preventDefault();
-    document.getElementById('doc-dropzone').classList.remove('drag-over');
-    docHandleFiles(e.dataTransfer.files, 'general');
-  }
-
-  function docReadAsDataURL(file) {
+  function _docReadAsDataURL(file) {
     return new Promise(resolve => {
       const r = new FileReader();
-      r.onload = e => resolve(e.target.result);
+      r.onload  = e => resolve(e.target.result);
       r.onerror = () => resolve(null);
       r.readAsDataURL(file);
     });
   }
 
-  const _docUrlStore = {};
   function openDocUrl(key) {
     const url = _docUrlStore[key];
     if (!url) return;
     if (url.startsWith('data:')) {
       const [header, b64] = url.split(',');
       const mime = header.match(/:(.*?);/)[1];
-      const binary = atob(b64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: mime });
-      window.open(URL.createObjectURL(blob), '_blank');
+      const bytes = new Uint8Array(atob(b64).split('').map(c => c.charCodeAt(0)));
+      window.open(URL.createObjectURL(new Blob([bytes], { type: mime })), '_blank');
     } else {
       window.open(url, '_blank');
     }
   }
 
-  function docHandleFiles(files, reqId) {
+  function docTriggerUpload(reqId) {
+    window.__docReqTarget = reqId || 'general';
+    const inp = document.getElementById('doc-req-input');
+    if (inp) { inp.value = ''; inp.click(); }
+  }
+
+  function docDragOver(e)  { e.preventDefault(); document.getElementById('doc-dropzone')?.classList.add('drag-over'); }
+  function docDragLeave(e) { document.getElementById('doc-dropzone')?.classList.remove('drag-over'); }
+  function docDrop(e) {
+    e.preventDefault();
+    document.getElementById('doc-dropzone')?.classList.remove('drag-over');
+    docHandleFiles(e.dataTransfer.files, 'general');
+  }
+
+  async function docHandleFiles(files, reqId) {
+    console.log('[DOC] docHandleFiles called', files?.length, reqId);
     if (!files || !files.length) return;
-    const file = files[0]; // process first file
-    const maxMB = 20;
-    if (file.size > maxMB * 1024 * 1024) {
-      alert('File is too large. Maximum size is ' + maxMB + ' MB.');
-      return;
-    }
-    // Show progress bar
-    const prog = document.getElementById('doc-upload-progress');
-    const bar = document.getElementById('doc-up-bar-fill');
-    const pct = document.getElementById('doc-up-pct');
-    document.getElementById('doc-up-filename').textContent = file.name;
-    bar.style.width = '0%';
-    pct.textContent = '0%';
-    prog.classList.add('show');
-    // Simulate upload progress
-    let p = 0;
-    const iv = setInterval(() => {
-      p += Math.random() * 22 + 8;
-      if (p >= 100) { p = 100; clearInterval(iv); }
-      bar.style.width = p + '%';
-      pct.textContent = Math.round(p) + '%';
-      if (p >= 100) {
-        setTimeout(async () => {
-          prog.classList.remove('show');
-          const now = new Date();
-          const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          const sizeStr = file.size > 1024*1024 ? (file.size/1024/1024).toFixed(1)+' MB' : Math.round(file.size/1024)+' KB';
-          // Upload to Firebase Storage for a permanent cross-device URL; fall back to base64 for small files
-          const _sess2 = getClientSession();
-          let url = null;
-          if (_sess2 && _sess2.clientId) {
-            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            url = await fsUploadFile(`docs/${_sess2.clientId}/client_${Date.now()}_${safeName}`, file);
-          }
-          if (!url && file.size <= 700 * 1024) url = await docReadAsDataURL(file);
-          const meta = { name: file.name, size: sizeStr, date: dateStr, reqId, url };
-          docClientFiles.push(meta);
-          try { localStorage.setItem(_docFilesKey, JSON.stringify(docClientFiles)); } catch(e) {}
-          // Sync to Firestore so admin can see and view client uploads cross-device
-          try {
-            const _sess = getClientSession();
-            if (_sess && _sess.clientId) {
-              fsGetDash(_sess.clientId).then(fd => {
-                const updated = Object.assign({}, fd || {}, { clientFiles: docClientFiles });
-                fsSetDash(_sess.clientId, updated);
-              }).catch(()=>{});
-            }
-          } catch(e) {}
-          docAddFileRow(file.name, sizeStr, dateStr, reqId);
-          if (reqId && reqId !== 'general') docMarkRequestDone(reqId, file.name, true);
-          docUpdateMeta();
-        }, 500);
-      }
-    }, 120);
-    // Handle multiple files
-    if (files.length > 1) {
-      Array.from(files).slice(1).forEach(f => {
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const sizeStr = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' MB' : Math.round(f.size/1024)+' KB';
-        const meta = { name: f.name, size: sizeStr, date: dateStr, reqId: 'general' };
-        docClientFiles.push(meta);
-        docAddFileRow(f.name, sizeStr, dateStr, 'general');
-      });
-      try { localStorage.setItem(_docFilesKey, JSON.stringify(docClientFiles)); } catch(e) {}
-    }
-    // Reset input
-    document.getElementById('doc-file-input').value = '';
-  }
+    const file = files[0];
+    console.log('[DOC] file:', file.name, file.size);
+    if (file.size > 20 * 1024 * 1024) { alert('File too large. Max 20 MB.'); return; }
 
-  function docAddFileRow(name, size, date, reqId) {
-    // After a new client upload, re-render the full list so it appears in order
+    // Show progress bar with simulated animation
+    const prog  = document.getElementById('doc-upload-progress');
+    const bar   = document.getElementById('doc-up-bar-fill');
+    const pct   = document.getElementById('doc-up-pct');
+    const fname = document.getElementById('doc-up-filename');
+    if (prog) {
+      if (fname) fname.textContent = file.name;
+      if (bar)  bar.style.width = '0%';
+      if (pct)  pct.textContent = '0%';
+      prog.classList.add('show');
+    }
+    await new Promise(resolve => {
+      let p = 0;
+      const iv = setInterval(() => {
+        p += Math.random() * 25 + 10;
+        if (p >= 100) { p = 100; clearInterval(iv); resolve(); }
+        if (bar) bar.style.width = p + '%';
+        if (pct) pct.textContent = Math.round(p) + '%';
+      }, 80);
+    });
+    if (prog) prog.classList.remove('show');
+
+    // Convert to base64 for local view (files ≤ 900 KB only; larger files get no preview URL)
+    const sess = (() => { try { return JSON.parse(sessionStorage.getItem('cq_client_session')||'null'); } catch(e) { return null; } })();
+    let url = null;
+    if (file.size <= 900 * 1024) url = await _docReadAsDataURL(file);
+
+    const now     = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const sizeStr = file.size > 1024*1024 ? (file.size/1024/1024).toFixed(1)+' MB' : Math.round(file.size/1024)+' KB';
+    const meta    = { id: 'cf_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), name: file.name, size: sizeStr, date: dateStr, reqId: reqId || 'general', url };
+
+    console.log('[DOC] meta created:', meta.name, 'url:', !!meta.url);
+    docClientFiles.push(meta);
+    console.log('[DOC] docClientFiles now has', docClientFiles.length, 'files');
+    _docSaveFiles();
+
+    // Sync metadata to Firestore — strip base64 so we stay under 1MB
+    if (sess && sess.clientId) {
+      const fsFiles = docClientFiles.map(f => ({ ...f, url: (f.url && !f.url.startsWith('data:')) ? f.url : null }));
+      fsSetDash(sess.clientId, { clientFiles: fsFiles }).catch(() => {});
+    }
+
+    console.log('[DOC] calling renderAllDocs');
     renderAllDocs();
-  }
-
-  function renderAllDocs() {
-    const list = document.getElementById('doc-all-list');
-    if (!list) return;
-    const rows = [];
-    const svgDoc = (color) => `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="${color}" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>`;
-
-    // 1. Signed contract(s) from onboarding data
-    try {
-      const sess = getClientSession();
-      const od = sess ? JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || '{}') : {};
-      const hasContract = od.contractSigned === 'signed' || (od.contractType && od.contractDate) || od.contractName;
-      if (hasContract) {
-        const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
-        const tLabel = typeLabels[od.contractType] || od.contractType || 'Consulting Agreement';
-        const dateStr = od.contractDate ? new Date(od.contractDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-        rows.push(`
-          <div class="doc-item">
-            <div class="doc-icon">${svgDoc('#10b981')}</div>
-            <div class="doc-info">
-              <div class="doc-name">Signed Consulting Agreement — ${tLabel}</div>
-              <div class="doc-meta">Signed by you · ${dateStr}</div>
-            </div>
-            <button class="doc-btn" onclick="viewSignedContract()">View</button>
-          </div>`);
-      }
-    } catch(e) {}
-
-    // 2. Admin-added documents from dashboard data
-    const d = getDashData();
-    (d.adminDocs || []).slice().reverse().forEach(doc => {
-      const dateStr = doc.date ? new Date(doc.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-      const ext = doc.name ? doc.name.split('.').pop().toUpperCase() : 'DOC';
-      rows.push(`
-        <div class="doc-item">
-          <div class="doc-icon">${svgDoc('#22A7F0')}</div>
-          <div class="doc-info">
-            <div class="doc-name">${doc.name}</div>
-            <div class="doc-meta">Uploaded by Admin · ${dateStr}</div>
-          </div>
-          ${doc.url
-            ? (() => { const k='dk_'+Math.random().toString(36).slice(2,10); _docUrlStore[k]=doc.url; return `<button class="doc-btn" onclick="openDocUrl('${k}')">View</button>`; })()
-            : (doc.type === 'contract'
-                ? `<button class="doc-btn" onclick="viewSignedContract()">View</button>`
-                : `<button class="doc-btn" style="opacity:0.35;cursor:default">View</button>`)
-          }
-        </div>`);
-    });
-
-    // 3. Client-uploaded files
-    docClientFiles.forEach(f => {
-      const ext = f.name ? f.name.split('.').pop().toLowerCase() : '';
-      const iconColor = ext === 'pdf' ? '#ef4444' : ext === 'docx' ? '#2563eb' : '#22A7F0';
-      const viewBtn = f.url
-        ? (() => { const k='dk_'+Math.random().toString(36).slice(2,10); _docUrlStore[k]=f.url; return `<button class="doc-btn" onclick="openDocUrl('${k}')">View</button>`; })()
-        : `<button class="doc-btn" style="opacity:0.35;cursor:default">View</button>`;
-      rows.push(`
-        <div class="doc-item">
-          <div class="doc-icon">${svgDoc(iconColor)}</div>
-          <div class="doc-info">
-            <div class="doc-name">${f.name}</div>
-            <div class="doc-meta">${ext.toUpperCase()} · ${f.size} · Uploaded by You · ${f.date}</div>
-          </div>
-          ${viewBtn}
-        </div>`);
-    });
-
-    if (rows.length === 0) {
-      list.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:8px 0">No documents yet.</div>';
-    } else {
-      list.innerHTML = rows.join('');
-    }
+    console.log('[DOC] renderAllDocs done, doc-all-list innerHTML length:', document.getElementById('doc-all-list')?.innerHTML?.length);
+    if (reqId && reqId !== 'general') _docMarkDone(reqId, file.name, true);
     docUpdateMeta();
+    _docToast(file.name + ' uploaded');
+
+    try { document.getElementById('doc-file-input').value = ''; } catch(e) {}
+    try { document.getElementById('doc-req-input').value  = ''; } catch(e) {}
   }
 
-  function docMarkRequestDone(reqId, fileName, save) {
-    const item = document.getElementById('dreq-' + reqId);
-    const badge = document.getElementById('dreq-' + reqId + '-badge');
-    if (!item || !badge) return;
-    item.classList.add('uploaded');
-    item.querySelector('.doc-req-icon').innerHTML = '<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
-    badge.textContent = 'Uploaded';
-    badge.classList.add('done');
-    const btn = item.querySelector('.doc-btn');
-    if (btn) btn.remove();
-    if (save) {
-      docFulfilled[reqId] = fileName;
-      try { localStorage.setItem(_docFulfilledKey, JSON.stringify(docFulfilled)); } catch(e) {}
+  // Called when Firestore data arrives (initial fetch or real-time listener)
+  function docUpdateFromFirestore(data) {
+    if (!data) return;
+    console.log('[DOC] docUpdateFromFirestore — docRequests:', data.docRequests?.length, 'clientFiles:', data.clientFiles?.length, 'adminDocs:', data.adminDocs?.length);
+    let changed = false;
+    if (data.docRequests !== undefined) {
+      _docRequests = data.docRequests || [];
+      renderDocRequests(_docRequests);
     }
-    docUpdateReqMeta();
+    if (data.clientFiles && data.clientFiles.length > 0) {
+      const localIds = new Set(docClientFiles.map(f => f.id || (f.name + '|' + f.date)));
+      const incoming = data.clientFiles.filter(f => {
+        const k = f.id || (f.name + '|' + f.date);
+        return !localIds.has(k);
+      });
+      if (incoming.length > 0) {
+        docClientFiles = [...docClientFiles, ...incoming];
+        _docSaveFiles();
+        changed = true;
+      }
+    }
+    if (changed) renderAllDocs();
+  }
+
+  function _docMarkDone(reqId, fileName, save) {
+    docFulfilled[reqId] = fileName;
+    if (save) _docSaveFulfilled();
+    renderDocRequests(_docRequests);
   }
 
   function renderDocRequests(reqs) {
+    _docRequests = reqs || [];
     const list = document.getElementById('doc-req-list');
     if (!list) return;
-    const svgDoc = `<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`;
+    const svgDoc   = `<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`;
     const svgCheck = `<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>`;
-    if (!reqs || reqs.length === 0) {
+    if (!_docRequests.length) {
       list.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:8px 0">No document requests yet.</div>';
       docUpdateReqMeta();
       return;
     }
-    list.innerHTML = reqs.map(r => {
+    list.innerHTML = _docRequests.map(r => {
       const fulfilled = docFulfilled[r.id];
-      const uploaded = !!fulfilled;
-      return `<div class="doc-req-item${uploaded ? ' uploaded' : ''}" id="dreq-${r.id}">
+      const uploaded  = !!fulfilled || !!r.received;
+      return `<div class="doc-req-item${uploaded?' uploaded':''}" id="dreq-${r.id}">
         <div class="doc-req-icon">${uploaded ? svgCheck : svgDoc}</div>
         <div class="doc-req-info">
           <div class="doc-req-name">${r.name}</div>
@@ -5325,15 +5232,59 @@
   }
 
   function docUpdateReqMeta() {
-    const items = document.querySelectorAll('.doc-req-item');
+    const items   = document.querySelectorAll('.doc-req-item');
     const pending = Array.from(items).filter(i => !i.classList.contains('uploaded')).length;
-    document.getElementById('doc-req-meta').textContent = pending > 0 ? pending + ' pending' : 'All submitted';
+    const el = document.getElementById('doc-req-meta');
+    if (el) el.textContent = pending > 0 ? pending + ' pending' : 'All submitted';
+  }
+
+  function renderAllDocs() {
+    const list = document.getElementById('doc-all-list');
+    if (!list) return;
+    const rows   = [];
+    const svgDoc = color => `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="${color}" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>`;
+    const viewBtn = url => {
+      if (!url) return `<button class="doc-btn" style="opacity:0.35;cursor:default">View</button>`;
+      const k = 'dk_' + Math.random().toString(36).slice(2,10);
+      _docUrlStore[k] = url;
+      return `<button class="doc-btn" onclick="openDocUrl('${k}')">View</button>`;
+    };
+
+    // 1. Signed contract from onboarding
+    try {
+      const sess = getClientSession();
+      const od   = sess ? JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || '{}') : {};
+      const hasContract = od.contractSigned === 'signed' || (od.contractType && od.contractDate) || od.contractName;
+      if (hasContract) {
+        const typeLabels = { full:'Full Payment', split:'Split Payment (2x)', backend:'Backend / Success Fee' };
+        const tLabel  = typeLabels[od.contractType] || od.contractType || 'Consulting Agreement';
+        const dateStr = od.contractDate ? new Date(od.contractDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+        rows.push(`<div class="doc-item"><div class="doc-icon">${svgDoc('#10b981')}</div><div class="doc-info"><div class="doc-name">Signed Consulting Agreement — ${tLabel}</div><div class="doc-meta">Signed by you · ${dateStr}</div></div><button class="doc-btn" onclick="viewSignedContract()">View</button></div>`);
+      }
+    } catch(e) {}
+
+    // 2. Admin-uploaded docs (from dashboard data in localStorage)
+    const d = getDashData();
+    (d.adminDocs || []).slice().reverse().forEach(doc => {
+      const dateStr = doc.date ? new Date(doc.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+      rows.push(`<div class="doc-item"><div class="doc-icon">${svgDoc('#22A7F0')}</div><div class="doc-info"><div class="doc-name">${doc.name}</div><div class="doc-meta">Uploaded by Admin · ${dateStr}</div></div>${viewBtn(doc.url)}</div>`);
+    });
+
+    // 3. Client-uploaded files
+    docClientFiles.slice().reverse().forEach(f => {
+      const ext       = f.name ? f.name.split('.').pop().toLowerCase() : '';
+      const iconColor = ext === 'pdf' ? '#ef4444' : ext === 'docx' ? '#2563eb' : '#22A7F0';
+      rows.push(`<div class="doc-item"><div class="doc-icon">${svgDoc(iconColor)}</div><div class="doc-info"><div class="doc-name">${f.name}</div><div class="doc-meta">${ext.toUpperCase()} · ${f.size} · Uploaded by You · ${f.date}</div></div>${viewBtn(f.url)}</div>`);
+    });
+
+    list.innerHTML = rows.length ? rows.join('') : '<div style="font-size:13px;color:var(--gray-400);padding:8px 0">No documents yet.</div>';
+    docUpdateMeta();
   }
 
   function docUpdateMeta() {
-    const list = document.getElementById('doc-all-list');
+    const list  = document.getElementById('doc-all-list');
     const total = list ? list.querySelectorAll('.doc-item').length : 0;
-    const el = document.getElementById('doc-all-meta');
+    const el    = document.getElementById('doc-all-meta');
     if (el) el.textContent = total + ' file' + (total !== 1 ? 's' : '');
     docUpdateReqMeta();
   }
@@ -5344,7 +5295,8 @@
     window.location.replace('login.html');
   }
 
-  // Init on load
+  // Init on load — render docs from localStorage immediately
+  function docInit() { renderAllDocs(); }
   docInit();
 
   // ── AUTO-LOGOUT AFTER 3 MIN INACTIVITY ───────────────────────────────

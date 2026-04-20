@@ -1717,7 +1717,7 @@
     // Always push current doc requests to Firestore so client sees them
     const _reqs = getDocRequests(id);
     if (_reqs.length > 0) {
-      fsGetDash(id).then(fd => fsSetDash(id, Object.assign({}, fd||{}, { docRequests: _reqs }))).catch(()=>{});
+      fsSetDash(id, { docRequests: _reqs }).catch(()=>{});
     }
   }
 
@@ -1888,7 +1888,7 @@
     const newReq = { id: 'r'+Date.now(), name, received: false };
     reqs.push(newReq);
     saveDocRequests(clientId, reqs);
-    fsGetDash(clientId).then(fd => fsSetDash(clientId, Object.assign({}, fd||{}, { docRequests: reqs }))).catch(()=>{});
+    fsSetDash(clientId, { docRequests: reqs }).catch(()=>{});
     inp.value = '';
     renderClientDetail(clientId);
     const c = getClient(clientId);
@@ -1898,7 +1898,7 @@
   function removeDocReq(clientId, reqId) {
     const reqs = getDocRequests(clientId).filter(r => r.id !== reqId);
     saveDocRequests(clientId, reqs);
-    fsGetDash(clientId).then(fd => fsSetDash(clientId, Object.assign({}, fd||{}, { docRequests: reqs }))).catch(()=>{});
+    fsSetDash(clientId, { docRequests: reqs }).catch(()=>{});
     renderClientDetail(clientId);
   }
 
@@ -1962,9 +1962,9 @@
     await fsGetDash(clientId).then(fd => {
       const ex = (fd && fd.adminDocs) ? fd.adminDocs : [];
       const seen = new Set(ex.map(d => d.id));
-      return fsSetDash(clientId, Object.assign({}, fd || {}, {
+      return fsSetDash(clientId, {
         adminDocs: [...ex, ...fsNewDocs.filter(d => !seen.has(d.id))]
-      }));
+      });
     }).catch(() => {});
     document.getElementById('adf-'+clientId).value = '';
     renderClientDetail(clientId);

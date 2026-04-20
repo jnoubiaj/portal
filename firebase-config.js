@@ -89,8 +89,9 @@ async function fsUploadFile(path, file) {
   try {
     if (typeof firebase.storage !== 'function') return null;
     const ref = firebase.storage().ref(path);
-    await ref.put(file);
-    return await ref.getDownloadURL();
+    const timeout = new Promise(resolve => setTimeout(() => resolve(null), 5000));
+    const upload = ref.put(file).then(() => ref.getDownloadURL()).catch(() => null);
+    return await Promise.race([upload, timeout]);
   } catch(e) { return null; }
 }
 
