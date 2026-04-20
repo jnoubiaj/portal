@@ -5149,9 +5149,9 @@
     docClientFiles.push(meta);
     _docSaveFiles();
 
-    // Sync metadata to Firestore — strip base64 so we stay under 1MB
+    // Sync to Firestore — keep base64 for small files (< 200 KB) so admin can view them
     if (sess && sess.clientId) {
-      const fsFiles = docClientFiles.map(f => ({ ...f, url: (f.url && !f.url.startsWith('data:')) ? f.url : null }));
+      const fsFiles = docClientFiles.map(f => ({ ...f, url: (f.url && f.url.startsWith('data:') && f.url.length > 270000) ? null : f.url }));
       fsSetDash(sess.clientId, { clientFiles: fsFiles }).catch(() => {});
     }
 

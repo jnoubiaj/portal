@@ -1941,11 +1941,9 @@
     const newDocs = [];
     for (const f of Array.from(files)) {
       const sizeStr = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' MB' : Math.round(f.size/1024)+' KB';
-      const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const storagePath = `docs/${clientId}/admin_${Date.now()}_${safeName}`;
-      // Try Firebase Storage for a permanent cross-device URL; fall back to base64 for small files
-      let url = await fsUploadFile(storagePath, f);
-      if (!url && f.size <= 700 * 1024) url = await readAsDataURL(f);
+      // Use base64 for files ≤ 900 KB so admin can view from any device
+      let url = null;
+      if (f.size <= 900 * 1024) url = await readAsDataURL(f);
       const doc = { id: 'adoc_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), name: f.name, size: sizeStr, date: dateStr, url };
       docs.push(doc);
       newDocs.push(doc);
@@ -1958,7 +1956,8 @@
     saveDashData(clientId, localDash);
     // ALSO directly write adminDocs to Firestore — don't rely on the async saveDashData write
     // completing before loadClientDocsFromFirestore reads stale data
-    const fsNewDocs = newDocs.map(d => ({ ...d, url: (d.url && !d.url.startsWith('data:')) ? d.url : null }));
+    // Keep base64 for small files (< 200 KB base64 string) so admin can view cross-device
+    const fsNewDocs = newDocs.map(d => ({ ...d, url: (d.url && d.url.startsWith('data:') && d.url.length > 270000) ? null : d.url }));
     await fsGetDash(clientId).then(fd => {
       const ex = (fd && fd.adminDocs) ? fd.adminDocs : [];
       const seen = new Set(ex.map(d => d.id));
