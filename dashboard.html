@@ -3739,12 +3739,10 @@
 
     // ── FIREBASE REAL-TIME SYNC ──────────────────────────────────────────
     const session = getClientSession();
-    console.log('[DOC] session clientId:', session?.clientId);
     if (session && session.clientId) {
       // Fetch latest from Firestore once (initial load)
       try {
         let fsData = await fsGetDash(session.clientId);
-        console.log('[DOC] initial Firestore fetch:', fsData ? 'got data' : 'null');
         if (fsData) {
           try {
             const localDash = JSON.parse(localStorage.getItem('cq_dash_' + session.clientId) || '{}');
@@ -5112,10 +5110,8 @@
   }
 
   async function docHandleFiles(files, reqId) {
-    console.log('[DOC] docHandleFiles called', files?.length, reqId);
     if (!files || !files.length) return;
     const file = files[0];
-    console.log('[DOC] file:', file.name, file.size);
     if (file.size > 20 * 1024 * 1024) { alert('File too large. Max 20 MB.'); return; }
 
     // Show progress bar with simulated animation
@@ -5150,9 +5146,7 @@
     const sizeStr = file.size > 1024*1024 ? (file.size/1024/1024).toFixed(1)+' MB' : Math.round(file.size/1024)+' KB';
     const meta    = { id: 'cf_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), name: file.name, size: sizeStr, date: dateStr, reqId: reqId || 'general', url };
 
-    console.log('[DOC] meta created:', meta.name, 'url:', !!meta.url);
     docClientFiles.push(meta);
-    console.log('[DOC] docClientFiles now has', docClientFiles.length, 'files');
     _docSaveFiles();
 
     // Sync metadata to Firestore — strip base64 so we stay under 1MB
@@ -5161,9 +5155,7 @@
       fsSetDash(sess.clientId, { clientFiles: fsFiles }).catch(() => {});
     }
 
-    console.log('[DOC] calling renderAllDocs');
     renderAllDocs();
-    console.log('[DOC] renderAllDocs done, doc-all-list innerHTML length:', document.getElementById('doc-all-list')?.innerHTML?.length);
     if (reqId && reqId !== 'general') _docMarkDone(reqId, file.name, true);
     docUpdateMeta();
     _docToast(file.name + ' uploaded');
@@ -5175,7 +5167,6 @@
   // Called when Firestore data arrives (initial fetch or real-time listener)
   function docUpdateFromFirestore(data) {
     if (!data) return;
-    console.log('[DOC] docUpdateFromFirestore — docRequests:', data.docRequests?.length, 'clientFiles:', data.clientFiles?.length, 'adminDocs:', data.adminDocs?.length);
     let changed = false;
     if (data.docRequests !== undefined) {
       _docRequests = data.docRequests || [];
