@@ -2267,55 +2267,20 @@
       <!-- ── CREDIT SECTION ────────────────────────────── -->
       <div class="section" id="section-credit">
 
-        <!-- ══ INPUT PHASE ══ -->
+        <!-- ══ INPUT PHASE (waiting for advisor) ══ -->
         <div id="ca-input">
-
-          <!-- Upload zone -->
           <div class="section-card" style="margin-bottom:20px">
             <div class="card-header">
               <div class="card-title">Credit Analyzer</div>
-              <div class="card-meta">Upload your Experian credit report PDF — we'll parse and break it down into sections automatically</div>
             </div>
             <div class="card-body">
-
-              <div id="ca-drop-area" class="ca-drop-area"
-                   onclick="document.getElementById('ca-pdf-file').click()"
-                   ondragover="event.preventDefault();this.classList.add('ca-drag-active')"
-                   ondragleave="this.classList.remove('ca-drag-active')"
-                   ondrop="caHandleDrop(event)">
-                <input type="file" id="ca-pdf-file" accept=".pdf" style="display:none" onchange="caHandleFile(this.files[0])">
-                <div class="ca-drop-pdf-icon">
-                  <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="1.5"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/><path d="M13 3v6h6M9 13h6M9 17h4"/></svg>
-                </div>
-                <div class="ca-drop-title">Upload Experian Credit Report</div>
-                <div class="ca-drop-sub">Drag &amp; drop your PDF here, or click to browse</div>
-                <div class="ca-drop-chips">
-                  <span>creditchecktotal.com</span>
-                  <span>myfreescorenow.com</span>
-                  <span>identityiq.com</span>
-                </div>
-                <button class="ca-btn-primary" style="margin-top:4px" onclick="event.stopPropagation();document.getElementById('ca-pdf-file').click()">
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                  Choose PDF File
-                </button>
+              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;gap:12px">
+                <svg width="44" height="44" fill="none" viewBox="0 0 24 24" stroke="#D4DCE8" stroke-width="1.5"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <div style="font-size:15px;font-weight:600;color:var(--navy)">No credit report yet</div>
+                <div style="font-size:13px;color:var(--gray-400);max-width:320px;line-height:1.6">Your advisor will upload and analyze your Experian credit report. Check back soon.</div>
               </div>
-
-              <div id="ca-processing" style="display:none" class="ca-processing">
-                <div class="ca-spin-ring"></div>
-                <div class="ca-proc-title">Analyzing your credit report…</div>
-                <div class="ca-proc-msg" id="ca-proc-msg">Loading PDF reader…</div>
-              </div>
-
-              <div id="ca-parse-error" style="display:none" class="ca-parse-error">
-                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="1.5"><path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <div class="ca-parse-error-title">Could not read this PDF</div>
-                <div class="ca-parse-error-sub">This PDF may use a non-standard encoding. Try downloading it from a different browser or as a "Save as PDF" from your credit portal, then upload again.</div>
-                <button class="ca-btn-secondary" onclick="caResetUpload()">Try Another File</button>
-              </div>
-
             </div>
           </div>
-
         </div><!-- end ca-input -->
 
         <!-- ══ REPORT PHASE ══ -->
@@ -5185,6 +5150,13 @@
       }
     }
     if (changed) renderAllDocs();
+    if (data.creditData) {
+      try { localStorage.setItem('cq_credit_data', JSON.stringify(data.creditData)); } catch(e) {}
+      if (typeof caRenderReport === 'function') {
+        window.caData = data.creditData;
+        caRenderReport(data.creditData);
+      }
+    }
   }
 
   function _docMarkDone(reqId, fileName, save) {
