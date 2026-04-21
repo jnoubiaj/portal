@@ -3606,6 +3606,29 @@
     document.getElementById('add-client-modal').style.display = 'flex';
   }
   const TEMP_PASSWORD = 'cqconsulting123!';
+  const GHL_API_KEY     = 'pit-9430c719-8434-493a-baec-40d8d1d843d2';
+  const GHL_LOCATION_ID = 'OZdxGQEIUHjEk0IGL0VP';
+
+  async function sendGHLWelcomeSMS(fname, phone, email, smsText) {
+    if (!phone) return;
+    try {
+      // Create or find contact in GHL
+      const contactRes = await fetch('https://services.leadconnectorhq.com/contacts/', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${GHL_API_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locationId: GHL_LOCATION_ID, firstName: fname, phone, email, tags: ['portal-client'] })
+      });
+      const contactData = await contactRes.json();
+      const contactId = contactData.contact?.id;
+      if (!contactId) { console.warn('GHL contact not created:', contactData); return; }
+      // Send SMS
+      await fetch('https://services.leadconnectorhq.com/conversations/messages', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${GHL_API_KEY}`, 'Version': '2021-04-15', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'SMS', contactId, message: smsText })
+      });
+    } catch(e) { console.warn('GHL SMS failed:', e); }
+  }
 
   function toggleNcPct() {
     const type = document.getElementById('nc-contract-type')?.value;
@@ -3715,6 +3738,8 @@
     const smsText = `Hi! Your CapitalQuest client portal account has been created.\n\nPortal: ${portalUrl}\nEmail: ${email}\nTemp Password: ${TEMP_PASSWORD}\n\nYou will be asked to create a new password when you first log in.\n\n— CapitalQuest Consulting`;
     document.getElementById('nc-sms-preview').textContent = smsText;
     document.getElementById('client-created-modal').style.display = 'flex';
+    // Auto-send via GHL
+    sendGHLWelcomeSMS(displayName, phone, email, smsText);
 
     renderClientList();
     renderOverview();
