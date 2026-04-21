@@ -3653,7 +3653,43 @@
 
       if (!contactId) { console.warn('GHL: could not find or create contact'); return; }
 
-      // Step 4: Send SMS
+      // Step 4: Add to "Business Funding" pipeline as "New Lead"
+      try {
+        const pipRes = await fetch(
+          `https://services.leadconnectorhq.com/opportunities/pipelines?locationId=${GHL_LOCATION_ID}`,
+          { headers }
+        );
+        const pipData = await pipRes.json();
+        console.log('GHL pipelines:', pipRes.status, pipData);
+        const pipeline = (pipData.pipelines || []).find(p =>
+          p.name.toLowerCase().includes('business funding') || p.name.toLowerCase().includes('funding')
+        );
+        if (pipeline) {
+          const stage = (pipeline.stages || []).find(s =>
+            s.name.toLowerCase().includes('new lead') || s.name.toLowerCase().includes('new')
+          ) || pipeline.stages?.[0];
+          if (stage) {
+            const oppRes = await fetch('https://services.leadconnectorhq.com/opportunities/', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                pipelineId: pipeline.id,
+                locationId: GHL_LOCATION_ID,
+                name: `${fname} — Portal Client`,
+                contactId,
+                pipelineStageId: stage.id,
+                status: 'open'
+              })
+            });
+            const oppData = await oppRes.json();
+            console.log('GHL opportunity created:', oppRes.status, oppData);
+          }
+        } else {
+          console.warn('GHL: Business Funding pipeline not found. Available:', (pipData.pipelines||[]).map(p=>p.name));
+        }
+      } catch(e) { console.warn('GHL pipeline add failed:', e); }
+
+      // Step 5: Send SMS
       const smsRes = await fetch('https://services.leadconnectorhq.com/conversations/messages', {
         method: 'POST',
         headers,
