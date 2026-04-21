@@ -3411,7 +3411,84 @@
       }
     }
 
+    // GHL sync — fire-and-forget, does not block completion
+    syncOnboardingToGHL(onboardData).catch(() => {});
+
     goTo('done');
+  }
+
+  // ── GHL SYNC ──────────────────────────────────────────────────────────
+  const _GHL_KEY = 'pit-69ef304a-e611-47a6-b270-2800956e2fb5';
+  const _GHL_LOC = 'OZdxGQEIUHjEk0IGL0VP';
+
+  async function syncOnboardingToGHL(d) {
+    if (!d || (!d.email && !d.phone)) return;
+    try {
+      // Find contact by email
+      let contactId = null;
+      if (d.email) {
+        const search = await fetch(
+          `https://services.leadconnectorhq.com/contacts/?locationId=${_GHL_LOC}&email=${encodeURIComponent(d.email)}`,
+          { headers: { 'Authorization': `Bearer ${_GHL_KEY}`, 'Version': '2021-07-28' } }
+        );
+        const sData = await search.json();
+        contactId = sData.contacts?.[0]?.id || null;
+      }
+      // If not found, create the contact
+      if (!contactId) {
+        const create = await fetch('https://services.leadconnectorhq.com/contacts/', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${_GHL_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ locationId: _GHL_LOC, firstName: d.firstName, lastName: d.lastName, phone: d.phone, email: d.email, tags: ['portal-client'] })
+        });
+        const cData = await create.json();
+        contactId = cData.contact?.id || null;
+      }
+      if (!contactId) return;
+
+      // Build address object
+      const address1 = [d.address, d.address2].filter(Boolean).join(', ') || undefined;
+
+      // Update contact with all onboarding + contract data
+      await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${_GHL_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName:   d.firstName   || undefined,
+          lastName:    d.lastName    || undefined,
+          phone:       d.phone       || undefined,
+          email:       d.email       || undefined,
+          address1,
+          city:        d.city        || undefined,
+          state:       d.state       || undefined,
+          postalCode:  d.zip         || undefined,
+          dateOfBirth: d.dob         || undefined,
+          companyName: d.bizName     || undefined,
+          customFields: [
+            { key: 'ssn',              fieldValue: d.ssn            || '' },
+            { key: 'annual_income',    fieldValue: d.income         || '' },
+            { key: 'biz_type',         fieldValue: d.bizType        || '' },
+            { key: 'industry',         fieldValue: d.industry       || '' },
+            { key: 'employees',        fieldValue: d.employees      || '' },
+            { key: 'monthly_sales',    fieldValue: d.monthlySales   || '' },
+            { key: 'ownership_pct',    fieldValue: d.ownership      || '' },
+            { key: 'biz_phone',        fieldValue: d.bizPhone       || '' },
+            { key: 'date_established', fieldValue: d.dateEstablished|| '' },
+            { key: 'loan_amount',      fieldValue: d.loanAmount     || '' },
+            { key: 'loan_purpose',     fieldValue: d.loanPurpose    || '' },
+            { key: 'biz_address',      fieldValue: d.bizAddress     || '' },
+            { key: 'personal_banks',   fieldValue: d.personalBanks  || '' },
+            { key: 'new_credit',       fieldValue: d.newCredit      || '' },
+            { key: 'contract_signed',  fieldValue: d.contractSigned || '' },
+            { key: 'contract_name',    fieldValue: d.contractName   || '' },
+            { key: 'contract_type',    fieldValue: d.contractType   || '' },
+            { key: 'contract_amount',  fieldValue: d.contractAmount || '' },
+            { key: 'contract_pct',     fieldValue: d.contractPct    || '' },
+            { key: 'contract_date',    fieldValue: d.contractDate   || '' },
+          ].filter(f => f.fieldValue !== '')
+        })
+      });
+    } catch(e) { /* silent — never block onboarding completion */ }
   }
 
   // ── FORM PREFILL FROM EXISTING DATA ─────────────────────────────────
