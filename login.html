@@ -980,21 +980,20 @@
             // Try by email (fallback if UID mapping missing)
             clientAuth = await fsGetClientAuthByEmail(email);
           }
-          if (!clientAuth || !clientAuth.clientId) {
-            await fsAuthSignOut();
-            showLoginError('Account not linked. Please contact your consultant.');
+          if (clientAuth && clientAuth.clientId) {
+            // Check mustChange flag
+            const fsCred = await fsGetCred(email);
+            if (fsCred && fsCred.mustChange) {
+              _pendingSession = { clientId: clientAuth.clientId, email };
+              showPage('page-change-password');
+              return;
+            }
+            startClientSession(clientAuth.clientId, email);
+            redirectAfterLogin(clientAuth.clientId);
             return;
           }
-          // Check mustChange flag
-          const fsCred = await fsGetCred(email);
-          if (fsCred && fsCred.mustChange) {
-            _pendingSession = { clientId: clientAuth.clientId, email };
-            showPage('page-change-password');
-            return;
-          }
-          startClientSession(clientAuth.clientId, email);
-          redirectAfterLogin(clientAuth.clientId);
-          return;
+          // clientAuth mapping missing — fall through to legacy path to auto-create it
+          // (account existed before migration wrote clientAuth docs)
         }
 
         // ── PATH 2: Legacy Firestore credential check + auto-migrate ──────
