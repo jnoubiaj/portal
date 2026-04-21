@@ -242,6 +242,86 @@
       top: 6px; right: 6px;
       border: 2px solid var(--white);
     }
+    .notif-count {
+      position: absolute;
+      top: -4px; right: -4px;
+      min-width: 18px; height: 18px;
+      background: var(--danger);
+      color: white;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-head);
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 4px;
+      border: 2px solid var(--white);
+      pointer-events: none;
+    }
+    /* Notification dropdown panel */
+    .notif-panel {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 340px;
+      background: white;
+      border: 1px solid var(--gray-100);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(10,25,60,0.13), 0 2px 8px rgba(10,25,60,0.07);
+      z-index: 9999;
+      overflow: hidden;
+      display: none;
+    }
+    .notif-panel.open { display: block; }
+    .notif-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .notif-panel-title {
+      font-family: var(--font-head); font-weight: 700; font-size: 14px; color: var(--navy);
+    }
+    .notif-mark-all {
+      font-size: 11px; font-weight: 600; color: var(--blue); cursor: pointer; background: none; border: none;
+    }
+    .notif-mark-all:hover { text-decoration: underline; }
+    .notif-list {
+      max-height: 360px; overflow-y: auto;
+    }
+    .notif-item {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--gray-50);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item:hover { background: var(--gray-50); }
+    .notif-item.unread { background: #f0f6ff; }
+    .notif-item.unread:hover { background: #e6f0fd; }
+    .notif-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 16px;
+    }
+    .notif-icon.doc    { background: #fff7ed; }
+    .notif-icon.msg    { background: #f0f9ff; }
+    .notif-icon.task   { background: #fefce8; }
+    .notif-icon.stage  { background: #f0fdf4; }
+    .notif-icon.credit { background: #fdf4ff; }
+    .notif-icon.upload { background: #f0fdf4; }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-body-title { font-size: 12.5px; font-weight: 600; color: var(--navy); line-height: 1.35; }
+    .notif-body-sub   { font-size: 11.5px; color: var(--gray-400); margin-top: 2px; line-height: 1.35; }
+    .notif-body-time  { font-size: 10.5px; color: var(--gray-300); margin-top: 4px; }
+    .notif-unread-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--blue); flex-shrink: 0; margin-top: 5px;
+    }
+    .notif-empty {
+      padding: 40px 20px; text-align: center;
+      font-size: 13px; color: var(--gray-400);
+    }
+    .notif-wrap { position: relative; }
     .header-avatar {
       width: 38px; height: 38px;
       border-radius: 50%;
@@ -2049,9 +2129,20 @@
       </button>
       <div class="page-title" id="pageTitleText">Dashboard</div>
       <div class="header-actions">
-        <div class="notif-btn">
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-          <span class="notif-dot"></span>
+        <div class="notif-wrap">
+          <div class="notif-btn" id="notif-btn" onclick="toggleNotifPanel(event)">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            <span class="notif-count" id="notif-count" style="display:none">0</span>
+          </div>
+          <div class="notif-panel" id="notif-panel">
+            <div class="notif-panel-header">
+              <div class="notif-panel-title">Notifications</div>
+              <button class="notif-mark-all" onclick="notifMarkAllRead()">Mark all read</button>
+            </div>
+            <div class="notif-list" id="notif-list">
+              <div class="notif-empty">No notifications yet</div>
+            </div>
+          </div>
         </div>
         <div class="header-avatar">JD</div>
       </div>
@@ -3663,6 +3754,7 @@
     renderProfileSection();
     initProfileSync();
     initChatSection();
+    notifRender();
     if (APPLYING_TO.length > 1) {
       setInterval(() => {
         applyIdx = (applyIdx + 1) % APPLYING_TO.length;
@@ -3691,10 +3783,12 @@
             localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
             if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
           } catch(e) {}
+          _prevDashSnap = fsData; // baseline — no notifications for initial state
           docUpdateFromFirestore(fsData);
           loadDashboardData(); // re-render with Firestore data
           renderApplyingCard();
           renderFundingSequence();
+          notifRender(); // show stored notifications from previous sessions
           // Re-pin section after async re-render so it doesn't snap back to dashboard
           try { switchSection(initSection, null, true); } catch(e) {}
         }
@@ -3713,6 +3807,7 @@
             localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
             if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
           } catch(e) {}
+          notifDetectChanges(fsData);
           docUpdateFromFirestore(fsData);
           loadDashboardData();
           renderApplyingCard();
@@ -5164,6 +5259,178 @@
     }
   }
 
+  // ── NOTIFICATIONS ──────────────────────────────────────────────────────
+  const NOTIF_ICONS = {
+    doc_request: { icon: '📄', cls: 'doc' },
+    doc_uploaded: { icon: '📎', cls: 'upload' },
+    message:      { icon: '💬', cls: 'msg' },
+    task:         { icon: '✅', cls: 'task' },
+    stage:        { icon: '🚀', cls: 'stage' },
+    credit_score: { icon: '💳', cls: 'credit' },
+  };
+
+  function _notifKey() {
+    const s = getClientSession();
+    return s?.clientId ? 'cq_notifs_' + s.clientId : null;
+  }
+
+  function notifGet() {
+    const k = _notifKey(); if (!k) return [];
+    try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch(e) { return []; }
+  }
+
+  function notifSave(list) {
+    const k = _notifKey(); if (!k) return;
+    try { localStorage.setItem(k, JSON.stringify(list)); } catch(e) {}
+  }
+
+  function notifAdd(type, title, body, navTo) {
+    const list = notifGet();
+    const id = type + '_' + Date.now();
+    // Deduplicate: skip if same title+body added in last 5 seconds
+    const recent = list.find(n => n.title === title && n.body === body && (Date.now() - n._ts) < 5000);
+    if (recent) return;
+    list.unshift({ id, type, title, body: body || '', navTo: navTo || null,
+      time: new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+' · '+new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'}),
+      read: false, _ts: Date.now() });
+    if (list.length > 50) list.splice(50);
+    notifSave(list);
+    notifRender();
+  }
+
+  function notifMarkAllRead() {
+    const list = notifGet().map(n => ({...n, read: true}));
+    notifSave(list);
+    notifRender();
+  }
+
+  function notifMarkRead(id) {
+    const list = notifGet().map(n => n.id === id ? {...n, read: true} : n);
+    notifSave(list);
+    notifRender();
+  }
+
+  function notifRender() {
+    const list = notifGet();
+    const unread = list.filter(n => !n.read).length;
+    const countEl = document.getElementById('notif-count');
+    if (countEl) {
+      countEl.textContent = unread > 9 ? '9+' : unread;
+      countEl.style.display = unread > 0 ? 'flex' : 'none';
+    }
+    const listEl = document.getElementById('notif-list');
+    if (!listEl) return;
+    if (!list.length) {
+      listEl.innerHTML = '<div class="notif-empty">You\'re all caught up!</div>';
+      return;
+    }
+    listEl.innerHTML = list.map(n => {
+      const meta = NOTIF_ICONS[n.type] || { icon: '🔔', cls: 'doc' };
+      return `<div class="notif-item${n.read?'':' unread'}" onclick="notifClick('${n.id}','${n.navTo||''}')">
+        <div class="notif-icon ${meta.cls}">${meta.icon}</div>
+        <div class="notif-body">
+          <div class="notif-body-title">${n.title}</div>
+          ${n.body ? `<div class="notif-body-sub">${n.body}</div>` : ''}
+          <div class="notif-body-time">${n.time}</div>
+        </div>
+        ${n.read ? '' : '<div class="notif-unread-dot"></div>'}
+      </div>`;
+    }).join('');
+  }
+
+  function notifClick(id, navTo) {
+    notifMarkRead(id);
+    closeNotifPanel();
+    if (navTo && navTo !== 'null') {
+      const navEl = document.querySelector(`.nav-item[onclick*="'${navTo}'"]`);
+      switchSection(navTo, navEl);
+    }
+  }
+
+  function toggleNotifPanel(e) {
+    e.stopPropagation();
+    const panel = document.getElementById('notif-panel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) notifRender();
+  }
+
+  function closeNotifPanel() {
+    const panel = document.getElementById('notif-panel');
+    if (panel) panel.classList.remove('open');
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.notif-wrap')) closeNotifPanel();
+  });
+
+  // Snapshot tracking — detect what changed between Firestore updates
+  let _prevDashSnap = null;
+
+  function notifDetectChanges(newData) {
+    if (!_prevDashSnap) {
+      // First load — snapshot without firing notifications
+      _prevDashSnap = newData;
+      return;
+    }
+    const prev = _prevDashSnap;
+    const next = newData;
+
+    // Stage change
+    if (prev.currentStage !== undefined && next.currentStage !== undefined && next.currentStage !== prev.currentStage) {
+      const stages = next.stageNames || DEFAULT_DASH.stageNames;
+      const stageName = stages[(next.currentStage || 1) - 1] || 'Stage ' + next.currentStage;
+      notifAdd('stage', 'Progress Updated', 'You\'ve moved to: ' + stageName, 'dashboard');
+    }
+
+    // Credit score change
+    const prevScore = prev.creditScore || prev.creditData?.fico;
+    const nextScore = next.creditScore || next.creditData?.fico;
+    if (nextScore && nextScore !== prevScore) {
+      const diff = nextScore - (prevScore || 0);
+      const sign = diff > 0 ? '+' : '';
+      notifAdd('credit_score', 'Credit Score Updated', 'New score: ' + nextScore + (prevScore ? ' (' + sign + diff + ')' : ''), 'credit');
+    }
+
+    // New doc requests
+    const prevReqIds = new Set((prev.docRequests || []).map(r => r.id));
+    (next.docRequests || []).forEach(r => {
+      if (!prevReqIds.has(r.id)) {
+        notifAdd('doc_request', 'Document Requested', r.name, 'documents');
+      }
+    });
+
+    // New admin-uploaded files
+    const prevFileIds = new Set((prev.adminFiles || []).map(f => f.id || (f.name+'|'+f.date)));
+    (next.adminFiles || []).forEach(f => {
+      const k = f.id || (f.name+'|'+f.date);
+      if (!prevFileIds.has(k)) {
+        notifAdd('doc_uploaded', 'Document Available', f.name || 'A new file was added', 'documents');
+      }
+    });
+
+    // New tasks
+    const prevTaskIds = new Set((prev.tasks || []).map(t => t.id));
+    (next.tasks || []).filter(t => t.status !== 'done').forEach(t => {
+      if (!prevTaskIds.has(t.id)) {
+        notifAdd('task', 'New Task Assigned', t.text || t.title || 'A task requires your attention', 'tasks');
+      }
+    });
+
+    _prevDashSnap = next;
+  }
+
+  // Called when a new message arrives from admin
+  function notifOnNewMessage(msgs) {
+    if (!msgs || !msgs.length) return;
+    const last = msgs[msgs.length - 1];
+    if (last && last.from === 'admin') {
+      const seen = notifGet().find(n => n.type === 'message' && n._ts && Math.abs(Date.now() - n._ts) < 3000);
+      if (!seen) {
+        notifAdd('message', 'New Message from ' + (last.name || 'Your Advisor'), last.text?.slice(0, 60) + (last.text?.length > 60 ? '…' : ''), 'chat');
+      }
+    }
+  }
+
   // ── MESSAGING ──────────────────────────────────────────────────────────
   let _chatMsgsUnsubscribe = null;
 
@@ -5217,8 +5484,14 @@
     fsGetMessages(session.clientId).then(msgs => renderChatMessages(msgs, initials));
     // Subscribe to real-time updates
     if (_chatMsgsUnsubscribe) return;
+    let _prevMsgCount = 0;
     _chatMsgsUnsubscribe = fsListenMessages(session.clientId, msgs => {
       renderChatMessages(msgs, initials);
+      // Fire notification only for new incoming admin messages (not on initial load)
+      if (_prevMsgCount > 0 && msgs.length > _prevMsgCount) {
+        notifOnNewMessage(msgs);
+      }
+      _prevMsgCount = msgs.length;
     });
   }
 
