@@ -3356,7 +3356,7 @@
     const st = document.getElementById('s-tasks'); if(st) st.textContent = (d.tasks && d.tasks.length) ? openTasks : '—';
 
     // Sidebar client name + avatar initials
-    const sn = document.querySelector('.client-info .name'); if(sn) sn.textContent = fn;
+    const sn = document.querySelector('.client-info .name'); if(sn) sn.textContent = (fn + (ln ? ' ' + ln : '')).trim();
     const av = document.querySelector('.client-avatar'); if(av) av.textContent = displayInitials;
     const hav = document.querySelector('.header-avatar'); if(hav) hav.textContent = displayInitials;
 
