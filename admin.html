@@ -1780,6 +1780,21 @@
     autoCalcFundingApproved(id);
     // Sync funding goal from onboarding desired loan amount
     syncFundingGoalFromOnboarding(id);
+    // Auto-fill credit score from credit report if not already set
+    setTimeout(() => {
+      const d0 = getDashData(id);
+      if (!d0.creditScore) {
+        const cr = getCreditData(id);
+        if (cr && cr.fico) {
+          const ficoInput = document.getElementById('db-fico-' + id);
+          if (ficoInput && !ficoInput.value) {
+            ficoInput.value = cr.fico;
+            if (typeof previewScoreChange === 'function') previewScoreChange(id);
+            if (typeof debouncedPublish === 'function') debouncedPublish(id);
+          }
+        }
+      }
+    }, 100);
     // Always push current doc requests to Firestore so client sees them
     const _reqs = getDocRequests(id);
     if (_reqs.length > 0) {
@@ -3089,6 +3104,15 @@
       const data = buildCaData(text);
       localStorage.setItem('cq_credit_' + clientId, JSON.stringify(data));
       fsSetDash(clientId, { creditData: data }).catch(() => {});
+      // Auto-fill credit score in dashboard editor
+      if (data.fico) {
+        const ficoInput = document.getElementById('db-fico-' + clientId);
+        if (ficoInput) {
+          ficoInput.value = data.fico;
+          if (typeof previewScoreChange === 'function') previewScoreChange(clientId);
+          if (typeof debouncedPublish === 'function') debouncedPublish(clientId);
+        }
+      }
       const tabPane = document.getElementById('dtab-credit');
       if (tabPane) tabPane.innerHTML = renderCreditTab(data, clientId);
     } catch(err) {
@@ -3664,7 +3688,7 @@
               <input type="hidden" id="db-secured-${clientId}" value="${d.fundingSecured}" />
               <div style="padding:8px 12px;background:var(--gray-50);border:1.5px solid var(--gray-100);border-radius:8px;font-size:13px;color:var(--gray-500)" id="db-secured-preview-${clientId}">${d.fundingApproved ? '$'+Number(d.fundingApproved).toLocaleString() : '—'}</div></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Credit Score</div>
-              <input class="a-add-req-input" style="width:100%" type="number" id="db-fico-${clientId}" value="${d.creditScore}" oninput="previewScoreChange('${clientId}');debouncedPublish('${clientId}')" /></div>
+              <input class="a-add-req-input" style="width:100%" type="number" id="db-fico-${clientId}" value="${d.creditScore || (getCreditData(clientId)?.fico) || ''}" oninput="previewScoreChange('${clientId}');debouncedPublish('${clientId}')" /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Score Change <span style="font-weight:400;color:var(--gray-400)">(auto-calculated)</span></div>
               <input class="a-add-req-input" style="width:100%;background:var(--gray-50);color:var(--gray-500)" id="db-ficochange-${clientId}" value="${d.creditChange}" readonly /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Approved ($) <span style="font-weight:400;color:var(--gray-400)">(auto-calculated from approvals)</span></div>
