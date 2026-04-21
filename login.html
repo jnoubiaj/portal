@@ -1019,17 +1019,20 @@
         if (!cred)        { showLoginError('Your account is not yet activated. Please contact your consultant.'); return; }
         if (cred.password !== pass) { showLoginError('Incorrect password. Please try again.'); return; }
 
-        // ── Auto-migrate: create Firebase Auth account + clientAuth mapping
+        // ── Auto-migrate: sign into Firebase Auth (create account if first time)
         try {
-          // Create Firebase Auth account and sign in
-          const signupRes = await fetch(
-            `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, password: pass, returnSecureToken: true }) }
-          );
-          const signupData = await signupRes.json();
-          if (signupData.localId) {
-            await fsSetClientAuth(signupData.localId, { clientId: adminClient.id, email });
+          let fbUser = null;
+          try {
+            // Try signing in first (account may already exist)
+            const r = await fsAuthSignIn(email, pass);
+            fbUser = r.user;
+          } catch(e) {
+            // Account doesn't exist yet — create it and sign in
+            const r = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+            fbUser = r.user;
+          }
+          if (fbUser) {
+            await fsSetClientAuth(fbUser.uid, { clientId: adminClient.id, email });
           }
         } catch(e) { /* migration optional — don't block login */ }
 
