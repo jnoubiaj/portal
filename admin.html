@@ -959,8 +959,13 @@
     const btn = document.querySelector('.btn-login');
     if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
     try {
-      if (!ADMIN_PROFILES[email]) throw new Error('Not an admin account');
-      await fsAuthSignIn(email, pass);
+      const result = await fsAuthSignIn(email, pass);
+      const user = result.user;
+      // After successful auth, verify it's a known admin email
+      if (!ADMIN_PROFILES[user.email]) {
+        await fsAuthSignOut();
+        throw new Error('Not an admin account');
+      }
       // onAuthStateChanged will handle showing the app
     } catch(e) {
       errEl.classList.add('show');
