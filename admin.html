@@ -1080,15 +1080,35 @@
 
   // Messages per client
   function getMsgs(clientId) {
-    const def = clientId === 'c1' ? [
-      { from:'admin', name:'Sam', text:"Hey James! We reviewed your credit report. Your Equifax score jumped 18 points — great progress!", time:'Apr 8, 10:22 AM' },
-      { from:'client', name:'James', text:"That's amazing news! What's the next step?", time:'Apr 8, 10:45 AM' },
-      { from:'admin', name:'Sam', text:"We're moving into Round 1 this week. I'll send you the list of banks to apply with today.", time:'Apr 8, 11:02 AM' },
-    ] : [];
-    try { return JSON.parse(localStorage.getItem('cq_admin_msgs_'+clientId) || JSON.stringify(def)); } catch(e) { return def; }
+    try { return JSON.parse(localStorage.getItem('cq_admin_msgs_'+clientId) || '[]'); } catch(e) { return []; }
   }
   function saveMsgs(clientId, msgs) {
     try { localStorage.setItem('cq_admin_msgs_'+clientId, JSON.stringify(msgs)); } catch(e) {}
+    fsSetMessages(clientId, msgs);
+  }
+
+  // Real-time message listeners keyed by clientId
+  const _msgListeners = {};
+  function _listenMsgs(clientId) {
+    if (_msgListeners[clientId]) return;
+    _msgListeners[clientId] = fsListenMessages(clientId, (msgs) => {
+      try { localStorage.setItem('cq_admin_msgs_'+clientId, JSON.stringify(msgs)); } catch(e) {}
+      const detailMsgsEl = document.getElementById('dchat-msgs-'+clientId);
+      if (detailMsgsEl) {
+        detailMsgsEl.innerHTML = msgs.map(m => chatMsgHTML(m)).join('') ||
+          `<div style="text-align:center;padding:40px;font-size:13px;color:var(--gray-400)">No messages yet</div>`;
+        detailMsgsEl.scrollTop = detailMsgsEl.scrollHeight;
+      }
+      if (activeMsgClientId === clientId) {
+        const sectionMsgsEl = document.getElementById('a-msg-chat-msgs');
+        if (sectionMsgsEl) {
+          sectionMsgsEl.innerHTML = msgs.map(m => chatMsgHTML(m)).join('') ||
+            `<div style="text-align:center;padding:40px;font-size:13px;color:var(--gray-400)">No messages yet</div>`;
+          sectionMsgsEl.scrollTop = sectionMsgsEl.scrollHeight;
+        }
+      }
+      renderMsgThreads();
+    });
   }
 
   // Activity log
@@ -1116,6 +1136,8 @@
     renderOverview();
     renderClientList();
     renderMsgThreads();
+    // Start Firestore message listeners for all clients
+    clients.forEach(c => _listenMsgs(c.id));
     document.getElementById('sb-client-count').textContent = clients.length;
     if (currentAdmin) {
       document.getElementById('sb-avatar').textContent = currentAdmin.initials;
@@ -1768,7 +1790,17 @@
         </div>
       </div>`;
 
-    // Scroll chat to bottom
+    // Start real-time message listener for this client
+    _listenMsgs(id);
+    // Load latest messages from Firestore and scroll to bottom
+    fsGetMessages(id).then(fsMsgs => {
+      if (fsMsgs.length) {
+        try { localStorage.setItem('cq_admin_msgs_'+id, JSON.stringify(fsMsgs)); } catch(e) {}
+        const el = document.getElementById('dchat-msgs-'+id);
+        if (el) { el.innerHTML = fsMsgs.map(m => chatMsgHTML(m)).join(''); el.scrollTop = el.scrollHeight; }
+        renderMsgThreads();
+      }
+    });
     setTimeout(() => {
       const el = document.getElementById('dchat-msgs-'+id);
       if (el) el.scrollTop = el.scrollHeight;
@@ -3373,18 +3405,23 @@
     </div>`;
   }
 
+  function _buildAdminMsg(text) {
+    const now = new Date();
+    return { from:'admin', name: currentAdmin?.name || 'Admin', text,
+      time: now.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) };
+  }
+
   function sendMsg(clientId) {
     const inp = document.getElementById('dchat-input-'+clientId);
     const text = inp?.value.trim();
     if (!text) return;
     const msgs = getMsgs(clientId);
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    msgs.push({ from:'admin', name: currentAdmin?.name || 'Admin', text, time: now.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+timeStr });
+    msgs.push(_buildAdminMsg(text));
     saveMsgs(clientId, msgs);
     inp.value = '';
-    renderClientDetail(clientId);
-    renderMsgThreads();
+    // UI update handled by Firestore listener; scroll immediately for responsiveness
+    const el = document.getElementById('dchat-msgs-'+clientId);
+    if (el) { el.innerHTML = msgs.map(m => chatMsgHTML(m)).join(''); el.scrollTop = el.scrollHeight; }
   }
 
   // ── MESSAGES SECTION ──────────────────────────────────────────────────
@@ -3409,6 +3446,7 @@
 
   function openMsgThread(clientId) {
     activeMsgClientId = clientId;
+    _listenMsgs(clientId);
     const c = getClient(clientId);
     document.getElementById('a-msg-full-header').textContent = c.fname+' '+c.lname;
     const msgs = getMsgs(clientId);
@@ -3417,10 +3455,18 @@
     const msgEl = document.getElementById('a-msg-chat-msgs');
     if (msgEl) msgEl.scrollTop = msgEl.scrollHeight;
     renderMsgThreads();
-    // Update send handler
     const inp = document.getElementById('a-msg-input');
     inp.placeholder = `Message ${c.fname}…`;
     inp.onkeydown = e => { if(e.key==='Enter') sendMsgFromSection(); };
+    // Load latest from Firestore once on open
+    fsGetMessages(clientId).then(fsMsgs => {
+      if (fsMsgs.length) {
+        try { localStorage.setItem('cq_admin_msgs_'+clientId, JSON.stringify(fsMsgs)); } catch(e) {}
+        const el = document.getElementById('a-msg-chat-msgs');
+        if (el) { el.innerHTML = fsMsgs.map(m => chatMsgHTML(m)).join(''); el.scrollTop = el.scrollHeight; }
+        renderMsgThreads();
+      }
+    });
   }
 
   function sendMsgFromSection() {
@@ -3429,12 +3475,11 @@
     const text = inp?.value.trim();
     if (!text) return;
     const msgs = getMsgs(activeMsgClientId);
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    msgs.push({ from:'admin', name: currentAdmin?.name || 'Admin', text, time: now.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+timeStr });
+    msgs.push(_buildAdminMsg(text));
     saveMsgs(activeMsgClientId, msgs);
     inp.value = '';
-    openMsgThread(activeMsgClientId);
+    const el = document.getElementById('a-msg-chat-msgs');
+    if (el) { el.innerHTML = msgs.map(m => chatMsgHTML(m)).join(''); el.scrollTop = el.scrollHeight; }
     renderMsgThreads();
   }
 

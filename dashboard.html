@@ -2426,42 +2426,15 @@
         <div class="section-card">
           <div class="card-header">
             <div class="card-title">Messages</div>
-            <div class="card-meta">Sam &amp; Ali — CapitalQuest Team</div>
+            <div class="card-meta">CapitalQuest Team</div>
           </div>
-          <div class="card-body">
-            <div class="chat-preview">
-              <div class="chat-msg">
-                <div class="chat-avatar" style="background:linear-gradient(135deg,#22A7F0,#1a3a6b)">S</div>
-                <div>
-                  <div class="chat-bubble">Hey James! We reviewed your credit report. Your Equifax score jumped 18 points — great progress! 🎉</div>
-                  <div class="chat-time">Sam · Apr 8, 10:22 AM</div>
-                </div>
-              </div>
-              <div class="chat-msg mine">
-                <div class="chat-avatar" style="background:linear-gradient(135deg,var(--navy),var(--navy-light))">JD</div>
-                <div>
-                  <div class="chat-bubble">That's awesome! When do we start the next round of applications?</div>
-                  <div class="chat-time">You · Apr 8, 10:35 AM</div>
-                </div>
-              </div>
-              <div class="chat-msg">
-                <div class="chat-avatar" style="background:linear-gradient(135deg,#10b981,#065f46)">A</div>
-                <div>
-                  <div class="chat-bubble">Hi James! Once you pay down the Chase and BofA cards, we'll be ready to go. Estimated 2–3 weeks from now.</div>
-                  <div class="chat-time">Ali · Apr 8, 11:02 AM</div>
-                </div>
-              </div>
-              <div class="chat-msg">
-                <div class="chat-avatar" style="background:linear-gradient(135deg,#22A7F0,#1a3a6b)">S</div>
-                <div>
-                  <div class="chat-bubble">Also — I've uploaded your latest credit report to the Documents section. Take a look and let me know if you have questions!</div>
-                  <div class="chat-time">Sam · Apr 9, 9:15 AM</div>
-                </div>
-              </div>
+          <div class="card-body" style="display:flex;flex-direction:column;height:480px">
+            <div class="chat-preview" id="chat-msgs-list" style="flex:1;overflow-y:auto;padding-bottom:8px">
+              <div style="text-align:center;padding:40px;font-size:13px;color:var(--gray-400)">Loading messages…</div>
             </div>
             <div class="chat-input-row">
-              <input class="chat-input" placeholder="Type a message..." />
-              <button class="chat-send">
+              <input class="chat-input" id="chat-input-field" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendClientMsg()" />
+              <button class="chat-send" onclick="sendClientMsg()">
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
               </button>
             </div>
@@ -3689,6 +3662,7 @@
     renderFundingSequence();
     renderProfileSection();
     initProfileSync();
+    initChatSection();
     if (APPLYING_TO.length > 1) {
       setInterval(() => {
         applyIdx = (applyIdx + 1) % APPLYING_TO.length;
@@ -5017,6 +4991,10 @@
     if (name === 'profile') {
       renderProfileSection();
     }
+    // Init real-time messaging when chat section is opened
+    if (name === 'chat') {
+      initChatSection();
+    }
   }
 
   // Handle browser back/forward within the portal
@@ -5184,6 +5162,64 @@
         caRenderReport(data.creditData);
       }
     }
+  }
+
+  // ── MESSAGING ──────────────────────────────────────────────────────────
+  let _chatMsgsUnsubscribe = null;
+
+  function _clientChatMsgHTML(m, clientInitials) {
+    const isMe = m.from === 'client';
+    return `<div class="chat-msg${isMe?' mine':''}">
+      <div class="chat-avatar" style="background:${isMe?'linear-gradient(135deg,var(--navy),var(--navy-light))':'linear-gradient(135deg,#22A7F0,#1a3a6b)'}">${isMe ? (clientInitials||'Me') : (m.name?m.name[0]:'S')}</div>
+      <div>
+        <div class="chat-bubble">${m.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <div class="chat-time">${isMe ? 'You' : m.name} · ${m.time}</div>
+      </div>
+    </div>`;
+  }
+
+  function renderChatMessages(msgs, clientInitials) {
+    const list = document.getElementById('chat-msgs-list');
+    if (!list) return;
+    if (!msgs || !msgs.length) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;font-size:13px;color:var(--gray-400)">No messages yet. Say hello!</div>';
+      return;
+    }
+    list.innerHTML = msgs.map(m => _clientChatMsgHTML(m, clientInitials)).join('');
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function sendClientMsg() {
+    const inp = document.getElementById('chat-input-field');
+    const text = inp?.value.trim();
+    if (!text) return;
+    const session = getClientSession();
+    if (!session?.clientId) return;
+    const d = getDashData();
+    const initials = ((d._firstName||'')[0]||'') + ((d._lastName||'')[0]||'');
+    const clientName = [d._firstName, d._lastName].filter(Boolean).join(' ') || 'Client';
+    fsGetMessages(session.clientId).then(msgs => {
+      const now = new Date();
+      msgs.push({ from:'client', name: clientName, text,
+        time: now.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) });
+      fsSetMessages(session.clientId, msgs);
+      inp.value = '';
+      renderChatMessages(msgs, initials);
+    });
+  }
+
+  function initChatSection() {
+    const session = getClientSession();
+    if (!session?.clientId) return;
+    const d = getDashData();
+    const initials = ((d._firstName||'')[0]||'') + ((d._lastName||'')[0]||'');
+    // Load from Firestore once
+    fsGetMessages(session.clientId).then(msgs => renderChatMessages(msgs, initials));
+    // Subscribe to real-time updates
+    if (_chatMsgsUnsubscribe) return;
+    _chatMsgsUnsubscribe = fsListenMessages(session.clientId, msgs => {
+      renderChatMessages(msgs, initials);
+    });
   }
 
   function _docMarkDone(reqId, fileName, save) {

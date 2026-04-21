@@ -128,3 +128,23 @@ function fsListenOnboarding(clientId, callback) {
     if (snap.exists) callback(snap.data());
   });
 }
+
+// ── MESSAGES ─────────────────────────────────────────────────────────────
+async function fsGetMessages(clientId) {
+  try {
+    const doc = await db.collection('messages').doc(clientId).get();
+    return doc.exists ? (doc.data().msgs || []) : [];
+  } catch(e) { return []; }
+}
+
+async function fsSetMessages(clientId, msgs) {
+  try {
+    await db.collection('messages').doc(clientId).set({ msgs });
+  } catch(e) {}
+}
+
+function fsListenMessages(clientId, callback) {
+  return db.collection('messages').doc(clientId).onSnapshot(snap => {
+    callback(snap.exists ? (snap.data().msgs || []) : []);
+  });
+}
