@@ -2510,12 +2510,15 @@
     } catch(e) { window.location.replace('login.html'); }
   })();
 
-  // Validate Firebase Auth session — if not signed in, force re-login
+  // Validate Firebase Auth session — only redirect if we were previously confirmed signed in
+  // (avoids false logout when onAuthStateChanged fires null during SDK initialization)
+  let _dashAuthReady = false;
   fsAuthOnStateChange(function(user) {
-    if (!user) {
+    if (user) {
+      _dashAuthReady = true;
+    } else if (_dashAuthReady) {
       const sess = sessionStorage.getItem('cq_client_session');
       if (sess) {
-        // Has portal session but no Firebase Auth — force re-login to restore auth
         try { sessionStorage.removeItem('cq_client_session'); } catch(e) {}
         window.location.replace('login.html');
       }
@@ -5495,18 +5498,21 @@
     if (!session?.clientId) return;
     const d = getDashData();
     const initials = ((d._firstName||'')[0]||'') + ((d._lastName||'')[0]||'');
-    // Load from Firestore once
-    fsGetMessages(session.clientId).then(msgs => renderChatMessages(msgs, initials));
+    // Load from Firestore once and seed the baseline count
+    let _prevMsgCount = -1; // -1 = not yet initialized
+    fsGetMessages(session.clientId).then(msgs => {
+      renderChatMessages(msgs, initials);
+      _prevMsgCount = msgs.length; // baseline — no notification for existing messages
+    });
     // Subscribe to real-time updates
     if (_chatMsgsUnsubscribe) return;
-    let _prevMsgCount = 0;
     _chatMsgsUnsubscribe = fsListenMessages(session.clientId, msgs => {
       renderChatMessages(msgs, initials);
-      // Fire notification only for new incoming admin messages (not on initial load)
-      if (_prevMsgCount > 0 && msgs.length > _prevMsgCount) {
+      if (_prevMsgCount >= 0 && msgs.length > _prevMsgCount) {
         notifOnNewMessage(msgs);
       }
-      _prevMsgCount = msgs.length;
+      if (_prevMsgCount === -1) _prevMsgCount = msgs.length; // fallback seed
+      else _prevMsgCount = msgs.length;
     });
   }
 
