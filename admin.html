@@ -3697,12 +3697,8 @@
       const headers = { 'Authorization': `Bearer ${GHL_API_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };
       // Use POST search endpoint which supports full-text search
       const res = await fetch(
-        `https://services.leadconnectorhq.com/contacts/search`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ locationId: GHL_LOCATION_ID, query, limit: 10 })
-        }
+        `https://services.leadconnectorhq.com/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(query)}&limit=10`,
+        { headers }
       );
       const data = await res.json();
       console.log('GHL search raw:', res.status, data);
