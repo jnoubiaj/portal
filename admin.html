@@ -3653,7 +3653,10 @@
 
       if (!contactId) { console.warn('GHL: could not find or create contact'); return; }
 
-      // Step 4: Send SMS
+      // Step 4: Add to Portal Pipeline at Stage 1 (Contract Signed)
+      syncGHLPipelineStage(null, 'Contract Signed', { fname, email, phone: e164 }, contactId).catch(()=>{});
+
+      // Step 5: Send SMS
       const smsRes = await fetch('https://services.leadconnectorhq.com/conversations/messages', {
         method: 'POST',
         headers,
@@ -3662,6 +3665,83 @@
       const smsData = await smsRes.json();
       console.log('GHL SMS sent:', smsRes.status, smsData);
     } catch(e) { console.warn('GHL SMS failed:', e); }
+  }
+
+  // Cache pipeline data so we don't fetch on every stage change
+  let _ghlPipelineCache = null;
+
+  async function syncGHLPipelineStage(clientId, stageName, client, knownContactId) {
+    try {
+      const headers = { 'Authorization': `Bearer ${GHL_API_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };
+
+      // Find contact ID if not provided
+      let contactId = knownContactId || null;
+      if (!contactId && client) {
+        const email = client.email || '';
+        const phone = client.phone || '';
+        if (email) {
+          const r = await fetch(`https://services.leadconnectorhq.com/contacts/?locationId=${GHL_LOCATION_ID}&email=${encodeURIComponent(email)}`, { headers });
+          const d = await r.json();
+          contactId = d.contacts?.[0]?.id || null;
+        }
+        if (!contactId && phone) {
+          const rawPhone = phone.replace(/\D/g,'');
+          const e164 = rawPhone.startsWith('1') ? '+'+rawPhone : '+1'+rawPhone;
+          const r = await fetch(`https://services.leadconnectorhq.com/contacts/?locationId=${GHL_LOCATION_ID}&phone=${encodeURIComponent(e164)}`, { headers });
+          const d = await r.json();
+          contactId = d.contacts?.[0]?.id || null;
+        }
+      }
+      if (!contactId) { console.warn('GHL stage sync: contact not found for', client?.email); return; }
+
+      // Load pipeline (cached)
+      if (!_ghlPipelineCache) {
+        const r = await fetch(`https://services.leadconnectorhq.com/opportunities/pipelines?locationId=${GHL_LOCATION_ID}`, { headers });
+        const d = await r.json();
+        _ghlPipelineCache = (d.pipelines || []).find(p => p.name.toLowerCase().includes('portal pipeline') || p.name.toLowerCase() === 'portal pipeline');
+        console.log('GHL pipeline loaded:', _ghlPipelineCache?.name, _ghlPipelineCache?.stages?.map(s=>s.name));
+      }
+      if (!_ghlPipelineCache) { console.warn('GHL: Portal Pipeline not found'); return; }
+
+      // Find matching stage
+      const stage = _ghlPipelineCache.stages.find(s => s.name.toLowerCase() === stageName.toLowerCase())
+        || _ghlPipelineCache.stages[0];
+      if (!stage) return;
+
+      // Check if opportunity already exists for this contact in this pipeline
+      const oppSearch = await fetch(
+        `https://services.leadconnectorhq.com/opportunities/search?location_id=${GHL_LOCATION_ID}&contact_id=${contactId}&pipeline_id=${_ghlPipelineCache.id}`,
+        { headers }
+      );
+      const oppData = await oppSearch.json();
+      const existingOpp = oppData.opportunities?.[0];
+
+      if (existingOpp) {
+        // Update existing opportunity stage
+        const upd = await fetch(`https://services.leadconnectorhq.com/opportunities/${existingOpp.id}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ pipelineStageId: stage.id })
+        });
+        console.log('GHL stage updated:', upd.status, stageName);
+      } else {
+        // Create new opportunity
+        const fname = client?.fname || client?.firstName || '';
+        const opp = await fetch('https://services.leadconnectorhq.com/opportunities/', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            pipelineId: _ghlPipelineCache.id,
+            locationId: GHL_LOCATION_ID,
+            name: `${fname} — Portal Client`,
+            contactId,
+            pipelineStageId: stage.id,
+            status: 'open'
+          })
+        });
+        console.log('GHL opportunity created:', opp.status, stageName);
+      }
+    } catch(e) { console.warn('GHL stage sync failed:', e); }
   }
 
   function toggleNcPct() {
@@ -4039,6 +4119,8 @@
     saveDashData(clientId, d);
     const c = getClient(clientId);
     logActivity(`Progress stage updated to <strong>${d.stageNames[cs-1]}</strong> for ${c?.fname||''}`, '#22A7F0');
+    // Sync stage to GHL Portal Pipeline
+    syncGHLPipelineStage(clientId, d.stageNames[cs-1], c).catch(()=>{});
     // Toast
     const toast = document.getElementById('stage-saved-toast-'+clientId);
     if (toast) { toast.textContent = '✓ Stage updated & published'; toast.style.opacity='1'; setTimeout(()=>toast.style.opacity='0',2500); }
