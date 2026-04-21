@@ -3623,8 +3623,9 @@
         headers: { 'Authorization': `Bearer ${GHL_API_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' },
         body: JSON.stringify({ locationId: GHL_LOCATION_ID, firstName: fname, phone: e164, email, tags: ['portal-client'] })
       });
-      const contactData = await contactRes.json();
-      console.log('GHL contact response:', contactData);
+      const contactRaw = await contactRes.text();
+      console.log('GHL contact status:', contactRes.status, contactRaw);
+      const contactData = JSON.parse(contactRaw);
       const contactId = contactData.contact?.id;
       if (!contactId) { console.warn('GHL contact not created:', contactData); return; }
 
