@@ -3698,7 +3698,6 @@
     renderFundingSequence();
     renderProfileSection();
     initProfileSync();
-    initChatSection();
     notifRender();
     if (APPLYING_TO.length > 1) {
       setInterval(() => {
@@ -3713,7 +3712,14 @@
     } catch(e) { switchSection('dashboard', null, true); }
     try { document.querySelector('.content-area').classList.add('ready'); } catch(e) {}
 
-    // ── FIREBASE REAL-TIME SYNC ──────────────────────────────────────────
+    // ── FIREBASE REAL-TIME SYNC — wait for Firebase Auth before starting ──
+    // Without this, request.auth is null and Firestore denies all reads
+    let _firestoreStarted = false;
+    async function startFirestoreListeners() {
+      if (_firestoreStarted) return;
+      _firestoreStarted = true;
+      initChatSection();
+
     const session = getClientSession();
     if (session && session.clientId) {
       // Fetch latest from Firestore once (initial load)
@@ -3760,6 +3766,17 @@
         });
       } catch(e) {}
     }
+    } // end startFirestoreListeners
+
+    // Start immediately if Firebase Auth already has a user (returning visit)
+    // Otherwise wait up to 4s for auth to initialize, then start anyway
+    let _authStarted = false;
+    fsAuthOnStateChange(function(user) {
+      if (!_authStarted) { _authStarted = true; startFirestoreListeners(); }
+    });
+    setTimeout(function() {
+      if (!_authStarted) { _authStarted = true; startFirestoreListeners(); }
+    }, 4000);
   });
 
   const sectionTitles = {
