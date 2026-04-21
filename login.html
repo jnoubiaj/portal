@@ -1018,17 +1018,17 @@
         if (!cred)        { showLoginError('Your account is not yet activated. Please contact your consultant.'); return; }
         if (cred.password !== pass) { showLoginError('Incorrect password. Please try again.'); return; }
 
-        // ── Auto-migrate: sign into Firebase Auth (create account if first time)
+        // ── Auto-migrate: link Firebase Auth to this client record
         try {
-          let fbUser = null;
-          try {
-            // Try signing in first (account may already exist)
-            const r = await fsAuthSignIn(email, pass);
-            fbUser = r.user;
-          } catch(e) {
-            // Account doesn't exist yet — create it and sign in
-            const r = await firebase.auth().createUserWithEmailAndPassword(email, pass);
-            fbUser = r.user;
+          let fbUser = firebaseUser; // reuse auth from Path 1 if already signed in
+          if (!fbUser) {
+            try {
+              const r = await fsAuthSignIn(email, pass);
+              fbUser = r.user;
+            } catch(e) {
+              const r = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+              fbUser = r.user;
+            }
           }
           if (fbUser) {
             await fsSetClientAuth(fbUser.uid, { clientId: adminClient.id, email });

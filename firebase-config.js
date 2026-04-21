@@ -97,9 +97,10 @@ async function fsUploadFile(path, file) {
 
 // Real-time listener for dashboard — calls callback whenever data changes
 function fsListenDash(clientId, callback) {
-  return db.collection('dashboards').doc(clientId).onSnapshot(snap => {
-    if (snap.exists) callback(snap.data());
-  });
+  return db.collection('dashboards').doc(clientId).onSnapshot(
+    snap => { if (snap.exists) callback(snap.data()); },
+    () => {}
+  );
 }
 
 // ── ONBOARDING DATA ───────────────────────────────────────────────────────
@@ -124,9 +125,10 @@ async function fsGetAllOnboarding() {
 }
 
 function fsListenOnboarding(clientId, callback) {
-  return db.collection('onboarding').doc(clientId).onSnapshot(snap => {
-    if (snap.exists) callback(snap.data());
-  });
+  return db.collection('onboarding').doc(clientId).onSnapshot(
+    snap => { if (snap.exists) callback(snap.data()); },
+    () => {}
+  );
 }
 
 // ── MESSAGES ─────────────────────────────────────────────────────────────
@@ -144,9 +146,10 @@ async function fsSetMessages(clientId, msgs) {
 }
 
 function fsListenMessages(clientId, callback) {
-  return db.collection('messages').doc(clientId).onSnapshot(snap => {
-    callback(snap.exists ? (snap.data().msgs || []) : []);
-  });
+  return db.collection('messages').doc(clientId).onSnapshot(
+    snap => { callback(snap.exists ? (snap.data().msgs || []) : []); },
+    () => {}
+  );
 }
 
 // ── FIREBASE AUTH ─────────────────────────────────────────────────────────
