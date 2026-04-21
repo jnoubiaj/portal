@@ -3784,7 +3784,7 @@
             localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
             if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
           } catch(e) {}
-          _prevDashSnap = fsData; // baseline — no notifications for initial state
+          notifDetectChanges(fsData);
           docUpdateFromFirestore(fsData);
           loadDashboardData(); // re-render with Firestore data
           renderApplyingCard();
@@ -5367,12 +5367,39 @@
     if (!e.target.closest('.notif-wrap')) closeNotifPanel();
   });
 
-  // Snapshot tracking — detect what changed between Firestore updates
+  // Snapshot tracking — persisted so changes are caught even after page reload
   let _prevDashSnap = null;
 
+  function _notifSnapKey() {
+    const s = getClientSession();
+    return s?.clientId ? 'cq_notif_snap_' + s.clientId : null;
+  }
+  function _loadNotifSnap() {
+    const k = _notifSnapKey(); if (!k) return null;
+    try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch(e) { return null; }
+  }
+  function _saveNotifSnap(data) {
+    const k = _notifSnapKey(); if (!k) return;
+    // Only persist lightweight fields needed for diffing
+    try {
+      localStorage.setItem(k, JSON.stringify({
+        currentStage: data.currentStage,
+        creditScore: data.creditScore,
+        creditData: data.creditData ? { fico: data.creditData.fico } : undefined,
+        docRequests: (data.docRequests || []).map(r => ({ id: r.id, name: r.name })),
+        adminFiles:  (data.adminFiles  || []).map(f => ({ id: f.id, name: f.name, date: f.date })),
+        tasks:       (data.tasks       || []).map(t => ({ id: t.id, status: t.status })),
+        fundingRows: (data.fundingRows  || []).map(r => ({ id: r.id, bank: r.bank, cardName: r.cardName, status: r.status, amount: r.amount })),
+      }));
+    } catch(e) {}
+  }
+
   function notifDetectChanges(newData) {
+    // Load persisted snapshot (survives page reload)
+    if (!_prevDashSnap) _prevDashSnap = _loadNotifSnap();
     if (!_prevDashSnap) {
-      // First load — snapshot without firing notifications
+      // Very first time — save baseline, no notifications
+      _saveNotifSnap(newData);
       _prevDashSnap = newData;
       return;
     }
@@ -5421,10 +5448,11 @@
     });
 
     // Funding application status changes
+    const _rowKey = r => r.id || (r.bank + '|' + r.cardName);
     const prevRowMap = {};
-    (prev.fundingRows || []).forEach(r => { prevRowMap[r.id] = r; });
+    (prev.fundingRows || []).forEach(r => { prevRowMap[_rowKey(r)] = r; });
     (next.fundingRows || []).forEach(r => {
-      const old = prevRowMap[r.id];
+      const old = prevRowMap[_rowKey(r)];
       const bankLabel = r.bank || r.cardName || 'Application';
       if (!old) {
         // New row added — applied
@@ -5447,6 +5475,7 @@
     });
 
     _prevDashSnap = next;
+    _saveNotifSnap(next);
   }
 
   // Called when a new message arrives from admin
