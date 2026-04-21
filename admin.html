@@ -333,7 +333,15 @@
       width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
       font-family: var(--font-h); font-weight: 700; font-size: 18px; color: var(--white);
+      cursor: pointer; position: relative; overflow: hidden;
     }
+    .a-dh-avatar:hover .a-avatar-overlay { opacity: 1; }
+    .a-avatar-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; opacity: 0; transition: opacity 0.15s;
+    }
+    .a-avatar-overlay svg { width: 18px; height: 18px; color: white; }
     .a-dh-name { font-family: var(--font-h); font-size: 20px; font-weight: 800; color: var(--navy); letter-spacing: -0.02em; }
     .a-dh-sub { font-size: 13px; color: var(--gray-400); margin-top: 3px; }
     .a-dh-actions { margin-left: auto; display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
@@ -1705,10 +1713,10 @@
             : '<span class="status-pill sp-' + statusClass + '">' + statusLabel(c.status) + '</span>';
           var ficoBadge = c.fico ? '<div class="a-cl-fico">FICO ' + c.fico + '</div>' : '';
           return '<div class="a-client-row ' + (selectedClientId===c.id?'active':'') + '" onclick="selectClient(\'' + c.id + '\')">' +
-            '<div class="a-cl-avatar" style="background:' + (c.archived?'#8b5cf6':c.color) + '">' + c.fname[0] + c.lname[0] + '</div>' +
+            '<div class="a-cl-avatar" style="background:' + (c.archived?'#8b5cf6':c.color) + ';' + (c.photo?'padding:0':'') + '">' + (c.photo ? '<img src="'+c.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />' : c.fname[0] + c.lname[0]) + '</div>' +
             '<div style="min-width:0">' +
               '<div class="a-cl-name">' + c.fname + ' ' + c.lname + archivedBadge + '</div>' +
-              '<div class="a-cl-info">' + c.email + '</div>' +
+              '<div class="a-cl-info">' + fmtPhoneAdmin(c.phone) + '</div>' +
             '</div>' +
             '<div class="a-cl-right">' + statusBadge + ficoBadge + '</div>' +
           '</div>';
@@ -1717,6 +1725,13 @@
 
   function statusLabel(s) {
     return { new:'New', pending:'Pending', progress:'In Progress', approved:'Approved', disqualified:'Disqualified' }[s] || s;
+  }
+  function fmtPhoneAdmin(p) {
+    if (!p) return 'No phone';
+    const d = p.replace(/\D/g,'');
+    if (d.length === 10) return '('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6);
+    if (d.length === 11 && d[0]==='1') return '('+d.slice(1,4)+') '+d.slice(4,7)+'-'+d.slice(7);
+    return p;
   }
 
   // ── CLIENT DETAIL ─────────────────────────────────────────────────────
@@ -1750,7 +1765,11 @@
     document.getElementById('a-detail-card').innerHTML = `
       <div class="a-dh">
         <div class="a-dh-top">
-          <div class="a-dh-avatar" style="background:${c.color}">${(c.fname||'?')[0]}${(c.lname||'')[0]||''}</div>
+          <div class="a-dh-avatar" style="background:${c.color};${c.photo?'padding:0;':''}" onclick="triggerPhotoUpload('${id}')" title="Upload photo">
+            ${c.photo ? `<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />` : `${(c.fname||'?')[0]}${(c.lname||'')[0]||''}`}
+            <div class="a-avatar-overlay"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+          </div>
+          <input type="file" id="photo-upload-${id}" accept="image/*" style="display:none" onchange="handlePhotoUpload('${id}',this)" />
           <div style="min-width:0">
             <div class="a-dh-name">${c.fname} ${c.lname}</div>
             <div class="a-dh-sub">${c.email} · ${c.phone || 'No phone'}</div>
@@ -2030,6 +2049,43 @@
   }
 
   // ── STATUS ────────────────────────────────────────────────────────────
+  function triggerPhotoUpload(clientId) {
+    const inp = document.getElementById('photo-upload-'+clientId);
+    if (inp) inp.click();
+  }
+  async function handlePhotoUpload(clientId, input) {
+    const file = input.files[0];
+    if (!file) return;
+    const c = getClient(clientId);
+    if (!c) return;
+    // Show loading state on avatar
+    const avatarEl = document.querySelector('.a-dh-avatar');
+    if (avatarEl) avatarEl.style.opacity = '0.6';
+    try {
+      let photoUrl = null;
+      // Try Firebase Storage first
+      photoUrl = await fsUploadFile('clients/'+clientId+'/profile', file);
+      // Fallback: base64 (small images only)
+      if (!photoUrl) {
+        await new Promise((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = e => { photoUrl = e.target.result; res(); };
+          reader.onerror = rej;
+          reader.readAsDataURL(file);
+        });
+      }
+      if (photoUrl) {
+        c.photo = photoUrl;
+        saveClients();
+        await fsSaveClient(c);
+        renderClientList();
+        renderClientDetail(clientId);
+      }
+    } catch(e) {}
+    if (avatarEl) avatarEl.style.opacity = '';
+    input.value = '';
+  }
+
   function updateStatus(id, status) {
     const c = getClient(id);
     if (!c) return;
@@ -3487,7 +3543,7 @@
         const unread = _countUnread(c.id, msgs);
         return `<div class="a-msg-thread ${activeMsgClientId===c.id?'active':''}" onclick="openMsgThread('${c.id}')">
           <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:28px;height:28px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:700;font-size:11px;color:white;flex-shrink:0">${c.fname[0]}${c.lname[0]}</div>
+            <div style="width:28px;height:28px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:700;font-size:11px;color:white;flex-shrink:0;overflow:hidden">${c.photo?`<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`:`${c.fname[0]}${c.lname[0]}`}</div>
             <div style="min-width:0;flex:1">
               <div class="a-msg-thread-name" style="${unread>0?'color:var(--navy);font-weight:700':''}">${c.fname} ${c.lname}</div>
               <div class="a-msg-thread-preview" style="${unread>0?'color:var(--navy);font-weight:600':''}${last&&!last.from_admin&&unread>0?'':''}">${last ? last.text : 'No messages yet'}</div>
@@ -3818,7 +3874,7 @@
           <div class="a-doc-section-title" style="margin-bottom:14px">Banner & Stats</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Client First Name</div>
-              <input class="a-add-req-input" style="width:100%" id="db-name-${clientId}" value="${d.clientName || c.fname || ''}" oninput="debouncedPublish('${clientId}')" /></div>
+              <input class="a-add-req-input" style="width:100%" id="db-name-${clientId}" value="${d.clientName || getOnboardDataForClient(clientId)?.firstName || c.fname || ''}" oninput="debouncedPublish('${clientId}')" /></div>
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Total Funding Secured ($) <span style="font-weight:400;color:var(--gray-400)">(synced with Funding Approved)</span></div>
               <input type="hidden" id="db-secured-${clientId}" value="${d.fundingSecured}" />
               <div style="padding:8px 12px;background:var(--gray-50);border:1.5px solid var(--gray-100);border-radius:8px;font-size:13px;color:var(--gray-500)" id="db-secured-preview-${clientId}">${d.fundingApproved ? '$'+Number(d.fundingApproved).toLocaleString() : '—'}</div></div>
