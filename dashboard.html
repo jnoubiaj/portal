@@ -2863,11 +2863,6 @@
         if (bank.amount) tags.innerHTML += '<span class="fs-amount">' + bank.amount + '</span>';
         row.appendChild(tags);
 
-        // Status
-        const status = document.createElement('span');
-        status.className = 'fs-status fs-s-' + bank.status;
-        status.textContent = bank.statusLabel;
-        row.appendChild(status);
 
         list.appendChild(row);
       }
