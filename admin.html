@@ -3612,32 +3612,55 @@
   async function sendGHLWelcomeSMS(fname, phone, email, smsText) {
     if (!phone) { console.warn('GHL SMS: no phone number, skipping'); return; }
     try {
-      // Normalize phone to E.164 (+1XXXXXXXXXX)
       const rawPhone = phone.replace(/\D/g,'');
       const e164 = rawPhone.startsWith('1') ? '+' + rawPhone : '+1' + rawPhone;
+      const headers = { 'Authorization': `Bearer ${GHL_API_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };
 
-      // Create or find contact in GHL
-      console.log('GHL: creating/finding contact for', email, e164);
-      const contactRes = await fetch('https://services.leadconnectorhq.com/contacts/', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${GHL_API_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locationId: GHL_LOCATION_ID, firstName: fname, phone: e164, email, tags: ['portal-client'] })
-      });
-      const contactRaw = await contactRes.text();
-      console.log('GHL contact status:', contactRes.status, contactRaw);
-      const contactData = JSON.parse(contactRaw);
-      const contactId = contactData.contact?.id;
-      if (!contactId) { console.warn('GHL contact not created:', contactData); return; }
+      // Step 1: Search for existing contact by email
+      let contactId = null;
+      if (email) {
+        const searchRes = await fetch(
+          `https://services.leadconnectorhq.com/contacts/?locationId=${GHL_LOCATION_ID}&email=${encodeURIComponent(email)}`,
+          { headers }
+        );
+        const searchData = await searchRes.json();
+        console.log('GHL search by email:', searchRes.status, searchData);
+        contactId = searchData.contacts?.[0]?.id || null;
+      }
 
-      // Send SMS
-      console.log('GHL: sending SMS to contactId', contactId);
+      // Step 2: If not found by email, search by phone
+      if (!contactId) {
+        const phoneSearchRes = await fetch(
+          `https://services.leadconnectorhq.com/contacts/?locationId=${GHL_LOCATION_ID}&phone=${encodeURIComponent(e164)}`,
+          { headers }
+        );
+        const phoneSearchData = await phoneSearchRes.json();
+        console.log('GHL search by phone:', phoneSearchRes.status, phoneSearchData);
+        contactId = phoneSearchData.contacts?.[0]?.id || null;
+      }
+
+      // Step 3: If still not found, create the contact
+      if (!contactId) {
+        const createRes = await fetch('https://services.leadconnectorhq.com/contacts/', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ locationId: GHL_LOCATION_ID, firstName: fname, phone: e164, email, tags: ['portal-client'] })
+        });
+        const createData = await createRes.json();
+        console.log('GHL create contact:', createRes.status, createData);
+        contactId = createData.contact?.id || null;
+      }
+
+      if (!contactId) { console.warn('GHL: could not find or create contact'); return; }
+
+      // Step 4: Send SMS
       const smsRes = await fetch('https://services.leadconnectorhq.com/conversations/messages', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${GHL_API_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ type: 'SMS', contactId, message: smsText })
       });
       const smsData = await smsRes.json();
-      console.log('GHL SMS response:', smsData);
+      console.log('GHL SMS sent:', smsRes.status, smsData);
     } catch(e) { console.warn('GHL SMS failed:', e); }
   }
 
