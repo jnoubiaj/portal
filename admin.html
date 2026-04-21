@@ -1713,9 +1713,9 @@
             : '<span class="status-pill sp-' + statusClass + '">' + statusLabel(c.status) + '</span>';
           var ficoBadge = c.fico ? '<div class="a-cl-fico">FICO ' + c.fico + '</div>' : '';
           return '<div class="a-client-row ' + (selectedClientId===c.id?'active':'') + '" onclick="selectClient(\'' + c.id + '\')">' +
-            '<div class="a-cl-avatar" style="background:' + (c.archived?'#8b5cf6':c.color) + ';' + (c.photo?'padding:0':'') + '">' + (c.photo ? '<img src="'+c.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />' : c.fname[0] + c.lname[0]) + '</div>' +
+            (function(){var ob=getOnboardDataForClient(c.id);var df=ob&&ob.firstName?ob.firstName:c.fname;var dl=ob&&ob.lastName?ob.lastName:c.lname;return '<div class="a-cl-avatar" style="background:' + (c.archived?'#8b5cf6':c.color) + ';' + (c.photo?'padding:0':'') + '">' + (c.photo ? '<img src="'+c.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />' : df[0] + (dl?dl[0]:'')) + '</div>' +
             '<div style="min-width:0">' +
-              '<div class="a-cl-name">' + c.fname + ' ' + c.lname + archivedBadge + '</div>' +
+              '<div class="a-cl-name">' + df + ' ' + dl + archivedBadge + '</div>';})() +
               '<div class="a-cl-info">' + fmtPhoneAdmin(c.phone) + '</div>' +
             '</div>' +
             '<div class="a-cl-right">' + statusBadge + ficoBadge + '</div>' +
@@ -1762,6 +1762,10 @@
     const creditData = getCreditData(id);
     window._acrClientId = id; // used by credit upload handlers
 
+    const _ob = getOnboardDataForClient(id);
+    const _displayFirst = _ob?.firstName || c.fname;
+    const _displayLast  = _ob?.lastName  || c.lname;
+
     document.getElementById('a-detail-card').innerHTML = `
       <div class="a-dh">
         <div class="a-dh-top">
@@ -1771,7 +1775,7 @@
           </div>
           <input type="file" id="photo-upload-${id}" accept="image/*" style="display:none" onchange="handlePhotoUpload('${id}',this)" />
           <div style="min-width:0">
-            <div class="a-dh-name">${c.fname} ${c.lname}</div>
+            <div class="a-dh-name">${_displayFirst} ${_displayLast}</div>
             <div class="a-dh-sub">${c.email} · ${c.phone || 'No phone'}</div>
           </div>
           <div class="a-dh-actions">
