@@ -2510,21 +2510,6 @@
     } catch(e) { window.location.replace('login.html'); }
   })();
 
-  // Validate Firebase Auth session — only redirect if we were previously confirmed signed in
-  // (avoids false logout when onAuthStateChanged fires null during SDK initialization)
-  let _dashAuthReady = false;
-  fsAuthOnStateChange(function(user) {
-    if (user) {
-      _dashAuthReady = true;
-    } else if (_dashAuthReady) {
-      const sess = sessionStorage.getItem('cq_client_session');
-      if (sess) {
-        try { sessionStorage.removeItem('cq_client_session'); } catch(e) {}
-        window.location.replace('login.html');
-      }
-    }
-  });
-
   // Fix iOS swipe-back: re-validate session when page is restored from bfcache
   window.addEventListener('pageshow', (e) => {
     try {
