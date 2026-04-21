@@ -2068,12 +2068,6 @@
       </div>
 
       <div class="nav-section-label">Funding</div>
-      <div class="nav-item" onclick="switchSection('funding', this)">
-        <span class="nav-icon">
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        </span>
-        Funding Details
-      </div>
       <div class="nav-item" onclick="switchSection('sequence', this)">
         <span class="nav-icon">
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M5 12h14M5 16h8"/></svg>
@@ -2277,51 +2271,6 @@
       </div>
 
       <!-- ── FUNDING TABLE ─────────────────────────────── -->
-      <div class="section" id="section-funding">
-        <div class="section-card">
-          <div class="card-header">
-            <div class="card-title">Funding Application Status</div>
-            <div class="card-meta">Admin-managed · Updated Apr 8</div>
-          </div>
-          <div class="card-body">
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Bank</th>
-                    <th>Product</th>
-                    <th>Applied</th>
-                    <th>Status</th>
-                    <th>Amount</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td class="bank-name">Chase</td><td>Business Card</td><td>Mar 15</td><td><span class="status-pill pill-approved">Approved</span></td><td>$25,000</td><td>Ink Business Cash</td></tr>
-                  <tr><td class="bank-name">Amex</td><td>Business Card</td><td>Mar 15</td><td><span class="status-pill pill-approved">Approved</span></td><td>$20,000</td><td>Blue Business Plus</td></tr>
-                  <tr><td class="bank-name">Bank of America</td><td>Business Card</td><td>Mar 22</td><td><span class="status-pill pill-pending">Pending</span></td><td>—</td><td>Under review</td></tr>
-                  <tr><td class="bank-name">Wells Fargo</td><td>Business LOC</td><td>Mar 22</td><td><span class="status-pill pill-pending">Pending</span></td><td>—</td><td>Documents requested</td></tr>
-                  <tr><td class="bank-name">PNC Bank</td><td>Business Card</td><td>Apr 1</td><td><span class="status-pill pill-sent">Sent</span></td><td>—</td><td>Application submitted</td></tr>
-                  <tr><td class="bank-name">US Bank</td><td>Business Card</td><td>Apr 1</td><td><span class="status-pill pill-sent">Sent</span></td><td>—</td><td>Application submitted</td></tr>
-                  <tr><td class="bank-name">Truist</td><td>Business Card</td><td>—</td><td><span class="status-pill" style="background:var(--gray-100);color:var(--gray-400)">Queued</span></td><td>—</td><td>Scheduled next round</td></tr>
-                  <tr><td class="bank-name">Marcus</td><td>Personal Loan</td><td>—</td><td><span class="status-pill" style="background:var(--gray-100);color:var(--gray-400)">Queued</span></td><td>—</td><td>Post-utilization</td></tr>
-                  <tr><td class="bank-name">Key Bank</td><td>Business Card</td><td>—</td><td><span class="status-pill" style="background:var(--gray-100);color:var(--gray-400)">Queued</span></td><td>—</td><td>—</td></tr>
-                  <tr><td class="bank-name">BMO Harris</td><td>Business Card</td><td>—</td><td><span class="status-pill" style="background:var(--gray-100);color:var(--gray-400)">Queued</span></td><td>—</td><td>—</td></tr>
-                  <tr><td class="bank-name">Citizens Bank</td><td>Business Card</td><td>—</td><td><span class="status-pill" style="background:var(--gray-100);color:var(--gray-400)">Queued</span></td><td>—</td><td>—</td></tr>
-                  <tr><td class="bank-name">M&amp;T Bank</td><td>Business Card</td><td>—</td><td><span class="status-pill" style="background:var(--gray-100);color:var(--gray-400)">Queued</span></td><td>—</td><td>—</td></tr>
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colspan="4"><strong>Total Secured</strong></td>
-                    <td><strong id="funding-table-total">$0</strong></td>
-                    <td id="funding-table-approvals">—</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- ── FUNDING SEQUENCE SECTION ─────────────────── -->
       <div class="section" id="section-sequence">
@@ -3822,7 +3771,7 @@
     dashboard: 'Dashboard',
     sequence: 'Funding Sequence',
     tasks: 'My Tasks',
-    funding: 'Funding Details',
+
     credit: 'Credit Analyzer',
     documents: 'Documents',
     chat: 'Messages',
