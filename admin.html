@@ -498,6 +498,70 @@
     .a-no-credit p { font-size: 13px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── CREDIT REPORT FULL VIEW ─────────────────── */
+    .section-card { background:var(--white);border-radius:14px;border:1px solid var(--gray-100);box-shadow:0 2px 8px rgba(10,22,40,0.04);margin-bottom:14px;overflow:hidden; }
+    .card-header { padding:14px 18px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between; }
+    .card-title { font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy); }
+    .card-meta { font-size:12px;color:var(--gray-400); }
+    .card-body { padding:18px; }
+    .verdict-banner { border-radius:12px;padding:18px 22px;display:flex;align-items:center;gap:14px;margin-bottom:18px; }
+    .verdict-banner.approved { background:linear-gradient(135deg,#064e3b,#065f46); }
+    .verdict-banner.review   { background:linear-gradient(135deg,#78350f,#92400e); }
+    .verdict-banner.denied   { background:linear-gradient(135deg,#7f1d1d,#991b1b); }
+    .verdict-icon { width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .verdict-banner.approved .verdict-icon { background:rgba(16,185,129,0.2); }
+    .verdict-banner.review   .verdict-icon { background:rgba(245,158,11,0.2); }
+    .verdict-banner.denied   .verdict-icon { background:rgba(239,68,68,0.2); }
+    .verdict-label { font-family:var(--font-h);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.5);margin-bottom:2px; }
+    .verdict-title { font-family:var(--font-h);font-size:16px;font-weight:800;color:#fff;margin-bottom:2px; }
+    .verdict-sub   { font-size:12px;color:rgba(255,255,255,0.6); }
+    .cr-metrics-row { display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:18px; }
+    .cr-metric-card { background:var(--white);border:1px solid var(--gray-100);border-radius:10px;padding:12px 10px;box-shadow:0 1px 4px rgba(10,22,40,0.04); }
+    .cr-metric-label { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gray-400);margin-bottom:5px; }
+    .cr-metric-value { font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--navy); }
+    .cr-metric-sub   { font-size:11px;color:var(--gray-400);margin-top:1px; }
+    .cr-metric-card.ok   { border-top:3px solid var(--success); }
+    .cr-metric-card.warn { border-top:3px solid var(--warning); }
+    .cr-metric-card.bad  { border-top:3px solid var(--danger); }
+    .cr-metric-card.ok   .cr-metric-value { color:var(--success); }
+    .cr-metric-card.warn .cr-metric-value { color:var(--warning); }
+    .cr-metric-card.bad  .cr-metric-value { color:var(--danger); }
+    .cr-grid { display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px; }
+    .factor-list { display:flex;flex-direction:column;gap:7px; }
+    .factor-item { display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:8px; }
+    .factor-item.positive { background:var(--success-bg); }
+    .factor-item.warning  { background:var(--warn-bg); }
+    .factor-item.negative { background:var(--danger-bg); }
+    .factor-dot { width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px; }
+    .factor-item.positive .factor-dot { background:var(--success); }
+    .factor-item.warning  .factor-dot { background:var(--warning); }
+    .factor-item.negative .factor-dot { background:var(--danger); }
+    .factor-text { font-size:12px;color:var(--gray-600);line-height:1.5; }
+    .action-step { display:flex;gap:12px;padding:13px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:9px;margin-bottom:8px; }
+    .action-num  { width:24px;height:24px;border-radius:50%;background:var(--blue-light);border:2px solid rgba(34,167,240,0.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:700;font-size:11px;color:var(--blue);flex-shrink:0; }
+    .action-body h4 { font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--navy);margin-bottom:2px; }
+    .action-body p  { font-size:12px;color:var(--gray-500);line-height:1.5;margin:0; }
+    .ca-tbl { width:100%;border-collapse:collapse;font-size:12px; }
+    .ca-tbl thead tr { border-bottom:2px solid var(--gray-100); }
+    .ca-tbl th { padding:7px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--gray-400);text-align:left; }
+    .ca-tbl th.r,.ca-tbl td.r { text-align:right; }
+    .ca-tbl td { padding:10px 10px;border-bottom:1px solid var(--gray-50);vertical-align:middle; }
+    .ca-tbl tr:last-child td { border-bottom:none; }
+    .st-closed { background:var(--gray-100);color:var(--gray-500);display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700; }
+    .pay-ok   { background:var(--success-bg);color:#065f46;display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700; }
+    .pay-warn { background:var(--warn-bg);color:#78350f;display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700; }
+    .pay-bad  { background:var(--danger-bg);color:#991b1b;display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700; }
+    .ca-type-badge { display:inline-flex;align-items:center;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap; }
+    .tcc{background:#e0f2fe;color:#0369a1}.tau{background:#fef3c7;color:#92400e}.tmtg{background:#ede9fe;color:#5b21b6}.tpl{background:#ecfdf5;color:#065f46}.tsl{background:#fdf2f8;color:#86198f}.tloc{background:#e0f7fa;color:#0e7490}.tcol{background:var(--danger-bg);color:var(--danger)}.toth{background:var(--gray-100);color:var(--gray-600)}
+    .ca-section-group-label { font-family:var(--font-h);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gray-500);margin:18px 0 7px;display:flex;align-items:center;gap:7px; }
+    .ca-count-badge { display:inline-flex;align-items:center;justify-content:center;background:var(--gray-100);color:var(--gray-600);border-radius:999px;font-size:10px;font-weight:700;padding:1px 7px;margin-left:4px; }
+    .ca-summ-grid { display:grid;grid-template-columns:1fr auto;gap:5px 10px;align-items:baseline; }
+    .ca-summ-label { font-size:11px;color:var(--gray-400); }
+    .ca-summ-val { font-size:12px;font-weight:600;color:var(--navy);text-align:right;white-space:nowrap; }
+    .ca-summ-bad { color:var(--danger) !important; }
+    .ca-empty { text-align:center;padding:24px;color:var(--gray-400);font-size:12px;background:var(--gray-50);border:1.5px dashed var(--gray-200);border-radius:10px; }
+    @media(max-width:900px){ .cr-metrics-row{grid-template-columns:repeat(3,1fr)} .cr-grid{grid-template-columns:1fr} }
+
     /* ── MESSAGES TAB / SECTION ────────────────── */
     .a-chat-wrap { display: flex; flex-direction: column; height: 420px; }
     .a-chat-msgs { flex: 1; overflow-y: auto; padding: 16px 0; display: flex; flex-direction: column; gap: 12px; }
@@ -2728,65 +2792,209 @@
         <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px">Credit Report Analysis</div>
         ${adminCrUploadZoneHTML(cid)}
       </div>`;
-    const fico = d.fico || d.fico8 || 0;
-    const ficoCls = fico >= 700 ? 'a-cm-ok' : fico >= 640 ? 'a-cm-warn' : 'a-cm-bad';
-    const inq = d.inqCount ?? d.inquiryCount ?? 0;
-    const inqCls = inq <= 2 ? 'a-cm-ok' : inq <= 4 ? 'a-cm-warn' : 'a-cm-bad';
-    const late = d.late ?? d.accountsEverLate ?? 0;
-    const rating = fico>=800?'Exceptional':fico>=740?'Very Good':fico>=670?'Good':fico>=580?'Fair':'Poor';
-    const hardBlock = fico<640||d.collections>0||d.pubRecords||inq>6||late>3;
-    const softIssue = (fico>=640&&fico<680)||inq>4||late>0||(d.util||0)>50;
-    let vStyle,vTitle,vSub;
-    if(hardBlock){vStyle='background:#fef2f2;border:1px solid #fecaca;color:#991b1b';vTitle='Not Qualified for Funding';vSub='Profile does not meet minimum requirements.';}
-    else if(softIssue){vStyle='background:#fffbeb;border:1px solid #fde68a;color:#92400e';vTitle='Conditionally Approved';vSub='Minor improvements needed to maximize funding.';}
-    else{vStyle='background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46';vTitle='Approved for Funding';vSub='Strong credit profile — ready to begin funding process.';}
+    return adminCaBuildReport(d, cid);
+  }
+
+  function adminCaTypeBadge(type) {
+    const map={'Credit Card':['tcc','Credit Card'],'Auto Loan':['tau','Auto Loan'],'Mortgage':['tmtg','Mortgage'],'Personal Loan':['tpl','Personal Loan'],'Student Loan':['tsl','Student Loan'],'Line of Credit':['tloc','Line of Credit'],'Medical':['tcol','Medical'],'Collection':['tcol','Collection'],'Other':['toth','Other']};
+    const [cls,label]=map[type]||['toth',type];
+    return '<span class="ca-type-badge '+cls+'">'+label+'</span>';
+  }
+
+  function adminCaAcctTable(accts, cols) {
+    if(!accts.length) return '<div class="ca-empty">No accounts in this category.</div>';
+    const th=cols.map(c=>`<th${c.right?' class="r"':''}>${c.label}</th>`).join('');
+    const rows=accts.map(a=>`<tr>${cols.map(c=>`<td${c.right?' class="r"':''}>${c.render(a)}</td>`).join('')}</tr>`).join('');
+    return `<div style="overflow-x:auto"><table class="ca-tbl"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  function adminCaBuildReport(d, cid) {
+    const rating=d.fico>=800?'Exceptional':d.fico>=740?'Very Good':d.fico>=670?'Good':d.fico>=580?'Fair':'Poor';
+    const openAccts=d.accounts.filter(a=>a.isOpen);
+    const closedAccts=d.accounts.filter(a=>!a.isOpen);
+    const cardUtils=d.accounts.filter(a=>a.util!=null).map(a=>a.util);
+    const maxUtil=cardUtils.length?Math.max(...cardUtils):(d.util||0);
+    const hardBlock=d.fico<640||d.collections>0||d.pubRecords||d.inqCount>6||d.late>3;
+    const softIssue=(d.fico>=640&&d.fico<680)||d.inqCount>4||d.late>0||maxUtil>50;
+    let vClass,vTitle,vSub,vSvg;
+    if(hardBlock){vClass='denied';vTitle='Not Qualified for Funding';vSub='Profile does not meet minimum requirements. Review the action plan below.';vSvg='<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>';}
+    else if(softIssue){vClass='review';vTitle='Conditionally Approved';vSub='Profile qualifies with minor improvements. Address items below to maximize funding.';vSvg='<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2.5"><path d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>';}
+    else{vClass='approved';vTitle='Approved for Funding';vSub='Strong credit profile — ready to begin the funding process.';vSvg='<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>';}
+
+    const metrics=[
+      {label:'FICO Score 8',value:d.fico||'—',sub:rating,cls:d.fico>=700?'ok':d.fico>=640?'warn':'bad'},
+      {label:'Avg Acct Age',value:d.avgAge||'—',sub:d.oldAge?'Oldest: '+d.oldAge:'',cls:'ok'},
+      {label:'Hard Inquiries',value:d.inqCount,sub:d.inqCount<=4?'Within limit':'Exceeds 4',cls:d.inqCount<=2?'ok':d.inqCount<=4?'warn':'bad'},
+      {label:'Late Payments',value:d.late,sub:d.late===0?'Perfect history':d.late+' acct(s)',cls:d.late===0?'ok':d.late<=1?'warn':'bad'},
+      {label:'Collections',value:d.collections||'0',sub:d.collections?'Must resolve':'None on file',cls:d.collections?'bad':'ok'},
+      {label:'Utilization',value:(d.util!=null?d.util:0)+'%',sub:(d.util||0)<=30?'Healthy':(d.util||0)<=50?'Moderate':'High',cls:(d.util||0)<=30?'ok':(d.util||0)<=50?'warn':'bad'},
+    ];
+    const metricsHtml=metrics.map(m=>`<div class="cr-metric-card ${m.cls}"><div class="cr-metric-label">${m.label}</div><div class="cr-metric-value">${m.value}</div><div class="cr-metric-sub">${m.sub}</div></div>`).join('');
+
+    const fmt$=n=>n>0?'$'+n.toLocaleString():'$0';
+    const summHtml=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="section-card" style="margin:0"><div class="card-header" style="padding-bottom:10px"><div class="card-title" style="font-size:12px">Account Summary</div></div><div class="card-body" style="padding-top:0"><div class="ca-summ-grid">
+        <span class="ca-summ-label">Open Accounts</span><span class="ca-summ-val">${d.openCount||openAccts.length}</span>
+        <span class="ca-summ-label">Closed Accounts</span><span class="ca-summ-val">${d.closedCount||closedAccts.length}</span>
+        <span class="ca-summ-label">Collections</span><span class="ca-summ-val ${d.collections?'ca-summ-bad':''}">${d.collections||0}</span>
+        <span class="ca-summ-label">Avg Account Age</span><span class="ca-summ-val">${d.avgAge||'—'}</span>
+        <span class="ca-summ-label">Oldest Account</span><span class="ca-summ-val">${d.oldAge||'—'}</span>
+        <span class="ca-summ-label">Ever Late</span><span class="ca-summ-val ${d.late?'ca-summ-bad':''}">${d.late||0}</span>
+      </div></div></div>
+      <div class="section-card" style="margin:0"><div class="card-header" style="padding-bottom:10px"><div class="card-title" style="font-size:12px">Credit Utilization</div></div><div class="card-body" style="padding-top:0">
+        <div style="text-align:center;padding:6px 0 12px"><div style="font-size:28px;font-weight:800;font-family:var(--font-h);color:${(d.util||0)<=30?'var(--success)':(d.util||0)<=50?'var(--warning)':'var(--danger)'}">${d.util!=null?d.util+'%':'0%'}</div><div style="font-size:11px;color:var(--gray-400);margin-top:1px">${(d.util||0)<=30?'Healthy':(d.util||0)<=50?'Moderate':'High — reduce below 30%'}</div></div>
+        <div class="ca-summ-grid"><span class="ca-summ-label">Credit Used</span><span class="ca-summ-val">${fmt$(d.creditUsed)}</span><span class="ca-summ-label">Credit Limit</span><span class="ca-summ-val">${fmt$(d.creditLimit)}</span></div>
+      </div></div>
+      <div class="section-card" style="margin:0"><div class="card-header" style="padding-bottom:10px"><div class="card-title" style="font-size:12px">Debt Summary</div></div><div class="card-body" style="padding-top:0"><div class="ca-summ-grid">
+        <span class="ca-summ-label">Total Debt</span><span class="ca-summ-val" style="font-weight:700;color:var(--navy)">${d.totalDebt>0?fmt$(d.totalDebt):'—'}</span>
+        <span class="ca-summ-label">CC / Line Debt</span><span class="ca-summ-val">${d.ccDebt>0?fmt$(d.ccDebt):'—'}</span>
+        <span class="ca-summ-label">Loan Debt</span><span class="ca-summ-val">${d.loanDebt>0?fmt$(d.loanDebt):'—'}</span>
+        <span class="ca-summ-label">Collections Debt</span><span class="ca-summ-val ${d.collectionsDebt>0?'ca-summ-bad':''}">${fmt$(d.collectionsDebt)}</span>
+      </div></div></div>
+    </div>`;
+
+    // Account tables
+    function mkOpenCols(){return[
+      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy)">${a.name||'—'}</span>`},
+      {label:'Type',render:a=>adminCaTypeBadge(a.type)+(a.isAuthUser?'<div style="font-size:10px;color:var(--gray-400);margin-top:1px">Auth User</div>':"")},
+      {label:'Opened',render:a=>`<span style="color:var(--gray-500)">${a.dateOpened||'—'}</span>`},
+      {label:'Balance',right:true,render:a=>`<span style="font-weight:600;color:var(--danger)">${a.balance>0?'$'+a.balance.toLocaleString():'$0'}</span>`},
+      {label:'Limit/Orig',right:true,render:a=>{const isInst=['Mortgage','Auto Loan','Personal Loan','Student Loan'].includes(a.type);const v=isInst?(a.originalBalance||a.limit):a.limit;return`<span style="color:var(--gray-500)">${v?'$'+v.toLocaleString():'—'}</span>`;}},
+      {label:'Payment History',render:a=>{const cls=a.isNeverLate?'pay-ok':a.hasDerog?'pay-bad':'pay-warn';return`<span class="${cls}">${a.payHistory}</span>${a.negativeMonths>0?`<div style="font-size:10px;color:#ef4444;margin-top:1px">${a.negativeMonths} neg months</div>`:''}`;}},
+    ];}
+    function mkGoodOpenCols(type){const isR=['Credit Card','Line of Credit'].includes(type);const isI=['Mortgage','Auto Loan','Personal Loan','Student Loan'].includes(type);return[
+      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy)">${a.name||'—'}</span>`},
+      {label:'Type',render:a=>adminCaTypeBadge(a.type)+(a.isAuthUser?'<div style="font-size:10px;color:var(--gray-400);margin-top:1px">Auth User</div>':"")},
+      {label:'Opened',render:a=>`<span style="color:var(--gray-500)">${a.dateOpened||'—'}</span>`},
+      {label:'Balance',right:true,render:a=>`<span style="font-weight:600">${a.balance>0?'$'+a.balance.toLocaleString():'$0'}</span>`},
+      isI?{label:'Orig Bal',right:true,render:a=>`<span style="color:var(--gray-500)">${(a.originalBalance||a.limit)?'$'+(a.originalBalance||a.limit).toLocaleString():'—'}</span>`}
+         :{label:'Limit',right:true,render:a=>`<span style="color:var(--gray-500)">${a.limit?'$'+a.limit.toLocaleString():'—'}</span>`},
+      ...(isR?[{label:'Util',right:true,render:a=>{const u=a.util;const c=u==null?'':u<=10?'color:#10b981;font-weight:700':u<=30?'color:#f59e0b;font-weight:700':'color:#ef4444;font-weight:700';return`<span style="${c}">${u!=null?u+'%':'—'}</span>`;}}]:[]),
+      ...(isI?[{label:'Terms',render:a=>`<span style="color:var(--gray-500)">${a.terms||'—'}</span>`}]:[]),
+      {label:'Mo. Payment',right:true,render:a=>`<span style="color:var(--gray-500)">${a.payment>0?'$'+a.payment.toLocaleString():'—'}</span>`},
+      {label:'Payment',render:a=>`<span class="pay-ok">${a.payHistory}</span>`},
+    ];}
+    const closedDerogCols=[
+      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy)">${a.name||'—'}</span>`},
+      {label:'Type',render:a=>adminCaTypeBadge(a.type)},
+      {label:'Opened',render:a=>`<span style="color:var(--gray-500)">${a.dateOpened||'—'}</span>`},
+      {label:'Closed',render:a=>`<span style="color:var(--gray-500)">${a.dateClosed||'—'}</span>`},
+      {label:'Balance',right:true,render:a=>`<span style="font-weight:600;color:var(--danger)">${a.balance>0?'$'+a.balance.toLocaleString():'$0'}</span>`},
+      {label:'Limit/Orig',right:true,render:a=>{const isInst=['Mortgage','Auto Loan','Personal Loan','Student Loan'].includes(a.type);const v=isInst?(a.originalBalance||a.limit):a.limit;return`<span style="color:var(--gray-500)">${v?'$'+v.toLocaleString():'—'}</span>`;}},
+      {label:'Payment',render:a=>{const cls=a.hasDerog?'pay-bad':'pay-warn';return`<span class="${cls}">${a.payHistory}</span>`;}},
+    ];
+    const closedGoodCols=[
+      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy)">${a.name||'—'}</span>`},
+      {label:'Type',render:a=>adminCaTypeBadge(a.type)},
+      {label:'Opened',render:a=>`<span style="color:var(--gray-500)">${a.dateOpened||'—'}</span>`},
+      {label:'Closed',render:a=>`<span style="color:var(--gray-500)">${a.dateClosed||'—'}</span>`},
+      {label:'Balance',right:true,render:a=>`<span style="font-weight:600">${a.balance>0?'$'+a.balance.toLocaleString():'$0'}</span>`},
+      {label:'Limit/Orig',right:true,render:a=>{const isInst=['Mortgage','Auto Loan','Personal Loan','Student Loan'].includes(a.type);const v=isInst?(a.originalBalance||a.limit):a.limit;return`<span style="color:var(--gray-500)">${v?'$'+v.toLocaleString():'—'}</span>`;}},
+      {label:'Payment',render:a=>`<span class="pay-ok">${a.payHistory}</span>`},
+    ];
+
+    const openChargedOff=openAccts.filter(a=>a.payHistory==='Charged Off'&&a.type!=='Collection');
+    const openCollections=openAccts.filter(a=>a.type==='Collection');
+    const openWithLates=openAccts.filter(a=>!a.isNeverLate&&a.payHistory!=='Charged Off'&&a.type!=='Collection');
+    const openGood=openAccts.filter(a=>a.isNeverLate&&a.payHistory!=='Charged Off'&&a.type!=='Collection');
+    const closedChargedOff=closedAccts.filter(a=>a.payHistory==='Charged Off'&&a.type!=='Collection');
+    const closedCollections=closedAccts.filter(a=>a.type==='Collection');
+    const closedWithLates=closedAccts.filter(a=>!a.isNeverLate&&a.payHistory!=='Charged Off'&&a.type!=='Collection');
+    const closedGood=closedAccts.filter(a=>a.isNeverLate&&a.payHistory!=='Charged Off'&&a.type!=='Collection');
+
+    let sectHtml='';
+    const totalOpen=openChargedOff.length+openCollections.length+openWithLates.length+openGood.length;
+    if(totalOpen){
+      sectHtml+=`<div class="ca-section-group-label">Open Accounts <span>${totalOpen}</span></div>`;
+      if(openCollections.length)sectHtml+=`<div class="section-card" style="margin-bottom:12px;border-color:rgba(239,68,68,0.25)"><div class="card-header"><div class="card-title" style="font-size:13px;color:#ef4444">Collections <span class="ca-count-badge" style="background:rgba(239,68,68,0.12);color:#ef4444">${openCollections.length}</span></div></div><div class="card-body" style="padding-top:0">${adminCaAcctTable(openCollections,mkOpenCols())}</div></div>`;
+      if(openChargedOff.length)sectHtml+=`<div class="section-card" style="margin-bottom:12px;border-color:rgba(239,68,68,0.25)"><div class="card-header"><div class="card-title" style="font-size:13px;color:#ef4444">Charged Off <span class="ca-count-badge" style="background:rgba(239,68,68,0.12);color:#ef4444">${openChargedOff.length}</span></div></div><div class="card-body" style="padding-top:0">${adminCaAcctTable(openChargedOff,mkOpenCols())}</div></div>`;
+      if(openWithLates.length)sectHtml+=`<div class="section-card" style="margin-bottom:12px;border-color:rgba(245,158,11,0.3)"><div class="card-header"><div class="card-title" style="font-size:13px;color:#d97706">Open — With Late Payments <span class="ca-count-badge" style="background:rgba(245,158,11,0.12);color:#d97706">${openWithLates.length}</span></div></div><div class="card-body" style="padding-top:0">${adminCaAcctTable(openWithLates,mkOpenCols())}</div></div>`;
+      if(openGood.length){
+        const gTypes=['Credit Card','Line of Credit','Auto Loan','Personal Loan','Student Loan','Mortgage','Other','Medical'];
+        const byType=gTypes.map(t=>({t,accts:openGood.filter(a=>a.type===t)})).filter(g=>g.accts.length);
+        const other=openGood.filter(a=>!gTypes.includes(a.type));
+        if(other.length)byType.push({t:'Other',accts:other});
+        for(const g of byType)sectHtml+=`<div class="section-card" style="margin-bottom:12px"><div class="card-header"><div class="card-title" style="font-size:13px">Open in Good Standing — ${g.t} <span class="ca-count-badge">${g.accts.length}</span></div></div><div class="card-body" style="padding-top:0">${adminCaAcctTable(g.accts,mkGoodOpenCols(g.t))}</div></div>`;
+      }
+    }
+    const totalClosed=closedChargedOff.length+closedCollections.length+closedWithLates.length+closedGood.length;
+    if(totalClosed){
+      sectHtml+=`<div class="ca-section-group-label">Closed Accounts <span>${totalClosed}</span></div>`;
+      if(closedChargedOff.length)sectHtml+=`<div class="section-card" style="margin-bottom:12px;border-color:rgba(239,68,68,0.25)"><div class="card-header"><div class="card-title" style="font-size:13px;color:#ef4444">Charged Off <span class="ca-count-badge" style="background:rgba(239,68,68,0.12);color:#ef4444">${closedChargedOff.length}</span></div></div><div class="card-body" style="padding-top:0">${adminCaAcctTable(closedChargedOff,closedDerogCols)}</div></div>`;
+      if(closedCollections.length)sectHtml+=`<div class="section-card" style="margin-bottom:12px;border-color:rgba(239,68,68,0.25)"><div class="card-header"><div class="card-title" style="font-size:13px;color:#ef4444">Collections <span class="ca-count-badge" style="background:rgba(239,68,68,0.12);color:#ef4444">${closedCollections.length}</span></div></div><div class="card-body" style="padding-top:0">${adminCaAcctTable(closedCollections,closedDerogCols)}</div></div>`;
+      if(closedWithLates.length)sectHtml+=`<div class="section-card" style="margin-bottom:12px;border-color:rgba(245,158,11,0.3)"><div class="card-header"><div class="card-title" style="font-size:13px;color:#d97706">With Late Payments <span class="ca-count-badge" style="background:rgba(245,158,11,0.12);color:#d97706">${closedWithLates.length}</span></div></div><div class="card-body" style="padding-top:0">${adminCaAcctTable(closedWithLates,closedDerogCols)}</div></div>`;
+      if(closedGood.length)sectHtml+=`<div class="section-card" style="margin-bottom:12px"><div class="card-header"><div class="card-title" style="font-size:13px">Closed in Good Standing <span class="ca-count-badge">${closedGood.length}</span></div></div><div class="card-body" style="padding-top:0">${adminCaAcctTable(closedGood,closedGoodCols)}</div></div>`;
+    }
+    if(!d.accounts.length)sectHtml=`<div class="ca-empty">No accounts were found in this PDF. The report format may not be supported.</div>`;
+
+    // Inquiries
+    let inqHtml='';
+    if(d.inquiries&&d.inquiries.length){
+      const th='<tr><th>Creditor / Lender</th><th>Date</th><th>Status</th></tr>';
+      const rows=d.inquiries.map(i=>`<tr><td style="font-weight:600;color:var(--navy)">${i.name}</td><td style="color:var(--gray-500)">${i.date}</td><td><span class="${i.status==='active'?'pay-ok':'st-closed'}">${i.status==='active'?'Active':'Removed'}</span></td></tr>`).join('');
+      inqHtml=`<div class="section-card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">Hard Inquiries</div><div class="card-meta">${d.inquiries.length} total</div></div><div class="card-body" style="padding-top:0"><div style="overflow-x:auto"><table class="ca-tbl"><thead>${th}</thead><tbody>${rows}</tbody></table></div></div></div>`;
+    }
+
+    // Positives / Issues
+    const positives=[],issues=[],warnings=[];
+    if(d.fico>=800)positives.push('Exceptional FICO '+d.fico+' — top tier');
+    else if(d.fico>=740)positives.push('Excellent FICO '+d.fico+' — very low risk');
+    else if(d.fico>=680)positives.push('Strong FICO '+d.fico+' — qualifies for most programs');
+    else if(d.fico>=640)warnings.push('FICO '+d.fico+' meets minimum — aim for 700+ for best odds');
+    else issues.push('FICO '+d.fico+' is below the 640 minimum threshold');
+    if(d.avgAge)positives.push('Average account age '+d.avgAge+' — established history');
+    if(d.late===0)positives.push('Perfect payment history — no late payments');
+    else if(d.late===1)warnings.push('1 account with late payment history');
+    else issues.push(d.late+' accounts with late payment history');
+    if(!d.collections)positives.push('No collection accounts');
+    else issues.push(d.collections+' collection account(s) — must be resolved');
+    if(!d.pubRecords)positives.push('No public records or bankruptcies');
+    else issues.push('Public record on file — major disqualifier');
+    if(d.inqCount<=2)positives.push(d.inqCount+' hard inquiries — well within limit');
+    else if(d.inqCount<=4)warnings.push(d.inqCount+' inquiries — within limit, pause new apps');
+    else issues.push(d.inqCount+' inquiries exceeds 4-inquiry maximum');
+    if(maxUtil<=30)positives.push('Card utilization healthy — at or below 30%');
+    else if(maxUtil<=50)warnings.push('Highest card at '+maxUtil+'% — reduce to <30%');
+    else issues.push('Card at '+maxUtil+'% utilization — must reduce to <30%');
+    const rf=(list,cls)=>list.map(f=>`<div class="factor-item ${cls}"><div class="factor-dot"></div><div class="factor-text">${f}</div></div>`).join('');
+    const posHtml=rf(positives,'positive')+rf(warnings,'warning')||'<div class="factor-item warning"><div class="factor-dot"></div><div class="factor-text">Upload a full credit report for complete analysis.</div></div>';
+    const issHtml=rf(issues,'negative')||'<div class="factor-item positive"><div class="factor-dot"></div><div class="factor-text">No critical issues identified.</div></div>';
+
+    // Actions
+    const actions=[];
+    if(d.fico<640)actions.push({t:'Improve FICO Score to 640+',b:'Pay down balances, dispute inaccurate negatives, allow 30–60 days for update.'});
+    if(maxUtil>30){const high=d.accounts.filter(a=>a.util>30).map(a=>a.name).join(', ')||'revolving accounts';actions.push({t:'Reduce Card Utilization Below 30%',b:high+' is above 30%. Paying down can add 20–40 points within one billing cycle.'});}
+    if(d.collections)actions.push({t:'Resolve Collection Accounts',b:'Negotiate pay-for-delete. Removal can add 40–80 points.'});
+    if(d.inqCount>4)actions.push({t:'Stop New Credit Applications',b:d.inqCount+' inquiries detected. Pause new applications for 90 days.'});
+    if(d.late>0)actions.push({t:'Address Late Payment History',b:'Request goodwill adjustments from affected creditors.'});
+    if(!actions.length){actions.push({t:'Maintain Strong Profile',b:'Keep utilization below 10%, pay on time, avoid new inquiries before funding.'});actions.push({t:'Prepare Supporting Documents',b:'Gather 3 months bank statements, EIN letter, voided check, and business financials.'});}
+    const actHtml=actions.map((a,i)=>`<div class="action-step"><div class="action-num">${i+1}</div><div class="action-body"><h4>${a.t}</h4><p>${a.b}</p></div></div>`).join('');
+
     return `
-      <div style="margin-bottom:16px;padding:12px 16px;border-radius:10px;${vStyle}">
-        <div style="font-weight:700;font-size:14px">${vTitle}</div>
-        <div style="font-size:12px;opacity:0.85;margin-top:2px">${vSub}</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--navy);letter-spacing:-0.02em">Credit Report</div>
+          <div style="font-size:12px;color:var(--gray-400);margin-top:2px">FICO Score 8: ${d.fico||'—'} · ${rating} · ${d.openCount||openAccts.length} open · ${d.accounts?.length??0} accounts parsed</div>
+        </div>
+        <button onclick="(function(cid){document.getElementById('acr-reupload-'+cid).style.display=document.getElementById('acr-reupload-'+cid).style.display==='none'?'block':'none'})('${cid}')"
+          style="font-size:12px;padding:6px 14px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;color:var(--gray-500);cursor:pointer;flex-shrink:0">
+          Re-upload Report
+        </button>
       </div>
-      <div class="a-credit-grid">
-        <div class="a-credit-metric ${ficoCls}">
-          <div class="a-cm-label">FICO Score</div>
-          <div class="a-cm-val">${fico || '—'}</div>
-          <div class="a-cm-sub">${rating}</div>
-        </div>
-        <div class="a-credit-metric ${inqCls}">
-          <div class="a-cm-label">Hard Inquiries</div>
-          <div class="a-cm-val">${inq}</div>
-          <div class="a-cm-sub">${inq <= 4 ? 'Within limit' : 'Exceeds 4'}</div>
-        </div>
-        <div class="a-credit-metric ${late === 0 ? 'a-cm-ok' : 'a-cm-bad'}">
-          <div class="a-cm-label">Late Payments</div>
-          <div class="a-cm-val">${late}</div>
-          <div class="a-cm-sub">${late === 0 ? 'Perfect history' : late+' account(s)'}</div>
-        </div>
-        <div class="a-credit-metric a-cm-ok">
-          <div class="a-cm-label">Avg Account Age</div>
-          <div class="a-cm-val">${d.avgAge || '—'}</div>
-          <div class="a-cm-sub">${d.oldAge ? 'Oldest: '+d.oldAge : ''}</div>
-        </div>
-        <div class="a-credit-metric ${(d.util??d.overallUtil??0) <= 30 ? 'a-cm-ok' : (d.util??d.overallUtil??0) <= 50 ? 'a-cm-warn' : 'a-cm-bad'}">
-          <div class="a-cm-label">Utilization</div>
-          <div class="a-cm-val">${d.util ?? d.overallUtil ?? '—'}${(d.util || d.overallUtil) ? '%' : ''}</div>
-          <div class="a-cm-sub">${(d.util??d.overallUtil??0) <= 30 ? 'Healthy' : 'High'}</div>
-        </div>
-        <div class="a-credit-metric a-cm-ok">
-          <div class="a-cm-label">Open Accounts</div>
-          <div class="a-cm-val">${d.openCount ?? d.openAccounts ?? '—'}</div>
-          <div class="a-cm-sub">${d.closedCount ? d.closedCount+' closed' : ''}</div>
-        </div>
+      <div id="acr-reupload-${cid}" style="display:none;margin-bottom:16px">${adminCrUploadZoneHTML(cid)}</div>
+      <div class="verdict-banner ${vClass}">
+        <div class="verdict-icon">${vSvg}</div>
+        <div><div class="verdict-label">Funding Readiness</div><div class="verdict-title">${vTitle}</div><div class="verdict-sub">${vSub}</div></div>
       </div>
-      <div style="font-size:12px;color:var(--gray-400);padding:4px 0 12px">
-        ${d.accounts?.length ?? 0} accounts parsed · Uploaded by advisor
+      <div class="cr-metrics-row">${metricsHtml}</div>
+      ${summHtml}
+      ${sectHtml}
+      ${inqHtml}
+      <div class="cr-grid">
+        <div class="section-card" style="margin:0"><div class="card-header"><div class="card-title">What's Working For You</div></div><div class="card-body"><div class="factor-list">${posHtml}</div></div></div>
+        <div class="section-card" style="margin:0"><div class="card-header"><div class="card-title">What Needs Attention</div></div><div class="card-body"><div class="factor-list">${issHtml}</div></div></div>
       </div>
-      <div id="acr-reupload-${cid}" style="display:none">
-        ${adminCrUploadZoneHTML(cid)}
-      </div>
-      <button onclick="document.getElementById('acr-reupload-${cid}').style.display=document.getElementById('acr-reupload-${cid}').style.display==='none'?'block':'none'"
-        style="font-size:12px;padding:6px 14px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;color:var(--gray-500);cursor:pointer">
-        Re-upload Report
-      </button>`;
+      <div class="section-card"><div class="card-header"><div class="card-title">Action Plan</div></div><div class="card-body">${actHtml}</div></div>`;
   }
 
   function adminCrHandleFile(file, clientId) {
