@@ -2496,6 +2496,7 @@
 
 <!-- Firebase compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -5597,6 +5598,7 @@
   }
 
   function clientSignOut() {
+    fsAuthSignOut().catch(() => {});
     try { sessionStorage.removeItem('cq_client_session'); } catch(e) {}
     try { localStorage.removeItem('cq_active_client_session'); } catch(e) {}
     window.location.replace('login.html');

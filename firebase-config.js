@@ -148,3 +148,63 @@ function fsListenMessages(clientId, callback) {
     callback(snap.exists ? (snap.data().msgs || []) : []);
   });
 }
+
+// ── FIREBASE AUTH ─────────────────────────────────────────────────────────
+
+async function fsAuthSignIn(email, password) {
+  return firebase.auth().signInWithEmailAndPassword(email, password);
+}
+
+async function fsAuthSignOut() {
+  return firebase.auth().signOut();
+}
+
+function fsAuthCurrentUser() {
+  return firebase.auth().currentUser;
+}
+
+function fsAuthOnStateChange(callback) {
+  return firebase.auth().onAuthStateChanged(callback);
+}
+
+// Create a Firebase Auth user WITHOUT signing out current user (uses REST API)
+// Returns the new user's UID, or null if email already exists or on error
+async function fsAuthCreateUser(email, password) {
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: false }) }
+    );
+    const data = await res.json();
+    if (data.error) {
+      if (data.error.message === 'EMAIL_EXISTS') return null;
+      throw new Error(data.error.message);
+    }
+    return data.localId;
+  } catch(e) { return null; }
+}
+
+// ── CLIENT AUTH MAPPING ───────────────────────────────────────────────────
+// Maps Firebase UID → { clientId, email }
+
+async function fsSetClientAuth(uid, data) {
+  try { await db.collection('clientAuth').doc(uid).set(data); } catch(e) {}
+}
+
+async function fsGetClientAuth(uid) {
+  try {
+    const doc = await db.collection('clientAuth').doc(uid).get();
+    return doc.exists ? doc.data() : null;
+  } catch(e) { return null; }
+}
+
+// Find clientAuth document by email (for migration)
+async function fsGetClientAuthByEmail(email) {
+  try {
+    const snap = await db.collection('clientAuth')
+      .where('email', '==', email.toLowerCase()).limit(1).get();
+    if (!snap.empty) return { uid: snap.docs[0].id, ...snap.docs[0].data() };
+    return null;
+  } catch(e) { return null; }
+}

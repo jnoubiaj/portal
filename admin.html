@@ -937,38 +937,53 @@
 
 <!-- Firebase compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 
 <script>
   // ── AUTH ──────────────────────────────────────────────────────────────
-  const ADMIN_CREDS = [
-    { email: 'sam@capitalquestfunding.com', password: 'CapitalQuest2024', name: 'Sam', initials: 'S' },
-    { email: 'ali@capitalquestfunding.com', password: 'CapitalQuest2024', name: 'Ali', initials: 'A' },
-  ];
+  // Admin profiles keyed by email — no passwords stored here
+  const ADMIN_PROFILES = {
+    'sam@capitalquestfunding.com': { name: 'Sam', initials: 'S' },
+    'ali@capitalquestfunding.com': { name: 'Ali', initials: 'A' },
+  };
   let currentAdmin = null;
 
-  function adminLogin() {
+  async function adminLogin() {
     const email = document.getElementById('al-email').value.trim().toLowerCase();
     const pass  = document.getElementById('al-pass').value;
-    const user  = ADMIN_CREDS.find(c => c.email === email && c.password === pass);
-    if (!user) {
-      document.getElementById('al-error').classList.add('show');
-      return;
+    const errEl = document.getElementById('al-error');
+    errEl.classList.remove('show');
+    const btn = document.querySelector('.btn-login');
+    if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+    try {
+      if (!ADMIN_PROFILES[email]) throw new Error('Not an admin account');
+      await fsAuthSignIn(email, pass);
+      // onAuthStateChanged will handle showing the app
+    } catch(e) {
+      errEl.classList.add('show');
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
     }
-    currentAdmin = user;
-    try { sessionStorage.setItem('cq_admin_session', JSON.stringify(user)); } catch(e) {}
+  }
+
+  function _showAdminApp(user) {
+    const profile = ADMIN_PROFILES[user.email] || { name: user.email, initials: user.email[0].toUpperCase() };
+    currentAdmin = { email: user.email, ...profile };
+    try { sessionStorage.setItem('cq_admin_session', JSON.stringify(currentAdmin)); } catch(e) {}
     document.getElementById('admin-login').style.display = 'none';
     document.getElementById('admin-app').style.display = 'block';
-    document.getElementById('sb-avatar').textContent = user.initials;
-    document.getElementById('sb-name').textContent = user.name;
-    initAdminApp();
+    document.getElementById('sb-avatar').textContent = profile.initials;
+    document.getElementById('sb-name').textContent = profile.name;
+    if (typeof initAdminApp === 'function') initAdminApp();
   }
 
   function adminLogout() {
-    try { sessionStorage.removeItem('cq_admin_session'); } catch(e) {}
-    location.reload();
+    fsAuthSignOut().then(() => {
+      try { sessionStorage.removeItem('cq_admin_session'); } catch(e) {}
+      location.reload();
+    });
   }
 
   // ── DATA ──────────────────────────────────────────────────────────────
@@ -1152,28 +1167,21 @@
       }
     } catch(e) {}
   }
-  // Auto-restore admin session — runs here so all data/functions are defined first
-  (function() {
-    try {
-      const s = sessionStorage.getItem('cq_admin_session');
-      if (s) {
-        currentAdmin = JSON.parse(s);
-        document.getElementById('admin-login').style.display = 'none';
-        document.getElementById('admin-app').style.display = 'block';
-        document.getElementById('sb-avatar').textContent = currentAdmin.initials;
-        document.getElementById('sb-name').textContent = currentAdmin.name;
-        initAdminApp();
-        return;
-      }
-    } catch(e) { sessionStorage.removeItem('cq_admin_session'); }
-  })();
-  if (currentAdmin) initAdminApp();
+  // Firebase Auth state — auto-restore session on page load
+  fsAuthOnStateChange(function(user) {
+    if (user && ADMIN_PROFILES[user.email]) {
+      _showAdminApp(user);
+    } else if (user) {
+      // Signed in but not an admin — sign out
+      fsAuthSignOut();
+    }
+    // If no user: login screen is already visible by default
+  });
 
-  // Re-render overview once DOM is fully ready to catch any elements not yet painted
+  // Re-render overview once DOM is fully ready
   document.addEventListener('DOMContentLoaded', function() {
     if (currentAdmin) {
       renderOverview();
-      // Also restore last section after full DOM ready
       try {
         const lastSection = localStorage.getItem('cq_admin_section');
         if (lastSection && document.getElementById('asec-' + lastSection)) {
@@ -3575,6 +3583,10 @@
     // Sync to Firestore so client can log in from any device
     fsSetCred(email, { clientId, password: TEMP_PASSWORD, mustChange: true }).catch(() => {});
     fsSaveClient(newClient).catch(() => {});
+    // Create Firebase Auth account + clientAuth mapping for secure login
+    fsAuthCreateUser(email, TEMP_PASSWORD).then(uid => {
+      if (uid) fsSetClientAuth(uid, { clientId, email: email.toLowerCase() });
+    }).catch(() => {});
 
     logActivity(`New client account created: <strong>${email}</strong>`, color);
     closeAddClientModal();

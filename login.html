@@ -858,6 +858,7 @@
 
   <!-- Firebase compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
 
@@ -957,74 +958,95 @@
       }
       const email = document.getElementById('loginEmail').value.trim().toLowerCase();
       const pass  = document.getElementById('loginPassword').value;
-      if (!email || !pass) {
-        showLoginError('Please enter your email and password.');
-        return;
-      }
+      if (!email || !pass) { showLoginError('Please enter your email and password.'); return; }
 
-      // Disable button while checking
       const btn = document.querySelector('.btn-signin');
       if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
 
       try {
-        // PRIMARY: Check Firestore credential (works on all devices)
-        let fsCred = null;
-        let fsClient = null;
+        // ── PATH 1: Firebase Auth (fully migrated accounts) ────────────────
+        let firebaseUser = null;
+        try {
+          const cred = await fsAuthSignIn(email, pass);
+          firebaseUser = cred.user;
+        } catch(authErr) {
+          // Auth failed — will try legacy path below
+        }
+
+        if (firebaseUser) {
+          // Get clientId from clientAuth mapping
+          let clientAuth = await fsGetClientAuth(firebaseUser.uid);
+          if (!clientAuth) {
+            // Try by email (fallback if UID mapping missing)
+            clientAuth = await fsGetClientAuthByEmail(email);
+          }
+          if (!clientAuth || !clientAuth.clientId) {
+            await fsAuthSignOut();
+            showLoginError('Account not linked. Please contact your consultant.');
+            return;
+          }
+          // Check mustChange flag
+          const fsCred = await fsGetCred(email);
+          if (fsCred && fsCred.mustChange) {
+            _pendingSession = { clientId: clientAuth.clientId, email };
+            showPage('page-change-password');
+            return;
+          }
+          startClientSession(clientAuth.clientId, email);
+          redirectAfterLogin(clientAuth.clientId);
+          return;
+        }
+
+        // ── PATH 2: Legacy Firestore credential check + auto-migrate ──────
+        let fsCred = null, fsClient = null;
         try {
           fsCred = await fsGetCred(email);
           const fsClients = await fsGetClients();
-          if (fsClients) fsClient = fsClients.find(c => c.adminCreated === true && c.email && c.email.toLowerCase() === email);
+          if (fsClients) fsClient = fsClients.find(c => c.adminCreated && c.email && c.email.toLowerCase() === email);
         } catch(e) {}
 
-        // FALLBACK: localStorage (same device as admin)
         let adminClients = [];
         try { adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]'); } catch(e) {}
-        const localClient = adminClients.find(c => c.adminCreated === true && c.email && c.email.toLowerCase() === email);
-
+        const localClient = adminClients.find(c => c.adminCreated && c.email && c.email.toLowerCase() === email);
         let cred = fsCred;
-        let adminClient = fsClient || localClient;
-
-        // If not in Firestore, try localStorage credentials
+        const adminClient = fsClient || localClient;
         if (!cred) {
-          let creds = {};
-          try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
+          let creds = {}; try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
           cred = creds[email] || null;
         }
 
-        // STEP 1: Must be an admin-created account
-        if (!adminClient) {
-          showLoginError('No account found. Please contact your consultant.');
-          return;
-        }
+        if (!adminClient) { showLoginError('No account found. Please contact your consultant.'); return; }
+        if (!cred)        { showLoginError('Your account is not yet activated. Please contact your consultant.'); return; }
+        if (cred.password !== pass) { showLoginError('Incorrect password. Please try again.'); return; }
 
-        // STEP 2: Must have credentials set up by admin
-        if (!cred) {
-          showLoginError('Your account is not yet activated. Please contact your consultant.');
-          return;
-        }
+        // ── Auto-migrate: create Firebase Auth account + clientAuth mapping
+        try {
+          // Create Firebase Auth account and sign in
+          const signupRes = await fetch(
+            `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password: pass, returnSecureToken: true }) }
+          );
+          const signupData = await signupRes.json();
+          if (signupData.localId) {
+            await fsSetClientAuth(signupData.localId, { clientId: adminClient.id, email });
+          }
+        } catch(e) { /* migration optional — don't block login */ }
 
-        // STEP 3: Password must match
-        if (cred.password !== pass) {
-          showLoginError('Incorrect password. Please try again.');
-          return;
-        }
-
-        // Seed localStorage from Firestore for faster future loads
+        // Seed localStorage
         try {
           const merged = [...adminClients.filter(c => c.email.toLowerCase() !== email), adminClient];
           localStorage.setItem('cq_admin_clients', JSON.stringify(merged));
-          const creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}');
-          creds[email] = cred;
-          localStorage.setItem('cq_client_creds', JSON.stringify(creds));
+          const lsCreds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}');
+          lsCreds[email] = cred;
+          localStorage.setItem('cq_client_creds', JSON.stringify(lsCreds));
         } catch(e) {}
 
-        // STEP 4: Force password change if flagged
         if (cred.mustChange) {
           _pendingSession = { clientId: adminClient.id, email };
           showPage('page-change-password');
           return;
         }
-
         startClientSession(adminClient.id, email);
         redirectAfterLogin(adminClient.id);
       } finally {
@@ -1117,20 +1139,22 @@
 
       if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
-      // Save new password and clear mustChange flag in localStorage
+      // Update Firebase Auth password for the current signed-in user
+      try {
+        const fbUser = fsAuthCurrentUser();
+        if (fbUser) await fbUser.updatePassword(pw1);
+      } catch(e) { /* non-blocking */ }
+
+      // Update Firestore credential record
       let creds = {};
       try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
       if (!creds[email]) creds[email] = { clientId: _pendingSession.clientId };
       creds[email].password   = pw1;
       creds[email].mustChange = false;
       try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
-
-      // Await Firestore save so password persists across devices/browsers
       try {
         await fsSetCred(email, { clientId: _pendingSession.clientId, password: pw1, mustChange: false });
-      } catch(e) {
-        // localStorage already updated — proceed even if Firestore fails
-      }
+      } catch(e) {}
 
       startClientSession(_pendingSession.clientId, email);
       redirectAfterLogin(_pendingSession.clientId);
