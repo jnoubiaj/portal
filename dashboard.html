@@ -309,6 +309,7 @@
     .notif-icon.stage  { background: #f0fdf4; }
     .notif-icon.credit { background: #fdf4ff; }
     .notif-icon.upload { background: #f0fdf4; }
+    .notif-icon.denied { background: #fff1f2; }
     .notif-body { flex: 1; min-width: 0; }
     .notif-body-title { font-size: 12.5px; font-weight: 600; color: var(--navy); line-height: 1.35; }
     .notif-body-sub   { font-size: 11.5px; color: var(--gray-400); margin-top: 2px; line-height: 1.35; }
@@ -5261,12 +5262,15 @@
 
   // ── NOTIFICATIONS ──────────────────────────────────────────────────────
   const NOTIF_ICONS = {
-    doc_request: { icon: '📄', cls: 'doc' },
-    doc_uploaded: { icon: '📎', cls: 'upload' },
-    message:      { icon: '💬', cls: 'msg' },
-    task:         { icon: '✅', cls: 'task' },
-    stage:        { icon: '🚀', cls: 'stage' },
-    credit_score: { icon: '💳', cls: 'credit' },
+    doc_request:          { icon: '📄', cls: 'doc' },
+    doc_uploaded:         { icon: '📎', cls: 'upload' },
+    message:              { icon: '💬', cls: 'msg' },
+    task:                 { icon: '✅', cls: 'task' },
+    stage:                { icon: '🚀', cls: 'stage' },
+    credit_score:         { icon: '💳', cls: 'credit' },
+    application:          { icon: '📨', cls: 'doc' },
+    application_approved: { icon: '🎉', cls: 'stage' },
+    application_denied:   { icon: '❌', cls: 'denied' },
   };
 
   function _notifKey() {
@@ -5413,6 +5417,32 @@
     (next.tasks || []).filter(t => t.status !== 'done').forEach(t => {
       if (!prevTaskIds.has(t.id)) {
         notifAdd('task', 'New Task Assigned', t.text || t.title || 'A task requires your attention', 'tasks');
+      }
+    });
+
+    // Funding application status changes
+    const prevRowMap = {};
+    (prev.fundingRows || []).forEach(r => { prevRowMap[r.id] = r; });
+    (next.fundingRows || []).forEach(r => {
+      const old = prevRowMap[r.id];
+      const bankLabel = r.bank || r.cardName || 'Application';
+      if (!old) {
+        // New row added — applied
+        if (r.status === 'applied' || r.status === 'pending') {
+          notifAdd('application', 'Application Submitted', bankLabel + (r.cardName ? ' — ' + r.cardName : ''), 'funding');
+        }
+      } else if (old.status !== r.status) {
+        if (r.status === 'approved') {
+          const amt = r.amount ? ' · $' + Number(r.amount).toLocaleString() : '';
+          notifAdd('application_approved', 'Application Approved! 🎉', bankLabel + (r.cardName ? ' — ' + r.cardName : '') + amt, 'funding');
+        } else if (r.status === 'denied') {
+          notifAdd('application_denied', 'Application Denied', bankLabel + (r.cardName ? ' — ' + r.cardName : ''), 'funding');
+        } else if (r.status === 'applied' && old.status === 'pending') {
+          notifAdd('application', 'Application Submitted', bankLabel + (r.cardName ? ' — ' + r.cardName : ''), 'funding');
+        }
+      } else if (r.status === 'approved' && r.amount && old.amount !== r.amount) {
+        // Approval amount updated
+        notifAdd('application_approved', 'Approval Amount Updated', bankLabel + ' — $' + Number(r.amount).toLocaleString(), 'funding');
       }
     });
 
