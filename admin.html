@@ -2829,20 +2829,20 @@
     const closedAccts=d.accounts.filter(a=>!a.isOpen);
     const cardUtils=d.accounts.filter(a=>a.util!=null).map(a=>a.util);
     const maxUtil=cardUtils.length?Math.max(...cardUtils):(d.util||0);
-    const hardBlock=d.fico<640||d.collections>0||d.pubRecords||d.inqCount>6||d.late>3;
-    const softIssue=(d.fico>=640&&d.fico<680)||d.inqCount>4||d.late>0||maxUtil>50;
+    const hardBlock=d.fico<700||d.collections>0||d.pubRecords||d.recentInquiries>6||d.late>3||d.recentCCAccounts>=5;
+    const softIssue=(!hardBlock)&&((d.fico>=700&&d.fico<740)||d.recentInquiries>4||d.late>0||maxUtil>50||d.recentCCAccounts>=3);
     let vClass,vTitle,vSub,vSvg;
     if(hardBlock){vClass='denied';vTitle='Not Qualified for Funding';vSub='Profile does not meet minimum requirements. Review the action plan below.';vSvg='<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>';}
     else if(softIssue){vClass='review';vTitle='Conditionally Approved';vSub='Profile qualifies with minor improvements. Address items below to maximize funding.';vSvg='<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2.5"><path d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>';}
     else{vClass='approved';vTitle='Approved for Funding';vSub='Strong credit profile — ready to begin the funding process.';vSvg='<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>';}
 
     const metrics=[
-      {label:'FICO Score 8',value:d.fico||'—',sub:rating,cls:d.fico>=700?'ok':d.fico>=640?'warn':'bad'},
+      {label:'FICO Score 8',value:d.fico||'—',sub:rating,cls:d.fico>=700?'ok':d.fico>=680?'warn':'bad'},
       {label:'Avg Acct Age',value:d.avgAge||'—',sub:d.oldAge?'Oldest: '+d.oldAge:'',cls:'ok'},
-      {label:'Hard Inquiries',value:d.inqCount,sub:d.inqCount<=4?'Within limit':'Exceeds 4',cls:d.inqCount<=2?'ok':d.inqCount<=4?'warn':'bad'},
+      {label:'Inq. (6 months)',value:d.recentInquiries,sub:d.recentInquiries<=4?'Within limit':d.recentInquiries<=6?'Approaching limit':'Exceeds limit',cls:d.recentInquiries<=4?'ok':d.recentInquiries<=6?'warn':'bad'},
       {label:'Late Payments',value:d.late,sub:d.late===0?'Perfect history':d.late+' acct(s)',cls:d.late===0?'ok':d.late<=1?'warn':'bad'},
       {label:'Collections',value:d.collections||'0',sub:d.collections?'Must resolve':'None on file',cls:d.collections?'bad':'ok'},
-      {label:'Utilization',value:(d.util!=null?d.util:0)+'%',sub:(d.util||0)<=30?'Healthy':(d.util||0)<=50?'Moderate':'High',cls:(d.util||0)<=30?'ok':(d.util||0)<=50?'warn':'bad'},
+      {label:'New CC (24 mo)',value:d.recentCCAccounts,sub:d.recentCCAccounts<3?'Within 5/24 rule':d.recentCCAccounts<5?'Approaching limit':'Exceeds 5/24 rule',cls:d.recentCCAccounts<3?'ok':d.recentCCAccounts<5?'warn':'bad'},
     ];
     const metricsHtml=metrics.map(m=>`<div class="cr-metric-card ${m.cls}"><div class="cr-metric-label">${m.label}</div><div class="cr-metric-value">${m.value}</div><div class="cr-metric-sub">${m.sub}</div></div>`).join('');
 
@@ -2952,37 +2952,44 @@
 
     // Positives / Issues
     const positives=[],issues=[],warnings=[];
-    if(d.fico>=800)positives.push('Exceptional FICO '+d.fico+' — top tier');
-    else if(d.fico>=740)positives.push('Excellent FICO '+d.fico+' — very low risk');
-    else if(d.fico>=680)positives.push('Strong FICO '+d.fico+' — qualifies for most programs');
-    else if(d.fico>=640)warnings.push('FICO '+d.fico+' meets minimum — aim for 700+ for best odds');
-    else issues.push('FICO '+d.fico+' is below the 640 minimum threshold');
-    if(d.avgAge)positives.push('Average account age '+d.avgAge+' — established history');
+    if(d.fico>=800)positives.push('Exceptional FICO '+d.fico+' — top tier, qualifies for all programs');
+    else if(d.fico>=740)positives.push('Excellent FICO '+d.fico+' — lenders see you as very low risk');
+    else if(d.fico>=700)positives.push('FICO '+d.fico+' meets minimum — aim for 740+ for best approval odds');
+    else if(d.fico>=680)warnings.push('FICO '+d.fico+' is below the 700 minimum — needs improvement');
+    else issues.push('FICO '+d.fico+' is well below the 700 minimum threshold');
+    if(d.avgAge)positives.push('Average account age '+d.avgAge+' — established credit history');
+    if(d.oldAge)positives.push('Oldest account: '+d.oldAge+' — long history is a strong positive');
     if(d.late===0)positives.push('Perfect payment history — no late payments');
     else if(d.late===1)warnings.push('1 account with late payment history');
     else issues.push(d.late+' accounts with late payment history');
-    if(!d.collections)positives.push('No collection accounts');
-    else issues.push(d.collections+' collection account(s) — must be resolved');
+    if(!d.collections)positives.push('No collection accounts on file');
+    else issues.push(d.collections+' collection account(s) — must be resolved before funding');
     if(!d.pubRecords)positives.push('No public records or bankruptcies');
-    else issues.push('Public record on file — major disqualifier');
-    if(d.inqCount<=2)positives.push(d.inqCount+' hard inquiries — well within limit');
-    else if(d.inqCount<=4)warnings.push(d.inqCount+' inquiries — within limit, pause new apps');
-    else issues.push(d.inqCount+' inquiries exceeds 4-inquiry maximum');
+    else issues.push('Public record on file — major disqualifier, requires resolution');
+    if(d.recentInquiries<=2)positives.push(d.recentInquiries+' inquiries in last 6 months — well within limit');
+    else if(d.recentInquiries<=6)warnings.push(d.recentInquiries+' inquiries in last 6 months — approaching the 6-inquiry limit');
+    else issues.push(d.recentInquiries+' inquiries in last 6 months — exceeds the 6-inquiry limit');
+    if(d.recentCCAccounts<3)positives.push(d.recentCCAccounts+' new credit card account(s) in 24 months — within 5/24 rule');
+    else if(d.recentCCAccounts<5)warnings.push(d.recentCCAccounts+' new credit card accounts in 24 months — approaching 5/24 limit');
+    else issues.push(d.recentCCAccounts+' new credit card accounts in 24 months — exceeds 5/24 rule');
     if(maxUtil<=30)positives.push('Card utilization healthy — at or below 30%');
-    else if(maxUtil<=50)warnings.push('Highest card at '+maxUtil+'% — reduce to <30%');
-    else issues.push('Card at '+maxUtil+'% utilization — must reduce to <30%');
+    else if(maxUtil<=50)warnings.push('Highest card at '+maxUtil+'% — reduce to below 30%');
+    else issues.push('Card at '+maxUtil+'% utilization — must reduce to below 30% before applying');
     const rf=(list,cls)=>list.map(f=>`<div class="factor-item ${cls}"><div class="factor-dot"></div><div class="factor-text">${f}</div></div>`).join('');
     const posHtml=rf(positives,'positive')+rf(warnings,'warning')||'<div class="factor-item warning"><div class="factor-dot"></div><div class="factor-text">Upload a full credit report for complete analysis.</div></div>';
     const issHtml=rf(issues,'negative')||'<div class="factor-item positive"><div class="factor-dot"></div><div class="factor-text">No critical issues identified.</div></div>';
 
     // Actions
     const actions=[];
-    if(d.fico<640)actions.push({t:'Improve FICO Score to 640+',b:'Pay down balances, dispute inaccurate negatives, allow 30–60 days for update.'});
-    if(maxUtil>30){const high=d.accounts.filter(a=>a.util>30).map(a=>a.name).join(', ')||'revolving accounts';actions.push({t:'Reduce Card Utilization Below 30%',b:high+' is above 30%. Paying down can add 20–40 points within one billing cycle.'});}
-    if(d.collections)actions.push({t:'Resolve Collection Accounts',b:'Negotiate pay-for-delete. Removal can add 40–80 points.'});
-    if(d.inqCount>4)actions.push({t:'Stop New Credit Applications',b:d.inqCount+' inquiries detected. Pause new applications for 90 days.'});
-    if(d.late>0)actions.push({t:'Address Late Payment History',b:'Request goodwill adjustments from affected creditors.'});
-    if(!actions.length){actions.push({t:'Maintain Strong Profile',b:'Keep utilization below 10%, pay on time, avoid new inquiries before funding.'});actions.push({t:'Prepare Supporting Documents',b:'Gather 3 months bank statements, EIN letter, voided check, and business financials.'});}
+    if(d.fico<700)actions.push({t:'Improve FICO Score to 700+',b:'Pay down revolving balances, dispute inaccurate negatives, and avoid new credit applications. Allow 30–60 days for score to update.'});
+    if(maxUtil>30){const high=d.accounts.filter(a=>a.util>30).map(a=>a.name).join(', ')||'revolving accounts';actions.push({t:'Reduce Card Utilization Below 30%',b:high+' is above 30%. Paying down balances can add 20–40 points within one billing cycle.'});}
+    if(d.collections)actions.push({t:'Resolve Collection Accounts',b:'Negotiate pay-for-delete with collection agency. Removal can add 40–80 points.'});
+    if(d.recentInquiries>6)actions.push({t:'Stop All New Credit Applications',b:d.recentInquiries+' inquiries in the last 6 months exceeds our limit. Pause all new applications for at least 90 days.'});
+    else if(d.recentInquiries>4)actions.push({t:'Limit New Credit Applications',b:d.recentInquiries+' inquiries in the last 6 months. Avoid any new applications to stay within the 6-inquiry limit.'});
+    if(d.recentCCAccounts>=5)actions.push({t:'5/24 Rule Violation — Wait for Accounts to Age',b:d.recentCCAccounts+' credit card accounts opened in the last 24 months. Must wait until older accounts fall outside the 24-month window.'});
+    else if(d.recentCCAccounts>=3)actions.push({t:'Approaching 5/24 Limit',b:d.recentCCAccounts+' new credit card accounts in 24 months. Do not open any new credit cards before applying for funding.'});
+    if(d.late>0)actions.push({t:'Address Late Payment History',b:'Request goodwill adjustments from affected creditors. One late payment can lower score by 60–110 points.'});
+    if(!actions.length){actions.push({t:'Maintain Your Strong Profile',b:'Keep utilization below 10%, make all payments on time, and avoid new inquiries or credit card accounts before funding.'});actions.push({t:'Prepare Supporting Documents',b:'Gather 3 months bank statements, EIN letter, voided check, and business financials.'});}
     const actHtml=actions.map((a,i)=>`<div class="action-step"><div class="action-num">${i+1}</div><div class="action-body"><h4>${a.t}</h4><p>${a.b}</p></div></div>`).join('');
 
     return `
@@ -3134,7 +3141,8 @@
       avgAge:null, oldAge:null, accounts:[], inquiries:[],
       openCount:0, closedCount:0,
       creditUsed:0, creditLimit:0,
-      ccDebt:0, loanDebt:0, collectionsDebt:0, totalDebt:0
+      ccDebt:0, loanDebt:0, collectionsDebt:0, totalDebt:0,
+      recentCCAccounts:0, recentInquiries:0
     };
     const t = text.replace(/\s+/g,' ');
     {
@@ -3241,6 +3249,26 @@
       for(let i=0;i<d.inqCount;i++)d.inquiries.push({name:'Creditor '+(i+1),date:allDates[i]?allDates[i][1].trim():'—',status:'active'});
     }
     if(d.inquiries.length>d.inqCount)d.inqCount=d.inquiries.length;
+    // ── 5/24 rule: credit card accounts opened in last 24 months ──────────
+    // ── Recent inquiries: last 6 months ────────────────────────────────────
+    (function(){
+      const now=new Date();
+      const cut24=new Date(now.getFullYear(),now.getMonth()-24,now.getDate());
+      const cut6 =new Date(now.getFullYear(),now.getMonth()-6, now.getDate());
+      function parseDate(s){
+        if(!s||s==='—')return null;
+        const my=s.match(/^(\d{1,2})\/(\d{4})$/);
+        if(my)return new Date(+my[2],+my[1]-1,1);
+        const dt=new Date(s);return isNaN(dt.getTime())?null:dt;
+      }
+      d.recentCCAccounts=d.accounts.filter(a=>{
+        if(!['Credit Card','Line of Credit'].includes(a.type))return false;
+        const dt=parseDate(a.dateOpened);return dt&&dt>=cut24;
+      }).length;
+      d.recentInquiries=d.inquiries.filter(i=>{
+        const dt=parseDate(i.date);return dt&&dt>=cut6;
+      }).length;
+    })();
     return d;
   }
 
