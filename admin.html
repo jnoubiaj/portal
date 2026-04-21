@@ -1156,8 +1156,16 @@
     renderOverview();
     renderClientList();
     renderMsgThreads();
-    // Start Firestore message listeners for all clients
-    clients.forEach(c => _listenMsgs(c.id));
+    // Start Firestore message listeners for all clients + fetch latest immediately
+    clients.forEach(c => {
+      _listenMsgs(c.id);
+      fsGetMessages(c.id).then(msgs => {
+        if (msgs.length) {
+          try { localStorage.setItem('cq_admin_msgs_'+c.id, JSON.stringify(msgs)); } catch(e) {}
+          renderMsgThreads();
+        }
+      });
+    });
     document.getElementById('sb-client-count').textContent = clients.length;
     if (currentAdmin) {
       document.getElementById('sb-avatar').textContent = currentAdmin.initials;
