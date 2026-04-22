@@ -3628,28 +3628,24 @@
       const e164 = rawPhone.startsWith('1') ? '+' + rawPhone : '+1' + rawPhone;
       const headers = { 'Authorization': `Bearer ${GHL_API_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };
 
-      // Step 1: Search via Cloudflare worker (server-side) by email then phone
+      // Step 1: Search via Cloudflare worker by email
       let contactId = null;
-      const searchQuery = email || e164;
-      if (searchQuery) {
-        const searchRes = await fetch(
-          `https://ghl-proxy.sam-e5a.workers.dev/?query=${encodeURIComponent(searchQuery)}`
-        );
-        const searchData = await searchRes.json();
-        console.log('GHL search:', searchRes.status, searchData);
-        contactId = searchData.contacts?.[0]?.id || null;
+      if (email) {
+        const r = await fetch(`https://ghl-proxy.sam-e5a.workers.dev/?query=${encodeURIComponent(email)}`);
+        const d = await r.json();
+        console.log('GHL search by email:', d);
+        contactId = d.contacts?.[0]?.id || null;
       }
 
-      // Step 2: Try phone if email search found nothing
-      if (!contactId && email) {
-        const searchRes2 = await fetch(
-          `https://ghl-proxy.sam-e5a.workers.dev/?query=${encodeURIComponent(e164)}`
-        );
-        const searchData2 = await searchRes2.json();
-        contactId = searchData2.contacts?.[0]?.id || null;
+      // Step 2: Search by phone if not found
+      if (!contactId) {
+        const r = await fetch(`https://ghl-proxy.sam-e5a.workers.dev/?query=${encodeURIComponent(e164)}`);
+        const d = await r.json();
+        console.log('GHL search by phone:', d);
+        contactId = d.contacts?.[0]?.id || null;
       }
 
-      // Step 3: If still not found, create the contact
+      // Step 3: Create contact — if duplicate, GHL returns existing ID in meta
       if (!contactId) {
         const createRes = await fetch('https://services.leadconnectorhq.com/contacts/', {
           method: 'POST',
@@ -3658,7 +3654,7 @@
         });
         const createData = await createRes.json();
         console.log('GHL create contact:', createRes.status, createData);
-        contactId = createData.contact?.id || null;
+        contactId = createData.contact?.id || createData.meta?.contactId || null;
       }
 
       if (!contactId) { console.warn('GHL: could not find or create contact'); return; }
