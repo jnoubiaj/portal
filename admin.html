@@ -3628,27 +3628,25 @@
       const e164 = rawPhone.startsWith('1') ? '+' + rawPhone : '+1' + rawPhone;
       const headers = { 'Authorization': `Bearer ${GHL_API_KEY}`, 'Version': '2021-07-28', 'Content-Type': 'application/json' };
 
-      // Step 1: Search for existing contact by email
+      // Step 1: Search via Cloudflare worker (server-side) by email then phone
       let contactId = null;
-      if (email) {
+      const searchQuery = email || e164;
+      if (searchQuery) {
         const searchRes = await fetch(
-          `https://services.leadconnectorhq.com/contacts/?locationId=${GHL_LOCATION_ID}&email=${encodeURIComponent(email)}`,
-          { headers }
+          `https://ghl-proxy.sam-e5a.workers.dev/?query=${encodeURIComponent(searchQuery)}`
         );
         const searchData = await searchRes.json();
-        console.log('GHL search by email:', searchRes.status, searchData);
+        console.log('GHL search:', searchRes.status, searchData);
         contactId = searchData.contacts?.[0]?.id || null;
       }
 
-      // Step 2: If not found by email, search by phone
-      if (!contactId) {
-        const phoneSearchRes = await fetch(
-          `https://services.leadconnectorhq.com/contacts/?locationId=${GHL_LOCATION_ID}&phone=${encodeURIComponent(e164)}`,
-          { headers }
+      // Step 2: Try phone if email search found nothing
+      if (!contactId && email) {
+        const searchRes2 = await fetch(
+          `https://ghl-proxy.sam-e5a.workers.dev/?query=${encodeURIComponent(e164)}`
         );
-        const phoneSearchData = await phoneSearchRes.json();
-        console.log('GHL search by phone:', phoneSearchRes.status, phoneSearchData);
-        contactId = phoneSearchData.contacts?.[0]?.id || null;
+        const searchData2 = await searchRes2.json();
+        contactId = searchData2.contacts?.[0]?.id || null;
       }
 
       // Step 3: If still not found, create the contact
