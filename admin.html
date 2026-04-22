@@ -806,6 +806,12 @@
                 <button class="a-filter-btn" onclick="setFilter('disqualified',this)">Disqualified</button>
                 <button class="a-filter-btn" id="filter-archived-btn" onclick="setFilter('archived',this)" style="border-color:#8b5cf6;color:#8b5cf6" onmouseover="this.style.background='#8b5cf6';this.style.color='white'" onmouseout="if(!this.classList.contains('active')){this.style.background='';this.style.color='#8b5cf6'}">Archived</button>
               </div>
+              <div style="padding:0 16px 10px;display:flex;align-items:center;gap:8px;">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#8A97B0" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                <select id="state-filter" onchange="renderClientList()" style="font-family:var(--font-b);font-size:12px;color:var(--navy);border:1.5px solid var(--gray-200);border-radius:8px;padding:4px 10px;outline:none;background:white;cursor:pointer;">
+                  <option value="">All States</option>
+                </select>
+              </div>
               <div class="a-cl-list" id="a-cl-list"></div>
             </div>
             <!-- Detail -->
@@ -1702,14 +1708,30 @@
 
   function renderClientList() {
     const q = (document.getElementById('client-search')?.value || '').toLowerCase();
+    const stateFilter = (document.getElementById('state-filter')?.value || '').toLowerCase();
     const showArchived = activeFilter === 'archived';
+
+    // Populate state dropdown from onboarding data
+    const stateEl = document.getElementById('state-filter');
+    if (stateEl) {
+      const states = [...new Set(clients.map(c => {
+        const ob = getOnboardDataForClient(c.id);
+        return ob?.state || '';
+      }).filter(Boolean))].sort();
+      const currentVal = stateEl.value;
+      stateEl.innerHTML = '<option value="">All States</option>' + states.map(s => `<option value="${s.toLowerCase()}" ${s.toLowerCase()===currentVal?'selected':''}>${s}</option>`).join('');
+    }
+
     let filtered = clients.filter(c => {
       if (showArchived) return !!c.archived;
-      if (c.archived) return false; // hide archived from all other views
+      if (c.archived) return false;
       const name = (c.fname+' '+c.lname).toLowerCase();
       const matchQ = !q || name.includes(q) || (c.email||'').toLowerCase().includes(q);
       const matchF = activeFilter === 'all' || c.status === activeFilter;
-      return matchQ && matchF;
+      const ob = getOnboardDataForClient(c.id);
+      const clientState = (ob?.state || '').toLowerCase();
+      const matchState = !stateFilter || clientState === stateFilter;
+      return matchQ && matchF && matchState;
     });
     const archivedCount = clients.filter(c => c.archived).length;
     // Update archived tab badge
@@ -1729,7 +1751,7 @@
             (function(){var ob=getOnboardDataForClient(c.id);var df=ob&&ob.firstName?ob.firstName:c.fname;var dl=ob&&ob.lastName?ob.lastName:c.lname;return '<div class="a-cl-avatar" style="background:' + (c.archived?'#8b5cf6':c.color) + ';' + (c.photo?'padding:0':'') + '">' + (c.photo ? '<img src="'+c.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />' : df[0] + (dl?dl[0]:'')) + '</div>' +
             '<div style="min-width:0">' +
               '<div class="a-cl-name">' + df + ' ' + dl + archivedBadge + '</div>';})() +
-              '<div class="a-cl-info">' + fmtPhoneAdmin(c.phone) + '</div>' +
+              '<div class="a-cl-info">' + fmtPhoneAdmin(c.phone) + (function(){var ob=getOnboardDataForClient(c.id);return ob&&ob.state?' · <span style="font-size:11px;font-weight:700;color:var(--blue)">'+ob.state+'</span>':'';})() + '</div>' +
             '</div>' +
             '<div class="a-cl-right">' + statusBadge + ficoBadge + '</div>' +
           '</div>';
@@ -1788,8 +1810,8 @@
           </div>
           <input type="file" id="photo-upload-${id}" accept="image/*" style="display:none" onchange="handlePhotoUpload('${id}',this)" />
           <div style="min-width:0">
-            <div class="a-dh-name">${_displayFirst} ${_displayLast}</div>
-            <div class="a-dh-sub">${c.email} · ${c.phone || 'No phone'}</div>
+            <div class="a-dh-name">${_displayFirst} ${_displayLast}${_ob?.state ? ` <span style="font-size:12px;font-weight:700;color:var(--blue);background:#f0f9ff;padding:2px 8px;border-radius:6px;border:1px solid rgba(34,167,240,0.2);vertical-align:middle">${_ob.state}</span>` : ''}</div>
+            <div class="a-dh-sub">${c.email} · ${c.phone || 'No phone'}${_ob?.city ? ' · ' + _ob.city : ''}</div>
           </div>
           <div class="a-dh-actions">
             ${c.status !== 'approved'    ? `<button class="a-action-btn approve" onclick="updateStatus('${id}','approved')">Approve</button>` : ''}
