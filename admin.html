@@ -48,7 +48,7 @@
     /* ── LOGIN ─────────────────────────────────── */
     #admin-login {
       min-height: 100vh;
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       background: var(--navy);
@@ -1236,10 +1236,11 @@
     if (user && ADMIN_PROFILES[user.email]) {
       _showAdminApp(user);
     } else if (user) {
-      // Signed in but not an admin — sign out
       fsAuthSignOut();
+      document.getElementById('admin-login').style.display = 'flex';
+    } else {
+      document.getElementById('admin-login').style.display = 'flex';
     }
-    // If no user: login screen is already visible by default
   });
 
   // Re-render overview once DOM is fully ready
