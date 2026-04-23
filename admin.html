@@ -5071,10 +5071,10 @@
           + '<div class="bnk-cli-meta"><span>FICO ' + e.fico + '</span>' + incomeTag + stateTag + '</div>'
           + '<div class="bnk-apps-row">' + (e.chips || noApps) + '</div>'
           + '</div>'
-          + '<div class="bnk-cli-actions" style="flex-direction:column;align-items:flex-end;gap:5px">'
+          + '<div class="bnk-cli-actions" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">'
           + '<button class="bac-btn" onclick="bnkPickClient(\'' + bnkSafe + '\',\'' + e.c.id + '\')">Edit / Add App</button>'
-          + '<button class="bac-btn danger" onclick="removeClientFromBank(\'' + bnkSafe + '\',\'' + e.c.id + '\')" style="margin-left:6px">Remove</button>'
-          + (e.dateAdded ? '<div style="font-size:11px;font-weight:600;color:var(--gray-400)">' + _fmtDateBnk(e.dateAdded) + '</div>' : '')
+          + '<button class="bac-btn danger" onclick="removeClientFromBank(\'' + bnkSafe + '\',\'' + e.c.id + '\')">Remove</button>'
+          + dateTag
           + '</div>'
           + '</div>';
       });
