@@ -1300,22 +1300,22 @@
     }
   }
 
+  var _adminAppInited = false;
   function _showAdminApp(user) {
     const profile = ADMIN_PROFILES[user.email] || { name: user.email, initials: user.email[0].toUpperCase() };
     currentAdmin = { email: user.email, ...profile };
-    try { sessionStorage.setItem('cq_admin_session', JSON.stringify(currentAdmin)); } catch(e) {}
+    try { localStorage.setItem('cq_admin_user', JSON.stringify({ email: user.email })); } catch(e) {}
     document.getElementById('admin-login').style.display = 'none';
     document.getElementById('admin-app').style.display = 'block';
     document.getElementById('sb-avatar').textContent = profile.initials;
     document.getElementById('sb-name').textContent = profile.name;
-    if (typeof initAdminApp === 'function') initAdminApp();
+    if (!_adminAppInited) { _adminAppInited = true; if (typeof initAdminApp === 'function') initAdminApp(); }
   }
 
   function adminLogout() {
-    fsAuthSignOut().then(() => {
-      try { sessionStorage.removeItem('cq_admin_session'); } catch(e) {}
-      location.reload();
-    });
+    try { localStorage.removeItem('cq_admin_user'); } catch(e) {}
+    _adminAppInited = false;
+    fsAuthSignOut().then(() => { location.reload(); });
   }
 
   // ── DATA ──────────────────────────────────────────────────────────────
@@ -1537,14 +1537,41 @@
       }
     } catch(e) {}
   }
-  // Firebase Auth state — auto-restore session on page load
+  // Fast-restore: show admin immediately from localStorage while Firebase resolves
+  (function() {
+    try {
+      var _cached = JSON.parse(localStorage.getItem('cq_admin_user') || 'null');
+      if (_cached && _cached.email && ADMIN_PROFILES[_cached.email]) {
+        var _profile = ADMIN_PROFILES[_cached.email];
+        currentAdmin = { email: _cached.email, name: _profile.name, initials: _profile.initials };
+        _adminAppInited = true;
+        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-app').style.display = 'block';
+        document.getElementById('sb-avatar').textContent = _profile.initials;
+        document.getElementById('sb-name').textContent = _profile.name;
+        if (typeof initAdminApp === 'function') initAdminApp();
+      }
+    } catch(e) {}
+  })();
+
+  // Firebase Auth state — confirm or revoke fast-restore
   fsAuthOnStateChange(function(user) {
     if (user && ADMIN_PROFILES[user.email]) {
       _showAdminApp(user);
     } else if (user) {
+      // Signed in but not an admin
+      try { localStorage.removeItem('cq_admin_user'); } catch(e) {}
+      _adminAppInited = false;
+      currentAdmin = null;
       fsAuthSignOut();
+      document.getElementById('admin-app').style.display = 'none';
       document.getElementById('admin-login').style.display = 'flex';
     } else {
+      // Not signed in — clear stale session, show login
+      try { localStorage.removeItem('cq_admin_user'); } catch(e) {}
+      _adminAppInited = false;
+      currentAdmin = null;
+      document.getElementById('admin-app').style.display = 'none';
       document.getElementById('admin-login').style.display = 'flex';
     }
   });
