@@ -3390,9 +3390,7 @@
       activeRows.forEach(r => { if (r.bank && !seenBanks.includes(r.bank)) seenBanks.push(r.bank); });
       banks = seenBanks.map(b => ({ name: b }));
     } else {
-      banks = (d.applyingBanks && d.applyingBanks.length)
-        ? d.applyingBanks.map(b => ({ name: b }))
-        : (d.applyingBank ? [{ name: d.applyingBank }] : []);
+      banks = [];
     }
     if (banks.length) {
       APPLYING_TO.splice(0, APPLYING_TO.length, ...banks);
