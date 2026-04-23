@@ -5389,8 +5389,13 @@
 
     } else if (s === 1) {
       // ── STEP 2: Income & Revenue
-      var pBanks = Array.isArray(ob.personalBanks) ? ob.personalBanks.join(', ') : (ob.personalBanks || '');
-      var bBanks  = Array.isArray(ob.bizBanks) ? ob.bizBanks.join(', ') : (ob.bizBanks || '');
+      var _pList = Array.isArray(ob.personalBanks) ? ob.personalBanks : (ob.personalBanks ? [ob.personalBanks] : []);
+      var _bList  = Array.isArray(ob.bizBanks)      ? ob.bizBanks      : (ob.bizBanks      ? [ob.bizBanks]      : []);
+      var _bnkLower = (w.bankName || '').toLowerCase();
+      var _hasPersonal = _pList.some(function(b){ return b && b.toLowerCase().indexOf(_bnkLower) !== -1; });
+      var _hasBiz      = _bList.some(function(b){  return b && b.toLowerCase().indexOf(_bnkLower) !== -1; });
+      var pBanks = _hasPersonal ? (w.bankName + ' (Personal)') : "Client doesn't have a personal account here";
+      var bBanks  = _hasBiz      ? (w.bankName + ' (Business)') : "Client doesn't have a business account here";
       body = '<div class="wiz-grid">'
         + wizInput('wiz-annual-income', 'Annual Income ($)', 'e.g. 120000', wd.annualIncome || ob.annualIncome || '', 'text')
         + wizInput('wiz-monthly-sales', 'Monthly Revenue ($)', 'e.g. 25000', wd.monthlySales || ob.monthlySales || '', 'text')
@@ -5401,8 +5406,8 @@
         + '</div>'
         + '<div class="wiz-divider"></div>'
         + '<div class="wiz-grid">'
-        + '<div class="wiz-field auto"><div class="wiz-field-label">Personal Banks <span class="wiz-autobadge">AUTO</span></div><div class="wiz-field-val" style="font-size:12px">' + (pBanks || '—') + '</div></div>'
-        + '<div class="wiz-field auto"><div class="wiz-field-label">Business Banks <span class="wiz-autobadge">AUTO</span></div><div class="wiz-field-val" style="font-size:12px">' + (bBanks || '—') + '</div></div>'
+        + '<div class="wiz-field auto"><div class="wiz-field-label">Personal Account at ' + w.bankName + ' <span class="wiz-autobadge">AUTO</span></div><div class="wiz-field-val" style="font-size:12px;color:' + (_hasPersonal ? 'var(--success)' : 'var(--gray-400)') + '">' + pBanks + '</div></div>'
+        + '<div class="wiz-field auto"><div class="wiz-field-label">Business Account at ' + w.bankName + ' <span class="wiz-autobadge">AUTO</span></div><div class="wiz-field-val" style="font-size:12px;color:' + (_hasBiz ? 'var(--success)' : 'var(--gray-400)') + '">' + bBanks + '</div></div>'
         + '</div>';
 
     } else if (s === 1) {
