@@ -5166,6 +5166,28 @@
     'Application Details'
   ];
 
+  function wizTogglePersonalFields(val) {
+    var disabled = val === 'no';
+    ['wiz-personal-yrs','wiz-personal-mos','wiz-personal-balance'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.disabled = disabled;
+      el.style.opacity = disabled ? '0.35' : '1';
+      el.style.pointerEvents = disabled ? 'none' : '';
+      if (disabled) el.value = '';
+    });
+  }
+  function wizToggleBizFields(val) {
+    var disabled = val === 'no';
+    ['wiz-biz-yrs','wiz-biz-mos','wiz-biz-balance','wiz-biz-rev'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.disabled = disabled;
+      el.style.opacity = disabled ? '0.35' : '1';
+      el.style.pointerEvents = disabled ? 'none' : '';
+      if (disabled) el.value = '';
+    });
+  }
   function wizSaveCurrentFields() {
     var w = window._wiz;
     if (!w) return;
@@ -5173,29 +5195,29 @@
     var g = function(id){ var el = document.getElementById(id); return el ? el.value : ''; };
 
     if (s === 0) {
-      // Credit Profile: read-only confirm
+      // Credit Profile: read-only
     } else if (s === 1) {
       // Income & Revenue
-      w.data.annualIncome   = g('wiz-annual-income');
-      w.data.monthlySales   = g('wiz-monthly-sales');
-      w.data.loanAmount     = g('wiz-loan-amount');
-      w.data.ownership      = g('wiz-ownership');
-      w.data.industry       = g('wiz-industry');
-      w.data.employees      = g('wiz-employees');
-    } else if (s === 1) {
+      w.data.annualIncome      = g('wiz-annual-income');
+      w.data.monthlySales      = g('wiz-monthly-sales');
+      w.data.loanAmount        = g('wiz-loan-amount');
+      w.data.ownership         = g('wiz-ownership');
+      w.data.industry          = g('wiz-industry');
+      w.data.employees         = g('wiz-employees');
+    } else if (s === 2) {
       // Personal Banking
       w.data.hasPersonalAccount = g('wiz-has-personal');
-      w.data.personalAcctYrs    = g('wiz-personal-yrs');
-      w.data.personalAcctMos    = g('wiz-personal-mos');
-      w.data.personalBalance    = g('wiz-personal-balance');
-    } else if (s === 1) {
+      w.data.personalAcctYrs   = g('wiz-personal-yrs');
+      w.data.personalAcctMos   = g('wiz-personal-mos');
+      w.data.personalBalance   = g('wiz-personal-balance');
+    } else if (s === 3) {
       // Business Banking
-      w.data.hasBizAccount = g('wiz-has-biz');
-      w.data.bizAcctYrs    = g('wiz-biz-yrs');
-      w.data.bizAcctMos    = g('wiz-biz-mos');
-      w.data.bizBalance    = g('wiz-biz-balance');
+      w.data.hasBizAccount     = g('wiz-has-biz');
+      w.data.bizAcctYrs        = g('wiz-biz-yrs');
+      w.data.bizAcctMos        = g('wiz-biz-mos');
+      w.data.bizBalance        = g('wiz-biz-balance');
       w.data.bizMonthlyRevenue = g('wiz-biz-rev');
-    } else if (s === 1) {
+    } else if (s === 4) {
       // Credit Cards
       w.data.hasPersonalCC   = g('wiz-has-personal-cc');
       w.data.personalCCYrs   = g('wiz-personal-cc-yrs');
@@ -5203,13 +5225,13 @@
       w.data.personalCCSpend = g('wiz-personal-cc-spend');
       w.data.hasBizCC        = g('wiz-has-biz-cc');
       w.data.bizCCSpend      = g('wiz-biz-cc-spend');
-    } else if (s === 1) {
+    } else if (s === 5) {
       // Debt & DTI
-      w.data.dti           = g('wiz-dti');
-      w.data.monthlyDebt   = g('wiz-monthly-debt');
+      w.data.dti             = g('wiz-dti');
+      w.data.monthlyDebt     = g('wiz-monthly-debt');
       w.data.hasExistingLoan = g('wiz-has-loan');
       w.data.existingLoanBal = g('wiz-loan-bal');
-    } else if (s === 1) {
+    } else if (s === 6) {
       // Application Details
       w.data.dateApplied  = g('wiz-date');
       w.data.amount       = g('wiz-amount');
@@ -5218,7 +5240,6 @@
       w.data.notes        = g('wiz-notes');
     }
   }
-
   function wizNext() {
     var w = window._wiz;
     if (!w) return;
@@ -5410,32 +5431,34 @@
         + '<div class="wiz-field auto"><div class="wiz-field-label">Business Account at ' + w.bankName + ' <span class="wiz-autobadge">AUTO</span></div><div class="wiz-field-val" style="font-size:12px;color:' + (_hasBiz ? 'var(--success)' : 'var(--gray-400)') + '">' + bBanks + '</div></div>'
         + '</div>';
 
-    } else if (s === 1) {
+    } else if (s === 2) {
       // ── STEP 3: Personal Banking
       body = '<div class="wiz-grid">'
         + wizSelect('wiz-has-personal', 'Has Personal Account?', [
             { value: '', label: '— Select —' },
             { value: 'yes', label: 'Yes' },
             { value: 'no',  label: 'No'  }
-          ], wd.hasPersonalAccount || '')
+          ], wd.hasPersonalAccount || '', 'wizTogglePersonalFields(this.value)')
         + '<div class="wiz-field"><label class="wiz-field-label">How Long (Personal Account)</label><div style="display:flex;gap:8px"><input class="wiz-input" id="wiz-personal-yrs" type="number" min="0" placeholder="Years" value="' + (wd.personalAcctYrs || '') + '" style="width:50%"><input class="wiz-input" id="wiz-personal-mos" type="number" min="0" max="11" placeholder="Months" value="' + (wd.personalAcctMos || '') + '" style="width:50%"></div></div>'
         + wizInput('wiz-personal-balance', 'Avg Monthly Balance ($)', 'e.g. 5000', wd.personalBalance || '', 'text')
         + '</div>';
+      setTimeout(function(){ wizTogglePersonalFields(wd.hasPersonalAccount||''); }, 10);
 
-    } else if (s === 1) {
+    } else if (s === 3) {
       // ── STEP 4: Business Banking
       body = '<div class="wiz-grid">'
         + wizSelect('wiz-has-biz', 'Has Business Account?', [
             { value: '', label: '— Select —' },
             { value: 'yes', label: 'Yes' },
             { value: 'no',  label: 'No'  }
-          ], wd.hasBizAccount || '')
+          ], wd.hasBizAccount || '', 'wizToggleBizFields(this.value)')
         + '<div class="wiz-field"><label class="wiz-field-label">How Long (Business Account)</label><div style="display:flex;gap:8px"><input class="wiz-input" id="wiz-biz-yrs" type="number" min="0" placeholder="Years" value="' + (wd.bizAcctYrs || '') + '" style="width:50%"><input class="wiz-input" id="wiz-biz-mos" type="number" min="0" max="11" placeholder="Months" value="' + (wd.bizAcctMos || '') + '" style="width:50%"></div></div>'
         + wizInput('wiz-biz-balance', 'Avg Monthly Business Balance ($)', 'e.g. 10000', wd.bizBalance || '', 'text')
         + wizInput('wiz-biz-rev', 'Monthly Business Revenue ($)', 'e.g. 25000', wd.bizMonthlyRevenue || ob.monthlySales || '', 'text')
         + '</div>';
+      setTimeout(function(){ wizToggleBizFields(wd.hasBizAccount||''); }, 10);
 
-    } else if (s === 1) {
+    } else if (s === 4) {
       // ── STEP 5: Credit Cards
       body = '<div class="wiz-grid">'
         + wizSelect('wiz-has-personal-cc', 'Has Personal Credit Card?', [
@@ -5456,7 +5479,7 @@
         + wizInput('wiz-biz-cc-spend', 'Monthly Business CC Spend ($)', 'e.g. 3000', wd.bizCCSpend || '', 'text')
         + '</div>';
 
-    } else if (s === 1) {
+    } else if (s === 5) {
       // ── STEP 6: Debt & DTI
       body = '<div class="wiz-grid">'
         + wizInput('wiz-dti', 'DTI Ratio (%)', 'e.g. 28', wd.dti || '', 'text')
@@ -5469,7 +5492,7 @@
         + wizInput('wiz-loan-bal', 'Existing Loan Balance ($)', 'e.g. 20000', wd.existingLoanBal || '', 'text')
         + '</div>';
 
-    } else if (s === 1) {
+    } else if (s === 6) {
       // ── STEP 7: Application Details
       body = '<div class="wiz-grid">'
         + wizInput('wiz-date', 'Date Applied', '', wd.dateApplied || new Date().toISOString().slice(0,10), 'date')
