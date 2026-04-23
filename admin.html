@@ -2344,7 +2344,10 @@
 
   function switchDetailTab(tab) {
     activeDetailTab = tab;
-    if (selectedClientId) renderClientDetail(selectedClientId);
+    if (selectedClientId) {
+      renderClientDetail(selectedClientId);
+      if (tab === 'dashboard') setTimeout(function(){ autoCalcFundingApproved(selectedClientId); }, 60);
+    }
   }
 
   // ── DELETE CLIENT ─────────────────────────────────────────────────────
