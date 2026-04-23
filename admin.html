@@ -4771,9 +4771,10 @@
       d.applyingBanks = activeBanks;
       d.applyingBank  = activeBanks[0] || '';
       d.applyingCount = activeBanks.length ? activeBanks.length + ' of ' + activeBanks.length + ' applications' : '';
-    } else if (d.applyingBanks && d.applyingBanks.length) {
-      d.applyingBank  = d.applyingBanks[0];
-      d.applyingCount = d.applyingBanks.length + ' of ' + d.applyingBanks.length + ' applications';
+    } else {
+      d.applyingBanks = [];
+      d.applyingBank  = '';
+      d.applyingCount = '';
     }
     // Stage is set via the slider (applyStageSlider), already saved — just keep current value
     // Collect tasks
