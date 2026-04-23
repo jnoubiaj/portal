@@ -5218,13 +5218,10 @@
       w.data.bizBalance        = g('wiz-biz-balance');
       w.data.bizMonthlyRevenue = g('wiz-biz-rev');
     } else if (s === 4) {
-      // Credit Cards
-      w.data.hasPersonalCC   = g('wiz-has-personal-cc');
-      w.data.personalCCYrs   = g('wiz-personal-cc-yrs');
-      w.data.personalCCMos   = g('wiz-personal-cc-mos');
-      w.data.personalCCSpend = g('wiz-personal-cc-spend');
-      w.data.hasBizCC        = g('wiz-has-biz-cc');
-      w.data.bizCCSpend      = g('wiz-biz-cc-spend');
+      // Credit Cards — personal is auto from credit report
+      w.data.bizCCCard    = g('wiz-biz-cc-card');
+      w.data.bizCCBalance = g('wiz-biz-cc-balance');
+      w.data.bizCCOpened  = g('wiz-biz-cc-opened');
     } else if (s === 5) {
       // Debt & DTI
       w.data.dti             = g('wiz-dti');
@@ -5460,23 +5457,57 @@
 
     } else if (s === 4) {
       // ── STEP 5: Credit Cards
-      body = '<div class="wiz-grid">'
-        + wizSelect('wiz-has-personal-cc', 'Has Personal Credit Card?', [
-            { value: '', label: '— Select —' },
-            { value: 'yes', label: 'Yes' },
-            { value: 'no',  label: 'No'  }
-          ], wd.hasPersonalCC || '')
-        + '<div class="wiz-field"><label class="wiz-field-label">How Long (Personal CC)</label><div style="display:flex;gap:8px"><input class="wiz-input" id="wiz-personal-cc-yrs" type="number" min="0" placeholder="Years" value="' + (wd.personalCCYrs || '') + '" style="width:50%"><input class="wiz-input" id="wiz-personal-cc-mos" type="number" min="0" max="11" placeholder="Months" value="' + (wd.personalCCMos || '') + '" style="width:50%"></div></div>'
-        + wizInput('wiz-personal-cc-spend', 'Monthly Personal CC Spend ($)', 'e.g. 2000', wd.personalCCSpend || '', 'text')
-        + '</div>'
+      var _allAccts = (w.cr && w.cr.accounts) ? w.cr.accounts : [];
+      var _bnkWords = w.bankName.toLowerCase().split(/\s+/).filter(function(wrd){ return wrd.length > 2; });
+      var _personalCCs = _allAccts.filter(function(a){
+        if (!a.isOpen) return false;
+        if (a.type !== 'Credit Card' && a.type !== 'Line of Credit') return false;
+        var aName = (a.name || '').toLowerCase();
+        return _bnkWords.some(function(wrd){ return aName.indexOf(wrd) !== -1; });
+      });
+      var _ccHtml = '';
+      if (_personalCCs.length) {
+        _ccHtml = _personalCCs.map(function(a){
+          var authTag = a.isAuthUser
+            ? '<span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;margin-left:6px">Auth User</span>'
+            : '<span style="background:#d1fae5;color:#065f46;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;margin-left:6px">Primary</span>';
+          var bal = a.balance != null ? '$' + Number(a.balance).toLocaleString() : '—';
+          var lim = a.limit  != null ? '$' + Number(a.limit).toLocaleString()   : '—';
+          return '<div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:10px 14px;margin-bottom:8px">'
+            + '<div style="display:flex;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:600">' + a.name + '</span>' + authTag + '</div>'
+            + '<div style="font-size:12px;color:var(--gray-500)">Balance: <strong>' + bal + '</strong> &nbsp;·&nbsp; Limit: <strong>' + lim + '</strong>'
+            + (a.dateOpened ? ' &nbsp;·&nbsp; Opened: ' + a.dateOpened : '') + '</div>'
+            + '</div>';
+        }).join('');
+      } else {
+        _ccHtml = '<div style="font-size:12px;color:var(--gray-400);font-style:italic;padding:8px 0">No ' + w.bankName + ' credit cards found in credit report</div>';
+      }
+      var BIZ_CARDS = {
+        'Chase': ['Chase Ink Business Cash','Chase Ink Business Unlimited','Chase Ink Business Preferred','Chase Ink Business Premier'],
+        'American Express': ['Amex Blue Business Cash','Amex Blue Business Plus','Amex Business Gold','Amex Business Platinum','Amex Business Green'],
+        'Bank of America': ['BOA Business Advantage Cash Rewards','BOA Business Advantage Unlimited Cash Rewards','BOA Business Advantage Travel Rewards'],
+        'Capital One': ['Capital One Spark Cash','Capital One Spark Cash Plus','Capital One Spark Miles','Capital One Spark Classic'],
+        'Citi': ['Citi Business AAdvantage Platinum Select','Citi Costco Anywhere Visa Business'],
+        'Wells Fargo': ['Wells Fargo Business Platinum Card','Wells Fargo Business Elite Signature Card'],
+        'US Bank': ['US Bank Business Triple Cash Rewards','US Bank Business Altitude Connect'],
+        'Discover': ['Discover it Business Card'],
+        'Truist': ['Truist Business Cash Rewards','Truist One Business'],
+        'PNC': ['PNC Business Visa Credit Card','PNC Cash Rewards Visa Business'],
+        'TD Bank': ['TD Business Solutions Credit Card'],
+        'Flagstar': ['Flagstar Business Visa Platinum']
+      };
+      var _bizCards = BIZ_CARDS[w.bankName] || [];
+      var _bizOpts = [{value:'',label:'— Select Card —'}].concat(_bizCards.map(function(cn){ return {value:cn,label:cn}; }));
+      body = '<div>'
+        + '<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px">Personal Credit Cards at ' + w.bankName + ' <span class="wiz-autobadge">AUTO</span></div>'
+        + _ccHtml
         + '<div class="wiz-divider"></div>'
+        + '<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px;margin-top:4px">Business Credit Card at ' + w.bankName + '</div>'
         + '<div class="wiz-grid">'
-        + wizSelect('wiz-has-biz-cc', 'Has Business Credit Card?', [
-            { value: '', label: '— Select —' },
-            { value: 'yes', label: 'Yes' },
-            { value: 'no',  label: 'No'  }
-          ], wd.hasBizCC || '')
-        + wizInput('wiz-biz-cc-spend', 'Monthly Business CC Spend ($)', 'e.g. 3000', wd.bizCCSpend || '', 'text')
+        + wizSelect('wiz-biz-cc-card', 'Business Card', _bizOpts, wd.bizCCCard || '')
+        + wizInput('wiz-biz-cc-balance', 'Balance ($)', 'e.g. 5000', wd.bizCCBalance || '', 'text')
+        + wizInput('wiz-biz-cc-opened', 'Date Opened', '', wd.bizCCOpened || '', 'date')
+        + '</div>'
         + '</div>';
 
     } else if (s === 5) {
