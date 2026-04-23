@@ -5166,6 +5166,15 @@
     'Application Details'
   ];
 
+  function wizFormatDollar(el) {
+    var raw = el.value.replace(/[^0-9]/g, '');
+    if (raw === '') { el.value = ''; return; }
+    el.value = Number(raw).toLocaleString();
+  }
+  function wizFormatPct(el) {
+    var raw = el.value.replace(/[^0-9.]/g, '');
+    el.value = raw ? raw + '%' : '';
+  }
   function wizTogglePersonalFields(val) {
     var disabled = val === 'no';
     ['wiz-personal-yrs','wiz-personal-mos','wiz-personal-balance'].forEach(function(id){
@@ -5198,9 +5207,8 @@
       // Credit Profile: read-only
     } else if (s === 1) {
       // Income & Revenue
-      w.data.annualIncome      = g('wiz-annual-income');
-      w.data.monthlySales      = g('wiz-monthly-sales');
-      w.data.loanAmount        = g('wiz-loan-amount');
+      w.data.annualIncome = g('wiz-annual-income');
+      w.data.loanAmount   = g('wiz-loan-amount');
       w.data.ownership         = g('wiz-ownership');
       w.data.industry          = g('wiz-industry');
       w.data.employees         = g('wiz-employees');
@@ -5212,11 +5220,12 @@
       w.data.personalBalance   = g('wiz-personal-balance');
     } else if (s === 3) {
       // Business Banking
-      w.data.hasBizAccount     = g('wiz-has-biz');
-      w.data.bizAcctYrs        = g('wiz-biz-yrs');
-      w.data.bizAcctMos        = g('wiz-biz-mos');
-      w.data.bizBalance        = g('wiz-biz-balance');
-      w.data.bizMonthlyRevenue = g('wiz-biz-rev');
+      w.data.hasBizAccount = g('wiz-has-biz');
+      w.data.bizAcctYrs    = g('wiz-biz-yrs');
+      w.data.bizAcctMos    = g('wiz-biz-mos');
+      w.data.bizBalance    = g('wiz-biz-balance');
+      w.data.bizDeposit    = g('wiz-biz-deposit');
+      w.data.bizAcctType   = g('wiz-biz-acct-type');
     } else if (s === 4) {
       // Credit Cards — personal is auto from credit report
       w.data.bizCCCard    = g('wiz-biz-cc-card');
@@ -5339,14 +5348,14 @@
       + '</div>';
   }
 
-  function wizInput(id, label, placeholder, prefill, type) {
+  function wizInput(id, label, placeholder, prefill, type, oninput) {
     var t = type || 'text';
     var autoClass = prefill ? ' auto-prefill' : '';
     var badge = prefill ? ' <span class="wiz-autobadge">AUTO</span>' : '';
     var val = prefill || '';
     return '<div class="wiz-field' + autoClass + '">'
       + '<label class="wiz-field-label" for="' + id + '">' + label + badge + '</label>'
-      + '<input class="wiz-input' + (prefill ? ' wiz-prefilled' : '') + '" id="' + id + '" type="' + t + '" placeholder="' + placeholder + '" value="' + val + '">'
+      + '<input class="wiz-input' + (prefill ? ' wiz-prefilled' : '') + '" id="' + id + '" type="' + t + '" placeholder="' + placeholder + '" value="' + val + '"' + (oninput ? ' oninput="' + oninput + '"' : '') + '>'
       + '</div>';
   }
 
@@ -5415,10 +5424,9 @@
       var pBanks = _hasPersonal ? (w.bankName + ' (Personal)') : "Client doesn't have a personal account here";
       var bBanks  = _hasBiz      ? (w.bankName + ' (Business)') : "Client doesn't have a business account here";
       body = '<div class="wiz-grid">'
-        + wizInput('wiz-annual-income', 'Annual Income ($)', 'e.g. 120000', wd.annualIncome || ob.annualIncome || '', 'text')
-        + wizInput('wiz-monthly-sales', 'Monthly Revenue ($)', 'e.g. 25000', wd.monthlySales || ob.monthlySales || '', 'text')
-        + wizInput('wiz-loan-amount', 'Loan Requested ($)', 'e.g. 50000', wd.loanAmount || ob.loanAmount || '', 'text')
-        + wizInput('wiz-ownership', 'Ownership %', 'e.g. 100', wd.ownership || ob.ownership || '', 'text')
+        + wizInput('wiz-annual-income', 'Annual Income ($)', 'e.g. 120000', wd.annualIncome || ob.annualIncome || '', 'text', 'wizFormatDollar(this)')
+        + wizInput('wiz-loan-amount', 'Loan Requested ($)', 'e.g. 50000', wd.loanAmount || ob.loanAmount || '', 'text', 'wizFormatDollar(this)')
+        + wizInput('wiz-ownership', 'Ownership %', 'e.g. 100', wd.ownership || ob.ownership || '', 'text', 'wizFormatPct(this)')
         + wizInput('wiz-industry', 'Industry', 'e.g. Technology', wd.industry || ob.industry || '', 'text')
         + wizInput('wiz-employees', 'Employees', 'e.g. 5', wd.employees || ob.employees || '', 'text')
         + '</div>'
@@ -5450,8 +5458,16 @@
             { value: 'no',  label: 'No'  }
           ], wd.hasBizAccount || '', 'wizToggleBizFields(this.value)')
         + '<div class="wiz-field"><label class="wiz-field-label">How Long (Business Account)</label><div style="display:flex;gap:8px"><input class="wiz-input" id="wiz-biz-yrs" type="number" min="0" placeholder="Years" value="' + (wd.bizAcctYrs || '') + '" style="width:50%"><input class="wiz-input" id="wiz-biz-mos" type="number" min="0" max="11" placeholder="Months" value="' + (wd.bizAcctMos || '') + '" style="width:50%"></div></div>'
-        + wizInput('wiz-biz-balance', 'Avg Monthly Business Balance ($)', 'e.g. 10000', wd.bizBalance || '', 'text')
-        + wizInput('wiz-biz-rev', 'Monthly Business Revenue ($)', 'e.g. 25000', wd.bizMonthlyRevenue || ob.monthlySales || '', 'text')
+        + wizInput('wiz-biz-balance', 'Avg Monthly Business Balance ($)', 'e.g. 10,000', wd.bizBalance || '', 'text', 'wizFormatDollar(this)')
+        + wizInput('wiz-biz-deposit', 'Amount Deposited ($)', 'e.g. 5,000', wd.bizDeposit || '', 'text', 'wizFormatDollar(this)')
+        + wizSelect('wiz-biz-acct-type', 'Account Type at ' + w.bankName, [
+            { value: '', label: '— Select —' },
+            { value: 'Business Checking', label: 'Business Checking' },
+            { value: 'Business Savings',  label: 'Business Savings'  },
+            { value: 'Business Money Market', label: 'Business Money Market' },
+            { value: 'Business Premium Checking', label: 'Business Premium Checking' },
+            { value: 'Business Interest Checking', label: 'Business Interest Checking' }
+          ], wd.bizAcctType || '')
         + '</div>';
       setTimeout(function(){ wizToggleBizFields(wd.hasBizAccount||''); }, 10);
 
@@ -5505,7 +5521,7 @@
         + '<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px;margin-top:4px">Business Credit Card at ' + w.bankName + '</div>'
         + '<div class="wiz-grid">'
         + wizSelect('wiz-biz-cc-card', 'Business Card', _bizOpts, wd.bizCCCard || '')
-        + wizInput('wiz-biz-cc-balance', 'Balance ($)', 'e.g. 5000', wd.bizCCBalance || '', 'text')
+        + wizInput('wiz-biz-cc-balance', 'Balance ($)', 'e.g. 5000', wd.bizCCBalance || '', 'text', 'wizFormatDollar(this)')
         + wizInput('wiz-biz-cc-opened', 'Date Opened', '', wd.bizCCOpened || '', 'date')
         + '</div>'
         + '</div>';
@@ -5514,20 +5530,20 @@
       // ── STEP 6: Debt & DTI
       body = '<div class="wiz-grid">'
         + wizInput('wiz-dti', 'DTI Ratio (%)', 'e.g. 28', wd.dti || '', 'text')
-        + wizInput('wiz-monthly-debt', 'Total Monthly Debt Payments ($)', 'e.g. 1500', wd.monthlyDebt || '', 'text')
+        + wizInput('wiz-monthly-debt', 'Total Monthly Debt Payments ($)', 'e.g. 1500', wd.monthlyDebt || '', 'text', 'wizFormatDollar(this)')
         + wizSelect('wiz-has-loan', 'Existing Loan at ' + w.bankName + '?', [
             { value: '', label: '— Select —' },
             { value: 'yes', label: 'Yes' },
             { value: 'no',  label: 'No'  }
           ], wd.hasExistingLoan || '')
-        + wizInput('wiz-loan-bal', 'Existing Loan Balance ($)', 'e.g. 20000', wd.existingLoanBal || '', 'text')
+        + wizInput('wiz-loan-bal', 'Existing Loan Balance ($)', 'e.g. 20000', wd.existingLoanBal || '', 'text', 'wizFormatDollar(this)')
         + '</div>';
 
     } else if (s === 6) {
       // ── STEP 7: Application Details
       body = '<div class="wiz-grid">'
         + wizInput('wiz-date', 'Date Applied', '', wd.dateApplied || new Date().toISOString().slice(0,10), 'date')
-        + wizInput('wiz-amount', 'Amount Requested ($)', 'e.g. 50000', wd.amount || '', 'text')
+        + wizInput('wiz-amount', 'Amount Requested ($)', 'e.g. 50000', wd.amount || '', 'text', 'wizFormatDollar(this)')
         + wizSelect('wiz-outcome', 'Outcome', [
             { value: 'pending',  label: 'Pending'  },
             { value: 'approved', label: 'Approved' },
