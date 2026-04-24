@@ -5444,7 +5444,7 @@
       + '</div>';
   }
 
-  function wizSelect(id, label, options, prefill) {
+  function wizSelect(id, label, options, prefill, onchange) {
     var autoClass = prefill ? ' auto-prefill' : '';
     var badge = prefill ? ' <span class="wiz-autobadge">AUTO</span>' : '';
     var opts = options.map(function(o){
@@ -5453,9 +5453,10 @@
       var sel = (prefill && String(prefill) === String(v)) ? ' selected' : '';
       return '<option value="' + v + '"' + sel + '>' + l + '</option>';
     }).join('');
+    var onchAttr = onchange ? ' onchange="' + onchange + '"' : '';
     return '<div class="wiz-field' + autoClass + '">'
       + '<label class="wiz-field-label" for="' + id + '">' + label + badge + '</label>'
-      + '<select class="wiz-input' + (prefill ? ' wiz-prefilled' : '') + '" id="' + id + '">' + opts + '</select>'
+      + '<select class="wiz-input' + (prefill ? ' wiz-prefilled' : '') + '" id="' + id + '"' + onchAttr + '>' + opts + '</select>'
       + '</div>';
   }
 
@@ -5551,12 +5552,12 @@
             { value: 'Business Interest Checking', label: 'Business Interest Checking' }
           ], wd.bizAcctType || '')
         + '</div>'
-        + '<div id="wiz-biz-existing-fields" class="wiz-grid">'
+        + '<div id="wiz-biz-existing-fields" class="wiz-grid" style="display:none">'
         + '<div class="wiz-field"><label class="wiz-field-label">How Long (Business Account)</label><div style="display:flex;gap:8px"><input class="wiz-input" id="wiz-biz-yrs" type="number" min="0" placeholder="Years" value="' + (wd.bizAcctYrs || '') + '" style="width:50%"><input class="wiz-input" id="wiz-biz-mos" type="number" min="0" max="11" placeholder="Months" value="' + (wd.bizAcctMos || '') + '" style="width:50%"></div></div>'
         + wizInput('wiz-biz-balance', 'Avg Monthly Business Balance ($)', 'e.g. 10,000', wd.bizBalance || '', 'text', 'wizFormatDollar(this)')
         + wizInput('wiz-biz-opened', 'Date Account Opened', '', wd.bizAcctOpened || '', 'date')
         + '</div>'
-        + '<div id="wiz-biz-new-fields" class="wiz-grid">'
+        + '<div id="wiz-biz-new-fields" class="wiz-grid" style="display:none">'
         + wizInput('wiz-biz-deposit', 'Amount Deposited ($)', 'e.g. 5,000', wd.bizDeposit || '', 'text', 'wizFormatDollar(this)')
         + wizInput('wiz-biz-opened', 'Date Account Opened', '', wd.bizAcctOpened || '', 'date')
         + '</div>';
