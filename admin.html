@@ -5281,6 +5281,53 @@
       var dep = document.getElementById('wiz-biz-deposit'); if (dep) dep.value = '';
     }
   }
+  function wizMatchIndustry(raw) {
+    if (!raw) return '';
+    if (raw.indexOf(' | ') !== -1) return raw;
+    var lower = raw.toLowerCase().trim();
+    var opts = [
+      'Accounting & Bookkeeping | 541219',
+      'Auto Repair | 811111',
+      'Beauty / Salon / Barber | 812112',
+      'Catering | 722330',
+      'Childcare / Daycare | 624410',
+      'Cleaning / Janitorial | 561720',
+      'Consulting | 541611',
+      'Construction | 238220',
+      'E-commerce | 454110',
+      'Education / Tutoring | 611691',
+      'Fitness / Gym | 713940',
+      'Food Manufacturing | 311991',
+      'Healthcare / Medical | 621211',
+      'Import / Export | 419120',
+      'Insurance Agency | 524210',
+      'Landscaping | 561730',
+      'Legal Services | 541110',
+      'Manufacturing | 311991',
+      'Marketing / Advertising | 541810',
+      'Non-profit | 813410',
+      'Photography / Videography | 541922',
+      'Printing / Publishing | 323111',
+      'Property Management | 531311',
+      'Real Estate | 531311',
+      'Restaurant / Food Service | 722515',
+      'Retail | 445110',
+      'Security Services | 561621',
+      'Staffing Agency | 561320',
+      'Technology / IT | 541511',
+      'Transportation / Trucking | 484110',
+      'Wholesale / Distribution | 425120'
+    ];
+    for (var i = 0; i < opts.length; i++) {
+      var name = opts[i].split(' | ')[0].toLowerCase();
+      var parts = name.split(/[\/,&]/);
+      for (var p = 0; p < parts.length; p++) {
+        var part = parts[p].trim();
+        if (part && (lower.indexOf(part) !== -1 || part.indexOf(lower) !== -1)) return opts[i];
+      }
+    }
+    return '';
+  }
   function wizUpdateNaics(val) {
     var el = document.getElementById('wiz-naics-display');
     if (!el) return;
@@ -5552,9 +5599,9 @@
             { value: 'Technology / IT | 541511', label: 'Technology / IT — 541511' },
             { value: 'Transportation / Trucking | 484110', label: 'Transportation / Trucking — 484110' },
             { value: 'Wholesale / Distribution | 425120', label: 'Wholesale / Distribution — 425120' }
-          ], wd.industry || ob.industry || '', 'wizUpdateNaics(this.value)')
+          ], wizMatchIndustry(wd.industry || ob.industry || ''), 'wizUpdateNaics(this.value)')
         + wizInput('wiz-employees', 'Employees', 'e.g. 5', wd.employees || ob.employees || '', 'text')
-        + (function(){ var _naics = (wd.industry || ob.industry || '').split(' | ')[1] || ''; return '<div class="wiz-field auto"><div class="wiz-field-label">NAICS Code <span class="wiz-autobadge">AUTO</span></div><div id="wiz-naics-display" class="wiz-field-val" style="font-size:15px;font-weight:700;color:var(--navy);letter-spacing:0.04em">' + (_naics || '—') + '</div></div>'; })()
+        + (function(){ var _naics = wizMatchIndustry(wd.industry || ob.industry || '').split(' | ')[1] || ''; return '<div class="wiz-field auto"><div class="wiz-field-label">NAICS Code <span class="wiz-autobadge">AUTO</span></div><div id="wiz-naics-display" class="wiz-field-val" style="font-size:15px;font-weight:700;color:var(--navy);letter-spacing:0.04em">' + (_naics || '—') + '</div></div>'; })()
         + '</div>'
         + '<div class="wiz-divider"></div>'
         + '<div class="wiz-grid">'
