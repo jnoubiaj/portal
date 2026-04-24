@@ -5071,9 +5071,11 @@
           + '<div class="bnk-cli-meta"><span>FICO ' + e.fico + '</span>' + incomeTag + stateTag + '</div>'
           + '<div class="bnk-apps-row">' + (e.chips || noApps) + '</div>'
           + '</div>'
-          + '<div class="bnk-cli-actions" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">'
+          + '<div class="bnk-cli-actions" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'
+          + '<div style="display:flex;gap:6px">'
           + '<button class="bac-btn" onclick="bnkPickClient(\'' + bnkSafe + '\',\'' + e.c.id + '\')">Edit / Add App</button>'
           + '<button class="bac-btn danger" onclick="removeClientFromBank(\'' + bnkSafe + '\',\'' + e.c.id + '\')">Remove</button>'
+          + '</div>'
           + dateTag
           + '</div>'
           + '</div>';
