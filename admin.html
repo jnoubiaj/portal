@@ -5281,6 +5281,12 @@
       var dep = document.getElementById('wiz-biz-deposit'); if (dep) dep.value = '';
     }
   }
+  function wizUpdateNaics(val) {
+    var el = document.getElementById('wiz-naics-display');
+    if (!el) return;
+    var code = val ? val.split(' | ')[1] : '';
+    el.textContent = code || '—';
+  }
   function wizSaveCurrentFields() {
     var w = window._wiz;
     if (!w) return;
@@ -5546,8 +5552,9 @@
             { value: 'Technology / IT | 541511', label: 'Technology / IT — 541511' },
             { value: 'Transportation / Trucking | 484110', label: 'Transportation / Trucking — 484110' },
             { value: 'Wholesale / Distribution | 425120', label: 'Wholesale / Distribution — 425120' }
-          ], wd.industry || ob.industry || '')
+          ], wd.industry || ob.industry || '', 'wizUpdateNaics(this.value)')
         + wizInput('wiz-employees', 'Employees', 'e.g. 5', wd.employees || ob.employees || '', 'text')
+        + (function(){ var _naics = (wd.industry || ob.industry || '').split(' | ')[1] || ''; return '<div class="wiz-field auto"><div class="wiz-field-label">NAICS Code <span class="wiz-autobadge">AUTO</span></div><div id="wiz-naics-display" class="wiz-field-val" style="font-size:15px;font-weight:700;color:var(--navy);letter-spacing:0.04em">' + (_naics || '—') + '</div></div>'; })()
         + '</div>'
         + '<div class="wiz-divider"></div>'
         + '<div class="wiz-grid">'
