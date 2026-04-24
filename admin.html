@@ -5653,9 +5653,30 @@
       // ── STEP 5: Credit Cards
       var _allAccts = (w.cr && w.cr.accounts) ? w.cr.accounts : [];
       var _bnkWords = w.bankName.toLowerCase().split(/\s+/).filter(function(wrd){ return wrd.length > 2; });
+      // Bank keyword map: catches cards that use product name without bank name in credit report
+      var _bankCardMap = {
+        'chase': ['chase','sapphire','freedom','slate','ink','amazon','disney','united','marriott','ihg','southwest','hyatt','aarp'],
+        'american express': ['amex','american express','americanexpress','platinum','gold','blue cash','everyday','hilton','delta','marriott','amazon'],
+        'amex': ['amex','american express','americanexpress','platinum','gold','blue cash','everyday','hilton','delta'],
+        'bank of america': ['bank of america','bankamerica','bofA','preferred rewards','travel rewards','cash rewards','unlimited cash','customized cash'],
+        'capital one': ['capital one','venture','quicksilver','savor','spark','secured'],
+        'citi': ['citi','citibank','citicard','double cash','custom cash','premier','prestige','simplicity','diamond'],
+        'citibank': ['citi','citibank','citicard','double cash','custom cash','premier','prestige','simplicity','diamond'],
+        'wells fargo': ['wells fargo','wellsfargo','active cash','autograph','reflect','bilt'],
+        'discover': ['discover','discover it','discover miles','discover secured'],
+        'us bank': ['us bank','usbank','altitude','cash+','flexperks'],
+        'barclays': ['barclays','barclaycard','jetblue','carnival','aadvantage','arrival'],
+        'synchrony': ['synchrony','care credit','amazon store','walmart','gap','lowes','home depot','amazon'],
+        'td bank': ['td bank','tdbank','td cash','td double up'],
+        'pnc': ['pnc','points visa','cash rewards']
+      };
+      var _bnkKey = (w.bankName || '').toLowerCase();
+      var _cardKeywords = _bankCardMap[_bnkKey] || (w.bankName || '').toLowerCase().split(/\s+/).filter(function(wrd){ return wrd.length > 2; });
       var _personalCCs = _allAccts.filter(function(a){
         if (!a.isOpen) return false;
-        return a.type === 'Credit Card' || a.type === 'Line of Credit';
+        if (a.type !== 'Credit Card' && a.type !== 'Line of Credit') return false;
+        var aName = (a.name || '').toLowerCase();
+        return _cardKeywords.some(function(kw){ return aName.indexOf(kw) !== -1; });
       });
       var _ccHtml = '';
       if (_personalCCs.length) {
@@ -5680,7 +5701,7 @@
             + '</div>';
         }).join('');
       } else {
-        _ccHtml = '<div style="font-size:12px;color:var(--gray-400);font-style:italic;padding:8px 0">No credit cards found in credit report</div>';
+        _ccHtml = '<div style="font-size:12px;color:var(--gray-400);font-style:italic;padding:8px 0">No ' + w.bankName + ' credit cards found in credit report</div>';
       }
       var BIZ_CARDS = {
         'Chase': ['Chase Ink Business Cash','Chase Ink Business Unlimited','Chase Ink Business Preferred','Chase Ink Business Premier'],
