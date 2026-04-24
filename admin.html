@@ -5490,8 +5490,12 @@
   function wizCancel() {
     var wrap = document.getElementById('bnk-questionnaire-wrap');
     if (wrap) wrap.innerHTML = '';
-    var inp = document.getElementById('bnk-client-pick');
+    var inp = document.getElementById('bnk-client-search');
     if (inp) inp.value = '';
+    var sel = document.getElementById('bnk-selected-client');
+    if (sel) sel.innerHTML = '';
+    var res = document.getElementById('bnk-search-results');
+    if (res) res.style.display = 'none';
     window._wiz = null;
   }
 
