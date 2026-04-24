@@ -5558,8 +5558,6 @@
         + '</div>'
         + '<div id="wiz-biz-new-fields" class="wiz-grid" style="display:none">'
         + wizInput('wiz-biz-deposit', 'Amount Deposited ($)', 'e.g. 5,000', wd.bizDeposit || '', 'text', 'wizFormatDollar(this)')
-        + '</div>'
-        + '<div class="wiz-grid">'
         + wizInput('wiz-biz-opened', 'Date Account Opened', '', wd.bizAcctOpened || '', 'date')
         + '</div>';
       setTimeout(function(){ wizToggleBizFields(wd.hasBizAccount||''); }, 10);
