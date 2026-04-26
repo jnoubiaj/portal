@@ -4354,7 +4354,7 @@
     fundingApproved:'', fundingGoal:'',
     applyingBank:'', applyingCount:'', applyingBanks:[],
     currentStage:1,
-    stageNames:['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
+    stageNames:['Initial Setup / Credit Review','Credit Optimization','Funding Strategy','Bank Relationships','Application Phase','Decision / Results'],
     tasks:[],
     adminDocs:[],
     pendingContract:null,
@@ -4417,6 +4417,7 @@
     try {
       const saved = JSON.parse(localStorage.getItem('cq_dash_'+clientId) || '{}');
       const d = Object.assign({}, DEFAULT_DASH, saved);
+      d.stageNames = DEFAULT_DASH.stageNames; // always use canonical pipeline stages
       // Auto-populate client name from admin record if not manually set
       if (!d.clientName) {
         const c = getClient(clientId);
@@ -4607,6 +4608,11 @@
     logActivity(`Progress stage updated to <strong>${d.stageNames[cs-1]}</strong> for ${c?.fname||''}`, '#22A7F0');
     // Sync stage to GHL Portal Pipeline
     syncGHLPipelineStage(clientId, d.stageNames[cs-1], c).catch(()=>{});
+    // Sync pipeline stage (dashboard stage click → pipeline)
+    var _pt = initClientTasks(clientId);
+    _pt.stage = cs - 1; // dashboard is 1-indexed, pipeline is 0-indexed
+    saveClientTasks(clientId, _pt);
+    if (typeof renderPipeline === 'function') renderPipeline();
     // Toast
     const toast = document.getElementById('stage-saved-toast-'+clientId);
     if (toast) { toast.textContent = '✓ Stage updated & published'; toast.style.opacity='1'; setTimeout(()=>toast.style.opacity='0',2500); }
@@ -6933,10 +6939,16 @@
     if (currentStage < PIPELINE_STAGES.length - 1) {
       t.stage = currentStage + 1;
       saveClientTasks(clientId, t);
+      var d = getDashData(clientId);
+      d.currentStage = t.stage + 1;
+      saveDashData(clientId, d);
       renderTaskModal(clientId, t.stage);
     } else {
       t.stage = currentStage;
       saveClientTasks(clientId, t);
+      var df = getDashData(clientId);
+      df.currentStage = PIPELINE_STAGES.length;
+      saveDashData(clientId, df);
       document.getElementById('pl-modal-bg').remove();
     }
     renderPipeline();
