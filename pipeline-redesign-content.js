@@ -8,32 +8,32 @@
       color: '#3b82f6', light: '#eff6ff', border: '#bfdbfe', dark: '#1d4ed8',
       client:   ['Upload Experian Login Credentials','Confirm Personal Information','Upload ID + Proof of Address','Complete Onboarding Form'],
       internal: ['Pull Experian Report','Analyze Credit Profile','Identify Negative Items','Identify Inquiries','Calculate DTI'],
-      itimes:   ['Same day','1–2 days','1–2 days','Same day','Same day'] },
+      idays:    [0, 2, 2, 0, 0] },
     { name: 'Credit Optimization', sub: 'Remove & Repair',
       color: '#8b5cf6', light: '#f5f3ff', border: '#ddd6fe', dark: '#6d28d9',
       client:   ['Confirm Dispute Authorization','Avoid New Credit Applications','Pay Down High Utilization Accounts'],
       internal: ['Remove Inquiries','Send Dispute Letters','Track Bureau Responses','Update Credit Status'],
-      itimes:   ['30–45 days','3–5 days','30–45 days','1–2 days'] },
+      idays:    [45, 5, 45, 2] },
     { name: 'Funding Strategy',    sub: 'Plan & Sequence',
       color: '#f59e0b', light: '#fffbeb', border: '#fde68a', dark: '#b45309',
       client:   ['Confirm Business Information','Provide Business Details','Approve Funding Plan'],
       internal: ['Build Funding Sequence','Select Target Banks','Set Application Order','Determine Application Numbers'],
-      itimes:   ['2–3 days','1–2 days','1 day','1 day'] },
+      idays:    [3, 2, 1, 1] },
     { name: 'Bank Relationships',  sub: 'Open Accounts',
       color: '#10b981', light: '#ecfdf5', border: '#a7f3d0', dark: '#047857',
       client:   ['Open Business Bank Account','Deposit Required Funds','Confirm Account Opened','Maintain Required Balance'],
       internal: ['Assign Target Banks','Track Account Open Dates','Track Deposit Amounts','Monitor Relationship Age'],
-      itimes:   ['1 day','Ongoing','Ongoing','60–90 days'] },
+      idays:    [1, null, null, 90] },
     { name: 'Application Phase',   sub: 'Submit & Track',
       color: '#f97316', light: '#fff7ed', border: '#fed7aa', dark: '#c2410c',
       client:   ['Attend Bank Appointment','Confirm Submission','Upload Requested Documents'],
       internal: ['Introduce Client to BRM','Submit Applications','Track Application Dates','Handle Reconsideration Calls'],
-      itimes:   ['1–2 days','1–3 days','Ongoing','1–5 days'] },
+      idays:    [2, 3, null, 5] },
     { name: 'Decision / Results',  sub: 'Approved & Funded',
       color: '#059669', light: '#ecfdf5', border: '#6ee7b7', dark: '#065f46',
       client:   ['Accept Offer','Upload Approval Letters','Confirm Card Received'],
       internal: ['Log Approval Amounts','Update Funding Dashboard','Send Congratulations','Request Referrals'],
-      itimes:   ['Same day','Same day','Same day','1–2 days'] }
+      idays:    [0, 0, 0, 2] }
   ];
 
   function getClientTasks(id) {
@@ -58,6 +58,20 @@
     assigned.forEach(function(i){ if(t.checked['s'+stageIdx+'c'+i]) done++; });
     s.internal.forEach(function(_,i){ if(t.checked['s'+stageIdx+'i'+i]) done++; });
     return { total: total, done: done };
+  }
+
+  function plTaskDueBadge(stageStartedAt, offsetDays, done) {
+    if (offsetDays === null) return '<span style="font-size:10px;font-weight:600;color:#94a3b8;background:#f1f5f9;padding:2px 8px;border-radius:20px;white-space:nowrap">Ongoing</span>';
+    if (done) return '<span style="font-size:10px;font-weight:600;color:#059669;background:#d1fae5;padding:2px 8px;border-radius:20px;white-space:nowrap">&#x2713; Done</span>';
+    var dueTs = stageStartedAt + offsetDays * 86400000;
+    var now = new Date(); now.setHours(0,0,0,0);
+    var due = new Date(dueTs); due.setHours(0,0,0,0);
+    var diff = Math.round((due - now) / 86400000);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var dateStr = months[due.getMonth()] + ' ' + due.getDate();
+    if (diff < 0) return '<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fee2e2;padding:2px 8px;border-radius:20px;white-space:nowrap">&#x26A0; ' + Math.abs(diff) + 'd overdue</span>';
+    if (diff === 0) return '<span style="font-size:10px;font-weight:700;color:#d97706;background:#fef3c7;padding:2px 8px;border-radius:20px;white-space:nowrap">Due today</span>';
+    return '<span style="font-size:10px;font-weight:600;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:20px;white-space:nowrap">Due ' + dateStr + '</span>';
   }
 
   function plDaysInStage(id, stageIdx) {
@@ -205,12 +219,13 @@
         + '</div>';
     }
 
+    var stageStart = (t2.stageStartedAt && t2.stageStartedAt[viewStage]) ? t2.stageStartedAt[viewStage] : Date.now();
     var intRows = stage.internal.map(function(task, i) {
       var key = 's' + viewStage + 'i' + i;
       var chk = !!t2.checked[key];
-      var tl = (stage.itimes && stage.itimes[i]) ? stage.itimes[i] : '';
-      var tlBadge = tl ? '<span style="font-size:10px;font-weight:600;color:#94a3b8;background:#f1f5f9;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0">' + tl + '</span>' : '';
-      return taskRow(key, task, chk, 'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')', null, tlBadge);
+      var offsetDays = (stage.idays && stage.idays[i] !== undefined) ? stage.idays[i] : null;
+      var dueBadge = plTaskDueBadge(stageStart, offsetDays, chk);
+      return taskRow(key, task, chk, 'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')', null, dueBadge);
     }).join('');
 
     // Client tasks: only show assigned ones as checklist; rest available to add inline
