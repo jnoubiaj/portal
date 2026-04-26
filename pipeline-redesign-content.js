@@ -39,10 +39,6 @@
     if (!t) { t = { stage: 0, checked: {}, assigned: {}, stageStartedAt: {} }; t.stageStartedAt[0] = Date.now(); }
     if (!t.assigned) t.assigned = {};
     if (!t.stageStartedAt) { t.stageStartedAt = {}; t.stageStartedAt[t.stage] = Date.now(); }
-    // Auto-assign ALL client tasks for current stage if not yet assigned
-    if (!t.assigned[t.stage] || t.assigned[t.stage].length === 0) {
-      t.assigned[t.stage] = PIPELINE_STAGES[t.stage].client.map(function(_,i){ return i; });
-    }
     saveClientTasks(id, t);
     return t;
   }
@@ -50,9 +46,10 @@
   function plGetProgress(id, stageIdx) {
     var t = initClientTasks(id);
     var s = PIPELINE_STAGES[stageIdx];
-    var total = s.client.length + s.internal.length;
+    var assigned = t.assigned[stageIdx] || [];
+    var total = assigned.length + s.internal.length;
     var done = 0;
-    s.client.forEach(function(_,i){ if(t.checked['s'+stageIdx+'c'+i]) done++; });
+    assigned.forEach(function(i){ if(t.checked['s'+stageIdx+'c'+i]) done++; });
     s.internal.forEach(function(_,i){ if(t.checked['s'+stageIdx+'i'+i]) done++; });
     return { total: total, done: done };
   }
@@ -174,7 +171,7 @@
     var days = plDaysInStage(clientId, viewStage);
     var isCurrentStage = viewStage === t2.stage;
     var allInternalDone = stage.internal.every(function(_,i){ return t2.checked['s'+viewStage+'i'+i]; });
-    var allClientDone   = stage.client.every(function(_,i){ return t2.checked['s'+viewStage+'c'+i]; });
+    var allClientDone   = assigned.length === 0 || assigned.every(function(i){ return t2.checked['s'+viewStage+'c'+i]; });
     var canAdvance = isCurrentStage && allInternalDone && allClientDone;
     var isFinal = viewStage === PIPELINE_STAGES.length - 1;
 
@@ -207,14 +204,19 @@
       return taskRow(key, task, chk, 'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')', null);
     }).join('');
 
-    // All client tasks shown as plain checklist — no dropdown, no remove
-    var clientRows = stage.client.map(function(task, idx) {
-      var key = 's' + viewStage + 'c' + idx;
-      var chk = !!t2.checked[key];
-      return taskRow(key, task, chk, 'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')', null);
-    }).join('');
+    // Client tasks: only show assigned ones as checklist; rest available to add inline
+    var clientRows = assigned.length
+      ? assigned.map(function(idx) {
+          var key = 's' + viewStage + 'c' + idx;
+          var chk = !!t2.checked[key];
+          return taskRow(key, stage.client[idx], chk,
+            'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')',
+            'plRemoveAssigned(\'' + clientId + '\',' + viewStage + ',' + idx + ')'
+          );
+        }).join('')
+      : '<div style="font-size:12px;color:#94a3b8;font-style:italic;padding:10px 14px;background:#f8fafc;border-radius:10px;border:1.5px dashed #e2e8f0;text-align:center">No tasks selected — choose below</div>';
 
-    var unassigned = []; // no add-task dropdown needed
+    var unassigned = stage.client.map(function(_,i){ return i; }).filter(function(i){ return assigned.indexOf(i) === -1; });
 
     // Circular progress SVG (40px)
     var r = 16; var circ = 2 * Math.PI * r;
@@ -275,15 +277,22 @@
       + '<div style="font-size:10px;font-weight:800;color:' + stage.color + ';text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:6px">'
       + '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>'
       + 'Client Tasks</div>'
-      + '<span style="font-size:10px;color:#94a3b8">' + stage.client.filter(function(_,i){ return t2.checked['s'+viewStage+'c'+i]; }).length + '/' + stage.client.length + ' done</span></div>'
+      + '<span style="font-size:10px;color:#94a3b8">' + assigned.filter(function(i){ return t2.checked['s'+viewStage+'c'+i]; }).length + '/' + assigned.length + ' done</span></div>'
       + clientRows
 
       // Add task button (only shows if unassigned tasks exist)
-      + (unassigned.length ? '<div style="margin-top:8px"><div style="position:relative">'
-        + '<div onclick="var dd=document.getElementById(\'pl-add-dd-' + viewStage + '\');dd.style.display=dd.style.display===\'none\'?\'block\':\'none\'" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1.5px dashed ' + stage.border + ';border-radius:8px;background:' + stage.light + ';color:' + stage.color + ';font-size:12px;font-weight:700;cursor:pointer">'
-        + '<svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg> Add Task</div>'
-        + '<div id="pl-add-dd-' + viewStage + '" style="display:none;position:absolute;z-index:9999;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);padding:8px;margin-top:6px;min-width:280px">' + addRows + '</div>'
-        + '</div></div>' : '')
+      // Inline task picker — always visible, shows remaining unassigned tasks
+      + (unassigned.length
+          ? '<div style="margin-top:10px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 12px">'
+            + '<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Available tasks — click to add</div>'
+            + unassigned.map(function(idx) {
+                return '<div onclick="plToggleAssign(\'' + clientId + '\',' + viewStage + ',' + idx + ')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .12s;margin-bottom:3px" onmouseover="this.style.background=\'#fff\'" onmouseout="this.style.background=\'\'">'
+                  + '<div style="width:20px;height:20px;border-radius:6px;border:2px dashed ' + stage.color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+                  + '<svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="' + stage.color + '" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg></div>'
+                  + '<span style="font-size:13px;color:#64748b">' + stage.client[idx] + '</span></div>';
+              }).join('')
+            + '</div>'
+          : '')
 
       + '</div>'
 
@@ -326,7 +335,8 @@
     if (viewStage === t.stage) {
       var stage = PIPELINE_STAGES[viewStage];
       var allInternalDone = stage.internal.every(function(_,i){ return t.checked['s'+viewStage+'i'+i]; });
-      var allClientDone   = stage.client.every(function(_,i){ return t.checked['s'+viewStage+'c'+i]; });
+      var assigned2 = t.assigned[viewStage] || [];
+      var allClientDone   = assigned2.length === 0 || assigned2.every(function(i){ return t.checked['s'+viewStage+'c'+i]; });
       if (allInternalDone && allClientDone) {
         setTimeout(function() { plAdvance(clientId, viewStage); }, 700);
         return;
@@ -342,10 +352,6 @@
       t.stage = currentStage + 1;
       if (!t.stageStartedAt) t.stageStartedAt = {};
       t.stageStartedAt[t.stage] = Date.now();
-      // Auto-assign all client tasks for the new stage
-      if (!t.assigned[t.stage] || t.assigned[t.stage].length === 0) {
-        t.assigned[t.stage] = PIPELINE_STAGES[t.stage].client.map(function(_,i){ return i; });
-      }
       saveClientTasks(clientId, t);
       var d = getDashData(clientId);
       d.currentStage = t.stage + 1;
