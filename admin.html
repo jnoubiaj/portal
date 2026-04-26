@@ -6751,6 +6751,8 @@
 
 
 
+
+
   // ══════════════════════════════════════════════════
   //  PIPELINE — 6-stage client funding task system
   // ══════════════════════════════════════════════════
@@ -6759,27 +6761,33 @@
     { name: 'Initial Setup',       sub: 'Credit Review',
       color: '#3b82f6', light: '#eff6ff', border: '#bfdbfe', dark: '#1d4ed8',
       client:   ['Upload Experian Login Credentials','Confirm Personal Information','Upload ID + Proof of Address','Complete Onboarding Form'],
-      internal: ['Pull Experian Report','Analyze Credit Profile','Identify Negative Items','Identify Inquiries','Calculate DTI'] },
+      internal: ['Pull Experian Report','Analyze Credit Profile','Identify Negative Items','Identify Inquiries','Calculate DTI'],
+      itimes:   ['Same day','1–2 days','1–2 days','Same day','Same day'] },
     { name: 'Credit Optimization', sub: 'Remove & Repair',
       color: '#8b5cf6', light: '#f5f3ff', border: '#ddd6fe', dark: '#6d28d9',
       client:   ['Confirm Dispute Authorization','Avoid New Credit Applications','Pay Down High Utilization Accounts'],
-      internal: ['Remove Inquiries','Send Dispute Letters','Track Bureau Responses','Update Credit Status'] },
+      internal: ['Remove Inquiries','Send Dispute Letters','Track Bureau Responses','Update Credit Status'],
+      itimes:   ['30–45 days','3–5 days','30–45 days','1–2 days'] },
     { name: 'Funding Strategy',    sub: 'Plan & Sequence',
       color: '#f59e0b', light: '#fffbeb', border: '#fde68a', dark: '#b45309',
       client:   ['Confirm Business Information','Provide Business Details','Approve Funding Plan'],
-      internal: ['Build Funding Sequence','Select Target Banks','Set Application Order','Determine Application Numbers'] },
+      internal: ['Build Funding Sequence','Select Target Banks','Set Application Order','Determine Application Numbers'],
+      itimes:   ['2–3 days','1–2 days','1 day','1 day'] },
     { name: 'Bank Relationships',  sub: 'Open Accounts',
       color: '#10b981', light: '#ecfdf5', border: '#a7f3d0', dark: '#047857',
       client:   ['Open Business Bank Account','Deposit Required Funds','Confirm Account Opened','Maintain Required Balance'],
-      internal: ['Assign Target Banks','Track Account Open Dates','Track Deposit Amounts','Monitor Relationship Age'] },
+      internal: ['Assign Target Banks','Track Account Open Dates','Track Deposit Amounts','Monitor Relationship Age'],
+      itimes:   ['1 day','Ongoing','Ongoing','60–90 days'] },
     { name: 'Application Phase',   sub: 'Submit & Track',
       color: '#f97316', light: '#fff7ed', border: '#fed7aa', dark: '#c2410c',
       client:   ['Attend Bank Appointment','Confirm Submission','Upload Requested Documents'],
-      internal: ['Introduce Client to BRM','Submit Applications','Track Application Dates','Handle Reconsideration Calls'] },
+      internal: ['Introduce Client to BRM','Submit Applications','Track Application Dates','Handle Reconsideration Calls'],
+      itimes:   ['1–2 days','1–3 days','Ongoing','1–5 days'] },
     { name: 'Decision / Results',  sub: 'Approved & Funded',
       color: '#059669', light: '#ecfdf5', border: '#6ee7b7', dark: '#065f46',
       client:   ['Accept Offer','Upload Approval Letters','Confirm Card Received'],
-      internal: ['Log Approval Amounts','Update Funding Dashboard','Send Congratulations','Request Referrals'] }
+      internal: ['Log Approval Amounts','Update Funding Dashboard','Send Congratulations','Request Referrals'],
+      itimes:   ['Same day','Same day','Same day','1–2 days'] }
   ];
 
   function getClientTasks(id) {
@@ -6940,12 +6948,13 @@
     }).join('');
 
     // Task row builder
-    function taskRow(key, label, checked, onchange, onremove) {
+    function taskRow(key, label, checked, onchange, onremove, badge) {
       return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:4px;background:' + (checked ? stage.light : '#f8fafc') + ';border:1.5px solid ' + (checked ? stage.border : '#f1f5f9') + ';cursor:pointer;transition:all .15s" onclick="' + onchange + '">'
         + '<div style="width:20px;height:20px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px solid ' + (checked ? stage.color : '#cbd5e1') + ';background:' + (checked ? stage.color : '#fff') + ';transition:all .15s">'
         + (checked ? '<svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '')
         + '</div>'
         + '<span style="flex:1;font-size:13px;font-weight:' + (checked ? '500' : '600') + ';color:' + (checked ? '#94a3b8' : '#0f2044') + ';' + (checked ? 'text-decoration:line-through' : '') + '">' + label + '</span>'
+        + (badge || '')
         + (onremove ? '<span onclick="event.stopPropagation();' + onremove + '" title="Remove task" style="width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#fee2e2;color:#ef4444;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0">&#x2715;</span>' : '')
         + '</div>';
     }
@@ -6953,7 +6962,9 @@
     var intRows = stage.internal.map(function(task, i) {
       var key = 's' + viewStage + 'i' + i;
       var chk = !!t2.checked[key];
-      return taskRow(key, task, chk, 'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')', null);
+      var tl = (stage.itimes && stage.itimes[i]) ? stage.itimes[i] : '';
+      var tlBadge = tl ? '<span style="font-size:10px;font-weight:600;color:#94a3b8;background:#f1f5f9;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0">' + tl + '</span>' : '';
+      return taskRow(key, task, chk, 'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')', null, tlBadge);
     }).join('');
 
     // Client tasks: only show assigned ones as checklist; rest available to add inline
@@ -7109,6 +7120,7 @@
     }
     renderPipeline();
   }
+
 
 
 
