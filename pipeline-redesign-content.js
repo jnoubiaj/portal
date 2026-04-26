@@ -219,12 +219,17 @@
         + '</div>';
     }
 
-    var stageStart = (t2.stageStartedAt && t2.stageStartedAt[viewStage]) ? t2.stageStartedAt[viewStage] : Date.now();
+    var stageStart = (t2.stageStartedAt && t2.stageStartedAt[viewStage]) ? t2.stageStartedAt[viewStage] : null;
+    var clientEnteredStage = stageStart !== null; // only show live due dates if client has been in this stage
     var intRows = stage.internal.map(function(task, i) {
       var key = 's' + viewStage + 'i' + i;
       var chk = !!t2.checked[key];
       var offsetDays = (stage.idays && stage.idays[i] !== undefined) ? stage.idays[i] : null;
-      var dueBadge = plTaskDueBadge(stageStart, offsetDays, chk);
+      var dueBadge = clientEnteredStage
+        ? plTaskDueBadge(stageStart, offsetDays, chk)
+        : (offsetDays === null
+            ? '<span style="font-size:10px;font-weight:600;color:#94a3b8;background:#f1f5f9;padding:2px 8px;border-radius:20px">Ongoing</span>'
+            : '<span style="font-size:10px;font-weight:600;color:#94a3b8;background:#f1f5f9;padding:2px 8px;border-radius:20px">' + (offsetDays === 0 ? 'Same day' : offsetDays + ' day' + (offsetDays !== 1 ? 's' : '')) + '</span>');
       return taskRow(key, task, chk, 'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')', null, dueBadge);
     }).join('');
 
