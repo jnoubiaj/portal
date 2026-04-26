@@ -4443,6 +4443,10 @@
       fsData.adminDocs = fsData.adminDocs.map(d => ({
         ...d, url: (d.url && !d.url.startsWith('data:')) ? d.url : null
       }));
+    } else {
+      // Never overwrite Firestore adminDocs with an empty array — stale localStorage
+      // on a different device would wipe docs the admin uploaded from another browser.
+      delete fsData.adminDocs;
     }
     fsSetDash(clientId, fsData).catch(() => {});
   }
