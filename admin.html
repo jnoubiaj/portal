@@ -6764,6 +6764,8 @@
 
 
 
+
+
   // ══════════════════════════════════════════════════
   //  PIPELINE — 6-stage client funding task system
   // ══════════════════════════════════════════════════
@@ -6786,9 +6788,9 @@
       idays:    [1, 1, 1] },
     { name: 'Bank Relationships',  sub: 'Open Accounts',
       color: '#10b981', light: '#ecfdf5', border: '#a7f3d0', dark: '#047857',
-      client:   ['Open Business Bank Account','Deposit Required Funds','Confirm Account Opened','Maintain Required Balance'],
-      internal: ['Assign Target Banks','Track Account Open Dates','Track Deposit Amounts','Monitor Relationship Age'],
-      idays:    [1, null, null, 90] },
+      client:   ['Assign Target Banks','Track Personal Account Open Date','Verify Business Account & Open Date','Open Business Account & Deposit Funds'],
+      internal: ['Assign Target Banks','Track Personal Account Open Date','Verify Business Account & Open Date','Open Business Account & Deposit Funds'],
+      idays:    [1, 1, 1, 7] },
     { name: 'Application Phase',   sub: 'Submit & Track',
       color: '#f97316', light: '#fff7ed', border: '#fed7aa', dark: '#c2410c',
       client:   ['Attend Bank Appointment','Confirm Submission','Upload Requested Documents'],
@@ -6809,8 +6811,7 @@
     var t = getClientTasks(id);
     if (!t) { t = { stage: 0, checked: {}, assigned: {}, stageStartedAt: {} }; t.stageStartedAt[0] = Date.now(); }
     if (!t.assigned) t.assigned = {};
-    if (!t.stageStartedAt) t.stageStartedAt = {};
-    if (!t.stageStartedAt[t.stage]) t.stageStartedAt[t.stage] = Date.now();
+    if (!t.stageStartedAt) { t.stageStartedAt = {}; t.stageStartedAt[t.stage] = Date.now(); }
     saveClientTasks(id, t);
     return t;
   }
@@ -7147,6 +7148,7 @@
     }
     renderPipeline();
   }
+
 
 
 
