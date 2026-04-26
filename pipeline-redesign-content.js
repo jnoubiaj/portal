@@ -332,16 +332,6 @@
     var t = initClientTasks(clientId);
     t.checked[key] = !t.checked[key];
     saveClientTasks(clientId, t);
-    if (viewStage === t.stage) {
-      var stage = PIPELINE_STAGES[viewStage];
-      var allInternalDone = stage.internal.every(function(_,i){ return t.checked['s'+viewStage+'i'+i]; });
-      var assigned2 = t.assigned[viewStage] || [];
-      var allClientDone   = assigned2.length === 0 || assigned2.every(function(i){ return t.checked['s'+viewStage+'c'+i]; });
-      if (allInternalDone && allClientDone) {
-        setTimeout(function() { plAdvance(clientId, viewStage); }, 700);
-        return;
-      }
-    }
     renderTaskModal(clientId, viewStage);
     renderPipeline();
   }
