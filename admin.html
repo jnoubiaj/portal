@@ -6812,7 +6812,11 @@
   function getClientTasks(id) {
     try { return JSON.parse(localStorage.getItem('cq_tasks_' + id) || 'null'); } catch(e) { return null; }
   }
-  function saveClientTasks(id, data) { localStorage.setItem('cq_tasks_' + id, JSON.stringify(data)); }
+  function saveClientTasks(id, data) {
+    localStorage.setItem('cq_tasks_' + id, JSON.stringify(data));
+    // Sync to Firebase so clients can read their tasks on the dashboard
+    if (typeof fsSetDash === 'function') fsSetDash(id, { pipelineTasks: data }).catch(function(){});
+  }
   function initClientTasks(id) {
     var t = getClientTasks(id);
     if (!t) { t = { stage: 0, checked: {}, assigned: {}, stageStartedAt: {} }; t.stageStartedAt[0] = Date.now(); }
