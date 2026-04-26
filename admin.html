@@ -4607,7 +4607,12 @@
     syncGHLPipelineStage(clientId, d.stageNames[cs-1], c).catch(()=>{});
     // Sync pipeline stage (dashboard stage click → pipeline)
     var _pt = initClientTasks(clientId);
-    _pt.stage = cs - 1; // dashboard is 1-indexed, pipeline is 0-indexed
+    var _newStage = cs - 1;
+    if (_pt.stage !== _newStage) {
+      _pt.stage = _newStage;
+      if (!_pt.stageStartedAt) _pt.stageStartedAt = {};
+      if (!_pt.stageStartedAt[_newStage]) _pt.stageStartedAt[_newStage] = Date.now();
+    }
     saveClientTasks(clientId, _pt);
     if (typeof renderPipeline === 'function') renderPipeline();
     // Toast
@@ -6804,7 +6809,8 @@
     var t = getClientTasks(id);
     if (!t) { t = { stage: 0, checked: {}, assigned: {}, stageStartedAt: {} }; t.stageStartedAt[0] = Date.now(); }
     if (!t.assigned) t.assigned = {};
-    if (!t.stageStartedAt) { t.stageStartedAt = {}; t.stageStartedAt[t.stage] = Date.now(); }
+    if (!t.stageStartedAt) t.stageStartedAt = {};
+    if (!t.stageStartedAt[t.stage]) t.stageStartedAt[t.stage] = Date.now();
     saveClientTasks(id, t);
     return t;
   }
