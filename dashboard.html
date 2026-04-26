@@ -3353,8 +3353,35 @@
     }
     const sa = document.getElementById('s-approved'); if(sa) sa.textContent = d.fundingApproved ? '$' + Math.round(d.fundingApproved/1000) + 'K' : '—';
     const sg = document.getElementById('s-goal'); if(sg) sg.textContent = d.fundingGoal ? 'of $' + Math.round(d.fundingGoal/1000) + 'K goal' : '';
-    const openTasks = (d.tasks||[]).filter(t => t.status !== 'done').length;
-    const st = document.getElementById('s-tasks'); if(st) st.textContent = (d.tasks && d.tasks.length) ? openTasks : '—';
+    // Pull pipeline tasks for current stage from cq_tasks_{clientId}
+    var _pipelineTasks = [];
+    try {
+      var _PIPELINE_CLIENT_TASKS = [
+        ['Upload Experian Login Credentials','Confirm Personal Information','Upload ID + Proof of Address','Complete Onboarding Form'],
+        ['Remove Inquiries','Turn Off Fraud Alerts','Add Authorized User','Pay Down Utilization'],
+        ['Confirm Business Information','Provide Business Details','Approve Funding Plan'],
+        ['Assign Target Banks','Track Personal Account Open Date','Verify Business Account & Open Date','Open Business Account & Deposit Funds'],
+        ['Attend Bank Appointment','Confirm Submission','Upload Requested Documents','Handle Reconsideration Calls'],
+        ['Accept Offer','Upload Approval Letters','Confirm Card Received']
+      ];
+      var _pt = JSON.parse(localStorage.getItem('cq_tasks_' + d._clientId) || 'null');
+      if (_pt && typeof _pt.stage === 'number') {
+        var _si = _pt.stage;
+        var _stageTasks = _PIPELINE_CLIENT_TASKS[_si] || [];
+        var _assigned = (_pt.assigned && _pt.assigned[_si] !== undefined) ? _pt.assigned[_si] : null;
+        var _indices = _assigned !== null ? _assigned : _stageTasks.map(function(_,i){ return i; });
+        _indices.forEach(function(ti) {
+          var label = _stageTasks[ti];
+          if (!label) return;
+          var key = 's' + _si + 'c' + ti;
+          var checked = !!(_pt.checked && _pt.checked[key]);
+          _pipelineTasks.push({ text: label, status: checked ? 'done' : 'todo' });
+        });
+      }
+    } catch(e) {}
+    var _activeTasks = _pipelineTasks.length ? _pipelineTasks : (d.tasks || []);
+    const openTasks = _activeTasks.filter(t => t.status !== 'done').length;
+    const st = document.getElementById('s-tasks'); if(st) st.textContent = _activeTasks.length ? openTasks : '—';
 
     // Sidebar client name + avatar initials
     const sn = document.querySelector('.client-info .name'); if(sn) sn.textContent = (fn + (ln ? ' ' + ln : '')).trim();
@@ -3375,10 +3402,10 @@
     const pmiles = document.getElementById('progress-miles-full'); if(pmiles) pmiles.textContent = cs + ' of ' + stages.length + ' milestones completed';
 
     // Tasks
-    renderTaskList('task-list-mini', d.tasks||[], true);
-    renderTaskList('task-list-full', d.tasks||[], false);
+    renderTaskList('task-list-mini', _activeTasks, true);
+    renderTaskList('task-list-full', _activeTasks, false);
     const tm = document.getElementById('tasks-meta');
-    if(tm) tm.textContent = 'Admin-managed · ' + openTasks + ' open task' + (openTasks!==1?'s':'');
+    if(tm) tm.textContent = 'Pipeline tasks · ' + openTasks + ' open task' + (openTasks!==1?'s':'');
     const nb = document.getElementById('nb-tasks');
     if(nb) { nb.textContent = openTasks; nb.style.display = openTasks > 0 ? '' : 'none'; }
 
