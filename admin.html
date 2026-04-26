@@ -6745,6 +6745,8 @@
 
 
 
+
+
   // ══════════════════════════════════════════════════
   //  PIPELINE — 6-stage client funding task system
   // ══════════════════════════════════════════════════
@@ -6796,10 +6798,9 @@
   function plGetProgress(id, stageIdx) {
     var t = initClientTasks(id);
     var s = PIPELINE_STAGES[stageIdx];
-    var assigned = t.assigned[stageIdx] || [];
-    var total = assigned.length + s.internal.length;
+    var total = s.client.length + s.internal.length;
     var done = 0;
-    assigned.forEach(function(i){ if(t.checked['s'+stageIdx+'c'+i]) done++; });
+    s.client.forEach(function(_,i){ if(t.checked['s'+stageIdx+'c'+i]) done++; });
     s.internal.forEach(function(_,i){ if(t.checked['s'+stageIdx+'i'+i]) done++; });
     return { total: total, done: done };
   }
@@ -6921,7 +6922,7 @@
     var days = plDaysInStage(clientId, viewStage);
     var isCurrentStage = viewStage === t2.stage;
     var allInternalDone = stage.internal.every(function(_,i){ return t2.checked['s'+viewStage+'i'+i]; });
-    var allClientDone   = assigned.length === 0 || assigned.every(function(i){ return t2.checked['s'+viewStage+'c'+i]; });
+    var allClientDone   = stage.client.every(function(_,i){ return t2.checked['s'+viewStage+'c'+i]; });
     var canAdvance = isCurrentStage && allInternalDone && allClientDone;
     var isFinal = viewStage === PIPELINE_STAGES.length - 1;
 
@@ -6954,24 +6955,14 @@
       return taskRow(key, task, chk, 'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')', null);
     }).join('');
 
-    var clientRows = assigned.length
-      ? assigned.map(function(idx) {
-          var key = 's' + viewStage + 'c' + idx;
-          var chk = !!t2.checked[key];
-          return taskRow(key, stage.client[idx], chk,
-            'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')',
-            'plRemoveAssigned(\'' + clientId + '\',' + viewStage + ',' + idx + ')'
-          );
-        }).join('')
-      : '<div style="font-size:12px;color:#94a3b8;font-style:italic;padding:8px 12px;background:#f8fafc;border-radius:10px;border:1.5px dashed #e2e8f0">No client tasks — click below to add</div>';
-
-    // Unassigned tasks for "add" dropdown
-    var unassigned = stage.client.map(function(_,i){ return i; }).filter(function(i){ return assigned.indexOf(i) === -1; });
-    var addRows = unassigned.map(function(idx) {
-      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .1s" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'" onclick="plToggleAssign(\'' + clientId + '\',' + viewStage + ',' + idx + ')">'
-        + '<div style="width:16px;height:16px;border-radius:4px;border:2px solid #cbd5e1;background:#fff;flex-shrink:0"></div>'
-        + '<span style="font-size:13px;color:#0f2044">' + stage.client[idx] + '</span></div>';
+    // All client tasks shown as plain checklist — no dropdown, no remove
+    var clientRows = stage.client.map(function(task, idx) {
+      var key = 's' + viewStage + 'c' + idx;
+      var chk = !!t2.checked[key];
+      return taskRow(key, task, chk, 'plToggle(\'' + clientId + '\',\'' + key + '\',' + viewStage + ')', null);
     }).join('');
+
+    var unassigned = []; // no add-task dropdown needed
 
     // Circular progress SVG (40px)
     var r = 16; var circ = 2 * Math.PI * r;
@@ -7032,7 +7023,7 @@
       + '<div style="font-size:10px;font-weight:800;color:' + stage.color + ';text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:6px">'
       + '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>'
       + 'Client Tasks</div>'
-      + '<span style="font-size:10px;color:#94a3b8">' + assigned.filter(function(i){ return t2.checked['s'+viewStage+'c'+i]; }).length + '/' + assigned.length + ' done</span></div>'
+      + '<span style="font-size:10px;color:#94a3b8">' + stage.client.filter(function(_,i){ return t2.checked['s'+viewStage+'c'+i]; }).length + '/' + stage.client.length + ' done</span></div>'
       + clientRows
 
       // Add task button (only shows if unassigned tasks exist)
@@ -7082,9 +7073,8 @@
     saveClientTasks(clientId, t);
     if (viewStage === t.stage) {
       var stage = PIPELINE_STAGES[viewStage];
-      var assigned = t.assigned[viewStage] || [];
       var allInternalDone = stage.internal.every(function(_,i){ return t.checked['s'+viewStage+'i'+i]; });
-      var allClientDone   = assigned.length === 0 || assigned.every(function(i){ return t.checked['s'+viewStage+'c'+i]; });
+      var allClientDone   = stage.client.every(function(_,i){ return t.checked['s'+viewStage+'c'+i]; });
       if (allInternalDone && allClientDone) {
         setTimeout(function() { plAdvance(clientId, viewStage); }, 700);
         return;
@@ -7119,6 +7109,7 @@
     }
     renderPipeline();
   }
+
 
 
 
