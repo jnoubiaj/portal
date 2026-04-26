@@ -5,7 +5,7 @@ let html = fs.readFileSync(__dirname + '/admin.html', 'utf8');
 
 // ── 1. Replace CSS block ──────────────────────────────────────────────────────
 const OLD_CSS_START = '    /* ── Pipeline ─────────────────────────────── */\r\n    .pl-board{';
-const OLD_CSS_END   = '    .pl-advance-btn:disabled{background:var(--gray-300);cursor:not-allowed}\r\n';
+const OLD_CSS_END   = '    .pl-advance-btn:disabled{background:#cbd5e1 !important;cursor:not-allowed;opacity:1}\r\n';
 const cssStart = html.indexOf(OLD_CSS_START);
 const cssEnd   = html.indexOf(OLD_CSS_END);
 if (cssStart === -1) { console.error('CSS start not found'); process.exit(1); }
