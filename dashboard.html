@@ -3442,30 +3442,24 @@
     if (_sess && _sess.clientId) {
       fsGetDash(_sess.clientId).then(fd => {
         if (!fd) return;
-        // Sync pipelineTasks so dashboard can render them
-        if (fd.pipelineTasks !== undefined) {
-          window._fsPipelineTasks = fd.pipelineTasks;
-        }
-        // Sync adminDocs into localStorage so renderAllDocs can display them
-        if (fd.adminDocs !== undefined) {
-          try {
-            const k = 'cq_dash_' + _sess.clientId;
-            const cached = JSON.parse(localStorage.getItem(k) || '{}');
-            cached.adminDocs = fd.adminDocs;
-            localStorage.setItem(k, JSON.stringify(cached));
-            if (_sess.email) {
-              const ek = 'cq_dash_email_' + _sess.email.toLowerCase();
-              const ec = JSON.parse(localStorage.getItem(ek) || '{}');
-              ec.adminDocs = fd.adminDocs;
-              localStorage.setItem(ek, JSON.stringify(ec));
-            }
-          } catch(e) {}
-          renderAllDocs();
-          renderLatestDocs(fd);
-        }
+        // Sync pipelineTasks so task list renders on next loadDashboardData call
+        if (fd.pipelineTasks !== undefined) window._fsPipelineTasks = fd.pipelineTasks;
+        // Sync adminDocs into localStorage so renderAllDocs + renderLatestDocs can display them
+        try {
+          const k = 'cq_dash_' + _sess.clientId;
+          const cached = JSON.parse(localStorage.getItem(k) || '{}');
+          if (fd.adminDocs !== undefined) cached.adminDocs = fd.adminDocs;
+          localStorage.setItem(k, JSON.stringify(cached));
+          if (_sess.email) {
+            const ek = 'cq_dash_email_' + _sess.email.toLowerCase();
+            const ec = JSON.parse(localStorage.getItem(ek) || '{}');
+            if (fd.adminDocs !== undefined) ec.adminDocs = fd.adminDocs;
+            localStorage.setItem(ek, JSON.stringify(ec));
+          }
+        } catch(e) {}
+        renderAllDocs();
+        renderLatestDocs(fd.adminDocs !== undefined ? fd : getDashData());
         docUpdateFromFirestore(fd);
-        // Re-render dashboard with latest Firebase data (tasks, docs, stage)
-        loadDashboardData();
       }).catch(()=>{});
     }
   }
