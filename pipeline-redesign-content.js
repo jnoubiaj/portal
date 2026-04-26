@@ -28,7 +28,7 @@
       color: '#f97316', light: '#fff7ed', border: '#fed7aa', dark: '#c2410c',
       client:   ['Attend Bank Appointment','Confirm Submission','Upload Requested Documents'],
       internal: ['Introduce Client to BRM','Submit Applications','Track Application Dates','Handle Reconsideration Calls'],
-      idays:    [2, 3, null, 5] },
+      idays:    [1, 3, null, 5] },
     { name: 'Decision / Results',  sub: 'Approved & Funded',
       color: '#059669', light: '#ecfdf5', border: '#6ee7b7', dark: '#065f46',
       client:   ['Accept Offer','Upload Approval Letters','Confirm Card Received'],
