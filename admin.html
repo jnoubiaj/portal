@@ -6930,6 +6930,17 @@
     var t = initClientTasks(clientId);
     t.checked[key] = !t.checked[key];
     saveClientTasks(clientId, t);
+    // Auto-advance when all internal tasks for the current stage are done
+    if (viewStage === t.stage) {
+      var stage = PIPELINE_STAGES[viewStage];
+      var assigned = t.assigned[viewStage] || [];
+      var allInternalDone = stage.internal.every(function(_,i){ return t.checked['s'+viewStage+'i'+i]; });
+      var allClientDone   = assigned.length === 0 || assigned.every(function(i){ return t.checked['s'+viewStage+'c'+i]; });
+      if (allInternalDone && allClientDone) {
+        setTimeout(function() { plAdvance(clientId, viewStage); }, 600);
+        return;
+      }
+    }
     renderTaskModal(clientId, viewStage);
     renderPipeline();
   }
