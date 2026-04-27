@@ -1037,7 +1037,7 @@
           await _recaptchaVerifier.render();
         }
         _confirmationResult = await firebase.auth().signInWithPhoneNumber(phone, _recaptchaVerifier);
-        document.getElementById('code-sent-msg').textContent = 'Code sent to ' + raw;
+        document.getElementById('code-sent-msg').textContent = 'Code sent to ' + phone + ' — check your SMS';
         document.getElementById('step-phone').style.display = 'none';
         document.getElementById('step-code').style.display = '';
         setTimeout(function(){ document.getElementById('loginCode').focus(); }, 100);
