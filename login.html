@@ -990,6 +990,16 @@
     let _confirmationResult = null;
     let _recaptchaVerifier = null;
 
+    // Initialize reCAPTCHA on page load so it's ready before button click
+    window.addEventListener('load', function() {
+      try {
+        _recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+          size: 'invisible', callback: function() {}
+        });
+        _recaptchaVerifier.render();
+      } catch(e) { _recaptchaVerifier = null; }
+    });
+
     function resetPhoneLogin() {
       document.getElementById('step-phone').style.display = '';
       document.getElementById('step-code').style.display = 'none';
@@ -998,6 +1008,12 @@
       hideLoginError(1);
       hideLoginError(2);
       _confirmationResult = null;
+      // Re-init reCAPTCHA
+      try {
+        if (_recaptchaVerifier) { _recaptchaVerifier.clear(); _recaptchaVerifier = null; }
+        _recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible', callback: function(){} });
+        _recaptchaVerifier.render();
+      } catch(e) {}
     }
 
     async function sendSmsCode() {
@@ -1018,6 +1034,7 @@
           _recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
             size: 'invisible', callback: function() {}
           });
+          await _recaptchaVerifier.render();
         }
         _confirmationResult = await firebase.auth().signInWithPhoneNumber(phone, _recaptchaVerifier);
         document.getElementById('code-sent-msg').textContent = 'Code sent to ' + raw;
@@ -1025,10 +1042,15 @@
         document.getElementById('step-code').style.display = '';
         setTimeout(function(){ document.getElementById('loginCode').focus(); }, 100);
       } catch(e) {
-        _recaptchaVerifier = null; // reset so it can retry
+        console.error('Phone auth error:', e.code, e.message);
+        try { if (_recaptchaVerifier) { _recaptchaVerifier.clear(); } } catch(ce) {}
+        _recaptchaVerifier = null;
         const msg = e.code === 'auth/invalid-phone-number' ? 'Invalid phone number — please include area code.'
           : e.code === 'auth/too-many-requests' ? 'Too many attempts. Please try again later.'
-          : 'Could not send code. Please try again.';
+          : e.code === 'auth/captcha-check-failed' ? 'Security check failed — please refresh and try again.'
+          : e.code === 'auth/quota-exceeded' ? 'SMS quota exceeded. Please try again later.'
+          : e.code === 'auth/missing-phone-number' ? 'Please enter a valid phone number.'
+          : 'Error: ' + (e.code || e.message || 'unknown') + '. Please try again.';
         showLoginError(msg, 1);
         if (btn) { btn.disabled = false; btn.textContent = 'Send Verification Code'; }
       }
