@@ -1980,7 +1980,7 @@
       _notifUnsubs.push(msgUnsub);
     } catch(e) {}
 
-    // ── Dashboard / document upload listener ─────
+    // ── Dashboard / document upload + task completion listener ─────
     try {
       var dashPrev = {};
       var dashUnsub = db.collection('dashboards').onSnapshot(function(snap) {
@@ -1988,16 +1988,30 @@
           if (change.type === 'removed') return;
           var clientId = change.doc.id;
           var data = change.doc.data();
+          var prev = dashPrev[clientId] || {};
+
+          // Document uploads
           var docs = data.docClientFiles || [];
-          var prev = dashPrev[clientId] || [];
+          var prevDocs = prev.docClientFiles || [];
           var newDocs = docs.filter(function(d) {
             return d.date && d.date > _notifInitTs
-              && !prev.some(function(p){ return p.url === d.url; });
+              && !prevDocs.some(function(p){ return p.url === d.url; });
           });
           newDocs.forEach(function(d) {
             addNotif('document', clientId, _notifClientName(clientId) + ' uploaded a document: "' + (d.name || 'Untitled') + '"');
           });
-          dashPrev[clientId] = docs;
+
+          // Client task completions
+          var checked = (data.pipelineTasks && data.pipelineTasks.checked) || {};
+          var prevChecked = (prev.pipelineTasks && prev.pipelineTasks.checked) || {};
+          var newlyChecked = Object.keys(checked).filter(function(k) {
+            return checked[k] && !prevChecked[k];
+          });
+          if (newlyChecked.length > 0 && Object.keys(prevChecked).length > 0) {
+            addNotif('task', clientId, _notifClientName(clientId) + ' completed ' + newlyChecked.length + ' task' + (newlyChecked.length > 1 ? 's' : ''));
+          }
+
+          dashPrev[clientId] = data;
         });
       }, function(){});
       _notifUnsubs.push(dashUnsub);
