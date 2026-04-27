@@ -4630,7 +4630,7 @@
       if (!_pt.stageStartedAt[_newStage]) _pt.stageStartedAt[_newStage] = Date.now();
     }
     saveClientTasks(clientId, _pt);
-    if (typeof renderPipeline === 'function') renderPipeline();
+    if (typeof renderPipeline === 'function') { renderPipeline(); renderOvClientTasks(); }
     // Toast
     const toast = document.getElementById('stage-saved-toast-'+clientId);
     if (toast) { toast.textContent = '✓ Stage updated & published'; toast.style.opacity='1'; setTimeout(()=>toast.style.opacity='0',2500); }
@@ -7271,6 +7271,7 @@
     saveClientTasks(clientId, t);
     renderTaskModal(clientId, stageIdx);
     renderPipeline();
+    renderOvClientTasks();
   }
 
   function plToggleAssign(clientId, stageIdx, taskIdx) {
@@ -7282,6 +7283,7 @@
     saveClientTasks(clientId, t);
     renderTaskModal(clientId, stageIdx);
     renderPipeline();
+    renderOvClientTasks();
   }
 
   function plToggle(clientId, key, viewStage) {
@@ -7290,6 +7292,7 @@
     saveClientTasks(clientId, t);
     renderTaskModal(clientId, viewStage);
     renderPipeline();
+    renderOvClientTasks();
   }
 
   function plAdvance(clientId, currentStage) {
@@ -7312,6 +7315,7 @@
       document.getElementById('pl-modal-bg').remove();
     }
     renderPipeline();
+    renderOvClientTasks();
   }
 
 
