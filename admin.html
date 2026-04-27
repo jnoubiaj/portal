@@ -7714,9 +7714,38 @@
       + (isFinal
           ? '&#x1F389;&nbsp; Mark Complete — Client Funded!'
           : (canAdvance ? '&#x2705;&nbsp; All Done — Advancing to S' + (viewStage+2) + '...' : 'Complete all tasks to advance to S' + (viewStage+2)))
-      + '</button></div></div>';
+      + '</button>'
+      + '<div style="margin-top:10px;display:flex;align-items:center;gap:8px">'
+      + '<span style="font-size:11px;color:#94a3b8;white-space:nowrap">Move to stage:</span>'
+      + '<select onchange="plMoveToStage(\'' + clientId + '\',parseInt(this.value))" style="flex:1;height:32px;padding:0 8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:var(--font-b);color:#0f2044;background:#fff;cursor:pointer;outline:none">'
+      + '<option value="" disabled selected>Select stage…</option>'
+      + PIPELINE_STAGES.map(function(s, si) {
+          return '<option value="' + si + '"' + (si === t2.stage ? ' style="font-weight:700"' : '') + '>'
+            + 'S' + (si+1) + ' — ' + s.name + (si === t2.stage ? ' (current)' : '') + '</option>';
+        }).join('')
+      + '</select>'
+      + '</div>'
+      + '</div></div>';
 
     document.body.appendChild(bg);
+  }
+
+  function plMoveToStage(clientId, newStage) {
+    if (isNaN(newStage) || newStage < 0 || newStage >= PIPELINE_STAGES.length) return;
+    var t = initClientTasks(clientId);
+    if (newStage === t.stage) { renderTaskModal(clientId, newStage); return; }
+    t.stage = newStage;
+    if (!t.stageStartedAt) t.stageStartedAt = {};
+    if (!t.stageStartedAt[newStage]) t.stageStartedAt[newStage] = Date.now();
+    saveClientTasks(clientId, t);
+    var d = getDashData(clientId);
+    d.currentStage = newStage + 1;
+    saveDashData(clientId, d);
+    var c = getClient(clientId);
+    logActivity('Client <strong>' + (c ? c.fname + ' ' + c.lname : clientId) + '</strong> moved to S' + (newStage+1) + ' — ' + PIPELINE_STAGES[newStage].name, PIPELINE_STAGES[newStage].color);
+    renderTaskModal(clientId, newStage);
+    renderPipeline();
+    renderOvClientTasks();
   }
 
   function plRemoveAssigned(clientId, stageIdx, taskIdx) {
