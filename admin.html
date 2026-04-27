@@ -6898,7 +6898,12 @@
     var withTasks = active.filter(function(c) {
       var t = getClientTasks(c.id);
       if (!t) return false;
-      return ((t.assigned && t.assigned[t.stage]) || []).length > 0;
+      var si = t.stage;
+      var stage = PIPELINE_STAGES[si];
+      var anyInternal = stage.internal.some(function(_, i){ return !t.checked['s'+si+'i'+i]; });
+      var assigned = (t.assigned && t.assigned[si]) || [];
+      var anyClient = assigned.some(function(ti){ return !t.checked['s'+si+'c'+ti]; });
+      return anyInternal || anyClient;
     });
     if (!withTasks.length) return;
     window._ovTaskIdx = (((window._ovTaskIdx || 0) + dir) + withTasks.length) % withTasks.length;
