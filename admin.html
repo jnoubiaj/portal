@@ -1118,16 +1118,21 @@
           <div class="ov-kpi-row" id="ov-kpi-row"></div>
           <!-- Client Task Ownership Table -->
           <div id="ov-task-section"></div>
-          <!-- Pipeline Board -->
-          <div style="margin-top:32px;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.05);overflow:hidden">
-            <div style="padding:18px 24px 0;border-bottom:1.5px solid #e2e8f0;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;padding-bottom:14px">
-              <div>
-                <div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:#0f2044;letter-spacing:-0.02em">Pipeline</div>
-                <div style="font-size:12px;color:#64748b;margin-top:2px">Client progress across all stages</div>
+          <!-- Client Tasks + Pipeline Row -->
+          <div style="display:flex;gap:20px;margin-top:32px;align-items:flex-start">
+            <!-- Left: Client Tasks Queue -->
+            <div id="ov-client-tasks-panel" style="flex:0 0 300px;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.05);overflow:hidden"></div>
+            <!-- Right: Pipeline -->
+            <div style="flex:1;min-width:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.05);overflow:hidden">
+              <div style="padding:14px 24px;border-bottom:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+                <div>
+                  <div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:#0f2044;letter-spacing:-0.02em">Pipeline</div>
+                  <div style="font-size:12px;color:#64748b;margin-top:2px">Client progress across all stages</div>
+                </div>
+                <button onclick="switchAdminSection('pipeline',document.querySelector('.a-nav-item[onclick*=\'pipeline\']'))" style="font-size:12px;font-weight:600;color:#22A7F0;background:none;border:1.5px solid #bfdbfe;border-radius:8px;padding:5px 14px;cursor:pointer;font-family:var(--font-b);transition:background .15s" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='none'">View Full Board</button>
               </div>
-              <button onclick="switchAdminSection('pipeline',document.querySelector('.a-nav-item[onclick*=\'pipeline\']'))" style="font-size:12px;font-weight:600;color:#22A7F0;background:none;border:1.5px solid #bfdbfe;border-radius:8px;padding:5px 14px;cursor:pointer;font-family:var(--font-b);transition:background .15s" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='none'">View Full Board</button>
+              <div id="ov-pipeline-wrap" style="padding:0 20px 20px"></div>
             </div>
-            <div id="ov-pipeline-wrap" style="padding:0 20px 20px"></div>
           </div>
         </div>
 
@@ -1748,6 +1753,7 @@
     try { renderOvKpi(); } catch(e) { console.error('renderOvKpi', e); }
     try { renderOvTaskTable(); } catch(e) { console.error('renderOvTaskTable', e); }
     try { renderPipeline(); } catch(e) { console.error('renderPipeline in overview', e); }
+    try { renderOvClientTasks(); } catch(e) { console.error('renderOvClientTasks', e); }
   }
 
   function renderOvCards() {
@@ -6875,6 +6881,136 @@
 
   function plInitials(c) {
     return ((c.fname||'?')[0] + (c.lname||'?')[0]).toUpperCase();
+  }
+
+  // ── OVERVIEW: CLIENT TASKS QUEUE ─────────────────────────────────────────
+
+  function ovPlToggle(clientId, key, viewStage) {
+    var t = initClientTasks(clientId);
+    t.checked[key] = !t.checked[key];
+    saveClientTasks(clientId, t);
+    renderOvClientTasks();
+    renderPipeline();
+  }
+
+  function ovTaskNav(dir) {
+    var active = clients.filter(function(c){ return !c.archived; });
+    var withTasks = active.filter(function(c) {
+      var t = getClientTasks(c.id);
+      if (!t) return false;
+      return ((t.assigned && t.assigned[t.stage]) || []).length > 0;
+    });
+    if (!withTasks.length) return;
+    window._ovTaskIdx = (((window._ovTaskIdx || 0) + dir) + withTasks.length) % withTasks.length;
+    renderOvClientTasks();
+  }
+
+  function renderOvClientTasks() {
+    var panel = document.getElementById('ov-client-tasks-panel');
+    if (!panel) return;
+
+    var active = clients.filter(function(c){ return !c.archived; });
+    // Include any client in the pipeline who has at least one unchecked task this stage
+    var withTasks = active.filter(function(c) {
+      var t = getClientTasks(c.id);
+      if (!t) return false;
+      var si = t.stage;
+      var stage = PIPELINE_STAGES[si];
+      // Check if any internal task is unchecked
+      var anyInternal = stage.internal.some(function(_, i){ return !t.checked['s'+si+'i'+i]; });
+      // Check if any assigned client task is unchecked
+      var assigned = (t.assigned && t.assigned[si]) || [];
+      var anyClient = assigned.some(function(ti){ return !t.checked['s'+si+'c'+ti]; });
+      return anyInternal || anyClient;
+    });
+
+    if (withTasks.length === 0) {
+      panel.innerHTML = '<div style="padding:24px 20px;text-align:center">'
+        + '<div style="width:44px;height:44px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">'
+        + '<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>'
+        + '<div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:#0f2044;margin-bottom:6px">All Caught Up</div>'
+        + '<div style="font-size:12px;color:#94a3b8">No pending tasks across any client.</div></div>';
+      return;
+    }
+
+    if (window._ovTaskIdx === undefined || window._ovTaskIdx >= withTasks.length) window._ovTaskIdx = 0;
+    var idx = window._ovTaskIdx;
+    var c = withTasks[idx];
+    var t = initClientTasks(c.id);
+    var si = t.stage;
+    var stage = PIPELINE_STAGES[si];
+    var assigned = (t.assigned && t.assigned[si]) || [];
+    var p = plGetProgress(c.id, si);
+    var pct = p.total ? Math.round(p.done / p.total * 100) : 0;
+    var days = plDaysInStage(c.id, si);
+    var stageStart = (t.stageStartedAt && t.stageStartedAt[si]) ? t.stageStartedAt[si] : null;
+
+    function taskRow(key, label, chk, isDue) {
+      return '<div onclick="ovPlToggle(\'' + c.id + '\',\'' + key + '\',' + si + ')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;margin-bottom:5px;background:' + (chk ? stage.light : '#f8fafc') + ';border:1.5px solid ' + (chk ? stage.border : '#f1f5f9') + ';cursor:pointer;transition:all .15s">'
+        + '<div style="width:18px;height:18px;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px solid ' + (chk ? stage.color : '#cbd5e1') + ';background:' + (chk ? stage.color : '#fff') + ';transition:all .15s">'
+        + (chk ? '<svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '')
+        + '</div>'
+        + '<span style="flex:1;font-size:12px;font-weight:' + (chk ? '400' : '600') + ';color:' + (chk ? '#94a3b8' : '#0f2044') + ';' + (chk ? 'text-decoration:line-through' : '') + '">' + label + '</span>'
+        + (isDue && !chk ? '<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fee2e2;padding:1px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0">Due</span>' : '')
+        + '</div>';
+    }
+
+    // Internal tasks
+    var intRows = stage.internal.map(function(task, i) {
+      var key = 's' + si + 'i' + i;
+      var chk = !!t.checked[key];
+      var offsetDays = (stage.idays && stage.idays[i] !== undefined) ? stage.idays[i] : null;
+      var isDue = false;
+      if (stageStart && offsetDays !== null && !chk) {
+        var dueTs = stageStart + offsetDays * 86400000;
+        isDue = Date.now() >= dueTs;
+      }
+      return taskRow(key, task, chk, isDue);
+    }).join('');
+
+    // Client tasks (assigned only)
+    var clientRows = assigned.length
+      ? assigned.map(function(ti) {
+          var key = 's' + si + 'c' + ti;
+          var chk = !!t.checked[key];
+          return taskRow(key, stage.client[ti] || '', chk, false);
+        }).join('')
+      : '';
+
+    panel.innerHTML =
+      // Header
+      '<div style="padding:16px 20px 14px;border-bottom:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">'
+      + '<div><div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:#0f2044;letter-spacing:-0.02em">Tasks Due</div>'
+      + '<div style="font-size:12px;color:#64748b;margin-top:2px">' + withTasks.length + ' client' + (withTasks.length !== 1 ? 's' : '') + ' with pending tasks</div></div>'
+      + '</div>'
+      // Navigator
+      + '<div style="padding:10px 20px;border-bottom:1.5px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;background:#fafbfc">'
+      + '<button onclick="ovTaskNav(-1)" style="width:28px;height:28px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:16px;color:#64748b;line-height:1;transition:background .15s" onmouseover="this.style.background=\'#f1f5f9\'" onmouseout="this.style.background=\'#fff\'">&#x2039;</button>'
+      + '<span style="font-size:12px;font-weight:600;color:#64748b">' + (idx + 1) + ' <span style="color:#cbd5e1">of</span> ' + withTasks.length + '</span>'
+      + '<button onclick="ovTaskNav(1)" style="width:28px;height:28px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:16px;color:#64748b;line-height:1;transition:background .15s" onmouseover="this.style.background=\'#f1f5f9\'" onmouseout="this.style.background=\'#fff\'">&#x203a;</button>'
+      + '</div>'
+      // Client info
+      + '<div style="padding:14px 20px 12px;border-bottom:1.5px solid #f1f5f9">'
+      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'
+      + '<div style="width:38px;height:38px;border-radius:10px;background:' + stage.light + ';color:' + stage.color + ';font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + plInitials(c) + '</div>'
+      + '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#0f2044;font-family:var(--font-h)">' + c.fname + ' ' + c.lname + '</div>'
+      + '<div style="font-size:11px;color:#64748b">' + (c.fico ? 'FICO ' + c.fico : c.email || '—') + '</div></div>'
+      + plDaysBadge(days) + '</div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+      + '<span style="font-size:10px;font-weight:800;color:#fff;background:' + stage.color + ';padding:3px 10px;border-radius:20px">S' + (si + 1) + ' ' + stage.name + '</span>'
+      + '<span style="font-size:11px;font-weight:700;color:' + stage.color + '">' + p.done + '/' + p.total + ' done</span></div>'
+      + '<div style="height:4px;background:#e2e8f0;border-radius:99px;overflow:hidden"><div style="height:100%;background:' + stage.color + ';border-radius:99px;width:' + pct + '%;transition:width .3s"></div></div>'
+      + '</div>'
+      // Task lists
+      + '<div style="padding:12px 20px 6px;max-height:320px;overflow-y:auto">'
+      + '<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Internal</div>'
+      + intRows
+      + (clientRows ? '<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin:12px 0 8px">Client</div>' + clientRows : '')
+      + '</div>'
+      // Footer button
+      + '<div style="padding:10px 20px 16px">'
+      + '<button onclick="openTaskModal(\'' + c.id + '\')" style="width:100%;height:36px;background:#0f2044;border:none;border-radius:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--font-b);transition:background .15s" onmouseover="this.style.background=\'#1a3a6b\'" onmouseout="this.style.background=\'#0f2044\'">Open Full Task View &#x2197;</button>'
+      + '</div>';
   }
 
   function renderPipeline() {
