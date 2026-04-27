@@ -1119,7 +1119,16 @@
           <!-- Client Task Ownership Table -->
           <div id="ov-task-section"></div>
           <!-- Pipeline Board -->
-          <div id="ov-pipeline-wrap" style="margin-top:32px"></div>
+          <div style="margin-top:32px;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.05);overflow:hidden">
+            <div style="padding:18px 24px 0;border-bottom:1.5px solid #e2e8f0;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;padding-bottom:14px">
+              <div>
+                <div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:#0f2044;letter-spacing:-0.02em">Pipeline</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px">Client progress across all stages</div>
+              </div>
+              <button onclick="switchAdminSection('pipeline',document.querySelector('.a-nav-item[onclick*=\'pipeline\']'))" style="font-size:12px;font-weight:600;color:#22A7F0;background:none;border:1.5px solid #bfdbfe;border-radius:8px;padding:5px 14px;cursor:pointer;font-family:var(--font-b);transition:background .15s" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='none'">View Full Board</button>
+            </div>
+            <div id="ov-pipeline-wrap" style="padding:0 20px 20px"></div>
+          </div>
         </div>
 
         <!-- CLIENTS -->
