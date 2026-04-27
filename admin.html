@@ -1988,6 +1988,14 @@
           if (change.type === 'removed') return;
           var clientId = change.doc.id;
           var data = change.doc.data();
+
+          // 'added' = initial load — just set baseline, no notifications
+          if (change.type === 'added') {
+            dashPrev[clientId] = data;
+            return;
+          }
+
+          // 'modified' = real change
           var prev = dashPrev[clientId] || {};
 
           // Document uploads
@@ -2007,7 +2015,7 @@
           var newlyChecked = Object.keys(checked).filter(function(k) {
             return checked[k] && !prevChecked[k];
           });
-          if (newlyChecked.length > 0 && Object.keys(prevChecked).length > 0) {
+          if (newlyChecked.length > 0) {
             addNotif('task', clientId, _notifClientName(clientId) + ' completed ' + newlyChecked.length + ' task' + (newlyChecked.length > 1 ? 's' : ''));
           }
 
