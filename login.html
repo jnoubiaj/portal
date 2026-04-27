@@ -1130,8 +1130,8 @@
             return;
           }
         }
-        // 2. Firestore onboarding data — form was submitted (has bizName) or contract signed (not just pre-skipped)
-        if (fsOnboard && (fsOnboard.bizName || (fsOnboard.contractSigned === 'signed' && !fsOnboard.contractSkipped))) {
+        // 2. Firestore onboarding data — complete if onboardingComplete flag OR bizName submitted OR all steps were skipped
+        if (fsOnboard && (fsOnboard.onboardingComplete || fsOnboard.bizName || (fsOnboard.contractSigned === 'signed' && !fsOnboard.contractSkipped))) {
           window.location.replace('dashboard.html');
           return;
         }

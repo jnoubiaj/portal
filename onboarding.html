@@ -1788,6 +1788,17 @@
     // Hide step indicators — they're confusing when steps are skipped
     const hdr = document.querySelector('.onboard-header');
     if (hdr) hdr.style.display = 'none';
+    // All 3 skipped — mark complete and go straight to dashboard
+    if (skips.includes('contract') && skips.includes('personal') && skips.includes('business')) {
+      // Mark onboarding complete in Firestore so login never sends here again
+      try {
+        fsSetOnboarding(_cid, { onboardingComplete: true, contractSigned: 'signed', contractSkipped: true }).catch(()=>{});
+        const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+        const idx = adminClients.findIndex(c => c.id === _cid);
+        if (idx !== -1) { adminClients[idx].onboardingComplete = true; localStorage.setItem('cq_admin_clients', JSON.stringify(adminClients)); }
+      } catch(e) {}
+      window.location.replace('dashboard.html');
+    }
   })();
 
   function buildPaymentClause(contractKey, feeAmount, feePct) {
