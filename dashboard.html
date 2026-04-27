@@ -2956,7 +2956,8 @@
         const od = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null')
                 || JSON.parse(localStorage.getItem('cq_onboard_data') || 'null');
         if (od) {
-          if (!base.clientName && od.firstName) base.clientName = od.firstName;
+          // Always prefer real first name from onboarding over email-prefix display name
+          if (od.firstName) base.clientName = od.firstName;
           if (od.lastName) lastName = od.lastName;
         }
       } catch(e) {}
