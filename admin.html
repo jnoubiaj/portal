@@ -1118,6 +1118,8 @@
           <div class="ov-kpi-row" id="ov-kpi-row"></div>
           <!-- Client Task Ownership Table -->
           <div id="ov-task-section"></div>
+          <!-- Pipeline Board -->
+          <div id="ov-pipeline-wrap" style="margin-top:32px"></div>
         </div>
 
         <!-- CLIENTS -->
@@ -1736,6 +1738,7 @@
     try { renderOvClientTable(); } catch(e) { console.error('renderOvClientTable', e); }
     try { renderOvKpi(); } catch(e) { console.error('renderOvKpi', e); }
     try { renderOvTaskTable(); } catch(e) { console.error('renderOvTaskTable', e); }
+    try { renderPipeline(); } catch(e) { console.error('renderPipeline in overview', e); }
   }
 
   function renderOvCards() {
@@ -6867,7 +6870,9 @@
 
   function renderPipeline() {
     var wrap = document.getElementById('pipeline-board-wrap');
-    if (!wrap) return;
+    var ovWrap = document.getElementById('ov-pipeline-wrap');
+    if (!wrap && !ovWrap) return;
+    if (!wrap) { wrap = ovWrap; ovWrap = null; }
     var active = clients.filter(function(c){ return !c.archived; });
     var unstarted = active.filter(function(c){ return !getClientTasks(c.id); });
 
@@ -6949,7 +6954,9 @@
       + '<span class="pl-col-badge" style="background:#94a3b8">' + unstarted.length + '</span></div>'
       + unCards + '</div>';
 
-    wrap.innerHTML = summaryBar + '<div class="pl-board">' + unCol + cols + '</div>';
+    var html = summaryBar + '<div class="pl-board">' + unCol + cols + '</div>';
+    wrap.innerHTML = html;
+    if (ovWrap) ovWrap.innerHTML = html;
   }
 
   function openTaskModal(clientId) { renderTaskModal(clientId, initClientTasks(clientId).stage); }
