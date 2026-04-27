@@ -3359,6 +3359,16 @@
       } catch(e) {}
     }
 
+    window.toggleSSN = function(clientId, ssn) {
+      const val = document.getElementById('ssn-val-'+clientId);
+      const btn = document.getElementById('ssn-btn-'+clientId);
+      if (!val || !btn) return;
+      const masked = '•••-••-' + ssn.slice(-4);
+      const full = ssn.replace(/(\d{3})(\d{2})(\d{4})/, '$1-$2-$3');
+      if (val.textContent === masked) { val.textContent = full; btn.textContent = 'Hide'; }
+      else { val.textContent = masked; btn.textContent = 'Show'; }
+    };
+
     const fv = (val, fallback) => {
       if (val === undefined || val === null || val === '') return `<span class="prof-field-val empty">${fallback || '—'}</span>`;
       return `<span class="prof-field-val">${val}</span>`;
@@ -3448,7 +3458,7 @@
           ${field('Email', o.email)}
           <div class="prof-field"><div class="prof-field-label">Phone</div>${fmtPhone(o.phone)}</div>
           <div class="prof-field"><div class="prof-field-label">Date of Birth</div>${fmtDate(o.dob)}</div>
-          ${field('SSN', o.ssn ? '•••-••-'+o.ssn.slice(-4) : null)}
+          ${o.ssn ? `<div class="prof-field"><div class="prof-field-label">SSN</div><div style="display:flex;align-items:center;gap:8px"><span id="ssn-val-${clientId}">•••-••-${o.ssn.slice(-4)}</span><button onclick="toggleSSN('${clientId}','${o.ssn}')" id="ssn-btn-${clientId}" style="font-size:11px;padding:2px 8px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;color:#64748b;cursor:pointer;font-family:var(--font-b)">Show</button></div></div>` : field('SSN', null)}
           ${field('Mother\'s Maiden Name', o.maidenName)}
           ${field('Annual Income', o.annualIncome ? '$'+Number(o.annualIncome).toLocaleString() : null)}
           ${field('US Citizen', yesNo(o.citizen))}
