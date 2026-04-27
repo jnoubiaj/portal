@@ -1346,6 +1346,24 @@
       </div>
     </div>
 
+    <!-- Skip options -->
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;cursor:pointer" onclick="document.getElementById('nc-skip-contract').click()">
+        <input type="checkbox" id="nc-skip-contract" style="width:16px;height:16px;accent-color:#f59e0b;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation()" />
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#92400e">Contract already signed (skip portal signing)</div>
+          <div style="font-size:11px;color:#b45309;margin-top:1px">Client signed via GHL — skip the contract step in onboarding</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;cursor:pointer" onclick="document.getElementById('nc-skip-business').click()">
+        <input type="checkbox" id="nc-skip-business" style="width:16px;height:16px;accent-color:#10b981;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation()" />
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#065f46">No business yet (skip business form)</div>
+          <div style="font-size:11px;color:#047857;margin-top:1px">Client doesn't have a business — skip the business info step in onboarding</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Temp password info box -->
     <div style="background:#f0f9ff;border:1.5px solid rgba(34,167,240,0.2);border-radius:12px;padding:14px 16px;margin-bottom:24px;display:flex;align-items:center;gap:14px;">
       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2" style="flex-shrink:0"><path d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
@@ -4652,6 +4670,9 @@
     const contractAmount = document.getElementById('nc-contract-amount')?.value.replace(/[^0-9.]/g,'') || '';
     const contractPct    = document.getElementById('nc-contract-pct')?.value.replace(/[^0-9.]/g,'')    || '8';
 
+    const skipContract = document.getElementById('nc-skip-contract')?.checked || false;
+    const skipBusiness = document.getElementById('nc-skip-business')?.checked || false;
+
     const newClient = {
       id: clientId,
       fname: displayName, lname: '',
@@ -4669,6 +4690,8 @@
       fundingApprovedAmount: 0,
       fundingApprovedDate: null,
       onboardingComplete: false,
+      skipContract,
+      skipBusiness,
       contractSetup: { type: contractType, amount: contractAmount, pct: contractPct }
     };
     // Save per-client contract keys so onboarding reads them
@@ -4686,6 +4709,10 @@
     // Sync to Firestore so client can log in from any device
     fsSetCred(email, { clientId, password: TEMP_PASSWORD, mustChange: true }).catch(() => {});
     fsSaveClient(newClient).catch(() => {});
+    // If contract skipped, pre-mark it as signed in Firestore so onboarding bypasses it
+    if (skipContract) {
+      fsSetOnboarding(clientId, { contractSigned: 'signed', contractSkipped: true }).catch(() => {});
+    }
     // Create Firebase Auth account + clientAuth mapping for secure login
     fsAuthCreateUser(email, TEMP_PASSWORD).then(uid => {
       if (uid) fsSetClientAuth(uid, { clientId, email: email.toLowerCase() });
@@ -4698,6 +4725,8 @@
     document.getElementById('nc-contract-amount').value = '';
     document.getElementById('nc-contract-pct').value = '8';
     document.getElementById('nc-contract-type').value = 'full';
+    const skipCb = document.getElementById('nc-skip-contract'); if (skipCb) skipCb.checked = false;
+    const skipBizCb = document.getElementById('nc-skip-business'); if (skipBizCb) skipBizCb.checked = false;
     toggleNcPct();
 
     // Show confirmation modal with SMS preview

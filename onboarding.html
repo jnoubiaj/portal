@@ -1037,7 +1037,7 @@
           </div>
         </div>
         <div class="btn-row" style="justify-content:center">
-          <button class="btn-next navy" onclick="goTo('contract')" style="padding:0 40px">
+          <button class="btn-next navy" id="welcome-next-btn" onclick="goTo('contract')" style="padding:0 40px">
             Next: Review &amp; Sign Contract
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>
           </button>
@@ -1680,7 +1680,7 @@
               <div class="lbl">First update in portal</div>
             </div>
           </div>
-          <button class="btn-next navy" onclick="window.location.href='dashboard.html'" style="margin:0 auto;justify-content:center">
+          <button class="btn-next navy" onclick="finishOnboarding()" style="margin:0 auto;justify-content:center">
             Go to My Dashboard
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>
           </button>
@@ -1793,7 +1793,22 @@
     fsGetClients().then(fsClients => {
       if (!fsClients) return;
       const fsClient = fsClients.find(c => c.id === _cid);
-      if (!fsClient || !fsClient.contractSetup) return;
+      if (!fsClient) return;
+      // Skip business form if admin flagged it
+      if (fsClient.skipBusiness) {
+        localStorage.setItem('cq_skip_business_' + _cid, '1');
+      }
+      // Skip contract step if admin flagged it
+      if (fsClient.skipContract) {
+        localStorage.setItem('cq_signed_contract', 'signed');
+        localStorage.setItem('cq_skip_contract_' + _cid, '1');
+        const btn = document.getElementById('welcome-next-btn');
+        if (btn) {
+          btn.innerHTML = 'Next: Complete Your Profile <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>';
+          btn.onclick = function() { goTo('personal'); };
+        }
+      }
+      if (!fsClient.contractSetup) return;
       const cs = fsClient.contractSetup;
       _contractKey = cs.type   || _contractKey;
       _feeAmount   = cs.amount || _feeAmount;
@@ -3174,7 +3189,12 @@
     } catch(e) {}
 
     if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = 'Continue'; }
-    goTo('business');
+    // Skip business form if flagged
+    if (_cid && localStorage.getItem('cq_skip_business_' + _cid) === '1') {
+      goTo('done');
+    } else {
+      goTo('business');
+    }
   }
 
   function showDuplicateAccountModal(oldEmail) {
@@ -3206,6 +3226,33 @@
         </button>
       </div>`;
     document.body.appendChild(modal);
+  }
+
+  // ── FINISH ONBOARDING (used by done screen "Go to Dashboard" button) ──────
+  function finishOnboarding() {
+    // If business was skipped, save personal-only data and mark complete
+    if (_cid && localStorage.getItem('cq_skip_business_' + _cid) === '1') {
+      try {
+        const sess = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null')
+                  || JSON.parse(localStorage.getItem('cq_active_client_session') || 'null');
+        if (sess && sess.clientId) {
+          const existing = JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || '{}');
+          existing.onboardingComplete = true;
+          existing.skipBusiness = true;
+          localStorage.setItem('cq_onboard_data_' + sess.clientId, JSON.stringify(existing));
+          fsGetOnboarding(sess.clientId).then(fsEx => {
+            const toSave = Object.assign({}, existing, fsEx || {}, { onboardingComplete: true, skipBusiness: true });
+            fsSetOnboarding(sess.clientId, toSave);
+          }).catch(() => fsSetOnboarding(sess.clientId, existing));
+          fsGetClients().then(fsClients => {
+            if (!fsClients) return;
+            const fc = fsClients.find(c => c.id === sess.clientId);
+            if (fc) fsSaveClient(Object.assign({}, fc, { onboardingComplete: true, lastActivity: new Date().toISOString().split('T')[0] })).catch(() => {});
+          }).catch(() => {});
+        }
+      } catch(e) {}
+    }
+    window.location.href = 'dashboard.html';
   }
 
   // ── BUSINESS FORM SUBMIT ─────────────────────────────

@@ -1120,9 +1120,14 @@
             window.location.replace('dashboard.html');
             return;
           }
+          // Contract skipped by admin — go straight to onboarding form (no contract step)
+          if (fsClient && fsClient.skipContract) {
+            window.location.replace('onboarding.html');
+            return;
+          }
         }
-        // 2. Firestore onboarding data — form was submitted (has bizName) or contract signed
-        if (fsOnboard && (fsOnboard.bizName || fsOnboard.contractSigned === 'signed')) {
+        // 2. Firestore onboarding data — form was submitted (has bizName) or contract signed (not just pre-skipped)
+        if (fsOnboard && (fsOnboard.bizName || (fsOnboard.contractSigned === 'signed' && !fsOnboard.contractSkipped))) {
           window.location.replace('dashboard.html');
           return;
         }
