@@ -2840,9 +2840,17 @@
     const c = getClient(id);
     if (!c) return;
     c.archived = false;
+    c.status = 'progress';
     saveClients();
-    logActivity(`Client <strong>${c.fname} ${c.lname}</strong> restored from archive`, '#10b981');
+    // Reset pipeline back to S1
+    var freshTasks = { stage: 0, checked: {}, assigned: {}, iassigned: {}, customTasks: {}, stageStartedAt: { 0: Date.now() } };
+    saveClientTasks(id, freshTasks);
+    var d = getDashData(id);
+    d.currentStage = 1;
+    saveDashData(id, d);
+    logActivity(`Client <strong>${c.fname} ${c.lname}</strong> restored to pipeline (S1)`, '#10b981');
     renderClientList();
+    renderPipeline();
     renderOverview();
   }
 
