@@ -4755,7 +4755,7 @@
       ? `?contract=${contractType}&amount=${contractAmount}${contractType==='backend'?'&pct='+contractPct:''}`
       : `?contract=${contractType}${contractType==='backend'?'&pct='+contractPct:''}`;
     const portalUrl = window.location.origin + '/login.html' + contractParams;
-    const smsText = `Hi! Your CapitalQuest client portal account has been created.\n\nPortal: ${portalUrl}\nEmail: ${email}\nTemp Password: ${TEMP_PASSWORD}\n\nYou will be asked to create a new password when you first log in.\n\n— CapitalQuest Consulting`;
+    const smsText = `Hi${displayName ? ' ' + displayName.split(' ')[0] : ''}! Your CapitalQuest client portal is ready.\n\nJust go to this link and log in using your phone number — we'll text you a quick verification code:\n\n${portalUrl}\n\n— CapitalQuest Consulting`;
     document.getElementById('nc-sms-preview').textContent = smsText;
     document.getElementById('client-created-modal').style.display = 'flex';
     // Auto-send via GHL
