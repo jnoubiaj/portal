@@ -7810,12 +7810,24 @@
       saveDashData(clientId, d);
       renderTaskModal(clientId, t.stage);
     } else {
+      // Final stage complete — archive client and remove from pipeline
       t.stage = currentStage;
+      t.completedAt = Date.now();
       saveClientTasks(clientId, t);
       var df = getDashData(clientId);
       df.currentStage = PIPELINE_STAGES.length;
       saveDashData(clientId, df);
+      var c = getClient(clientId);
+      if (c) {
+        c.archived = true;
+        c.status = 'approved';
+        c.fundedAt = Date.now();
+        saveClients();
+        logActivity('Client <strong>' + (c.fname||'') + ' ' + (c.lname||'') + '</strong> funded &amp; archived', '#10b981');
+      }
       document.getElementById('pl-modal-bg').remove();
+      renderClientList();
+      renderOverview();
     }
     renderPipeline();
     renderOvClientTasks();
