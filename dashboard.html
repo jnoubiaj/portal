@@ -2334,7 +2334,7 @@
               <div class="ca-rpt-title">Credit Report</div>
               <div class="ca-rpt-sub" id="ca-rpt-meta"></div>
             </div>
-            <button class="cr-reset-btn" onclick="caEditReport()">Upload New Report</button>
+            <button class="cr-reset-btn" onclick="caEditReport()" style="display:none">Upload New Report</button>
           </div>
 
           <!-- Funding Verdict -->
@@ -3306,13 +3306,37 @@
   function initProfileSync() {
     const session = getClientSession();
     if (!session || !session.clientId) return;
-    fsGetOnboarding(session.clientId).then(od => {
-      if (od) {
-        try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od)); } catch(e) {}
-        renderProfileSection();
-        renderAllDocs();
-      }
-    }).catch(()=>{});
+
+    // Wait for Firebase Auth state before reading Firestore — phone auth session restores async
+    const doFetch = () => {
+      fsGetOnboarding(session.clientId).then(od => {
+        if (od) {
+          try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od)); } catch(e) {}
+          renderProfileSection();
+          renderAllDocs();
+        } else {
+          // Fallback: use admin client record for basic name/phone/email fields
+          try {
+            const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+            const ac = adminClients.find(c => c.id === session.clientId);
+            if (ac) {
+              const basic = { firstName: ac.fname || '', lastName: ac.lname || '', email: ac.email || '', phone: ac.phone || '' };
+              const existing = JSON.parse(localStorage.getItem('cq_onboard_data_' + session.clientId) || '{}');
+              const merged = Object.assign({}, basic, existing);
+              localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(merged));
+              renderProfileSection();
+            }
+          } catch(e) {}
+        }
+      }).catch(()=>{});
+    };
+
+    // Use onAuthStateChanged to ensure Firebase Auth is ready before Firestore read
+    try {
+      firebase.auth().onAuthStateChanged(user => {
+        doFetch();
+      });
+    } catch(e) { doFetch(); }
     if (_profileUnsubscribe) { try { _profileUnsubscribe(); } catch(e) {} }
     _profileUnsubscribe = fsListenOnboarding(session.clientId, (od) => {
       try {
@@ -3386,14 +3410,21 @@
     // Total Funding Secured starts at $0
     const wbf = document.getElementById('wb-funding'); if(wbf) wbf.textContent = d.fundingSecured ? '$' + Number(d.fundingSecured).toLocaleString() : '$0';
 
-    // Stats — show '—' when not yet set by admin
-    const sf = document.getElementById('s-fico'); if(sf) sf.textContent = d.creditScore ? d.creditScore : '—';
+    // Stats — admin-set score, or fall back to uploaded credit report FICO
+    let _ficoDisplay = d.creditScore || '';
+    if (!_ficoDisplay) {
+      try {
+        const _cd = JSON.parse(localStorage.getItem('cq_credit_data') || 'null');
+        if (_cd && (_cd.fico8 || _cd.fico)) _ficoDisplay = String(_cd.fico8 || _cd.fico);
+      } catch(e) {}
+    }
+    const sf = document.getElementById('s-fico'); if(sf) sf.textContent = _ficoDisplay || '—';
 
     // Credit score grade badge
     const sg2 = document.getElementById('s-fico-grade');
     if (sg2) {
-      if (d.creditScore) {
-        const score = +d.creditScore;
+      if (_ficoDisplay) {
+        const score = +_ficoDisplay;
         let label, bg, color;
         if (score >= 800)      { label='Exceptional'; bg='#d1fae5'; color='#065f46'; }
         else if (score >= 740) { label='Very Good';   bg='#d1fae5'; color='#065f46'; }
@@ -4045,8 +4076,12 @@
       setMsg('Parsing credit data…');
       const data = buildCaData(text);
 
-      // Persist so admin upload is visible to client without re-uploading
+      // Persist locally and to Firestore so client can see it cross-device
       try { localStorage.setItem('cq_credit_data', JSON.stringify(data)); } catch(e) {}
+      try {
+        const _sess = getClientSession();
+        if (_sess && _sess.clientId) fsSetDash(_sess.clientId, { creditData: data }).catch(()=>{});
+      } catch(e) {}
 
       document.getElementById('ca-processing').style.display = 'none';
       caData = data;
