@@ -1120,9 +1120,13 @@
             window.location.replace('dashboard.html');
             return;
           }
-          // Contract skipped by admin — go straight to onboarding form (no contract step)
-          if (fsClient && fsClient.skipContract) {
-            window.location.replace('onboarding.html');
+          // Build skip params so onboarding can apply them instantly without waiting for Firestore
+          if (fsClient && (fsClient.skipContract || fsClient.skipPersonal || fsClient.skipBusiness)) {
+            const skips = [];
+            if (fsClient.skipContract) skips.push('contract');
+            if (fsClient.skipPersonal) skips.push('personal');
+            if (fsClient.skipBusiness) skips.push('business');
+            window.location.replace('onboarding.html?skip=' + skips.join(','));
             return;
           }
         }

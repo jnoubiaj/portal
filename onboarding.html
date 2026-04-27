@@ -1770,6 +1770,23 @@
   const _sess     = (() => { try { return JSON.parse(sessionStorage.getItem('cq_client_session')||'null') || JSON.parse(localStorage.getItem('cq_active_client_session')||'null'); } catch(e){return null;} })();
   const _cid      = _sess ? _sess.clientId : null;
 
+  // ── APPLY SKIP FLAGS FROM URL PARAMS (instant, no Firestore wait) ──
+  // login.html passes ?skip=contract,personal,business when admin set skip flags
+  (() => {
+    if (!_cid) return;
+    const skipParam = urlParams.get('skip');
+    if (!skipParam) return;
+    const skips = skipParam.split(',');
+    if (skips.includes('contract')) {
+      localStorage.setItem('cq_signed_contract', 'signed');
+      localStorage.setItem('cq_skip_contract_' + _cid, '1');
+    }
+    if (skips.includes('personal')) localStorage.setItem('cq_skip_personal_' + _cid, '1');
+    if (skips.includes('business')) localStorage.setItem('cq_skip_business_' + _cid, '1');
+    // Clear saved step so it doesn't restore to a skipped step
+    localStorage.removeItem('cq_onboard_step_' + _cid);
+  })();
+
   function buildPaymentClause(contractKey, feeAmount, feePct) {
     const amountStr = (feeAmount && feeAmount !== '____________')
       ? '$' + Number(feeAmount).toLocaleString()
@@ -2831,6 +2848,31 @@
         }).catch(() => {});
       }
     } catch(e) {}
+
+    // Apply skip flags to welcome button immediately (synchronous — no Firestore wait)
+    (() => {
+      if (!_cid) return;
+      const skipContract = localStorage.getItem('cq_skip_contract_' + _cid) === '1';
+      const skipPersonal = localStorage.getItem('cq_skip_personal_' + _cid) === '1';
+      const skipBusiness = localStorage.getItem('cq_skip_business_' + _cid) === '1';
+      const btn = document.getElementById('welcome-next-btn');
+      if (!btn) return;
+      if (skipContract) {
+        if (skipPersonal && skipBusiness) {
+          btn.innerHTML = 'Go to My Dashboard <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>';
+          btn.onclick = function() { finishOnboarding(); };
+        } else if (skipPersonal) {
+          btn.innerHTML = 'Next: Business Info <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>';
+          btn.onclick = function() { goTo('business'); };
+        } else {
+          btn.innerHTML = 'Next: Complete Your Profile <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>';
+          btn.onclick = function() { goTo('personal'); };
+        }
+      } else if (skipPersonal) {
+        btn.innerHTML = 'Next: Review &amp; Sign Contract <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>';
+        // contract → after signing will route to business (handled in signContract)
+      }
+    })();
 
     // GHL two-way sync — pre-fill forms from GHL contact data
     setTimeout(prefillFromGHL, 500);
