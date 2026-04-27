@@ -5296,6 +5296,25 @@
     try { localStorage.setItem(k, JSON.stringify(list)); } catch(e) {}
   }
 
+  function playClientNotifSound() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [[0, 659], [0.14, 988]].forEach(function(pair) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = pair[1];
+        gain.gain.setValueAtTime(0, ctx.currentTime + pair[0]);
+        gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + pair[0] + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + pair[0] + 0.45);
+        osc.start(ctx.currentTime + pair[0]);
+        osc.stop(ctx.currentTime + pair[0] + 0.5);
+      });
+    } catch(e) {}
+  }
+
   function notifAdd(type, title, body, navTo) {
     const list = notifGet();
     const id = type + '_' + Date.now();
@@ -5308,6 +5327,7 @@
     if (list.length > 50) list.splice(50);
     notifSave(list);
     notifRender();
+    playClientNotifSound();
   }
 
   function notifMarkAllRead() {
