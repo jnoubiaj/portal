@@ -155,6 +155,9 @@ function fsListenMessages(clientId, callback) {
 // ── FIREBASE AUTH ─────────────────────────────────────────────────────────
 
 async function fsAuthSignIn(email, password) {
+  // SESSION persistence: auth token lives only in this tab's sessionStorage.
+  // Prevents admin and client tabs from sharing/clobbering each other's login.
+  try { await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION); } catch(e) {}
   return firebase.auth().signInWithEmailAndPassword(email, password);
 }
 

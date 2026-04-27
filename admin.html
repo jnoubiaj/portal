@@ -1609,16 +1609,10 @@
   fsAuthOnStateChange(function(user) {
     if (user && ADMIN_PROFILES[user.email]) {
       _showAdminApp(user);
-    } else if (user) {
-      // Signed in but not an admin
-      try { localStorage.removeItem('cq_admin_user'); } catch(e) {}
-      _adminAppInited = false;
-      currentAdmin = null;
-      fsAuthSignOut();
-      document.getElementById('admin-app').style.display = 'none';
-      document.getElementById('admin-login').style.display = 'flex';
     } else {
-      // Not signed in — clear stale session, show login
+      // Not signed in, or signed in as a non-admin (e.g. a client on another tab).
+      // Do NOT call fsAuthSignOut() here — that would log out the client on their tab.
+      // Just clear the local admin session and show the login screen.
       try { localStorage.removeItem('cq_admin_user'); } catch(e) {}
       _adminAppInited = false;
       currentAdmin = null;
