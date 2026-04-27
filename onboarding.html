@@ -1785,6 +1785,9 @@
     if (skips.includes('business')) localStorage.setItem('cq_skip_business_' + _cid, '1');
     // Clear saved step so it doesn't restore to a skipped step
     localStorage.removeItem('cq_onboard_step_' + _cid);
+    // Hide step indicators — they're confusing when steps are skipped
+    const hdr = document.querySelector('.onboard-header');
+    if (hdr) hdr.style.display = 'none';
   })();
 
   function buildPaymentClause(contractKey, feeAmount, feePct) {
