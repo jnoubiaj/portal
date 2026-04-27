@@ -754,7 +754,7 @@
         <div id="step-phone">
           <div class="f-group">
             <label class="f-label">Phone Number</label>
-            <input class="f-input" type="tel" id="loginPhone" placeholder="(555) 000-0000" onkeydown="if(event.key==='Enter')sendSmsCode()" />
+            <input class="f-input" type="tel" id="loginPhone" placeholder="(555) 000-0000" autocomplete="tel" inputmode="tel" name="tel" onkeydown="if(event.key==='Enter')sendSmsCode()" />
           </div>
 
           <div id="login-error" style="display:none;margin-bottom:16px;padding:12px 14px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-size:13px;color:#f87171;"></div>
@@ -1081,7 +1081,7 @@
         // Save clientAuth mapping for future use
         try { await fsSetClientAuth(result.user.uid, { clientId: match.id, phone: phoneE164 }); } catch(e) {}
 
-        startClientSession(match.id, match.email || phoneE164);
+        startClientSession(match.id, match.email || phoneE164, match.phone || phoneE164);
         redirectAfterLogin(match.id);
       } catch(e) {
         if (e.message !== 'no-clients') {
@@ -1099,10 +1099,10 @@
       window.location.href = 'onboarding.html';
     }
 
-    function startClientSession(clientId, email) {
+    function startClientSession(clientId, email, phone) {
       try {
         sessionStorage.setItem('cq_client_session', JSON.stringify({
-          clientId, email, loggedInAt: new Date().toISOString()
+          clientId, email, phone: phone || '', loggedInAt: new Date().toISOString()
         }));
       } catch(e) {}
     }

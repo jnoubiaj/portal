@@ -1646,7 +1646,7 @@
         </div>
 
         <div class="btn-row" style="margin-top:32px">
-          <button class="btn-back" onclick="goTo('personal')">← Back</button>
+          <button class="btn-back" onclick="(_cid && localStorage.getItem('cq_skip_personal_' + _cid)==='1') ? goTo('contract') : goTo('personal')">← Back</button>
           <button class="btn-next success" onclick="submitBusiness()">
             Submit Onboarding
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1758,6 +1758,10 @@
         localStorage.setItem('cq_onboard_step_' + sess.clientId, name);
       }
     } catch(e) {}
+    // GHL prefill fires once when personal screen is first shown
+    if (name === 'personal' || name === 'business') {
+      setTimeout(prefillFromGHL, 300);
+    }
     window.scrollTo(0, 0);
   }
 
@@ -1798,15 +1802,33 @@
       if (fsClient.skipBusiness) {
         localStorage.setItem('cq_skip_business_' + _cid, '1');
       }
+      // Skip personal form if admin flagged it
+      if (fsClient.skipPersonal) {
+        localStorage.setItem('cq_skip_personal_' + _cid, '1');
+      }
       // Skip contract step if admin flagged it
       if (fsClient.skipContract) {
         localStorage.setItem('cq_signed_contract', 'signed');
         localStorage.setItem('cq_skip_contract_' + _cid, '1');
         const btn = document.getElementById('welcome-next-btn');
         if (btn) {
-          btn.innerHTML = 'Next: Complete Your Profile <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>';
-          btn.onclick = function() { goTo('personal'); };
+          const skipPers = fsClient.skipPersonal;
+          const skipBiz  = fsClient.skipBusiness;
+          if (skipPers && skipBiz) {
+            btn.innerHTML = 'Go to My Dashboard <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>';
+            btn.onclick = function() { finishOnboarding(); };
+          } else if (skipPers) {
+            btn.innerHTML = 'Next: Business Info <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>';
+            btn.onclick = function() { goTo('business'); };
+          } else {
+            btn.innerHTML = 'Next: Complete Your Profile <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>';
+            btn.onclick = function() { goTo('personal'); };
+          }
         }
+      } else if (fsClient.skipPersonal) {
+        // Contract not skipped but personal is — after contract, go to business
+        const btn = document.getElementById('welcome-next-btn');
+        // The "Next" button on welcome still goes to contract; the contract "Next" button target is handled in signContract()
       }
       if (!fsClient.contractSetup) return;
       const cs = fsClient.contractSetup;
@@ -1952,7 +1974,16 @@
         window.location.replace('dashboard.html');
       }
     } else {
-      goTo('personal');
+      // Respect skipPersonal flag
+      if (_cid && localStorage.getItem('cq_skip_personal_' + _cid) === '1') {
+        if (localStorage.getItem('cq_skip_business_' + _cid) === '1') {
+          finishOnboarding();
+        } else {
+          goTo('business');
+        }
+      } else {
+        goTo('personal');
+      }
     }
   }
 
@@ -2800,6 +2831,9 @@
         }).catch(() => {});
       }
     } catch(e) {}
+
+    // GHL two-way sync — pre-fill forms from GHL contact data
+    setTimeout(prefillFromGHL, 500);
 
     // If coming from dashboard to re-sign a contract, skip straight to contract step
     const _resignMode = new URLSearchParams(window.location.search).get('resign') === '1';
@@ -3653,6 +3687,118 @@
     // Show prefill notice
     const notice = document.getElementById('prefill-notice');
     if (notice) notice.style.display = 'flex';
+  }
+
+  // ── GHL TWO-WAY SYNC ─────────────────────────────────
+  const GHL_PROXY = 'https://ghl-proxy.sam-e5a.workers.dev/';
+  let _ghlPrefillDone = false;
+
+  async function prefillFromGHL() {
+    if (_ghlPrefillDone) return;
+    _ghlPrefillDone = true;
+    try {
+      const sess = _getOnboardSession();
+      if (!sess) return;
+      const rawPhone = sess.phone || '';
+      const email    = sess.email || '';
+      let contacts = [];
+      // Try phone first
+      if (rawPhone) {
+        const digits = rawPhone.replace(/\D/g,'').replace(/^1?(\d{10})$/,'$1');
+        if (digits.length === 10) {
+          const r = await fetch(`${GHL_PROXY}?query=${encodeURIComponent(digits)}`);
+          if (r.ok) { const d = await r.json(); contacts = d.contacts || d.data || []; }
+        }
+      }
+      // Fallback: try email
+      if (!contacts.length && email) {
+        const r = await fetch(`${GHL_PROXY}?query=${encodeURIComponent(email)}`);
+        if (r.ok) { const d = await r.json(); contacts = d.contacts || d.data || []; }
+      }
+      if (!contacts.length) return;
+      const c = contacts[0];
+
+      // Only fill fields that are currently empty
+      const setIfEmpty = (id, val) => {
+        if (!val) return;
+        const el = document.getElementById(id);
+        if (el && !el.value) el.value = val;
+      };
+      const setIfEmptyEvent = (id, val, eventName) => {
+        if (!val) return;
+        const el = document.getElementById(id);
+        if (el && !el.value) { el.value = val; el.dispatchEvent(new Event(eventName || 'input')); }
+      };
+
+      // Personal fields
+      setIfEmpty('p_firstName', c.firstName);
+      setIfEmpty('p_lastName',  c.lastName);
+      // Phone: format as (XXX) XXX-XXXX
+      if (c.phone) {
+        const digits = c.phone.replace(/\D/g,'').replace(/^1/,'');
+        if (digits.length === 10) {
+          const fmt = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+          const phoneEl = document.getElementById('p_phone');
+          if (phoneEl && !phoneEl.value) { phoneEl.value = fmt; phoneEl.dispatchEvent(new Event('input')); }
+        }
+      }
+      // DOB: GHL may store as dateOfBirth (YYYY-MM-DD) or date_of_birth
+      const dob = c.dateOfBirth || c.date_of_birth || (c.customField && c.customField.dateOfBirth) || '';
+      setIfEmpty('p_dob', dob);
+      // Address
+      setIfEmpty('p_street', c.address1 || c.address);
+      setIfEmpty('p_city',   c.city);
+      setIfEmpty('p_zip',    c.postalCode || c.zipCode || c.zip);
+      if (c.state) {
+        const stEl = document.getElementById('p_state');
+        if (stEl && !stEl.value) { stEl.value = c.state; stEl.dispatchEvent(new Event('change')); }
+      }
+      // Business fields
+      setIfEmpty('b_bizName', c.companyName || c.company);
+      if (c.phone) {
+        const digits = c.phone.replace(/\D/g,'').replace(/^1/,'');
+        if (digits.length === 10) {
+          const fmt = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+          const bizPhoneEl = document.getElementById('b_phone');
+          if (bizPhoneEl && !bizPhoneEl.value) { bizPhoneEl.value = fmt; bizPhoneEl.dispatchEvent(new Event('input')); }
+        }
+      }
+      // Custom fields that GHL may include
+      if (c.customFields && Array.isArray(c.customFields)) {
+        c.customFields.forEach(cf => {
+          const key = (cf.name || cf.key || '').toLowerCase();
+          const val = cf.value || '';
+          if (!val) return;
+          if (key.includes('ssn') || key.includes('social')) {
+            const ssnEl = document.getElementById('p_ssn');
+            if (ssnEl && !ssnEl.value) { ssnEl.value = val; ssnEl.dispatchEvent(new Event('input')); }
+          } else if (key.includes('ein') || key.includes('tax id')) {
+            const einEl = document.getElementById('b_ein');
+            if (einEl && !einEl.value) { einEl.value = val; einEl.dispatchEvent(new Event('input')); }
+          } else if (key.includes('income') || key.includes('annual')) {
+            const incEl = document.getElementById('p_income');
+            if (incEl && !incEl.value) { incEl.value = val; incEl.dispatchEvent(new Event('input')); }
+          } else if (key.includes('industry')) {
+            setIfEmpty('b_industry', val);
+          } else if (key.includes('maiden')) {
+            setIfEmpty('p_maiden', val);
+          } else if (key.includes('citizen')) {
+            setIfEmpty('p_citizen', val);
+          } else if (key.includes('dob') || key.includes('birth')) {
+            setIfEmpty('p_dob', val);
+          } else if (key.includes('biz state') || key.includes('business state')) {
+            const bsEl = document.getElementById('b_state');
+            if (bsEl && !bsEl.value) { bsEl.value = val; bsEl.dispatchEvent(new Event('change')); }
+          } else if (key.includes('biz city') || key.includes('business city')) {
+            setIfEmpty('b_city', val);
+          } else if (key.includes('biz zip') || key.includes('business zip')) {
+            setIfEmpty('b_zip', val);
+          } else if (key.includes('biz street') || key.includes('business address')) {
+            setIfEmpty('b_street', val);
+          }
+        });
+      }
+    } catch(e) {}
   }
 
   // ── EXTRA BUSINESSES ─────────────────────────────────

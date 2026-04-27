@@ -1276,42 +1276,48 @@
 </div>
 
 <!-- ── ADD CLIENT MODAL ─────────────────────────────────────────────── -->
-<div id="add-client-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,0.55);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px);">
-  <div style="background:white;border-radius:20px;padding:36px;width:100%;max-width:480px;margin:20px;box-shadow:0 24px 80px rgba(0,0,0,0.25);">
-    <div style="font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--navy);margin-bottom:4px;">Add New Client</div>
-    <div style="font-size:13px;color:var(--gray-400);margin-bottom:24px;">Enter their email and phone — their profile auto-fills once they complete onboarding</div>
+<div id="add-client-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,0.55);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px);padding:16px;overflow-y:auto;">
+  <div style="background:white;border-radius:20px;width:100%;max-width:480px;margin:auto;box-shadow:0 24px 80px rgba(0,0,0,0.25);display:flex;flex-direction:column;max-height:calc(100vh - 32px);">
+    <!-- Sticky header -->
+    <div style="padding:22px 24px 0;flex-shrink:0;">
+      <div style="font-family:var(--font-h);font-size:17px;font-weight:800;color:var(--navy);margin-bottom:2px;">Add New Client</div>
+      <div style="font-size:12px;color:var(--gray-400);margin-bottom:16px;">Enter their email and phone — their profile auto-fills once they complete onboarding</div>
+    </div>
+
+    <!-- Scrollable body -->
+    <div style="overflow-y:auto;padding:0 24px;flex:1;overscroll-behavior:contain;">
 
     <!-- GHL Contact Search -->
-    <div class="lf-group" style="position:relative;">
-      <label style="display:flex;align-items:center;gap:6px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22A7F0" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <div class="lf-group" style="position:relative;margin-bottom:12px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22A7F0" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         Search GHL Contacts
       </label>
       <input type="text" id="nc-ghl-search" placeholder="Type name, email or phone..." autocomplete="off"
-        style="width:100%;height:44px;padding:0 14px;border:1.5px solid rgba(34,167,240,0.4);border-radius:10px;font-family:var(--font-b);font-size:14px;color:var(--navy);outline:none;box-sizing:border-box;"
+        style="width:100%;height:40px;padding:0 12px;border:1.5px solid rgba(34,167,240,0.4);border-radius:10px;font-family:var(--font-b);font-size:14px;color:var(--navy);outline:none;box-sizing:border-box;"
         oninput="ghlContactSearch(this.value)" />
-      <div id="nc-ghl-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1.5px solid var(--gray-200);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.12);z-index:300;max-height:220px;overflow-y:auto;margin-top:4px;"></div>
+      <div id="nc-ghl-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1.5px solid var(--gray-200);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.12);z-index:300;max-height:180px;overflow-y:auto;margin-top:4px;"></div>
     </div>
 
-    <div class="lf-group">
-      <label>Client Email (Portal Login)</label>
-      <input type="email" id="nc-email" placeholder="client@email.com" oninput="document.getElementById('nc-email-error').style.display='none'" />
+    <div class="lf-group" style="margin-bottom:10px;">
+      <label style="font-size:12px;">Client Email (Portal Login)</label>
+      <input type="email" id="nc-email" placeholder="client@email.com" style="height:40px;" oninput="document.getElementById('nc-email-error').style.display='none'" />
       <div id="nc-email-error" style="display:none;font-size:12px;color:var(--danger);margin-top:6px;padding:8px 12px;background:var(--danger-bg);border-radius:8px;border:1px solid rgba(239,68,68,0.2);"></div>
     </div>
-    <div class="lf-group"><label>Phone Number (for SMS)</label><input type="tel" id="nc-phone" placeholder="(555) 000-0000" /></div>
+    <div class="lf-group" style="margin-bottom:10px;"><label style="font-size:12px;">Phone Number (for SMS)</label><input type="tel" id="nc-phone" placeholder="(555) 000-0000" style="height:40px;" /></div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <div class="lf-group" style="margin:0">
-        <label>Service Type</label>
-        <select id="nc-service" style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:14px;color:var(--navy);outline:none;background:white;">
+        <label style="font-size:12px;">Service Type</label>
+        <select id="nc-service" style="width:100%;height:40px;padding:0 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;background:white;">
           <option value="Both">Both</option>
           <option value="Credit Repair">Credit Repair</option>
           <option value="Funding">Funding</option>
         </select>
       </div>
       <div class="lf-group" style="margin:0">
-        <label>Assign To</label>
-        <select id="nc-assign" style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:14px;color:var(--navy);outline:none;background:white;">
+        <label style="font-size:12px;">Assign To</label>
+        <select id="nc-assign" style="width:100%;height:40px;padding:0 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;background:white;">
           <option value="Sam">Sam</option>
           <option value="Ali">Ali</option>
         </select>
@@ -1319,64 +1325,66 @@
     </div>
 
     <!-- Contract Setup -->
-    <div style="border:1.5px solid rgba(34,167,240,0.25);border-radius:12px;overflow:hidden;margin-bottom:20px;">
-      <div style="background:#f0f9ff;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--blue);display:flex;align-items:center;gap:8px;">
-        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    <div style="border:1.5px solid rgba(34,167,240,0.25);border-radius:12px;overflow:hidden;margin-bottom:12px;">
+      <div style="background:#f0f9ff;padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--blue);display:flex;align-items:center;gap:8px;">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         Contract Setup
       </div>
-      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;">
+      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
         <div class="lf-group" style="margin:0">
-          <label>Contract Type</label>
-          <select id="nc-contract-type" onchange="toggleNcPct()" style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:14px;color:var(--navy);outline:none;background:white;">
+          <label style="font-size:12px;">Contract Type</label>
+          <select id="nc-contract-type" onchange="toggleNcPct()" style="width:100%;height:40px;padding:0 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;background:white;">
             <option value="full">Full Payment</option>
             <option value="split">Split Payment (2x)</option>
             <option value="backend">Backend / Success Fee</option>
           </select>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div class="lf-group" style="margin:0">
-            <label>Fee Amount ($)</label>
-            <input type="text" id="nc-contract-amount" placeholder="e.g. 3500" style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:14px;color:var(--navy);outline:none;" />
+            <label style="font-size:12px;">Fee Amount ($)</label>
+            <input type="text" id="nc-contract-amount" placeholder="e.g. 3500" style="width:100%;height:40px;padding:0 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;" />
           </div>
           <div class="lf-group" style="margin:0" id="nc-pct-wrap">
-            <label>Success Fee %</label>
-            <input type="text" id="nc-contract-pct" placeholder="e.g. 10" value="8" style="width:100%;height:44px;padding:0 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:14px;color:var(--navy);outline:none;" />
+            <label style="font-size:12px;">Success Fee %</label>
+            <input type="text" id="nc-contract-pct" placeholder="e.g. 10" value="8" style="width:100%;height:40px;padding:0 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:13px;color:var(--navy);outline:none;" />
           </div>
         </div>
       </div>
     </div>
 
     <!-- Skip options -->
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-      <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;cursor:pointer" onclick="document.getElementById('nc-skip-contract').click()">
-        <input type="checkbox" id="nc-skip-contract" style="width:16px;height:16px;accent-color:#f59e0b;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation()" />
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;cursor:pointer" onclick="document.getElementById('nc-skip-contract').click()">
+        <input type="checkbox" id="nc-skip-contract" style="width:15px;height:15px;accent-color:#f59e0b;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation()" />
         <div>
-          <div style="font-size:13px;font-weight:700;color:#92400e">Contract already signed (skip portal signing)</div>
+          <div style="font-size:12px;font-weight:700;color:#92400e">Contract already signed (skip portal signing)</div>
           <div style="font-size:11px;color:#b45309;margin-top:1px">Client signed via GHL — skip the contract step in onboarding</div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;cursor:pointer" onclick="document.getElementById('nc-skip-business').click()">
-        <input type="checkbox" id="nc-skip-business" style="width:16px;height:16px;accent-color:#10b981;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation()" />
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;cursor:pointer" onclick="document.getElementById('nc-skip-business').click()">
+        <input type="checkbox" id="nc-skip-business" style="width:15px;height:15px;accent-color:#10b981;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation()" />
         <div>
-          <div style="font-size:13px;font-weight:700;color:#065f46">No business yet (skip business form)</div>
+          <div style="font-size:12px;font-weight:700;color:#065f46">No business yet (skip business form)</div>
           <div style="font-size:11px;color:#047857;margin-top:1px">Client doesn't have a business — skip the business info step in onboarding</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:10px;cursor:pointer" onclick="document.getElementById('nc-skip-personal').click()">
+        <input type="checkbox" id="nc-skip-personal" style="width:15px;height:15px;accent-color:#7c3aed;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation()" />
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#4c1d95">Info already on file (skip personal form)</div>
+          <div style="font-size:11px;color:#6d28d9;margin-top:1px">Client's personal details were collected elsewhere — skip personal info step</div>
         </div>
       </div>
     </div>
 
-    <!-- Temp password info box -->
-    <div style="background:#f0f9ff;border:1.5px solid rgba(34,167,240,0.2);border-radius:12px;padding:14px 16px;margin-bottom:24px;display:flex;align-items:center;gap:14px;">
-      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2" style="flex-shrink:0"><path d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:2px;">Temporary Password Assigned</div>
-        <div style="font-size:13px;font-weight:700;color:var(--navy);letter-spacing:0.03em;">cqconsulting123!</div>
-        <div style="font-size:11px;color:var(--gray-400);margin-top:1px;">Client must create a new password on first login</div>
-      </div>
-    </div>
+    </div><!-- end scrollable body -->
 
-    <div style="display:flex;gap:10px;">
-      <button onclick="closeAddClientModal()" style="flex:1;height:44px;border-radius:10px;border:1.5px solid var(--gray-200);background:none;font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--gray-500);cursor:pointer;">Cancel</button>
-      <button onclick="saveNewClient()" style="flex:2;height:44px;border-radius:10px;border:none;background:var(--navy);font-family:var(--font-h);font-size:13px;font-weight:700;color:white;cursor:pointer;">Create &amp; Send Access</button>
+    <!-- Sticky footer -->
+    <div style="padding:12px 24px 20px;flex-shrink:0;border-top:1px solid var(--gray-100);">
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeAddClientModal()" style="flex:1;height:42px;border-radius:10px;border:1.5px solid var(--gray-200);background:none;font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--gray-500);cursor:pointer;">Cancel</button>
+        <button onclick="saveNewClient()" style="flex:2;height:42px;border-radius:10px;border:none;background:var(--navy);font-family:var(--font-h);font-size:13px;font-weight:700;color:white;cursor:pointer;">Create &amp; Send Access</button>
+      </div>
     </div>
   </div>
 </div>
@@ -4682,6 +4690,7 @@
 
     const skipContract = document.getElementById('nc-skip-contract')?.checked || false;
     const skipBusiness = document.getElementById('nc-skip-business')?.checked || false;
+    const skipPersonal = document.getElementById('nc-skip-personal')?.checked || false;
 
     const newClient = {
       id: clientId,
@@ -4702,6 +4711,7 @@
       onboardingComplete: false,
       skipContract,
       skipBusiness,
+      skipPersonal,
       contractSetup: { type: contractType, amount: contractAmount, pct: contractPct }
     };
     // Save per-client contract keys so onboarding reads them
@@ -4737,6 +4747,7 @@
     document.getElementById('nc-contract-type').value = 'full';
     const skipCb = document.getElementById('nc-skip-contract'); if (skipCb) skipCb.checked = false;
     const skipBizCb = document.getElementById('nc-skip-business'); if (skipBizCb) skipBizCb.checked = false;
+    const skipPersCb = document.getElementById('nc-skip-personal'); if (skipPersCb) skipPersCb.checked = false;
     toggleNcPct();
 
     // Show confirmation modal with SMS preview

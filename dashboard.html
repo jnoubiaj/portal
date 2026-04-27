@@ -3233,6 +3233,76 @@
     else renderProfileSection();
   }
 
+  // ── GHL TWO-WAY SYNC ─────────────────────────────────
+  async function syncFromGHL() {
+    try {
+      const session = getClientSession();
+      if (!session || !session.clientId) return;
+      const rawPhone = session.phone || '';
+      const email    = session.email || '';
+      let contacts = [];
+      // Try phone first
+      if (rawPhone) {
+        const digits = rawPhone.replace(/\D/g,'').replace(/^1?(\d{10})$/,'$1');
+        if (digits.length === 10) {
+          const r = await fetch(`https://ghl-proxy.sam-e5a.workers.dev/?query=${encodeURIComponent(digits)}`);
+          if (r.ok) { const d = await r.json(); contacts = d.contacts || d.data || []; }
+        }
+      }
+      // Fallback: try email
+      if (!contacts.length && email) {
+        const r = await fetch(`https://ghl-proxy.sam-e5a.workers.dev/?query=${encodeURIComponent(email)}`);
+        if (r.ok) { const d = await r.json(); contacts = d.contacts || d.data || []; }
+      }
+      if (!contacts.length) return;
+      const c = contacts[0];
+
+      // Map GHL fields to onboarding data shape
+      const cid = session.clientId;
+      let existing = {};
+      try { existing = JSON.parse(localStorage.getItem('cq_onboard_data_' + cid) || '{}'); } catch(e) {}
+
+      const merge = {};
+      if (c.firstName && !existing.firstName)  merge.firstName = c.firstName;
+      if (c.lastName  && !existing.lastName)   merge.lastName  = c.lastName;
+      if (c.companyName && !existing.bizName)  merge.bizName   = c.companyName;
+      if (c.address1 && !existing.street)      merge.street    = c.address1;
+      if (c.city && !existing.city)            merge.city      = c.city;
+      if (c.state && !existing.state)          merge.state     = c.state;
+      const zip = c.postalCode || c.zipCode || c.zip;
+      if (zip && !existing.zip)                merge.zip       = zip;
+      // Phone
+      if (c.phone && !existing.phone) {
+        const digits = c.phone.replace(/\D/g,'').replace(/^1/,'');
+        if (digits.length === 10) merge.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+      }
+      // DOB
+      const dob = c.dateOfBirth || c.date_of_birth;
+      if (dob && !existing.dob) merge.dob = dob;
+      // Custom fields
+      if (c.customFields && Array.isArray(c.customFields)) {
+        c.customFields.forEach(cf => {
+          const key = (cf.name || cf.key || '').toLowerCase();
+          const val = cf.value || '';
+          if (!val) return;
+          if ((key.includes('ein') || key.includes('tax id')) && !existing.ein) merge.ein = val;
+          else if ((key.includes('income') || key.includes('annual')) && !existing.annualIncome) merge.annualIncome = val;
+          else if ((key.includes('maiden')) && !existing.maidenName) merge.maidenName = val;
+          else if ((key.includes('industry')) && !existing.industry) merge.industry = val;
+          else if ((key.includes('dob') || key.includes('birth')) && !existing.dob) merge.dob = val;
+          else if ((key.includes('biz city') || key.includes('business city')) && !existing.bizCity) merge.bizCity = val;
+          else if ((key.includes('biz state') || key.includes('business state')) && !existing.bizState) merge.bizState = val;
+          else if ((key.includes('biz zip') || key.includes('business zip')) && !existing.bizZip) merge.bizZip = val;
+          else if ((key.includes('biz street') || key.includes('business address')) && !existing.bizStreet) merge.bizStreet = val;
+        });
+      }
+      if (!Object.keys(merge).length) return;
+      const merged = Object.assign({}, existing, merge);
+      try { localStorage.setItem('cq_onboard_data_' + cid, JSON.stringify(merged)); } catch(e) {}
+      renderProfileSection();
+    } catch(e) {}
+  }
+
   function initProfileSync() {
     const session = getClientSession();
     if (!session || !session.clientId) return;
@@ -3743,6 +3813,7 @@
     renderFundingSequence();
     renderProfileSection();
     initProfileSync();
+    syncFromGHL();
     notifRender();
     if (APPLYING_TO.length > 1) {
       setInterval(() => {
