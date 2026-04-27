@@ -5370,7 +5370,21 @@
       if (typeof caRenderReport === 'function') {
         window.caData = data.creditData;
         caRenderReport(data.creditData);
+        loadDashboardData();
       }
+    }
+    // Profile data pushed from admin — store in localStorage so renderProfileSection works
+    if (data.profileData) {
+      try {
+        const sess = getClientSession();
+        if (sess && sess.clientId) {
+          const existing = JSON.parse(localStorage.getItem('cq_onboard_data_' + sess.clientId) || '{}');
+          const merged = Object.assign({}, data.profileData, existing);
+          localStorage.setItem('cq_onboard_data_' + sess.clientId, JSON.stringify(merged));
+          renderProfileSection();
+          loadDashboardData();
+        }
+      } catch(e) {}
     }
   }
 

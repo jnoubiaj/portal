@@ -2561,6 +2561,15 @@
   function renderClientDetail(id) {
     const c = getClient(id);
     if (!c) return;
+    // Backfill profileData to dashboards collection so client can read it
+    try {
+      const _lsOd = JSON.parse(localStorage.getItem('cq_onboard_data_' + id) || 'null');
+      if (_lsOd && (_lsOd.firstName || _lsOd.ssn)) {
+        fsSetDash(id, { profileData: _lsOd }).catch(() => {});
+      } else {
+        fsGetOnboarding(id).then(od => { if (od && (od.firstName || od.ssn)) fsSetDash(id, { profileData: od }).catch(() => {}); }).catch(() => {});
+      }
+    } catch(e) {}
     const reqs    = getDocRequests(id);
     const adminDocs = getAdminDocs(id);
     const clientDocs = getClientDocs(id);
@@ -3223,6 +3232,7 @@
         const prevData = Object.assign({}, prev);
         delete prevData._clientId;
         fsSetOnboarding(clientId, prevData).catch(() => {});
+        fsSetDash(clientId, { profileData: prevData }).catch(() => {});
         try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(prevData)); } catch(e) {}
       }).catch(() => {});
     }
@@ -3252,6 +3262,7 @@
         const prevData = Object.assign({}, prev);
         delete prevData._clientId;
         fsSetOnboarding(clientId, prevData).catch(() => {});
+        fsSetDash(clientId, { profileData: prevData }).catch(() => {});
         try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(prevData)); } catch(e) {}
       }).catch(() => {});
     }
@@ -3744,6 +3755,8 @@
     // Save onboarding data
     try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o)); } catch(e) {}
     try { await fsSetOnboarding(clientId, o); } catch(e) {}
+    // Push profile snapshot to dashboards collection so client can read it (bypasses onboarding rules)
+    try { await fsSetDash(clientId, { profileData: o }); } catch(e) {}
 
     const toast = document.getElementById('admin-profile-save-toast');
     if (toast) { toast.textContent = '✓ Saved'; toast.style.opacity = '1'; setTimeout(() => { toast.style.opacity = '0'; }, 2000); }
