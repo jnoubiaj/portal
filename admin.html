@@ -2561,13 +2561,22 @@
   function renderClientDetail(id) {
     const c = getClient(id);
     if (!c) return;
-    // Backfill profileData to dashboards collection so client can read it
+    // Backfill profileData + real name to dashboards collection so client can read it
     try {
+      const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
       const _lsOd = JSON.parse(localStorage.getItem('cq_onboard_data_' + id) || 'null');
       if (_lsOd && (_lsOd.firstName || _lsOd.ssn)) {
-        fsSetDash(id, { profileData: _lsOd }).catch(() => {});
+        const updates = { profileData: _lsOd };
+        if (_lsOd.firstName) updates.clientName = cap(_lsOd.firstName);
+        fsSetDash(id, updates).catch(() => {});
       } else {
-        fsGetOnboarding(id).then(od => { if (od && (od.firstName || od.ssn)) fsSetDash(id, { profileData: od }).catch(() => {}); }).catch(() => {});
+        fsGetOnboarding(id).then(od => {
+          if (od && (od.firstName || od.ssn)) {
+            const updates = { profileData: od };
+            if (od.firstName) updates.clientName = cap(od.firstName);
+            fsSetDash(id, updates).catch(() => {});
+          }
+        }).catch(() => {});
       }
     } catch(e) {}
     const reqs    = getDocRequests(id);

@@ -2955,18 +2955,19 @@
       try {
         const od = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null')
                 || JSON.parse(localStorage.getItem('cq_onboard_data') || 'null');
+        const _cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
         if (od) {
           // Always prefer real first name from onboarding over email-prefix display name
-          if (od.firstName) base.clientName = od.firstName;
-          if (od.lastName) lastName = od.lastName;
+          if (od.firstName) base.clientName = _cap(od.firstName);
+          if (od.lastName) lastName = _cap(od.lastName);
         }
       } catch(e) {}
       if (!lastName) {
         try {
           const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
           const ac = adminClients.find(cl => cl.id === clientId);
-          if (ac && ac.lname) lastName = ac.lname;
-          if (!base.clientName && ac && ac.fname) base.clientName = ac.fname;
+          if (ac && ac.lname) lastName = _cap(ac.lname);
+          if (!base.clientName && ac && ac.fname) base.clientName = _cap(ac.fname);
         } catch(e) {}
       }
       if (!base.clientName && session && session.email) {
