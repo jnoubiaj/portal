@@ -2421,7 +2421,7 @@
               </div>
               <h4>Drag &amp; drop files here</h4>
               <p>or click to browse from your device</p>
-              <button class="doc-dropzone-btn" onclick="event.stopPropagation();document.getElementById('doc-file-input').click()">Browse Files</button>
+              <label class="doc-dropzone-btn" for="doc-file-input" onclick="event.stopPropagation()">Browse Files</label>
               <div class="doc-dropzone-note">Supported: PDF, JPG, PNG, DOCX</div>
             </div>
             <div class="doc-upload-progress" id="doc-upload-progress">
@@ -5313,7 +5313,6 @@
     const file = files[0];
     if (file.size > 20 * 1024 * 1024) { alert('File too large. Max 20 MB.'); return; }
 
-    // Show progress bar with simulated animation
     const prog  = document.getElementById('doc-upload-progress');
     const bar   = document.getElementById('doc-up-bar-fill');
     const pct   = document.getElementById('doc-up-pct');
@@ -5321,24 +5320,20 @@
     if (prog) {
       if (fname) fname.textContent = file.name;
       if (bar)  bar.style.width = '0%';
-      if (pct)  pct.textContent = '0%';
+      if (pct)  pct.textContent = 'Uploading…';
       prog.classList.add('show');
     }
-    await new Promise(resolve => {
-      let p = 0;
-      const iv = setInterval(() => {
-        p += Math.random() * 25 + 10;
-        if (p >= 100) { p = 100; clearInterval(iv); resolve(); }
-        if (bar) bar.style.width = p + '%';
-        if (pct) pct.textContent = Math.round(p) + '%';
-      }, 80);
-    });
-    if (prog) prog.classList.remove('show');
 
-    // Convert to base64 for local view (files ≤ 900 KB only; larger files get no preview URL)
+    // Convert to base64 for small files (≤ 900 KB) — skip for large files
     const sess = (() => { try { return JSON.parse(sessionStorage.getItem('cq_client_session')||'null'); } catch(e) { return null; } })();
     let url = null;
-    if (file.size <= 900 * 1024) url = await _docReadAsDataURL(file);
+    if (file.size <= 900 * 1024) {
+      if (bar) bar.style.width = '50%';
+      url = await _docReadAsDataURL(file);
+    }
+    if (bar) bar.style.width = '100%';
+    if (pct) pct.textContent = '100%';
+    if (prog) setTimeout(() => prog.classList.remove('show'), 400);
 
     const now     = new Date();
     const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

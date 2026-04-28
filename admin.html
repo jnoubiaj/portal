@@ -7327,12 +7327,19 @@
   }
   function initClientTasks(id) {
     var t = getClientTasks(id);
-    if (!t) { t = { stage: 0, checked: {}, assigned: {}, iassigned: {}, customTasks: {}, stageStartedAt: {} }; t.stageStartedAt[0] = Date.now(); }
+    if (!t) {
+      // Fresh local object only — do NOT write to Firestore here.
+      // Writing empty data would wipe previously saved tasks in Firestore
+      // when the admin opens the modal on a fresh browser session.
+      t = { stage: 0, checked: {}, assigned: {}, iassigned: {}, customTasks: {}, stageStartedAt: {} };
+      t.stageStartedAt[0] = Date.now();
+      try { localStorage.setItem('cq_tasks_' + id, JSON.stringify(t)); } catch(e) {}
+      return t;
+    }
     if (!t.assigned) t.assigned = {};
     if (!t.iassigned) t.iassigned = {};
     if (!t.customTasks) t.customTasks = {};
     if (!t.stageStartedAt) { t.stageStartedAt = {}; t.stageStartedAt[t.stage] = Date.now(); }
-    saveClientTasks(id, t);
     return t;
   }
 
@@ -7647,7 +7654,19 @@
     }
   }
 
-  function openTaskModal(clientId) { renderTaskModal(clientId, initClientTasks(clientId).stage); }
+  async function openTaskModal(clientId) {
+    // If localStorage is empty for this client, try to seed from Firestore first
+    // so the admin sees real tasks instead of an empty modal on fresh page load
+    if (!getClientTasks(clientId)) {
+      try {
+        var fsDash = await fsGetDash(clientId);
+        if (fsDash && fsDash.pipelineTasks) {
+          try { localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(fsDash.pipelineTasks)); } catch(e) {}
+        }
+      } catch(e) {}
+    }
+    renderTaskModal(clientId, initClientTasks(clientId).stage);
+  }
 
   function renderTaskModal(clientId, viewStage) {
     var old = document.getElementById('pl-modal-bg');
