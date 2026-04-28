@@ -2974,6 +2974,11 @@
         base.clientName = session.email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
       }
     }
+    // Always apply word-level capitalization to the final display name
+    const _capWords = s => s ? s.replace(/\b\w/g, l => l.toUpperCase()) : s;
+    if (base.clientName) base.clientName = _capWords(base.clientName);
+    if (lastName) lastName = _capWords(lastName);
+
     base._lastName = lastName;
     base._clientId = clientId;
 
@@ -5672,8 +5677,11 @@
     const session = getClientSession();
     if (!session?.clientId) return;
     const d = getDashData();
-    const initials = ((d._firstName||'')[0]||'') + ((d._lastName||'')[0]||'');
-    const clientName = [d._firstName, d._lastName].filter(Boolean).join(' ') || 'Client';
+    const _capW = s => s ? s.replace(/\b\w/g, l => l.toUpperCase()) : s;
+    const _fn = d.clientName ? _capW(d.clientName) : '';
+    const _ln = d._lastName  ? _capW(d._lastName)  : '';
+    const initials = ((_fn||'')[0]||'') + ((_ln||'')[0]||'');
+    const clientName = (_fn + (_ln ? ' ' + _ln : '')).trim() || 'Client';
     fsGetMessages(session.clientId).then(msgs => {
       const now = new Date();
       msgs.push({ from:'client', name: clientName, text,

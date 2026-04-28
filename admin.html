@@ -1846,9 +1846,21 @@
   var _notifDropOpen = false;
   var _notifSoundEnabled = true;
 
+  // Returns {fn, ln} using onboarding data when available, with proper capitalization
+  function _getClientNames(c) {
+    if (!c) return { fn: '', ln: '' };
+    var cap = function(s) { return s ? s.replace(/\b\w/g, function(l){ return l.toUpperCase(); }) : ''; };
+    var ob = getOnboardDataForClient(c.id);
+    var fn = cap((ob && ob.firstName) ? ob.firstName : c.fname) || c.fname || '';
+    var ln = cap((ob && ob.lastName)  ? ob.lastName  : c.lname) || c.lname || '';
+    return { fn: fn, ln: ln };
+  }
+
   function _notifClientName(clientId) {
     var c = getClient(clientId);
-    return c ? (c.fname + ' ' + c.lname) : 'A client';
+    if (!c) return 'A client';
+    var n = _getClientNames(c);
+    return (n.fn + ' ' + n.ln).trim() || 'A client';
   }
 
   function playNotifSound() {
@@ -2015,14 +2027,42 @@
           var clientId = change.doc.id;
           var data = change.doc.data();
 
-          // 'added' = initial load — just set baseline, no notifications
+          // 'added' = initial load — update client names from profileData if available
           if (change.type === 'added') {
             dashPrev[clientId] = data;
+            if (data.profileData && (data.profileData.firstName || data.profileData.lastName)) {
+              var _ci = clients.findIndex(function(cl){ return cl.id === clientId; });
+              if (_ci >= 0) {
+                var _capW = function(s){ return s ? s.replace(/\b\w/g, function(l){ return l.toUpperCase(); }) : s; };
+                var _pf = data.profileData;
+                var _nameChanged = false;
+                if (_pf.firstName && clients[_ci].fname !== _capW(_pf.firstName)) { clients[_ci].fname = _capW(_pf.firstName); _nameChanged = true; }
+                if (_pf.lastName  && clients[_ci].lname !== _capW(_pf.lastName))  { clients[_ci].lname = _capW(_pf.lastName);  _nameChanged = true; }
+                if (_nameChanged) {
+                  try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+                  try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_pf)); } catch(e) {}
+                }
+              }
+            }
             return;
           }
 
           // 'modified' = real change
           var prev = dashPrev[clientId] || {};
+
+          // Update client name from profileData if admin name looks like a GHL handle
+          if (data.profileData && (data.profileData.firstName || data.profileData.lastName)) {
+            var _ci2 = clients.findIndex(function(cl){ return cl.id === clientId; });
+            if (_ci2 >= 0) {
+              var _capW2 = function(s){ return s ? s.replace(/\b\w/g, function(l){ return l.toUpperCase(); }) : s; };
+              var _pf2 = data.profileData;
+              if (_pf2.firstName) clients[_ci2].fname = _capW2(_pf2.firstName);
+              if (_pf2.lastName)  clients[_ci2].lname = _capW2(_pf2.lastName);
+              try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+              try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_pf2)); } catch(e) {}
+              renderClientList(); renderMsgThreads(); renderPipeline();
+            }
+          }
 
           // Document uploads
           var docs = data.docClientFiles || [];
@@ -2153,19 +2193,19 @@
             </thead>
             <tbody>
               ${filtered.length === 0 ? `<tr><td colspan="5" class="ov-no-rows">No clients in this category</td></tr>` :
-                filtered.map(c => `
+                filtered.map(c => { const _on = _getClientNames(c); return `
                   <tr>
                     <td>
                       <div style="display:flex;align-items:center;gap:8px">
-                        <span class="ov-avatar-sm" style="background:${c.color}">${c.fname[0]}${c.lname[0]}</span>
-                        <span class="ov-client-link" onclick="selectClientFromOv('${c.id}')">${c.fname} ${c.lname}</span>
+                        <span class="ov-avatar-sm" style="background:${c.color}">${(_on.fn||'?')[0]}${(_on.ln||'')[0]}</span>
+                        <span class="ov-client-link" onclick="selectClientFromOv('${c.id}')">${_on.fn} ${_on.ln}</span>
                       </div>
                     </td>
                     <td>${svcBadge(c.serviceType)}</td>
                     <td><span style="font-size:12px;font-weight:600;color:var(--gray-600)">${c.assignedTo||'—'}</span></td>
                     <td>${statusPill(c.status)}</td>
                     <td style="color:var(--gray-400)">${fmtDate(c.lastActivity)}</td>
-                  </tr>`).join('')}
+                  </tr>`; }).join('')}
             </tbody>
           </table>
         </div>
@@ -2339,8 +2379,8 @@
                 '<div onclick="toggleCtPanel(\'' + c.id + '\')" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 80px;gap:0;padding:12px 16px;cursor:pointer;align-items:center;transition:background 0.12s" onmouseover="this.style.background=\'var(--gray-50)\'" onmouseout="this.style.background=\'\'">' +
                   '<div style="display:flex;align-items:center;gap:8px">' +
                     '<svg id="ct-arrow-' + c.id + '" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:var(--gray-400);transition:transform 0.2s;flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>' +
-                    '<span class="ov-avatar-sm" style="background:' + c.color + '">' + c.fname[0] + c.lname[0] + '</span>' +
-                    '<span style="font-weight:600;color:var(--navy);font-size:13px" class="ov-client-link" onclick="event.stopPropagation();selectClientFromOv(\'' + c.id + '\')">' + c.fname + ' ' + c.lname + '</span>' +
+                    '<span class="ov-avatar-sm" style="background:' + c.color + '">' + (function(){var _tn=_getClientNames(c);return (_tn.fn||'?')[0]+(_tn.ln||'')[0];})() + '</span>' +
+                    '<span style="font-weight:600;color:var(--navy);font-size:13px" class="ov-client-link" onclick="event.stopPropagation();selectClientFromOv(\'' + c.id + '\')">' + (function(){var _tn=_getClientNames(c);return _tn.fn+' '+_tn.ln;})() + '</span>' +
                   '</div>' +
                   '<div>' + svcBadge(c.serviceType) + '</div>' +
                   '<div>' + statusPill(c.status) + '</div>' +
@@ -4405,11 +4445,12 @@
         const msgs = getMsgs(c.id);
         const last = msgs[msgs.length-1];
         const unread = _countUnread(c.id, msgs);
+        const _cn = _getClientNames(c);
         return `<div class="a-msg-thread ${activeMsgClientId===c.id?'active':''}" onclick="openMsgThread('${c.id}')">
           <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:28px;height:28px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:700;font-size:11px;color:white;flex-shrink:0;overflow:hidden">${c.photo?`<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`:`${c.fname[0]}${c.lname[0]}`}</div>
+            <div style="width:28px;height:28px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:700;font-size:11px;color:white;flex-shrink:0;overflow:hidden">${c.photo?`<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`:`${(_cn.fn||'?')[0]}${(_cn.ln||'')[0]}`}</div>
             <div style="min-width:0;flex:1">
-              <div class="a-msg-thread-name" style="${unread>0?'color:var(--navy);font-weight:700':''}">${c.fname} ${c.lname}</div>
+              <div class="a-msg-thread-name" style="${unread>0?'color:var(--navy);font-weight:700':''}">${_cn.fn} ${_cn.ln}</div>
               <div class="a-msg-thread-preview" style="${unread>0?'color:var(--navy);font-weight:600':''}${last&&!last.from_admin&&unread>0?'':''}">${last ? last.text : 'No messages yet'}</div>
             </div>
             ${unread > 0 ? `<div class="a-msg-unread-dot"></div>` : ''}
@@ -7320,7 +7361,8 @@
   }
 
   function plInitials(c) {
-    return ((c.fname||'?')[0] + (c.lname||'?')[0]).toUpperCase();
+    var n = _getClientNames(c);
+    return (((n.fn||c.fname||'?')[0]) + ((n.ln||c.lname||'')[0]||'')).toUpperCase();
   }
 
   // ── OVERVIEW: CLIENT TASKS QUEUE ─────────────────────────────────────────
@@ -7534,11 +7576,12 @@
             var p = plGetProgress(c.id, si);
             var pct = p.total ? Math.round(p.done/p.total*100) : 0;
             var days = plDaysInStage(c.id, si);
+            var _pn = _getClientNames(c);
             return '<div class="pl-card" onclick="openTaskModal(\'' + c.id + '\')" style="border-left:3px solid ' + stage.color + '">'
               + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
               + '<div style="width:32px;height:32px;border-radius:9px;background:' + stage.light + ';color:' + stage.color + ';font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + plInitials(c) + '</div>'
               + '<div style="flex:1;min-width:0">'
-              + '<div class="pl-card-name">' + c.fname + ' ' + c.lname + '</div>'
+              + '<div class="pl-card-name">' + _pn.fn + ' ' + _pn.ln + '</div>'
               + '<div style="font-size:10px;color:#94a3b8">' + (c.fico ? 'FICO ' + c.fico : c.email||'—') + '</div></div>'
               + plDaysBadge(days) + '</div>'
               + '<div class="pl-prog-bar"><div class="pl-prog-fill" style="width:' + pct + '%;background:' + stage.color + '"></div></div>'
@@ -7559,10 +7602,11 @@
 
     var unCards = unstarted.length
       ? unstarted.map(function(c){
+          var _un = _getClientNames(c);
           return '<div class="pl-card" onclick="openTaskModal(\'' + c.id + '\')">'
             + '<div style="display:flex;align-items:center;gap:9px">'
             + '<div style="width:32px;height:32px;border-radius:9px;background:#f1f5f9;color:#94a3b8;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + plInitials(c) + '</div>'
-            + '<div><div class="pl-card-name">' + c.fname + ' ' + c.lname + '</div>'
+            + '<div><div class="pl-card-name">' + _un.fn + ' ' + _un.ln + '</div>'
             + '<div style="font-size:10px;color:#94a3b8">' + (c.fico ? 'FICO ' + c.fico : c.email||'—') + '</div></div></div>'
             + '<div style="font-size:11px;color:#3b82f6;font-weight:700;margin-top:9px">Start Pipeline &#x2192;</div></div>';
         }).join('')
@@ -7708,7 +7752,7 @@
       + '<div style="display:flex;align-items:center;gap:12px">'
       + '<div style="width:44px;height:44px;border-radius:12px;background:' + stage.light + ';color:' + stage.color + ';font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + plInitials(c) + '</div>'
       + '<div>'
-      + '<div style="font-family:var(--font-h);font-size:17px;font-weight:800;color:#0f2044;line-height:1.2">' + c.fname + ' ' + c.lname + '</div>'
+      + '<div style="font-family:var(--font-h);font-size:17px;font-weight:800;color:#0f2044;line-height:1.2">' + (function(){var _mn=_getClientNames(c);return _mn.fn+' '+_mn.ln;})() + '</div>'
       + '<div style="font-size:12px;color:#64748b;margin-top:3px;display:flex;align-items:center;gap:6px">'
       + '<span style="background:' + stage.color + ';color:#fff;font-size:10px;font-weight:700;padding:1px 8px;border-radius:20px">S' + (t2.stage+1) + '</span>'
       + PIPELINE_STAGES[t2.stage].name + ' &nbsp;' + plDaysBadge(days) + '</div></div></div>'
@@ -7815,7 +7859,7 @@
     d.currentStage = newStage + 1;
     saveDashData(clientId, d);
     var c = getClient(clientId);
-    logActivity('Client <strong>' + (c ? c.fname + ' ' + c.lname : clientId) + '</strong> moved to S' + (newStage+1) + ' — ' + PIPELINE_STAGES[newStage].name, PIPELINE_STAGES[newStage].color);
+    logActivity('Client <strong>' + (c ? (function(){var _ln=_getClientNames(c);return _ln.fn+' '+_ln.ln;})() : clientId) + '</strong> moved to S' + (newStage+1) + ' — ' + PIPELINE_STAGES[newStage].name, PIPELINE_STAGES[newStage].color);
     renderTaskModal(clientId, newStage);
     renderPipeline();
     renderOvClientTasks();
