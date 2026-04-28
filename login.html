@@ -1085,11 +1085,11 @@
           return;
         }
 
-        // Save clientAuth mapping for future use
-        try { await fsSetClientAuth(result.user.uid, { clientId: match.id, phone: phoneE164 }); } catch(e) {}
+        // Save clientAuth mapping for future use (fire-and-forget, don't await)
+        fsSetClientAuth(result.user.uid, { clientId: match.id, phone: phoneE164 }).catch(() => {});
 
         startClientSession(match.id, match.email || phoneE164, match.phone || phoneE164);
-        redirectAfterLogin(match.id);
+        redirectAfterLogin(match.id, match);
       } catch(e) {
         if (e.message !== 'no-clients') {
           const msg = e.code === 'auth/invalid-verification-code' ? 'Incorrect code — please try again.'
@@ -1114,28 +1114,35 @@
       } catch(e) {}
     }
 
-    async function redirectAfterLogin(clientId) {
+    async function redirectAfterLogin(clientId, knownClient) {
       try {
-        // 1. Firestore client record — most reliable across devices
-        const [fsClients, fsOnboard] = await Promise.all([
-          fsGetClients().catch(() => null),
+        // 1. Firestore client record — use already-fetched record if available (avoids a second read)
+        let fsClient = knownClient || null;
+        // Short-circuit: if client is already known to be complete, go straight to dashboard
+        if (fsClient && fsClient.onboardingComplete) {
+          window.location.replace('dashboard.html');
+          return;
+        }
+        // Fetch onboarding data in parallel; only fetch client list if we don't already have it
+        const [maybeClients, fsOnboard] = await Promise.all([
+          fsClient ? Promise.resolve(null) : fsGetClients().catch(() => null),
           fsGetOnboarding(clientId).catch(() => null)
         ]);
-        if (fsClients) {
-          const fsClient = fsClients.find(c => c.id === clientId);
-          if (fsClient && fsClient.onboardingComplete) {
-            window.location.replace('dashboard.html');
-            return;
-          }
-          // Build skip params so onboarding can apply them instantly without waiting for Firestore
-          if (fsClient && (fsClient.skipContract || fsClient.skipPersonal || fsClient.skipBusiness)) {
-            const skips = [];
-            if (fsClient.skipContract) skips.push('contract');
-            if (fsClient.skipPersonal) skips.push('personal');
-            if (fsClient.skipBusiness) skips.push('business');
-            window.location.replace('onboarding.html?skip=' + skips.join(','));
-            return;
-          }
+        if (!fsClient && maybeClients) {
+          fsClient = maybeClients.find(c => c.id === clientId) || null;
+        }
+        if (fsClient && fsClient.onboardingComplete) {
+          window.location.replace('dashboard.html');
+          return;
+        }
+        // Build skip params so onboarding can apply them instantly without waiting for Firestore
+        if (fsClient && (fsClient.skipContract || fsClient.skipPersonal || fsClient.skipBusiness)) {
+          const skips = [];
+          if (fsClient.skipContract) skips.push('contract');
+          if (fsClient.skipPersonal) skips.push('personal');
+          if (fsClient.skipBusiness) skips.push('business');
+          window.location.replace('onboarding.html?skip=' + skips.join(','));
+          return;
         }
         // 2. Firestore onboarding data — complete if onboardingComplete flag OR bizName submitted OR all steps were skipped
         if (fsOnboard && (fsOnboard.onboardingComplete || fsOnboard.bizName || (fsOnboard.contractSigned === 'signed' && !fsOnboard.contractSkipped))) {
