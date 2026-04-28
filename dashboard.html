@@ -3476,7 +3476,8 @@
       if (_pt && typeof _pt.stage === 'number') {
         var _si = _pt.stage;
         var _stageTasks = _PIPELINE_CLIENT_TASKS[_si] || [];
-        var _assigned = (_pt.assigned && _pt.assigned[_si] !== undefined) ? _pt.assigned[_si] : null;
+        var _rawA = (_pt.assigned && _pt.assigned[_si] !== undefined) ? _pt.assigned[_si] : null;
+        var _assigned = (Array.isArray(_rawA) && _rawA.length > 0) ? _rawA : null;
         var _indices = _assigned !== null ? _assigned : _stageTasks.map(function(_,i){ return i; });
         _indices.forEach(function(ti) {
           var label = _stageTasks[ti];
