@@ -3480,10 +3480,8 @@
       if (_pt && typeof _pt.stage === 'number') {
         var _si = _pt.stage;
         var _stageTasks = _PIPELINE_CLIENT_TASKS[_si] || [];
-        var _rawA = (_pt.assigned && _pt.assigned[_si] !== undefined) ? _pt.assigned[_si] : null;
-        var _assigned = (Array.isArray(_rawA) && _rawA.length > 0) ? _rawA : null;
-        var _indices = _assigned !== null ? _assigned : _stageTasks.map(function(_,i){ return i; });
-        _indices.forEach(function(ti) {
+        var _rawA = (_pt.assigned && Array.isArray(_pt.assigned[_si])) ? _pt.assigned[_si] : [];
+        _rawA.forEach(function(ti) {
           var label = _stageTasks[ti];
           if (!label) return;
           var key = 's' + _si + 'c' + ti;
@@ -5274,14 +5272,21 @@
     });
   }
 
-  function openDocUrl(key) {
+  async function openDocUrl(key) {
     const url = _docUrlStore[key];
     if (!url) return;
     if (url.startsWith('data:')) {
-      const [header, b64] = url.split(',');
-      const mime = header.match(/:(.*?);/)[1];
-      const bytes = new Uint8Array(atob(b64).split('').map(c => c.charCodeAt(0)));
-      window.open(URL.createObjectURL(new Blob([bytes], { type: mime })), '_blank');
+      // Use fetch to decode base64 — avoids slow charcode-by-charcode JS conversion
+      const blob = await fetch(url).then(r => r.blob());
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(objUrl), 10000);
     } else {
       window.open(url, '_blank');
     }
