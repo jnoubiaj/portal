@@ -2911,6 +2911,10 @@
     } catch(e) { return null; }
   }
 
+  function _getCreditKey() {
+    try { var s = getClientSession(); return 'cq_credit_data_' + (s && s.clientId ? s.clientId : 'anon'); } catch(e) { return 'cq_credit_data_anon'; }
+  }
+
   function getDashData() {
     const session = getClientSession();
     let clientId = session ? session.clientId : null;
@@ -3421,7 +3425,7 @@
     let _ficoDisplay = d.creditScore || '';
     if (!_ficoDisplay) {
       try {
-        const _cd = JSON.parse(localStorage.getItem('cq_credit_data') || 'null');
+        const _cd = JSON.parse(localStorage.getItem(_getCreditKey()) || 'null');
         if (_cd && (_cd.fico8 || _cd.fico)) _ficoDisplay = String(_cd.fico8 || _cd.fico);
       } catch(e) {}
     }
@@ -4085,7 +4089,7 @@
       const data = buildCaData(text);
 
       // Persist locally and to Firestore so client can see it cross-device
-      try { localStorage.setItem('cq_credit_data', JSON.stringify(data)); } catch(e) {}
+      try { localStorage.setItem(_getCreditKey(), JSON.stringify(data)); } catch(e) {}
       try {
         const _sess = getClientSession();
         if (_sess && _sess.clientId) fsSetDash(_sess.clientId, { creditData: data }).catch(()=>{});
@@ -5225,7 +5229,7 @@
     // Only auto-show if the report panel is currently hidden (not already showing)
     if (document.getElementById('ca-report').style.display !== 'none') return;
     try {
-      const saved = localStorage.getItem('cq_credit_data');
+      const saved = localStorage.getItem(_getCreditKey());
       if (saved) {
         caData = JSON.parse(saved);
         caRenderReport(caData);
@@ -5235,7 +5239,7 @@
 
   // Also clear persisted data when uploading a new report
   function caClearSavedReport() {
-    try { localStorage.removeItem('cq_credit_data'); } catch(e) {}
+    try { localStorage.removeItem(_getCreditKey()); } catch(e) {}
   }
 
   // ── DOCUMENT UPLOAD ──────────────────────────────────────────────────────
@@ -5374,7 +5378,7 @@
     }
     if (changed) renderAllDocs();
     if (data.creditData) {
-      try { localStorage.setItem('cq_credit_data', JSON.stringify(data.creditData)); } catch(e) {}
+      try { localStorage.setItem(_getCreditKey(), JSON.stringify(data.creditData)); } catch(e) {}
       if (typeof caRenderReport === 'function') {
         window.caData = data.creditData;
         caRenderReport(data.creditData);
