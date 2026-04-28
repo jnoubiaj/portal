@@ -2974,7 +2974,7 @@
           if (!base.clientName && ac && ac.fname) base.clientName = _cap(ac.fname);
         } catch(e) {}
       }
-      if (!base.clientName && session && session.email) {
+      if (!base.clientName && session && session.email && session.email.includes('@')) {
         base.clientName = session.email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
       }
     }
