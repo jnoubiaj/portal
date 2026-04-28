@@ -3050,17 +3050,17 @@
   function openDocUrl(key) {
     const url = _docUrlStore[key];
     if (!url) return;
+    let href = url;
     if (url.startsWith('data:')) {
       const [header, b64] = url.split(',');
       const mime = header.match(/:(.*?);/)[1];
-      const binary = atob(b64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: mime });
-      window.open(URL.createObjectURL(blob), '_blank');
-    } else {
-      window.open(url, '_blank');
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      href = URL.createObjectURL(new Blob([bytes], { type: mime }));
+      setTimeout(() => URL.revokeObjectURL(href), 30000);
     }
+    const a = document.createElement('a');
+    a.href = href; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
   function readAsDataURL(file) {

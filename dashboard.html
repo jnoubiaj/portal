@@ -1165,7 +1165,7 @@
     .doc-up-bar-fill {
       height: 100%; border-radius: 999px;
       background: linear-gradient(90deg, var(--blue), #67d5ff);
-      width: 0%; transition: width 0.4s ease;
+      width: 0%;
     }
     .doc-up-pct { font-size: 12px; color: var(--blue); font-weight: 600; white-space: nowrap; }
 
@@ -5345,6 +5345,8 @@
     const sizeStr = file.size > 1024*1024 ? (file.size/1024/1024).toFixed(1)+' MB' : Math.round(file.size/1024)+' KB';
     const meta    = { id: 'cf_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), name: file.name, size: sizeStr, date: dateStr, reqId: reqId || 'general', url };
 
+    // Remove any previous entry with the same filename to avoid duplicates on re-upload
+    docClientFiles = docClientFiles.filter(f => f.name !== file.name);
     docClientFiles.push(meta);
     _docSaveFiles();
 
@@ -5383,6 +5385,8 @@
         changed = true;
       }
     }
+    // Re-render when admin uploads docs so client sees them without refreshing
+    if (data.adminDocs !== undefined) changed = true;
     if (changed) renderAllDocs();
     if (data.creditData) {
       try { localStorage.setItem(_getCreditKey(), JSON.stringify(data.creditData)); } catch(e) {}
