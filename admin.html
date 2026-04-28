@@ -1572,8 +1572,12 @@
 
   // Client-submitted docs (read what client portal saves)
   function getClientDocs(clientId) {
-    // Client portal saves to cq_doc_files (single user for demo)
-    // In multi-user system this would be keyed by clientId
+    // Primary key used by client portal dashboard
+    try {
+      const d = JSON.parse(localStorage.getItem('cqdoc_files_' + clientId) || 'null');
+      if (d && d.length > 0) return d;
+    } catch(e) {}
+    // Legacy fallbacks
     if (clientId === 'c1') {
       try { return JSON.parse(localStorage.getItem('cq_doc_files') || '[]'); } catch(e) { return []; }
     }
@@ -2065,8 +2069,8 @@
           }
 
           // Document uploads
-          var docs = data.docClientFiles || [];
-          var prevDocs = prev.docClientFiles || [];
+          var docs = data.clientFiles || [];
+          var prevDocs = prev.clientFiles || [];
           var newDocs = docs.filter(function(d) {
             return d.date && d.date > _notifInitTs
               && !prevDocs.some(function(p){ return p.url === d.url; });
