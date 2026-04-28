@@ -2048,6 +2048,10 @@
                 }
               }
             }
+            // Seed pipelineTasks into localStorage so getClientTasks() finds them immediately
+            if (data.pipelineTasks && !localStorage.getItem('cq_tasks_' + clientId)) {
+              try { localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(data.pipelineTasks)); } catch(e) {}
+            }
             return;
           }
 
@@ -2087,6 +2091,11 @@
           });
           if (newlyChecked.length > 0) {
             addNotif('task', clientId, _notifClientName(clientId) + ' completed ' + newlyChecked.length + ' task' + (newlyChecked.length > 1 ? 's' : ''));
+          }
+
+          // Keep local task cache in sync with Firestore (client may have completed tasks)
+          if (data.pipelineTasks) {
+            try { localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(data.pipelineTasks)); } catch(e) {}
           }
 
           dashPrev[clientId] = data;
@@ -2841,6 +2850,11 @@
         if (creditPane && activeDetailTab === 'credit') {
           creditPane.innerHTML = renderCreditTab(fsDash.creditData, clientId);
         }
+      }
+
+      // Cache pipelineTasks from Firestore so getClientTasks() finds them on render
+      if (fsDash && fsDash.pipelineTasks) {
+        try { localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(fsDash.pipelineTasks)); } catch(e) {}
       }
 
       // Full replace — prevents duplicates on repeated calls
