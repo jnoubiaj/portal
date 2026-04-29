@@ -618,24 +618,18 @@
     @media (max-width: 768px) {
       #page-login { flex-direction: column; height: 100dvh; overflow: hidden; }
 
-      /* Brand strip — compact, no wasted space */
+      /* Brand section — centered, compact */
       .lp-left {
         flex: 0 0 auto;
-        padding: 16px 24px 14px;
+        padding: 20px 24px 16px;
         justify-content: center;
         align-items: center;
-        gap: 6px;
-        flex-direction: row;
-        border-bottom: 1px solid rgba(255,255,255,0.08);
-      }
-      .lp-logo {
         text-align: center;
-        margin-bottom: 0;
-        margin-right: 12px;
       }
-      .lp-logo img { height: 32px; }
-      .lp-content { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
-      .lp-headline { font-size: 14px; font-weight: 700; margin-bottom: 0; white-space: nowrap; letter-spacing: -0.01em; }
+      .lp-logo { text-align: center; margin-bottom: 10px; }
+      .lp-logo img { height: 38px; }
+      .lp-content { display: flex; flex-direction: column; align-items: center; text-align: center; }
+      .lp-headline { font-size: 17px; margin-bottom: 0; }
       .lp-headline br { display: none; }
       .lp-sub, .lp-features, .lp-footer { display: none; }
 
@@ -644,7 +638,7 @@
         flex: 1;
         width: 100%;
         border-left: none;
-        border-top: none;
+        border-top: 1px solid var(--border);
         padding: 28px 24px 24px;
         background: rgba(13,27,48,0.98);
         overflow-y: auto;
@@ -658,8 +652,8 @@
       .lp-footer-mobile { display: block; }
     }
     @media (max-width: 480px) {
-      .lp-left { padding: 14px 20px 12px; }
-      .lp-headline { font-size: 13px; }
+      .lp-left { padding: 16px 20px 14px; }
+      .lp-headline { font-size: 15px; }
       .lp-right { padding: 24px 20px 20px; }
       .welcome-card { padding: 36px 20px; }
     }
