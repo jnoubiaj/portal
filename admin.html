@@ -4699,13 +4699,14 @@
     });
     // Populate client info sidebar
     _renderMsgClientPanel(c);
-    fsGetDash(clientId).then(dash => _renderMsgClientPanel(c, dash));
+    Promise.all([fsGetDash(clientId), fsGetOnboarding(clientId)])
+      .then(([dash, onboard]) => _renderMsgClientPanel(c, dash, onboard));
   }
 
   const _MCP_COLORS = ['#22A7F0','#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#14b8a6'];
   function _mcpColor(str) { let h=0; for(let i=0;i<str.length;i++)h=(h*31+str.charCodeAt(i))&0xffffffff; return _MCP_COLORS[Math.abs(h)%_MCP_COLORS.length]; }
 
-  function _renderMsgClientPanel(c, dash) {
+  function _renderMsgClientPanel(c, dash, onboard) {
     const empty = document.getElementById('a-mcp-empty');
     const content = document.getElementById('a-mcp-content');
     if (!c) { empty.style.display='flex'; content.style.display='none'; return; }
@@ -4724,22 +4725,33 @@
     document.getElementById('a-mcp-contact').innerHTML = contactLines.join('<br>') || '<span style="color:var(--gray-300)">No contact info</span>';
 
     const stageNames = ['Initial Setup / Credit Review','Credit Optimization','Funding Strategy','Bank Relationships','Application Phase','Decision / Results'];
-    const stageIdx = dash ? (dash.currentStage || 1) : (c.stage || 1);
-    const stageName = dash ? (dash.stageNames ? dash.stageNames[stageIdx-1] : stageNames[stageIdx-1]) : stageNames[stageIdx-1];
-    const creditScore = dash ? (dash.creditScore || (dash.creditData && (dash.creditData.fico8||dash.creditData.fico)) || '') : '';
-    const fundingApproved = dash ? (dash.fundingApproved || (dash.fundingRows||[]).filter(r=>r.status==='approved').reduce((s,r)=>s+(+r.amount||0),0)) : '';
-    const tasksTotal = dash ? (dash.pipelineTasks||[]).length : 0;
-    const tasksDone = dash ? (dash.pipelineTasks||[]).filter(t=>t.done).length : 0;
-    const bizName = (dash && dash.profileData && dash.profileData.bizName) || c.bizName || '';
+    const stageIdx = (dash && dash.currentStage) || c.stage || 1;
+    const stageName = (dash && dash.stageNames) ? (dash.stageNames[stageIdx-1]||stageNames[stageIdx-1]) : stageNames[stageIdx-1];
+    const creditScore = (dash && (dash.creditScore || (dash.creditData && (dash.creditData.fico8||dash.creditData.fico)))) || '';
+    const fundingApproved = dash ? (dash.fundingApproved || (dash.fundingRows||[]).filter(r=>r.status==='approved').reduce((s,r)=>s+(+r.amount||0),0)) : 0;
+    const tasksTotal = (dash && dash.pipelineTasks) ? dash.pipelineTasks.length : 0;
+    const tasksDone  = (dash && dash.pipelineTasks) ? dash.pipelineTasks.filter(t=>t.done).length : 0;
+    const bizName = (dash && dash.profileData && dash.profileData.bizName) || (onboard && onboard.bizName) || c.bizName || '';
+    const bizType = (onboard && onboard.bizType) || '';
+    const annualRev = (onboard && onboard.annualRevenue) || '';
+    const contractSigned = (onboard && onboard.contractSigned === 'signed') || c.onboardingComplete || false;
+    const joinedAt = c.createdAt || c.addedAt || '';
 
     let bodyHTML = '';
 
-    if (bizName) bodyHTML += `
+    // Onboarding status
+    bodyHTML += `
       <div class="a-mcp-stat">
-        <div class="a-mcp-stat-label">Business</div>
-        <div class="a-mcp-stat-value" style="font-size:13px">${bizName}</div>
+        <div class="a-mcp-stat-label">Onboarding</div>
+        <div style="margin-top:4px">
+          <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;${contractSigned ? 'background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.2)' : 'background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.2)'}">
+            <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+            ${contractSigned ? 'Contract Signed' : 'Pending'}
+          </span>
+        </div>
       </div>`;
 
+    // Stage
     bodyHTML += `
       <div class="a-mcp-stat">
         <div class="a-mcp-stat-label">Current Stage</div>
@@ -4750,29 +4762,58 @@
         <div class="a-mcp-stat-sub" style="margin-top:4px">${stageName||''}</div>
       </div>`;
 
-    bodyHTML += `
+    // Business info
+    if (bizName || bizType) bodyHTML += `
+      <div class="a-mcp-stat">
+        <div class="a-mcp-stat-label">Business</div>
+        <div class="a-mcp-stat-value" style="font-size:13px">${bizName || '—'}</div>
+        ${bizType ? `<div class="a-mcp-stat-sub">${bizType}</div>` : ''}
+      </div>`;
+
+    // Annual revenue
+    if (annualRev) bodyHTML += `
+      <div class="a-mcp-stat">
+        <div class="a-mcp-stat-label">Annual Revenue</div>
+        <div class="a-mcp-stat-value" style="font-size:13px">${annualRev}</div>
+      </div>`;
+
+    // Credit score — only show if has value
+    if (creditScore) bodyHTML += `
       <div class="a-mcp-stat">
         <div class="a-mcp-stat-label">Credit Score</div>
-        <div class="a-mcp-stat-value">${creditScore || '—'}</div>
-        ${creditScore ? `<div class="a-mcp-stat-sub">${+creditScore>=720?'Excellent':+creditScore>=680?'Good':+creditScore>=640?'Fair':'Needs work'}</div>` : ''}
+        <div class="a-mcp-stat-value">${creditScore}</div>
+        <div class="a-mcp-stat-sub">${+creditScore>=720?'Excellent':+creditScore>=680?'Good':+creditScore>=640?'Fair':'Needs work'}</div>
       </div>`;
 
-    bodyHTML += `
+    // Funding approved — only show if > 0
+    if (fundingApproved) bodyHTML += `
       <div class="a-mcp-stat">
         <div class="a-mcp-stat-label">Funding Approved</div>
-        <div class="a-mcp-stat-value">${fundingApproved ? '$'+Number(fundingApproved).toLocaleString() : '—'}</div>
+        <div class="a-mcp-stat-value">$${Number(fundingApproved).toLocaleString()}</div>
       </div>`;
 
+    // Tasks — only show if tasks exist
     if (tasksTotal > 0) bodyHTML += `
       <div class="a-mcp-stat">
         <div class="a-mcp-stat-label">Tasks</div>
-        <div class="a-mcp-stat-value">${tasksDone} / ${tasksTotal}</div>
+        <div class="a-mcp-stat-value">${tasksDone} / ${tasksTotal} done</div>
         <div style="margin-top:6px;height:4px;border-radius:4px;background:var(--gray-100);overflow:hidden">
-          <div style="height:100%;width:${Math.round(tasksDone/tasksTotal*100)}%;background:var(--blue);border-radius:4px;transition:width 0.3s"></div>
+          <div style="height:100%;width:${Math.round(tasksDone/tasksTotal*100)}%;background:var(--blue);border-radius:4px"></div>
         </div>
       </div>`;
 
-    document.getElementById('a-mcp-body').innerHTML = bodyHTML;
+    // Joined date
+    if (joinedAt) {
+      const d = new Date(joinedAt);
+      const dateStr = isNaN(d) ? joinedAt : d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      bodyHTML += `
+        <div class="a-mcp-stat">
+          <div class="a-mcp-stat-label">Enrolled</div>
+          <div class="a-mcp-stat-value" style="font-size:13px">${dateStr}</div>
+        </div>`;
+    }
+
+    document.getElementById('a-mcp-body').innerHTML = bodyHTML || `<div style="text-align:center;padding:20px;font-size:12px;color:var(--gray-400)">No additional data yet</div>`;
     const btn = document.getElementById('a-mcp-profile-btn');
     btn.onclick = () => { openClientDetail(c.id); switchAdminSection('clients', document.querySelector('[data-sec="clients"]')); };
   }
