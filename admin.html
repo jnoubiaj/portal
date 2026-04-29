@@ -4697,10 +4697,11 @@
         renderMsgThreads();
       }
     });
-    // Populate client info sidebar
-    _renderMsgClientPanel(c);
+    // Populate client info sidebar — use localStorage immediately, then enrich with Firestore
+    const _localDash = getDashData(clientId);
+    _renderMsgClientPanel(c, _localDash, null);
     Promise.all([fsGetDash(clientId), fsGetOnboarding(clientId)])
-      .then(([dash, onboard]) => _renderMsgClientPanel(c, dash, onboard));
+      .then(([dash, onboard]) => _renderMsgClientPanel(c, dash || _localDash, onboard));
   }
 
   const _MCP_COLORS = ['#22A7F0','#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#14b8a6'];
