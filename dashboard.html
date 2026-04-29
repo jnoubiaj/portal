@@ -2708,14 +2708,6 @@
     } catch(e) {}
   });
 
-  // Auto-logout on tab/window close
-  window.addEventListener('pagehide', (e) => {
-    if (!e.persisted) {
-      try { sessionStorage.removeItem('cq_client_session'); } catch(x) {}
-      try { fsAuthSignOut(); } catch(x) {}
-    }
-  });
-
   // ── PORTAL CONFIG ─────────────────────────────────────
   // Change currentStage to update the entire dashboard at once
   const PORTAL_STAGES = [

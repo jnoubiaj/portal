@@ -1567,14 +1567,6 @@
     if (!_adminAppInited) { _adminAppInited = true; if (typeof initAdminApp === 'function') initAdminApp(); }
   }
 
-  // Auto-logout on tab/window close
-  window.addEventListener('pagehide', (e) => {
-    if (!e.persisted) {
-      try { localStorage.removeItem('cq_admin_user'); } catch(x) {}
-      try { fsAuthSignOut(); } catch(x) {}
-    }
-  });
-
   function adminLogout() {
     try { localStorage.removeItem('cq_admin_user'); } catch(e) {}
     _adminAppInited = false;
