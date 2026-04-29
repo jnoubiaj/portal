@@ -2074,6 +2074,13 @@
       /* Document req upload button — bigger tap target */
       .doc-req-badge { height: 36px; line-height: 36px; padding: 0 14px; font-size: 12px; cursor: pointer; }
 
+      /* Body scroll lock when chat is active — prevents iOS Safari bounce */
+      body.chat-scroll-lock {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+      }
+
       /* Chat — full screen, edge-to-edge on mobile */
       #section-chat {
         margin: 0 -14px;
@@ -2087,6 +2094,10 @@
         display: flex;
         flex-direction: column;
         margin-bottom: 0;
+      }
+      /* Remove content-area padding when chat is active so card fills to bottom */
+      body.chat-scroll-lock .content-area {
+        padding: 0 !important;
       }
       #section-chat .card-header { flex-shrink: 0; }
       #section-chat .card-body {
@@ -2695,6 +2706,14 @@
         try { if (typeof window._fsRefreshNow === 'function') window._fsRefreshNow(); } catch(e2) {}
       }
     } catch(e) {}
+  });
+
+  // Auto-logout on tab/window close
+  window.addEventListener('pagehide', (e) => {
+    if (!e.persisted) {
+      try { sessionStorage.removeItem('cq_client_session'); } catch(x) {}
+      try { fsAuthSignOut(); } catch(x) {}
+    }
   });
 
   // ── PORTAL CONFIG ─────────────────────────────────────
@@ -5446,6 +5465,14 @@
     // Init real-time messaging when chat section is opened
     if (name === 'chat') {
       initChatSection();
+    }
+    // Lock body scroll on mobile when in chat (prevents iOS Safari bounce/overscroll)
+    if (window.innerWidth <= 768) {
+      if (name === 'chat') {
+        document.body.classList.add('chat-scroll-lock');
+      } else {
+        document.body.classList.remove('chat-scroll-lock');
+      }
     }
     // Re-render docs list when navigating to Documents tab (catches updates that arrived while on another tab)
     if (name === 'documents') {
