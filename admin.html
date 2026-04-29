@@ -652,7 +652,7 @@
     .a-chat-send:hover { background: var(--blue-dark); }
 
     /* ── MESSAGES SECTION ──────────────────────── */
-    .a-msgs-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
+    .a-msgs-layout { display: grid; grid-template-columns: 280px 1fr 260px; gap: 20px; }
     .a-msg-thread-list {
       background: var(--white); border-radius: 14px;
       border: 1px solid var(--gray-100); overflow: hidden;
@@ -672,6 +672,54 @@
       display: flex; flex-direction: column; height: 520px;
     }
     .a-msg-full-header { font-family: var(--font-h); font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--gray-100); }
+
+    /* ── CLIENT INFO SIDEBAR ────────────────────── */
+    .a-msg-client-panel {
+      background: var(--white); border-radius: 14px;
+      border: 1px solid var(--gray-100); overflow: hidden;
+      height: 520px; display: flex; flex-direction: column;
+    }
+    .a-mcp-empty {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px; color: var(--gray-300);
+    }
+    .a-mcp-empty p { font-size: 12px; color: var(--gray-400); }
+    .a-mcp-header {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid var(--gray-100);
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+    }
+    .a-mcp-avatar {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-h); font-size: 18px; font-weight: 700;
+      color: var(--white); margin-bottom: 10px; flex-shrink: 0;
+    }
+    .a-mcp-name { font-family: var(--font-h); font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 2px; }
+    .a-mcp-contact { font-size: 11px; color: var(--gray-400); line-height: 1.6; }
+    .a-mcp-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .a-mcp-stat {
+      background: var(--gray-50); border-radius: 10px;
+      padding: 10px 12px; border: 1px solid var(--gray-100);
+    }
+    .a-mcp-stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); margin-bottom: 3px; }
+    .a-mcp-stat-value { font-family: var(--font-h); font-size: 15px; font-weight: 700; color: var(--navy); }
+    .a-mcp-stat-sub { font-size: 11px; color: var(--gray-400); margin-top: 1px; }
+    .a-mcp-stage-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(34,167,240,0.1); color: var(--blue);
+      border: 1px solid rgba(34,167,240,0.2); border-radius: 999px;
+      font-size: 11px; font-weight: 600; padding: 3px 10px;
+    }
+    .a-mcp-footer { padding: 12px 16px; border-top: 1px solid var(--gray-100); }
+    .a-mcp-profile-btn {
+      width: 100%; height: 36px; border-radius: 8px;
+      background: var(--navy); border: none; cursor: pointer;
+      font-family: var(--font-h); font-size: 12px; font-weight: 700;
+      color: var(--white); transition: background 0.15s;
+    }
+    .a-mcp-profile-btn:hover { background: var(--blue); }
 
     /* ── ACTIVITY FEED ─────────────────────────── */
     .a-activity-card {
@@ -812,6 +860,7 @@
 
       /* Messages */
       .a-msgs-layout { grid-template-columns: 1fr !important; }
+      .a-msg-client-panel { display: none; }
 
       /* Login box */
       .login-box { padding: 32px 24px; margin: 0 16px; max-width: 100%; }
@@ -1349,6 +1398,24 @@
                 <button class="a-chat-send" onclick="sendMsgFromSection()">
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
                 </button>
+              </div>
+            </div>
+            <!-- Client info sidebar -->
+            <div class="a-msg-client-panel" id="a-msg-client-panel">
+              <div class="a-mcp-empty" id="a-mcp-empty">
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="#D4DCE8" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
+                <p>Select a conversation</p>
+              </div>
+              <div id="a-mcp-content" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+                <div class="a-mcp-header">
+                  <div class="a-mcp-avatar" id="a-mcp-avatar"></div>
+                  <div class="a-mcp-name" id="a-mcp-name"></div>
+                  <div class="a-mcp-contact" id="a-mcp-contact"></div>
+                </div>
+                <div class="a-mcp-body" id="a-mcp-body"></div>
+                <div class="a-mcp-footer">
+                  <button class="a-mcp-profile-btn" id="a-mcp-profile-btn">View Full Profile →</button>
+                </div>
               </div>
             </div>
           </div>
@@ -4630,6 +4697,84 @@
         renderMsgThreads();
       }
     });
+    // Populate client info sidebar
+    _renderMsgClientPanel(c);
+    fsGetDash(clientId).then(dash => _renderMsgClientPanel(c, dash));
+  }
+
+  const _MCP_COLORS = ['#22A7F0','#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#14b8a6'];
+  function _mcpColor(str) { let h=0; for(let i=0;i<str.length;i++)h=(h*31+str.charCodeAt(i))&0xffffffff; return _MCP_COLORS[Math.abs(h)%_MCP_COLORS.length]; }
+
+  function _renderMsgClientPanel(c, dash) {
+    const empty = document.getElementById('a-mcp-empty');
+    const content = document.getElementById('a-mcp-content');
+    if (!c) { empty.style.display='flex'; content.style.display='none'; return; }
+    empty.style.display = 'none';
+    content.style.display = 'flex';
+
+    const name = (c.fname||'') + ' ' + (c.lname||'');
+    const initials = ((c.fname||'')[0]||'') + ((c.lname||'')[0]||'');
+    document.getElementById('a-mcp-avatar').textContent = initials.toUpperCase();
+    document.getElementById('a-mcp-avatar').style.background = _mcpColor(c.id||name);
+    document.getElementById('a-mcp-name').textContent = name;
+
+    const contactLines = [];
+    if (c.phone) contactLines.push(c.phone);
+    if (c.email) contactLines.push(c.email);
+    document.getElementById('a-mcp-contact').innerHTML = contactLines.join('<br>') || '<span style="color:var(--gray-300)">No contact info</span>';
+
+    const stageNames = ['Initial Setup / Credit Review','Credit Optimization','Funding Strategy','Bank Relationships','Application Phase','Decision / Results'];
+    const stageIdx = dash ? (dash.currentStage || 1) : (c.stage || 1);
+    const stageName = dash ? (dash.stageNames ? dash.stageNames[stageIdx-1] : stageNames[stageIdx-1]) : stageNames[stageIdx-1];
+    const creditScore = dash ? (dash.creditScore || (dash.creditData && (dash.creditData.fico8||dash.creditData.fico)) || '') : '';
+    const fundingApproved = dash ? (dash.fundingApproved || (dash.fundingRows||[]).filter(r=>r.status==='approved').reduce((s,r)=>s+(+r.amount||0),0)) : '';
+    const tasksTotal = dash ? (dash.pipelineTasks||[]).length : 0;
+    const tasksDone = dash ? (dash.pipelineTasks||[]).filter(t=>t.done).length : 0;
+    const bizName = (dash && dash.profileData && dash.profileData.bizName) || c.bizName || '';
+
+    let bodyHTML = '';
+
+    if (bizName) bodyHTML += `
+      <div class="a-mcp-stat">
+        <div class="a-mcp-stat-label">Business</div>
+        <div class="a-mcp-stat-value" style="font-size:13px">${bizName}</div>
+      </div>`;
+
+    bodyHTML += `
+      <div class="a-mcp-stat">
+        <div class="a-mcp-stat-label">Current Stage</div>
+        <div style="margin-top:4px"><span class="a-mcp-stage-badge">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+          Stage ${stageIdx} of 6
+        </span></div>
+        <div class="a-mcp-stat-sub" style="margin-top:4px">${stageName||''}</div>
+      </div>`;
+
+    bodyHTML += `
+      <div class="a-mcp-stat">
+        <div class="a-mcp-stat-label">Credit Score</div>
+        <div class="a-mcp-stat-value">${creditScore || '—'}</div>
+        ${creditScore ? `<div class="a-mcp-stat-sub">${+creditScore>=720?'Excellent':+creditScore>=680?'Good':+creditScore>=640?'Fair':'Needs work'}</div>` : ''}
+      </div>`;
+
+    bodyHTML += `
+      <div class="a-mcp-stat">
+        <div class="a-mcp-stat-label">Funding Approved</div>
+        <div class="a-mcp-stat-value">${fundingApproved ? '$'+Number(fundingApproved).toLocaleString() : '—'}</div>
+      </div>`;
+
+    if (tasksTotal > 0) bodyHTML += `
+      <div class="a-mcp-stat">
+        <div class="a-mcp-stat-label">Tasks</div>
+        <div class="a-mcp-stat-value">${tasksDone} / ${tasksTotal}</div>
+        <div style="margin-top:6px;height:4px;border-radius:4px;background:var(--gray-100);overflow:hidden">
+          <div style="height:100%;width:${Math.round(tasksDone/tasksTotal*100)}%;background:var(--blue);border-radius:4px;transition:width 0.3s"></div>
+        </div>
+      </div>`;
+
+    document.getElementById('a-mcp-body').innerHTML = bodyHTML;
+    const btn = document.getElementById('a-mcp-profile-btn');
+    btn.onclick = () => { openClientDetail(c.id); switchAdminSection('clients', document.querySelector('[data-sec="clients"]')); };
   }
 
   function sendMsgFromSection() {
