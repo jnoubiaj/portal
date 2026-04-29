@@ -89,18 +89,32 @@ async function fsUploadFile(path, file) {
   try {
     if (typeof firebase.storage !== 'function') return null;
     const ref = firebase.storage().ref(path);
-    const timeout = new Promise(resolve => setTimeout(() => resolve(null), 5000));
+    const timeout = new Promise(resolve => setTimeout(() => resolve(null), 120000));
     const upload = ref.put(file).then(() => ref.getDownloadURL()).catch(() => null);
     return await Promise.race([upload, timeout]);
   } catch(e) { return null; }
 }
 
-// Real-time listener for dashboard — calls callback whenever data changes
+// Real-time listener for dashboard — calls callback whenever data changes.
+// Auto-retries up to 5 times with exponential backoff if the listener errors out
+// (e.g. auth token expired, brief network drop).
 function fsListenDash(clientId, callback) {
-  return db.collection('dashboards').doc(clientId).onSnapshot(
-    snap => { if (snap.exists) callback(snap.data()); },
-    () => {}
-  );
+  let unsub = null;
+  let retries = 0;
+  let stopped = false;
+  function attach() {
+    if (stopped) return;
+    unsub = db.collection('dashboards').doc(clientId).onSnapshot(
+      snap => { retries = 0; if (snap.exists) callback(snap.data()); },
+      () => {
+        // Retry indefinitely — cap backoff at 30s so it recovers quickly after network hiccups
+        const delay = Math.min(1000 * Math.pow(2, Math.min(retries, 5)), 30000);
+        setTimeout(() => { if (!stopped) { retries++; attach(); } }, delay);
+      }
+    );
+  }
+  attach();
+  return () => { stopped = true; if (unsub) unsub(); };
 }
 
 // ── ONBOARDING DATA ───────────────────────────────────────────────────────

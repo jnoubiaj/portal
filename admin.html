@@ -2832,13 +2832,13 @@
       const allAdminIds = new Set(adminDocs.map(d => d.id));
       const mergedAdminDocs = [...adminDocs, ...fsDashAdminDocs.filter(d => !allAdminIds.has(d.id))];
       mergedAdminDocs.forEach(d => {
-        rows.push(docFileRowHTML(d.name, d.size, d.date, 'admin', d.url || null));
+        rows.push(docFileRowHTML(d.name, d.size, d.date, 'admin', d.url || null, d.id));
       });
 
       // 3. Client-uploaded files from Firestore
       if (fsDash && fsDash.clientFiles && fsDash.clientFiles.length) {
         fsDash.clientFiles.forEach(f => {
-          rows.push(docFileRowHTML(f.name, f.size, f.date, 'client', f.url || null));
+          rows.push(docFileRowHTML(f.name, f.size, f.date, 'client', f.url || null, f.id));
         });
       }
 
@@ -3080,9 +3080,25 @@
     const newDocs = [];
     for (const f of Array.from(files)) {
       const sizeStr = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' MB' : Math.round(f.size/1024)+' KB';
-      // Use base64 for files ≤ 900 KB so admin can view from any device
       let url = null;
-      if (f.size <= 900 * 1024) url = await readAsDataURL(f);
+      if (f.size <= 900 * 1024) {
+        url = await readAsDataURL(f);
+      } else {
+        // Large file — upload to Firebase Storage for a permanent download URL
+        try {
+          if (typeof firebase !== 'undefined' && typeof firebase.storage === 'function') {
+            const storagePath = 'admin/' + clientId + '/' + Date.now() + '_' + f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const ref = firebase.storage().ref(storagePath);
+            const task = ref.put(f);
+            await new Promise(resolve => {
+              task.on('state_changed', null,
+                () => resolve(),
+                async () => { try { url = await ref.getDownloadURL(); } catch(e) {} resolve(); }
+              );
+            });
+          }
+        } catch(e) {}
+      }
       const doc = { id: 'adoc_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), name: f.name, size: sizeStr, date: dateStr, url };
       docs.push(doc);
       newDocs.push(doc);
@@ -3110,7 +3126,7 @@
     logActivity(`Document uploaded for ${c.fname} ${c.lname}: <strong>${files[0].name}</strong>`, '#22A7F0');
   }
 
-  function docFileRowHTML(name, size, date, source, url) {
+  function docFileRowHTML(name, size, date, source, url, fileId) {
     const safeName = name || 'Document';
     const ext = safeName.split('.').pop().toLowerCase();
     const iconColor = ext==='pdf'?'#ef4444':ext==='docx'?'#2563eb':'#22A7F0';
@@ -3121,7 +3137,8 @@
     const badge = `<span class="a-doc-file-badge ${source==='admin'?'adfb-admin':'adfb-client'}">${source==='admin'?'Admin':'Client'}</span>`;
     let viewBtn = '';
     if (url) {
-      const key = 'dk_' + Math.random().toString(36).slice(2, 10);
+      // Use stable key derived from file ID so re-renders don't break View buttons
+      const key = 'dk_' + (fileId || (name + '_' + date)).replace(/[^a-zA-Z0-9]/g, '_');
       _docUrlStore[key] = url;
       viewBtn = `<button class="a-doc-view-btn" onclick="openDocUrl('${key}')">View</button>`;
     }
@@ -4933,23 +4950,30 @@
       return d;
     }
   }
-  function saveDashData(clientId, data) {
+  function saveDashData(clientId, data, localOnly) {
+    // Strip base64 URLs from adminDocs before writing to localStorage.
+    // Base64 strings can be 1-2 MB each — leaving them in causes JSON.stringify to
+    // block the UI thread every time any form field changes (add card, remove card, etc).
+    // Admin docs are already stored separately in cq_admin_docs_{clientId} with full URLs.
+    const _stripB64 = docs => (docs || []).map(d => ({
+      ...d, url: (d.url && d.url.startsWith('data:')) ? null : d.url
+    }));
+    const lsData = Object.assign({}, data, { adminDocs: _stripB64(data.adminDocs) });
     try {
-      localStorage.setItem('cq_dash_'+clientId, JSON.stringify(data));
-      localStorage.setItem('cq_dash_data', JSON.stringify(data));
+      localStorage.setItem('cq_dash_'+clientId, JSON.stringify(lsData));
+      localStorage.setItem('cq_dash_data', JSON.stringify(lsData));
       const c = getClient(clientId);
-      if (c && c.email) localStorage.setItem('cq_dash_email_'+c.email.toLowerCase(), JSON.stringify(data));
+      if (c && c.email) localStorage.setItem('cq_dash_email_'+c.email.toLowerCase(), JSON.stringify(lsData));
     } catch(e) {}
-    // Strip base64 data URLs from adminDocs before Firestore write (they exceed 1MB limit).
-    // Firebase Storage URLs (https://...) are kept — they're short and work cross-device.
+    if (localOnly) return;
+    // Firestore write: keep Storage URLs (https://...), strip base64, delete field if empty
     const fsData = Object.assign({}, data);
     if (fsData.adminDocs && fsData.adminDocs.length) {
       fsData.adminDocs = fsData.adminDocs.map(d => ({
         ...d, url: (d.url && !d.url.startsWith('data:')) ? d.url : null
       }));
     } else {
-      // Never overwrite Firestore adminDocs with an empty array — stale localStorage
-      // on a different device would wipe docs the admin uploaded from another browser.
+      // Never overwrite Firestore adminDocs with an empty array
       delete fsData.adminDocs;
     }
     fsSetDash(clientId, fsData).catch(() => {});
@@ -5241,14 +5265,39 @@
     bankSel.value = ''; cardSel.innerHTML = '<option value="">— Select card —</option>';
   }
 
+  const _amountTimers = {};
   function faUpdateRow(clientId, rowId, field, value) {
     const d = getDashData(clientId);
     if (!d.fundingRows) return;
     const row = d.fundingRows.find(r => r.id === rowId);
     if (!row) return;
     row[field] = value;
-    saveDashData(clientId, d);
-    if (field === 'status' || field === 'amount') autoCalcFundingApproved(clientId);
+
+    if (field === 'status') {
+      // Status: compute fundingApproved right now → one consistent Firestore write
+      const newTotal = d.fundingRows
+        .filter(r => r.status === 'approved')
+        .reduce((s, r) => s + (+r.amount || 0), 0);
+      if (newTotal > 0) { d.fundingApproved = newTotal; d.fundingSecured = newTotal; }
+      saveDashData(clientId, d);          // immediate Firestore write
+      autoCalcFundingApproved(clientId);  // update display + standard debounce
+    } else if (field === 'amount') {
+      // Amount: localStorage only while typing, NO debouncedPublish from autoCalc
+      saveDashData(clientId, d, true);    // localStorage only — no Firestore
+      autoCalcFundingApproved(clientId, true); // update display only, skip publish
+      // Separate timer: write final value 700ms after last keystroke
+      clearTimeout(_amountTimers[clientId]);
+      _amountTimers[clientId] = setTimeout(() => {
+        const latestD = getDashData(clientId); // fresh from localStorage — has final typed value
+        const approved = (latestD.fundingRows || [])
+          .filter(r => r.status === 'approved')
+          .reduce((s, r) => s + (+r.amount || 0), 0);
+        if (approved > 0) { latestD.fundingApproved = approved; latestD.fundingSecured = approved; }
+        saveDashData(clientId, latestD); // Firestore write with correct final amount
+      }, 700);
+    } else {
+      saveDashData(clientId, d);
+    }
   }
 
   function faRemove(clientId, rowId) {
@@ -5297,7 +5346,7 @@
     fsSetDash(clientId, d).catch(() => {});
   }
 
-  function autoCalcFundingApproved(clientId) {
+  function autoCalcFundingApproved(clientId, skipPublish) {
     const container = document.getElementById('fa-rows-' + clientId);
     let total = 0;
     if (container) {
@@ -5311,10 +5360,11 @@
     }
     const inp = document.getElementById('db-approved-' + clientId);
     const disp = document.getElementById('db-approved-display-' + clientId);
-    if (inp) inp.value = total;
-    if (disp) disp.textContent = total ? Number(total).toLocaleString() : '—';
+    if (inp && total > 0) inp.value = total;
+    const displayVal = inp ? (+inp.value || 0) : total;
+    if (disp) disp.textContent = displayVal ? Number(displayVal).toLocaleString() : '—';
     syncFundingPreview(clientId);
-    debouncedPublish(clientId);
+    if (!skipPublish) debouncedPublish(clientId);
   }
 
   function previewScoreChange(clientId) {
@@ -5389,10 +5439,9 @@
     const subHidden = g('db-subtitle-'+clientId);
     if (subHidden) subHidden.value = d.subtitle;
     saveDashData(clientId, d);
-    // Update client FICO in the client list too
+    // Update client FICO in the client list only when it actually changed
     const c = getClient(clientId);
-    if (c && d.creditScore) { c.fico = d.creditScore; saveClients(); renderClientList(); }
-    logActivity(`Dashboard updated for ${c?.fname} ${c?.lname}`, '#22A7F0');
+    if (c && d.creditScore && d.creditScore !== (c.fico || 0)) { c.fico = d.creditScore; saveClients(); renderClientList(); }
     // Show toast
     const toast = g('dash-pub-toast-'+clientId);
     if (toast) { toast.textContent = '✓ Published to client portal'; toast.style.opacity = '1'; setTimeout(() => toast.style.opacity = '0', 3000); }

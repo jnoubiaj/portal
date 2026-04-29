@@ -2938,8 +2938,12 @@
     }
 
     let saved = null;
-    // Primary: read by email (most reliable — never affected by clientId mismatches)
-    if (session && session.email) {
+    // Priority 1: in-memory Firestore cache — set by listener/polling, never stale
+    if (window._fsDashCache) {
+      saved = window._fsDashCache;
+    }
+    // Priority 2: read by email key
+    else if (session && session.email) {
       try { saved = JSON.parse(localStorage.getItem('cq_dash_email_' + session.email.toLowerCase()) || 'null'); } catch(e) {}
     }
     // Fallback 1: read by clientId
@@ -3373,9 +3377,13 @@
     });
   }
 
+  const _psHash = {};
   function renderProgressSteps(containerId, stages, currentStage) {
     const el = document.getElementById(containerId);
     if (!el) return;
+    const h = currentStage + '|' + stages.join(',');
+    if (_psHash[containerId] === h) return;
+    _psHash[containerId] = h;
     el.innerHTML = stages.map((name, i) => {
       const n = i + 1;
       const done = n < currentStage;
@@ -3407,7 +3415,6 @@
 
   function loadDashboardData() {
     const d = getDashData();
-    console.log('[CQ Debug] email key: cq_dash_email_' + (getClientSession()?.email||'?') + ' | clientId key: cq_dash_' + d._clientId);
 
     // Build initials: first letter of firstName + first letter of lastName
     const fn = d.clientName || '';
@@ -3545,33 +3552,10 @@
 
     renderFundingTable(d);
     renderLatestDocs(d);
-    renderAllDocs();
-    renderDocRequests(_docRequests.length ? _docRequests : (d.docRequests || []));
-
-    // Direct Firestore fetch for latest data (don't wait for real-time listener)
-    const _sess = getClientSession();
-    if (_sess && _sess.clientId) {
-      fsGetDash(_sess.clientId).then(fd => {
-        if (!fd) return;
-        // Sync pipelineTasks so task list renders on next loadDashboardData call
-        if (fd.pipelineTasks !== undefined) window._fsPipelineTasks = fd.pipelineTasks;
-        // Sync adminDocs into localStorage so renderAllDocs + renderLatestDocs can display them
-        try {
-          const k = 'cq_dash_' + _sess.clientId;
-          const cached = JSON.parse(localStorage.getItem(k) || '{}');
-          if (fd.adminDocs !== undefined) cached.adminDocs = fd.adminDocs;
-          localStorage.setItem(k, JSON.stringify(cached));
-          if (_sess.email) {
-            const ek = 'cq_dash_email_' + _sess.email.toLowerCase();
-            const ec = JSON.parse(localStorage.getItem(ek) || '{}');
-            if (fd.adminDocs !== undefined) ec.adminDocs = fd.adminDocs;
-            localStorage.setItem(ek, JSON.stringify(ec));
-          }
-        } catch(e) {}
-        renderAllDocs();
-        renderLatestDocs(fd.adminDocs !== undefined ? fd : getDashData());
-        docUpdateFromFirestore(fd);
-      }).catch(()=>{});
+    // Only re-render full doc list when the Documents section is visible — it's expensive
+    if (document.getElementById('section-documents')?.classList.contains('active')) {
+      renderAllDocs();
+      renderDocRequests(_docRequests.length ? _docRequests : (d.docRequests || []));
     }
   }
 
@@ -3704,6 +3688,7 @@
     'Discover': '#f76211',
   };
 
+  let _ftHash = '';
   function renderFundingTable(d) {
     const rows = (d.fundingRows || []);
     const card = document.getElementById('funding-apps-card');
@@ -3713,6 +3698,7 @@
 
     if (!rows.length) {
       card.style.display = 'none';
+      _ftHash = '';
       return;
     }
     card.style.display = '';
@@ -3726,6 +3712,11 @@
       else if (totalFunding) metaStr += ' · $' + totalFunding.toLocaleString() + ' in funding';
       meta.textContent = metaStr;
     }
+
+    // Only rebuild rows when data actually changed — prevents image flash on every poll tick
+    const newHash = JSON.stringify(rows.map(r => [r.id, r.bank, r.cardName, r.status, r.amount, r.instructions, r.introPeriod]));
+    if (newHash === _ftHash) return;
+    _ftHash = newHash;
 
     tbody.innerHTML = rows.map((r) => {
       const statusClass = r.status || 'pending';
@@ -3800,6 +3791,8 @@
     const docs = d.adminDocs || [];
     docs.slice().reverse().slice(0,3).forEach(doc => {
       const dateStr = doc.date ? new Date(doc.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      const sk = 'dk_adm_' + (doc.id || (doc.name + '_' + doc.date)).replace(/[^a-zA-Z0-9]/g, '_');
+      if (doc.url) _docUrlStore[sk] = doc.url;
       rows.push(`
         <div class="doc-item">
           <div class="doc-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
@@ -3807,7 +3800,7 @@
             <div class="doc-name">${doc.name}</div>
             <div class="doc-meta">Uploaded by Admin · ${dateStr}</div>
           </div>
-          ${doc.url ? (() => { const k='dk_'+Math.random().toString(36).slice(2,10); _docUrlStore[k]=doc.url; return `<button class="doc-btn" onclick="openDocUrl('${k}')">View</button>`; })() : (doc.type === 'contract' ? `<button class="doc-btn" onclick="viewSignedContract()">View</button>` : `<button class="doc-btn" style="opacity:0.4;cursor:default">View</button>`)}
+          ${doc.url ? `<button class="doc-btn" onclick="openDocUrl('${sk}')">View</button>` : (doc.type === 'contract' ? `<button class="doc-btn" onclick="viewSignedContract()">View</button>` : `<button class="doc-btn" style="opacity:0.4;cursor:default">View</button>`)}
         </div>`);
     });
 
@@ -3816,8 +3809,8 @@
     if (remaining > 0) {
       docClientFiles.slice().reverse().slice(0, remaining).forEach(f => {
         const dateStr = f.date ? new Date(f.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-        const k = 'dk_' + Math.random().toString(36).slice(2,10);
-        if (f.url) _docUrlStore[k] = f.url;
+        const sk = 'dk_cli_' + (f.id || (f.name + '_' + f.date)).replace(/[^a-zA-Z0-9]/g, '_');
+        if (f.url) _docUrlStore[sk] = f.url;
         rows.push(`
           <div class="doc-item">
             <div class="doc-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
@@ -3825,7 +3818,7 @@
               <div class="doc-name">${f.name}</div>
               <div class="doc-meta">Uploaded by You · ${dateStr}</div>
             </div>
-            ${f.url ? `<button class="doc-btn" onclick="openDocUrl('${k}')">View</button>` : `<button class="doc-btn" style="opacity:0.4;cursor:default">View</button>`}
+            ${f.url ? `<button class="doc-btn" onclick="openDocUrl('${sk}')">View</button>` : `<button class="doc-btn" style="opacity:0.4;cursor:default">View</button>`}
           </div>`);
       });
     }
@@ -3891,17 +3884,28 @@
             localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
             if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
           } catch(e) {}
+          // Set cache FIRST before any downstream calls that may call loadDashboardData()
+          if (fsData.pipelineTasks !== undefined) window._fsPipelineTasks = fsData.pipelineTasks;
+          window._fsDashCache = fsData;
           notifDetectChanges(fsData);
           docUpdateFromFirestore(fsData);
-          if (fsData.pipelineTasks !== undefined) window._fsPipelineTasks = fsData.pipelineTasks;
           loadDashboardData(); // re-render with Firestore data
-          renderApplyingCard();
-          renderFundingSequence();
           notifRender(); // show stored notifications from previous sessions
           // Re-pin section after async re-render so it doesn't snap back to dashboard
           try { switchSection(initSection, null, true); } catch(e) {}
         }
       } catch(e) {}
+
+      // Throttle: block duplicate renders from listener + poll firing within 50ms of each other
+      let _lastRenderMs = 0;
+      function _renderNow() {
+        const now = Date.now();
+        if (now - _lastRenderMs < 50) return;
+        _lastRenderMs = now;
+        loadDashboardData();
+      }
+
+      let _lastPollHash = '';
 
       // Subscribe to real-time updates (admin changes → client sees instantly)
       try {
@@ -3916,14 +3920,51 @@
             localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(fsData));
             if (session.email) localStorage.setItem('cq_dash_email_' + session.email.toLowerCase(), JSON.stringify(fsData));
           } catch(e) {}
+          // Set cache FIRST — docUpdateFromFirestore may call loadDashboardData(); it must read fresh data
+          if (fsData.pipelineTasks !== undefined) window._fsPipelineTasks = fsData.pipelineTasks;
+          window._fsDashCache = fsData;
+          // NOTE: do NOT update _lastPollHash here — polling stays as independent backup
           notifDetectChanges(fsData);
           docUpdateFromFirestore(fsData);
-          if (fsData.pipelineTasks !== undefined) window._fsPipelineTasks = fsData.pipelineTasks;
-          loadDashboardData();
-          renderApplyingCard();
-          renderFundingSequence();
+          _renderNow();
         });
       } catch(e) {}
+
+      // Fallback polling — catches cases where the real-time listener misses an update.
+      // Only re-renders if data actually changed (prevents constant DOM thrashing).
+      function _fsRefreshNow() {
+        const s = getClientSession();
+        if (!s || !s.clientId) return;
+        fsGetDash(s.clientId).then(fd => {
+          if (!fd) return;
+          // Lightweight hash of fields that matter for the UI
+          const hash = JSON.stringify({
+            pt: fd.pipelineTasks,
+            fr: fd.fundingRows,
+            cs: fd.currentStage,
+            cr: fd.creditScore,
+            fa: fd.fundingApproved,
+            cf: (fd.clientFiles || []).map(f => f.id || f.name),
+            ad: (fd.adminDocs   || []).map(f => f.id || f.name),
+          });
+          if (hash === _lastPollHash) return; // nothing changed — skip re-render
+          _lastPollHash = hash;
+          try {
+            localStorage.setItem('cq_dash_' + s.clientId, JSON.stringify(fd));
+            if (s.email) localStorage.setItem('cq_dash_email_' + s.email.toLowerCase(), JSON.stringify(fd));
+          } catch(e) {}
+          // Set cache FIRST — docUpdateFromFirestore may call loadDashboardData(); it must read fresh data
+          if (fd.pipelineTasks !== undefined) window._fsPipelineTasks = fd.pipelineTasks;
+          window._fsDashCache = fd;
+          notifDetectChanges(fd);
+          docUpdateFromFirestore(fd);
+          _renderNow();
+        }).catch(() => {});
+      }
+      setInterval(_fsRefreshNow, 2000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') _fsRefreshNow();
+      });
     }
     } // end startFirestoreListeners
 
@@ -5215,6 +5256,11 @@
     if (name === 'chat') {
       initChatSection();
     }
+    // Re-render docs list when navigating to Documents tab (catches updates that arrived while on another tab)
+    if (name === 'documents') {
+      renderAllDocs();
+      renderDocRequests(_docRequests.length ? _docRequests : (getDashData().docRequests || []));
+    }
   }
 
   // Handle browser back/forward within the portal
@@ -5266,8 +5312,9 @@
   function _docReadAsDataURL(file) {
     return new Promise(resolve => {
       const r = new FileReader();
-      r.onload  = e => resolve(e.target.result);
-      r.onerror = () => resolve(null);
+      const t = setTimeout(() => resolve(null), 8000);
+      r.onload  = e => { clearTimeout(t); resolve(e.target.result); };
+      r.onerror = () => { clearTimeout(t); resolve(null); };
       r.readAsDataURL(file);
     });
   }
@@ -5324,15 +5371,47 @@
       prog.classList.add('show');
     }
 
-    // Convert to base64 for small files (≤ 900 KB) — skip for large files
     const sess = (() => { try { return JSON.parse(sessionStorage.getItem('cq_client_session')||'null'); } catch(e) { return null; } })();
     let url = null;
+
     if (file.size <= 900 * 1024) {
-      if (bar) bar.style.width = '50%';
+      // Small file — base64 encode (instant, viewable without Storage)
+      if (bar) bar.style.width = '40%';
       url = await _docReadAsDataURL(file);
+      if (bar) bar.style.width = '100%';
+      if (pct) pct.textContent = '100%';
+    } else {
+      // Large file — upload to Firebase Storage so admin and client can view it
+      try {
+        if (typeof firebase !== 'undefined' && typeof firebase.storage === 'function' && sess && sess.clientId) {
+          const storagePath = 'clients/' + sess.clientId + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const storageRef = firebase.storage().ref(storagePath);
+          const uploadTask = storageRef.put(file);
+          await new Promise(resolve => {
+            // 3-minute hard timeout so the UI never stays stuck
+            const timer = setTimeout(resolve, 180000);
+            uploadTask.on('state_changed',
+              snap => {
+                const p = Math.round((snap.bytesTransferred / snap.totalBytes) * 90);
+                if (bar) bar.style.width = p + '%';
+                if (pct) pct.textContent = p + '%';
+              },
+              () => { clearTimeout(timer); resolve(); },
+              async () => {
+                clearTimeout(timer);
+                try { url = await storageRef.getDownloadURL(); } catch(e) {}
+                if (bar) bar.style.width = '100%';
+                if (pct) pct.textContent = '100%';
+                resolve();
+              }
+            );
+          });
+        }
+      } catch(e) {}
+      if (bar) bar.style.width = '100%';
+      if (pct) pct.textContent = '100%';
     }
-    if (bar) bar.style.width = '100%';
-    if (pct) pct.textContent = '100%';
+
     if (prog) setTimeout(() => prog.classList.remove('show'), 400);
 
     const now     = new Date();
@@ -5345,9 +5424,13 @@
     docClientFiles.push(meta);
     _docSaveFiles();
 
-    // Sync to Firestore — keep base64 for small files (< 200 KB) so admin can view them
+    // Sync to Firestore — keep base64 for small files, keep Storage URLs (https://…) as-is,
+    // only strip oversized base64 that would exceed Firestore's 1 MB document limit
     if (sess && sess.clientId) {
-      const fsFiles = docClientFiles.map(f => ({ ...f, url: (f.url && f.url.startsWith('data:') && f.url.length > 270000) ? null : f.url }));
+      const fsFiles = docClientFiles.map(f => ({
+        ...f,
+        url: (f.url && f.url.startsWith('data:') && f.url.length > 270000) ? null : f.url
+      }));
       fsSetDash(sess.clientId, { clientFiles: fsFiles }).catch(() => {});
     }
 
@@ -5380,9 +5463,9 @@
         changed = true;
       }
     }
-    // Re-render when admin uploads docs so client sees them without refreshing
+    // Re-render docs only when the Documents section is open (avoids expensive rebuild on every update)
     if (data.adminDocs !== undefined) changed = true;
-    if (changed) renderAllDocs();
+    if (changed && document.getElementById('section-documents')?.classList.contains('active')) renderAllDocs();
     if (data.creditData) {
       try { localStorage.setItem(_getCreditKey(), JSON.stringify(data.creditData)); } catch(e) {}
       if (typeof caRenderReport === 'function') {
@@ -5434,9 +5517,22 @@
     try { localStorage.setItem(k, JSON.stringify(list)); } catch(e) {}
   }
 
+  // AudioContext must be created/resumed inside a user gesture.
+  // We warm it up on the first click so it's ready when a Firestore notification arrives.
+  let _audioCtx = null;
+  document.addEventListener('click', function() {
+    if (!_audioCtx) {
+      try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    } else if (_audioCtx.state === 'suspended') {
+      _audioCtx.resume().catch(() => {});
+    }
+  }, { capture: true });
+
   function playClientNotifSound() {
     try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!_audioCtx) return;
+      if (_audioCtx.state === 'suspended') { _audioCtx.resume().catch(() => {}); return; }
+      var ctx = _audioCtx;
       [[0, 659], [0.14, 988]].forEach(function(pair) {
         var osc = ctx.createOscillator();
         var gain = ctx.createGain();
@@ -5556,6 +5652,7 @@
         adminFiles:  (data.adminFiles  || []).map(f => ({ id: f.id, name: f.name, date: f.date })),
         tasks:       (data.tasks       || []).map(t => ({ id: t.id, status: t.status })),
         fundingRows: (data.fundingRows  || []).map(r => ({ id: r.id, bank: r.bank, cardName: r.cardName, status: r.status, amount: r.amount })),
+        pipelineTasks: data.pipelineTasks ? { stage: data.pipelineTasks.stage, assigned: data.pipelineTasks.assigned } : undefined,
       }));
     } catch(e) {}
   }
@@ -5605,13 +5702,35 @@
       }
     });
 
-    // New tasks
+    // New tasks (legacy tasks[] array)
     const prevTaskIds = new Set((prev.tasks || []).map(t => t.id));
     (next.tasks || []).filter(t => t.status !== 'done').forEach(t => {
       if (!prevTaskIds.has(t.id)) {
         notifAdd('task', 'New Task Assigned', t.text || t.title || 'A task requires your attention', 'tasks');
       }
     });
+
+    // New pipeline tasks assigned by admin
+    if (next.pipelineTasks && next.pipelineTasks.assigned) {
+      var _PT_LABELS = [
+        ['Upload Experian Login Credentials','Confirm Personal Information','Upload ID + Proof of Address','Complete Onboarding Form'],
+        ['Remove Inquiries','Turn Off Fraud Alerts','Add Authorized User','Pay Down Utilization'],
+        ['Confirm Business Information','Provide Business Details','Approve Funding Plan'],
+        ['Assign Target Banks','Track Personal Account Open Date','Verify Business Account & Open Date','Open Business Account & Deposit Funds'],
+        ['Attend Bank Appointment','Confirm Submission','Upload Requested Documents','Handle Reconsideration Calls'],
+        ['Accept Offer','Upload Approval Letters','Confirm Card Received']
+      ];
+      var _ptStage = next.pipelineTasks.stage || 0;
+      var _ptLabels = _PT_LABELS[_ptStage] || [];
+      var _prevPtAssigned = (prev.pipelineTasks && prev.pipelineTasks.assigned && Array.isArray(prev.pipelineTasks.assigned[_ptStage])) ? prev.pipelineTasks.assigned[_ptStage] : [];
+      var _nextPtAssigned = Array.isArray(next.pipelineTasks.assigned[_ptStage]) ? next.pipelineTasks.assigned[_ptStage] : [];
+      var _prevPtSet = new Set(_prevPtAssigned);
+      _nextPtAssigned.forEach(function(ti) {
+        if (!_prevPtSet.has(ti)) {
+          notifAdd('task', 'New Task Assigned', _ptLabels[ti] || ('Task ' + (ti + 1)), 'tasks');
+        }
+      });
+    }
 
     // Funding application status changes
     const _rowKey = r => r.id || (r.bank + '|' + r.cardName);
@@ -5773,11 +5892,11 @@
     if (!list) return;
     const rows   = [];
     const svgDoc = color => `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="${color}" stroke-width="2"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>`;
-    const viewBtn = url => {
+    // Use stable key derived from file ID so re-renders don't break existing View buttons
+    const viewBtn = (url, stableKey) => {
       if (!url) return `<button class="doc-btn" style="opacity:0.35;cursor:default">View</button>`;
-      const k = 'dk_' + Math.random().toString(36).slice(2,10);
-      _docUrlStore[k] = url;
-      return `<button class="doc-btn" onclick="openDocUrl('${k}')">View</button>`;
+      _docUrlStore[stableKey] = url;
+      return `<button class="doc-btn" onclick="openDocUrl('${stableKey}')">View</button>`;
     };
 
     // 1. Signed contract from onboarding
@@ -5797,14 +5916,16 @@
     const d = getDashData();
     (d.adminDocs || []).slice().reverse().forEach(doc => {
       const dateStr = doc.date ? new Date(doc.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-      rows.push(`<div class="doc-item"><div class="doc-icon">${svgDoc('#22A7F0')}</div><div class="doc-info"><div class="doc-name">${doc.name}</div><div class="doc-meta">Uploaded by Admin · ${dateStr}</div></div>${viewBtn(doc.url)}</div>`);
+      const sk = 'dk_adm_' + (doc.id || (doc.name + '_' + doc.date)).replace(/[^a-zA-Z0-9]/g, '_');
+      rows.push(`<div class="doc-item"><div class="doc-icon">${svgDoc('#22A7F0')}</div><div class="doc-info"><div class="doc-name">${doc.name}</div><div class="doc-meta">Uploaded by Admin · ${dateStr}</div></div>${viewBtn(doc.url, sk)}</div>`);
     });
 
     // 3. Client-uploaded files
     docClientFiles.slice().reverse().forEach(f => {
       const ext       = f.name ? f.name.split('.').pop().toLowerCase() : '';
       const iconColor = ext === 'pdf' ? '#ef4444' : ext === 'docx' ? '#2563eb' : '#22A7F0';
-      rows.push(`<div class="doc-item"><div class="doc-icon">${svgDoc(iconColor)}</div><div class="doc-info"><div class="doc-name">${f.name}</div><div class="doc-meta">${ext.toUpperCase()} · ${f.size} · Uploaded by You · ${f.date}</div></div>${viewBtn(f.url)}</div>`);
+      const sk = 'dk_cli_' + (f.id || (f.name + '_' + f.date)).replace(/[^a-zA-Z0-9]/g, '_');
+      rows.push(`<div class="doc-item"><div class="doc-icon">${svgDoc(iconColor)}</div><div class="doc-info"><div class="doc-name">${f.name}</div><div class="doc-meta">${ext.toUpperCase()} · ${f.size} · Uploaded by You · ${f.date}</div></div>${viewBtn(f.url, sk)}</div>`);
     });
 
     list.innerHTML = rows.length ? rows.join('') : '<div style="font-size:13px;color:var(--gray-400);padding:8px 0">No documents yet.</div>';
