@@ -4626,7 +4626,12 @@
     const statusVal=statusLineM?statusLineM[1].trim():'';
     let statusKnown=false;
     if(/charged?.?off/i.test(statusVal)){a.payHistory='Charged Off';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
-    else if(/\bcollection\s+account\b/i.test(statusVal)||a.type==='Collection'){a.payHistory='Collection';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
+    else if(/bankrupt/i.test(statusVal)){a.payHistory='Bankruptcy';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
+    else if(/foreclos/i.test(statusVal)){a.payHistory='Foreclosed';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
+    else if(/repossess/i.test(statusVal)){a.payHistory='Repossession';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
+    else if(/voluntary\s+surrender/i.test(statusVal)){a.payHistory='Voluntary Surrender';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
+    else if(/default/i.test(statusVal)){a.payHistory='Defaulted';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
+    else if(/\bcollection\b/i.test(statusVal)||a.type==='Collection'){a.payHistory='Collection';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
     else if(/paid[,\s]+closed\s*[\/,]\s*never\s*late|account\s+paid[,\s]+never\s*late/i.test(statusVal)){a.payHistory='Never Late';a.isNeverLate=true;statusKnown=true;}
     else if(/never\s*late/i.test(statusVal)){a.payHistory='Never Late';a.isNeverLate=true;statusKnown=true;}
     else{
@@ -4646,24 +4651,49 @@
       const phText=c.substring(phIdx);
       const yearMatches=[...phText.matchAll(/\b(19|20)\d{2}\b/g)];
       const lastYear=yearMatches.length?yearMatches[yearMatches.length-1]:null;
-      const gridText=lastYear?phText.substring(0,lastYear.index+150):phText.substring(0,300);
-      const hasCO=/\b(?:19|20)\d{2}\b[^\n]*\bCO\b|\bCO\b[^\n]*\b(?:19|20)\d{2}\b/.test(gridText);
-      const hasC=/(?<!\d)\bC\b(?!\w)/.test(gridText);
-      const cCount=(gridText.match(/(?<!\d)\bC\b(?!\w)/g)||[]).length;
+      const gridText=lastYear?phText.substring(0,lastYear.index+250):phText.substring(0,400);
+      // Detect all Experian payment history codes (word-boundary safe)
+      const hasCO  = /\bCO\b/.test(gridText);                          // Charge off
+      const hasBK  = /\bBK\b/.test(gridText);                          // Bankruptcy
+      const hasFS  = /\bFS\b/.test(gridText);                          // Foreclosure proceedings started
+      const hasF   = !hasFS && /\bF\b/.test(gridText);                 // Foreclosed (not FS)
+      const hasR   = /\bR\b/.test(gridText);                           // Repossession
+      const hasVS  = /\bVS\b/.test(gridText);                          // Voluntary surrender
+      const hasD   = /\bD\b/.test(gridText);                           // Defaulted on contract
+      const hasG   = /\bG\b/.test(gridText);                           // Claim filed with government
+      const hasIC  = /\bIC\b/.test(gridText);                          // Insurance claim
+      const hasPBC = /\bPBC\b/.test(gridText);                         // Paid by creditor (neutral)
+      const hasC   = /(?<!\bCO|\bCL)\bC\b(?!O|L|S)/.test(gridText);  // Collection (not CO/CLS)
       const lateNums=[...gridText.matchAll(/\b(180|150|120|90|60|30)\b/g)].map(m=>+m[1]);
-      if(hasCO&&!statusKnown){a.payHistory='Charged Off';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
-      else if(hasC&&!statusKnown){a.payHistory='Collection';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
-      else if(!statusKnown){
-        const has180=lateNums.includes(180),has150=lateNums.includes(150),has120=lateNums.includes(120);
-        const has90=lateNums.includes(90),has60=lateNums.includes(60),has30=lateNums.includes(30);
-        if(has180){a.payHistory='180 Days Late';a.isNeverLate=false;a.hasDerog=true;}
-        else if(has150){a.payHistory='150 Days Late';a.isNeverLate=false;a.hasDerog=true;}
-        else if(has120){a.payHistory='120 Days Late';a.isNeverLate=false;a.hasDerog=true;}
-        else if(has90){a.payHistory='90 Days Late';a.isNeverLate=false;a.hasDerog=true;}
-        else if(has60){a.payHistory='60 Days Late';a.isNeverLate=false;}
-        else if(has30){a.payHistory='30 Days Late';a.isNeverLate=false;}
+      // Count each derogatory code occurrence for negativeMonths
+      const _cnt=rx=>(gridText.match(rx)||[]).length;
+      const negCount=
+        _cnt(/\bCO\b/g)+_cnt(/\bBK\b/g)+_cnt(/\bFS\b/g)+
+        (!hasFS?_cnt(/\bF\b/g):0)+_cnt(/\bR\b/g)+_cnt(/\bVS\b/g)+
+        _cnt(/\bD\b/g)+_cnt(/\bG\b/g)+_cnt(/\bIC\b/g)+
+        _cnt(/(?<!\bCO|\bCL)\bC\b(?!O|L|S)/g)+lateNums.length;
+      // Set payHistory by severity (worst wins), only if status not already known
+      if(!statusKnown){
+        if(hasCO) {a.payHistory='Charged Off';      a.isNeverLate=false;a.hasDerog=true;}
+        else if(hasBK) {a.payHistory='Bankruptcy';  a.isNeverLate=false;a.hasDerog=true;}
+        else if(hasFS) {a.payHistory='Foreclosure'; a.isNeverLate=false;a.hasDerog=true;}
+        else if(hasF)  {a.payHistory='Foreclosed';  a.isNeverLate=false;a.hasDerog=true;}
+        else if(hasR)  {a.payHistory='Repossession';a.isNeverLate=false;a.hasDerog=true;}
+        else if(hasVS) {a.payHistory='Voluntary Surrender';a.isNeverLate=false;a.hasDerog=true;}
+        else if(hasD)  {a.payHistory='Defaulted';   a.isNeverLate=false;a.hasDerog=true;}
+        else if(hasC||hasG||hasIC){a.payHistory='Collection';a.isNeverLate=false;a.hasDerog=true;}
+        else{
+          const has180=lateNums.includes(180),has150=lateNums.includes(150),has120=lateNums.includes(120);
+          const has90=lateNums.includes(90),has60=lateNums.includes(60),has30=lateNums.includes(30);
+          if(has180){a.payHistory='180 Days Late';a.isNeverLate=false;a.hasDerog=true;}
+          else if(has150){a.payHistory='150 Days Late';a.isNeverLate=false;a.hasDerog=true;}
+          else if(has120){a.payHistory='120 Days Late';a.isNeverLate=false;a.hasDerog=true;}
+          else if(has90){a.payHistory='90 Days Late';a.isNeverLate=false;a.hasDerog=true;}
+          else if(has60){a.payHistory='60 Days Late';a.isNeverLate=false;}
+          else if(has30){a.payHistory='30 Days Late';a.isNeverLate=false;}
+        }
       }
-      if(!a.isNeverLate){const nc=lateNums.length+(hasCO?1:0)+(hasC?cCount:0);if(nc>0)a.negativeMonths=nc;}
+      if(!a.isNeverLate&&negCount>0)a.negativeMonths=negCount;
     }
     if(a.payHistory==='Collection'&&a.type!=='Collection')a.type='Collection';
     const respM=c.match(/responsibility\s+(authorized\s+user|joint|individual)/i);
