@@ -4649,10 +4649,10 @@
       const gridText=lastYear?phText.substring(0,lastYear.index+150):phText.substring(0,300);
       const hasCO=/\b(?:19|20)\d{2}\b[^\n]*\bCO\b|\bCO\b[^\n]*\b(?:19|20)\d{2}\b/.test(gridText);
       const hasC=/(?<!\d)\bC\b(?!\w)/.test(gridText);
+      const cCount=(gridText.match(/(?<!\d)\bC\b(?!\w)/g)||[]).length;
       const lateNums=[...gridText.matchAll(/\b(180|150|120|90|60|30)\b/g)].map(m=>+m[1]);
-      if(!a.isNeverLate){const negCount=lateNums.length+(hasCO?1:0);if(negCount>0)a.negativeMonths=negCount;}
-      if(hasCO&&!statusKnown){a.payHistory='Charged Off';a.isNeverLate=false;a.hasDerog=true;}
-      else if(hasC&&a.type==='Collection'&&!statusKnown){a.payHistory='Collection';a.isNeverLate=false;a.hasDerog=true;}
+      if(hasCO&&!statusKnown){a.payHistory='Charged Off';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
+      else if(hasC&&!statusKnown){a.payHistory='Collection';a.isNeverLate=false;a.hasDerog=true;statusKnown=true;}
       else if(!statusKnown){
         const has180=lateNums.includes(180),has150=lateNums.includes(150),has120=lateNums.includes(120);
         const has90=lateNums.includes(90),has60=lateNums.includes(60),has30=lateNums.includes(30);
@@ -4663,6 +4663,7 @@
         else if(has60){a.payHistory='60 Days Late';a.isNeverLate=false;}
         else if(has30){a.payHistory='30 Days Late';a.isNeverLate=false;}
       }
+      if(!a.isNeverLate){const nc=lateNums.length+(hasCO?1:0)+(hasC?cCount:0);if(nc>0)a.negativeMonths=nc;}
     }
     if(a.payHistory==='Collection'&&a.type!=='Collection')a.type='Collection';
     const respM=c.match(/responsibility\s+(authorized\s+user|joint|individual)/i);
