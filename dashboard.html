@@ -2675,22 +2675,21 @@
   // ── PORTAL CONFIG ─────────────────────────────────────
   // Change currentStage to update the entire dashboard at once
   const PORTAL_STAGES = [
-    { label: 'Contract Signed' },
-    { label: 'Onboarding Complete' },
-    { label: 'Fraud Alerts Off' },
-    { label: 'Pay Down Utilization' },
-    { label: 'Add Tradeline' },
-    { label: 'Remove Inquiries' },
-    { label: 'Business Account' },
-    { label: 'Cleared for Funding' },
-    { label: 'Funded' },
+    { label: 'Initial Setup / Credit Review' },
+    { label: 'Credit Optimization' },
+    { label: 'Funding Strategy' },
+    { label: 'Bank Relationships' },
+    { label: 'Application Phase' },
+    { label: 'Decision / Results' },
   ];
-  const CURRENT_STAGE = 4; // ← change this number (1–9) to update everything
+  const CURRENT_STAGE = 1; // ← overridden by Firestore currentStage when data loads
 
   function syncStageUI() {
-    const total = PORTAL_STAGES.length;
-    const stage = CURRENT_STAGE;
-    const label = PORTAL_STAGES[stage - 1].label;
+    const _fsStages = (window._fsDashCache && window._fsDashCache.stageNames) ? window._fsDashCache.stageNames.map(l => ({ label: l })) : PORTAL_STAGES;
+    const _fsStage  = (window._fsDashCache && window._fsDashCache.currentStage) ? window._fsDashCache.currentStage : CURRENT_STAGE;
+    const total = _fsStages.length;
+    const stage = _fsStage;
+    const label = (_fsStages[stage - 1] || _fsStages[0]).label;
     const pct = Math.round((stage / total) * 100);
 
     // (Process Stage card repurposed to show active bank applications)
@@ -2714,13 +2713,21 @@
       el.textContent = stage + ' of ' + total + ' milestones completed';
     });
 
-    // Step circles — mark done/active/pending
+    // Step circles — rebuild HTML if stage count changed, then mark done/active/pending
     document.querySelectorAll('.progress-steps').forEach(container => {
-      container.querySelectorAll('.progress-step').forEach((step, i) => {
-        step.classList.remove('done', 'active');
-        if (i + 1 < stage) step.classList.add('done');
-        else if (i + 1 === stage) step.classList.add('active');
-      });
+      if (container.children.length !== total) {
+        container.innerHTML = _fsStages.map((s, i) => {
+          const n = i + 1;
+          const done = n < stage; const active = n === stage;
+          return `<div class="progress-step ${done?'done':active?'active':''}"><div class="step-circle">${done?'✓':n}</div><div class="step-label">${s.label}</div></div>`;
+        }).join('');
+      } else {
+        container.querySelectorAll('.progress-step').forEach((step, i) => {
+          step.classList.remove('done', 'active');
+          if (i + 1 < stage) step.classList.add('done');
+          else if (i + 1 === stage) step.classList.add('active');
+        });
+      }
     });
   }
 
@@ -3039,7 +3046,7 @@
     applyingCount: '',
     applyingBanks: [],
     currentStage: 1,
-    stageNames: ['Contract Signed','Onboarding Complete','Fraud Alerts Off','Pay Down Utilization','Add Tradeline','Remove Inquiries','Business Account','Cleared for Funding','Funded'],
+    stageNames: ['Initial Setup / Credit Review','Credit Optimization','Funding Strategy','Bank Relationships','Application Phase','Decision / Results'],
     tasks: [],
     adminDocs: [],        // { id, name, date, type } — admin-uploaded docs shown to client
     pendingContract: null, // { type, amount, pct, issuedAt } — set by admin when contract changes; cleared on client sign
@@ -3569,8 +3576,11 @@
     // Total Funding Secured starts at $0
     const wbf = document.getElementById('wb-funding'); if(wbf) wbf.textContent = d.fundingSecured ? '$' + Number(d.fundingSecured).toLocaleString() : '$0';
 
-    // Stats — admin-set score, or fall back to uploaded credit report FICO
+    // Stats — admin-set score → Firestore creditData.fico → local credit report FICO
     let _ficoDisplay = d.creditScore || '';
+    if (!_ficoDisplay && d.creditData) {
+      _ficoDisplay = String(d.creditData.fico8 || d.creditData.fico || '');
+    }
     if (!_ficoDisplay) {
       try {
         const _cd = JSON.parse(localStorage.getItem(_getCreditKey()) || 'null');
@@ -3611,7 +3621,9 @@
         scSub.style.visibility = 'hidden';
       }
     }
-    const sa = document.getElementById('s-approved'); if(sa) sa.textContent = d.fundingApproved ? (d.fundingApproved >= 1000000 ? '$' + +(d.fundingApproved/1000000).toFixed(1) + 'M' : '$' + Math.round(d.fundingApproved/1000) + 'K') : '—';
+    // fundingApproved: use stored value or calculate from approved fundingRows
+    const _calcApproved = d.fundingApproved || (d.fundingRows || []).filter(r => r.status === 'approved').reduce((s, r) => s + (+r.amount || 0), 0);
+    const sa = document.getElementById('s-approved'); if(sa) sa.textContent = _calcApproved ? (_calcApproved >= 1000000 ? '$' + +(_calcApproved/1000000).toFixed(1) + 'M' : '$' + Math.round(_calcApproved/1000) + 'K') : '—';
     const sg = document.getElementById('s-goal'); if(sg) sg.textContent = d.fundingGoal ? 'of $' + Math.round(d.fundingGoal/1000) + 'K goal' : '';
     // Pull pipeline tasks for current stage from Firebase pipelineTasks (synced by admin)
     var _pipelineTasks = [];
@@ -4030,6 +4042,7 @@
           window._fsDashCache = fsData;
           notifDetectChanges(fsData);
           docUpdateFromFirestore(fsData);
+          syncStageUI(); // rebuild steps with Firestore stage count
           loadDashboardData(); // re-render with Firestore data
           notifRender(); // show stored notifications from previous sessions
           // Re-pin section after async re-render so it doesn't snap back to dashboard
@@ -4067,6 +4080,7 @@
           // NOTE: do NOT update _lastPollHash here — polling stays as independent backup
           notifDetectChanges(fsData);
           docUpdateFromFirestore(fsData);
+          syncStageUI();
           _renderNow();
         });
       } catch(e) {}
@@ -4102,6 +4116,7 @@
           window._fsDashCache = fd;
           notifDetectChanges(fd);
           docUpdateFromFirestore(fd);
+          syncStageUI();
           _renderNow();
         }).catch(() => {});
       }
