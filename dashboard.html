@@ -6121,15 +6121,16 @@
     const banner = document.createElement('div');
     banner.id = 'inactivity-banner';
     banner.style.cssText = `
-      display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+      display:none;position:fixed;bottom:24px;left:16px;right:16px;max-width:480px;
+      margin:0 auto;
       background:#0A1628;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;
-      padding:12px 20px;border-radius:12px;z-index:9999;
+      padding:12px 16px;border-radius:12px;z-index:9999;
       box-shadow:0 8px 32px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);
-      display:none;align-items:center;gap:12px;white-space:nowrap;
+      align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;
     `;
     banner.innerHTML = `
-      <span>⏱ You'll be logged out in <strong id="inactivity-countdown">30</strong>s due to inactivity</span>
-      <button onclick="window._resetInactivity()" style="background:#22A7F0;border:none;color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:6px;cursor:pointer;">Stay Logged In</button>
+      <span style="flex:1;min-width:0">⏱ You'll be logged out in <strong id="inactivity-countdown">30</strong>s due to inactivity</span>
+      <button onclick="window._resetInactivity()" style="background:#22A7F0;border:none;color:#fff;font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Stay Logged In</button>
     `;
     document.body.appendChild(banner);
 
