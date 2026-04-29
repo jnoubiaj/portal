@@ -4815,7 +4815,7 @@
 
     document.getElementById('a-mcp-body').innerHTML = bodyHTML || `<div style="text-align:center;padding:20px;font-size:12px;color:var(--gray-400)">No additional data yet</div>`;
     const btn = document.getElementById('a-mcp-profile-btn');
-    btn.onclick = () => { openClientDetail(c.id); switchAdminSection('clients', document.querySelector('[data-sec="clients"]')); };
+    btn.onclick = () => { switchAdminSection('clients', document.querySelector('.a-nav-item[onclick*="clients"]')); setTimeout(() => selectClient(c.id), 50); };
   }
 
   function sendMsgFromSection() {
