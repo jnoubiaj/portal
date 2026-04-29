@@ -4663,7 +4663,7 @@
       const hasG   = /\bG\b/.test(gridText);                           // Claim filed with government
       const hasIC  = /\bIC\b/.test(gridText);                          // Insurance claim
       const hasPBC = /\bPBC\b/.test(gridText);                         // Paid by creditor (neutral)
-      const hasC   = /\bC\b/.test(gridText) || /\bcollection\b/i.test(gridText);  // standalone C or spelled out
+      const hasC   = /\bC\b/.test(gridText);  // Collection — \bC\b already excludes CO,CLS,IC,PBC
       const lateNums=[...gridText.matchAll(/\b(180|150|120|90|60|30)\b/g)].map(m=>+m[1]);
       // Count each derogatory code occurrence for negativeMonths
       const _cnt=rx=>(gridText.match(rx)||[]).length;
@@ -4692,13 +4692,6 @@
         else if(has30){a.payHistory='30 Days Late';a.isNeverLate=false;}
       }
       if(!a.isNeverLate&&negCount>0)a.negativeMonths=negCount;
-    }
-    // Fallback: if payment history section wasn't found, scan full block for derogatory signals
-    if(phIdx===-1){
-      if(!statusKnown||a.isNeverLate){
-        if(/charged?.?off/i.test(c)){a.payHistory='Charged Off';a.isNeverLate=false;a.hasDerog=true;}
-        else if(/\bcollection\b/i.test(c)&&!/no\s+collection/i.test(c)){a.payHistory='Collection';a.isNeverLate=false;a.hasDerog=true;}
-      }
     }
     if(a.payHistory==='Collection'&&a.type!=='Collection')a.type='Collection';
     const respM=c.match(/responsibility\s+(authorized\s+user|joint|individual)/i);
