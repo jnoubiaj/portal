@@ -4271,7 +4271,55 @@
         <div class="section-card" style="margin:0"><div class="card-header"><div class="card-title">What's Working For You</div></div><div class="card-body"><div class="factor-list">${posHtml}</div></div></div>
         <div class="section-card" style="margin:0"><div class="card-header"><div class="card-title">What Needs Attention</div></div><div class="card-body"><div class="factor-list">${issHtml}</div></div></div>
       </div>
-      <div class="section-card"><div class="card-header"><div class="card-title">Action Plan</div></div><div class="card-body">${actHtml}</div></div>`;
+      <div class="section-card"><div class="card-header"><div class="card-title">Action Plan</div></div><div class="card-body">${actHtml}</div></div>
+      ${(()=>{
+        const BANK_PATTERNS = [
+          { name:'Chase',           color:'#117ACA', patterns:['JPMCB','CHASE','JP MORGAN','JPMORGAN'] },
+          { name:'Bank of America', color:'#E31837', patterns:['BANK OF AMERICA','BANKAMERICA','FIA CARD','BOA'] },
+          { name:'American Express',color:'#007BC1', patterns:['AMEX','AMERICAN EXPRESS'] },
+          { name:'Citi',            color:'#003B70', patterns:['CITI','CBNA','CITIBANK','CITICARD'] },
+          { name:'Capital One',     color:'#D03027', patterns:['CAPITAL ONE','CAP ONE'] },
+          { name:'Discover',        color:'#FF6600', patterns:['DISCOVER'] },
+          { name:'Wells Fargo',     color:'#CC0000', patterns:['WELLS FARGO','WFNNB','WF BANK'] },
+          { name:'U.S. Bank',       color:'#003087', patterns:['US BANK','ELAN FINANCIAL','USB '] },
+          { name:'PNC Bank',        color:'#FF6200', patterns:['PNC ','PNC BANK'] },
+          { name:'Truist',          color:'#5C068C', patterns:['TRUIST','BB&T','SUNTRUST'] },
+          { name:'Navy Federal',    color:'#003366', patterns:['NAVY FEDERAL','NAVY FCU','NFCU'] },
+          { name:'USAA',            color:'#003087', patterns:['USAA'] },
+          { name:'TD Bank',         color:'#34A853', patterns:['TD BANK','TD CARD'] },
+          { name:'Barclays',        color:'#00AEEF', patterns:['BARCLAYS','BRCLYSBANKDE','BARCLAYCARD'] },
+          { name:'Synchrony',       color:'#6D2077', patterns:['SYNCHRONY','SYNCB'] },
+          { name:'Goldman Sachs',   color:'#6D6E71', patterns:['GOLDMAN','GS BANK','APPLE CARD/GS'] },
+          { name:'Ally Bank',       color:'#7A0019', patterns:['ALLY BANK','ALLY FINANCIAL'] },
+          { name:'Citizens Bank',   color:'#005C99', patterns:['CITIZENS BANK','CITIZENS '] },
+          { name:'Huntington',      color:'00843D',  patterns:['HUNTINGTON'] },
+          { name:'KeyBank',         color:'#CC0000', patterns:['KEYBANK','KEY BANK'] },
+          { name:'Regions Bank',    color:'#005DAA', patterns:['REGIONS'] },
+          { name:'Fifth Third',     color:'#6B2D8B', patterns:['FIFTH THIRD','5TH THIRD'] },
+        ];
+        const acctNames = d.accounts.map(a=>({ upper:(a.name||'').toUpperCase(), isOpen:a.isOpen, type:a.type||'' }));
+        const found = [];
+        for(const bp of BANK_PATTERNS){
+          const matched = acctNames.filter(a=>bp.patterns.some(p=>a.upper.includes(p)));
+          if(matched.length){
+            const hasOpen = matched.some(m=>m.isOpen);
+            const types = [...new Set(matched.map(m=>m.type).filter(Boolean))];
+            found.push({ name:bp.name, color:bp.color, count:matched.length, hasOpen, types });
+          }
+        }
+        if(!found.length) return '';
+        const chips = found.map(b=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid ${b.hasOpen?'rgba(16,185,129,0.25)':'var(--gray-100)'};background:${b.hasOpen?'rgba(16,185,129,0.05)':'var(--gray-50)'}">
+            <div style="width:30px;height:30px;border-radius:7px;background:${b.color};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0">${b.name[0]}</div>
+            <div style="min-width:0">
+              <div style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap">${b.name}</div>
+              <div style="font-size:11px;color:${b.hasOpen?'#10b981':'var(--gray-400)'};">${b.hasOpen?'Active':'Closed only'} · ${b.count} acct${b.count>1?'s':''}</div>
+            </div>
+            <div style="margin-left:auto;font-size:15px">${b.hasOpen?'✓':'○'}</div>
+          </div>`).join('');
+        return `<div class="section-card"><div class="card-header"><div class="card-title">Bank Relationships</div><div class="card-meta">${found.length} bank${found.length>1?'s':''} identified</div></div><div class="card-body"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">${chips}</div><div style="margin-top:12px;font-size:11px;color:var(--gray-400)">Green = active open account. Existing relationships improve approval odds for business cards at the same bank.</div></div></div>`;
+      })()}
+      `;
   }
 
   function adminCrHandleFile(file, clientId) {
