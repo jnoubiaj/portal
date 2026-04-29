@@ -3018,11 +3018,15 @@
         });
       }
 
-      // Cache creditData from Firestore — but never overwrite data from a recent upload
+      // Sync creditData from Firestore only if it is newer than what we have locally
       if (fsDash && fsDash.creditData) {
-        const msSinceUpload = Date.now() - (_creditUploadTs[clientId] || 0);
-        if (msSinceUpload > 30000) {
-          try { localStorage.setItem('cq_credit_' + clientId, JSON.stringify(fsDash.creditData)); } catch(e) {}
+        const localTs  = parseInt(localStorage.getItem('cq_credit_ts_' + clientId) || '0', 10);
+        const fsTs     = fsDash.creditData._ts || 0;
+        if (fsTs > localTs) {
+          try {
+            localStorage.setItem('cq_credit_' + clientId, JSON.stringify(fsDash.creditData));
+            localStorage.setItem('cq_credit_ts_' + clientId, String(fsTs));
+          } catch(e) {}
           const creditPane = document.getElementById('dtab-credit');
           if (creditPane && activeDetailTab === 'credit') {
             creditPane.innerHTML = renderCreditTab(fsDash.creditData, clientId);
@@ -4412,17 +4416,21 @@
       const text = fullText.replace(/\u0000/g,'').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,' ').replace(/  +/g,' ').trim();
       setMsg('Parsing credit data…');
       const data = buildCaData(text);
-      _creditUploadTs[clientId] = Date.now();
+      const _now = Date.now();
+      data._ts = _now;
+      _creditUploadTs[clientId] = _now;
       localStorage.setItem('cq_credit_' + clientId, JSON.stringify(data));
+      localStorage.setItem('cq_credit_ts_' + clientId, String(_now));
       // Auto-fill credit score in dashboard editor
       if (data.fico) {
         const ficoInput = document.getElementById('db-fico-' + clientId);
         if (ficoInput) {
           ficoInput.value = data.fico;
           if (typeof previewScoreChange === 'function') previewScoreChange(clientId);
-          if (typeof debouncedPublish === 'function') debouncedPublish(clientId);
         }
       }
+      // Always publish after upload so creditData reaches Firestore via saveDashData
+      if (typeof debouncedPublish === 'function') debouncedPublish(clientId);
       const tabPane = document.getElementById('dtab-credit');
       if (tabPane) tabPane.innerHTML = renderCreditTab(data, clientId);
     } catch(err) {
