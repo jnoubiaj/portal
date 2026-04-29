@@ -892,51 +892,48 @@
     }
     .form-error-banner.visible { display: flex; }
 
-    @media (max-width: 600px) {
-      .card-top, .card-body { padding: 28px 24px; }
+    @media (max-width: 768px) {
+      html, body { overflow-x: hidden; max-width: 100vw; }
+
+      .card-top, .card-body { padding: 28px 22px; }
       .form-grid { grid-template-columns: 1fr; }
       .form-group.span-2 { grid-column: span 1; }
       .sig-row { grid-template-columns: 1fr; }
       .expect-grid { grid-template-columns: 1fr; }
       .confirm-steps { flex-direction: column; align-items: center; }
 
-      /* ── Prevent horizontal scroll ── */
-      html, body { overflow-x: hidden; max-width: 100vw; }
-
-      /* ── Sticky roadmap: header uses space-between with buttons on edges ── */
       .onboard-header {
-        padding: 0 10px !important;
-        height: 54px;
+        padding: 0 12px !important;
+        height: 56px;
         justify-content: space-between !important;
         gap: 6px !important;
       }
       .onboard-logo { display: none !important; }
       .hdr-btn-label { display: none; }
 
-      /* Step dots — compact, labels hidden */
       .step-ind span { display: none; }
       .step-ind { gap: 0; }
       .step-dot {
-        width: 28px; height: 28px;
-        font-size: 11px;
-        font-weight: 800;
+        width: 30px; height: 30px;
+        font-size: 12px; font-weight: 800;
       }
       .step-ind.active .step-dot {
         box-shadow: 0 0 0 4px rgba(34,167,240,0.2);
       }
       .step-connector { width: 24px; margin: 0 2px; }
 
-      /* Center ALL step card headers on mobile */
       .card-top { text-align: center; }
       .card-top .card-badge { margin-left: auto; margin-right: auto; }
 
-      /* Center all btn-rows on mobile */
       .btn-row { justify-content: center; }
       .btn-back { display: none; }
       .btn-next { width: 100%; justify-content: center; }
 
-      /* Page padding */
-      .page-wrap { margin: 20px auto; padding: 0 14px 60px; }
+      .page-wrap { margin: 16px auto; padding: 0 14px 64px; }
+    }
+    @media (max-width: 480px) {
+      .card-top, .card-body { padding: 22px 16px; }
+      .page-wrap { padding: 0 12px 64px; }
     }
   </style>
 </head>
