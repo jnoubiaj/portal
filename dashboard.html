@@ -3470,7 +3470,7 @@
         scSub.style.visibility = 'hidden';
       }
     }
-    const sa = document.getElementById('s-approved'); if(sa) sa.textContent = d.fundingApproved ? '$' + Math.round(d.fundingApproved/1000) + 'K' : '—';
+    const sa = document.getElementById('s-approved'); if(sa) sa.textContent = d.fundingApproved ? (d.fundingApproved >= 1000000 ? '$' + +(d.fundingApproved/1000000).toFixed(1) + 'M' : '$' + Math.round(d.fundingApproved/1000) + 'K') : '—';
     const sg = document.getElementById('s-goal'); if(sg) sg.textContent = d.fundingGoal ? 'of $' + Math.round(d.fundingGoal/1000) + 'K goal' : '';
     // Pull pipeline tasks for current stage from Firebase pipelineTasks (synced by admin)
     var _pipelineTasks = [];
