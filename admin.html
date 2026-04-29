@@ -2778,7 +2778,7 @@
     renderClientDetail(id);
     // Real-time listener: refresh docs when client uploads or admin data changes
     if (_clientDashUnsub) { try { _clientDashUnsub(); } catch(e) {} }
-    _clientDashUnsub = fsListenDash(id, () => { loadClientDocsFromFirestore(id); });
+    _clientDashUnsub = fsListenDash(id, (snapData) => { loadClientDocsFromFirestore(id, snapData); });
     // Switch to clients section if not already
     document.querySelectorAll('.a-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.a-nav-item').forEach(n => n.classList.remove('active'));
@@ -2973,13 +2973,13 @@
     }
   }
 
-  async function loadClientDocsFromFirestore(clientId) {
+  async function loadClientDocsFromFirestore(clientId, snapData) {
     const listEl = document.getElementById('adoc-list-' + clientId);
     if (!listEl) return;
     try {
       const [fsOnboard, fsDash] = await Promise.all([
         fsGetOnboarding(clientId).catch(() => null),
-        fsGetDash(clientId).catch(() => null)
+        snapData ? Promise.resolve(snapData) : fsGetDash(clientId).catch(() => null)
       ]);
       const rows = [];
 
