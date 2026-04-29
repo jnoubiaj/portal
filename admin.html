@@ -4660,7 +4660,7 @@
       const hasFS = /\bFS\b/.test(cleanGrid);   // Foreclosure started
       const hasVS = /\bVS\b/.test(cleanGrid);   // Voluntary surrender
       const hasIC = /\bIC\b/.test(cleanGrid);   // Insurance claim
-      const hasC  = /\bC\b/.test(cleanGrid);    // Collection — real C codes remain after CLS/CO normalization
+      const hasC  = (cleanGrid.match(/\bC\b/g)||[]).length >= 3;  // Require 3+ C codes — filters out single stray C from split CLS
       const lateNums=[...cleanGrid.matchAll(/\b(180|150|120|90|60|30)\b/g)].map(m=>+m[1]);
       const _cnt=rx=>(cleanGrid.match(rx)||[]).length;
       const negCount=_cnt(/\bCO\b/g)+_cnt(/\bBK\b/g)+_cnt(/\bFS\b/g)+_cnt(/\bVS\b/g)+_cnt(/\bIC\b/g)+_cnt(/\bC\b/g)+lateNums.length;
