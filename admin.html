@@ -3018,13 +3018,15 @@
         });
       }
 
-      // Cache creditData from Firestore so getCreditData() finds it on render
+      // Cache creditData from Firestore — but never overwrite data from a recent upload
       if (fsDash && fsDash.creditData) {
-        try { localStorage.setItem('cq_credit_' + clientId, JSON.stringify(fsDash.creditData)); } catch(e) {}
-        // Refresh the credit tab if currently open
-        const creditPane = document.getElementById('dtab-credit');
-        if (creditPane && activeDetailTab === 'credit') {
-          creditPane.innerHTML = renderCreditTab(fsDash.creditData, clientId);
+        const msSinceUpload = Date.now() - (_creditUploadTs[clientId] || 0);
+        if (msSinceUpload > 30000) {
+          try { localStorage.setItem('cq_credit_' + clientId, JSON.stringify(fsDash.creditData)); } catch(e) {}
+          const creditPane = document.getElementById('dtab-credit');
+          if (creditPane && activeDetailTab === 'credit') {
+            creditPane.innerHTML = renderCreditTab(fsDash.creditData, clientId);
+          }
         }
       }
 
@@ -4410,8 +4412,8 @@
       const text = fullText.replace(/\u0000/g,'').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,' ').replace(/  +/g,' ').trim();
       setMsg('Parsing credit data…');
       const data = buildCaData(text);
+      _creditUploadTs[clientId] = Date.now();
       localStorage.setItem('cq_credit_' + clientId, JSON.stringify(data));
-      fsSetDash(clientId, { creditData: data }).catch(() => {});
       // Auto-fill credit score in dashboard editor
       if (data.fico) {
         const ficoInput = document.getElementById('db-fico-' + clientId);
@@ -5322,6 +5324,11 @@
       // Never overwrite Firestore adminDocs with an empty array
       delete fsData.adminDocs;
     }
+    // Always include latest creditData in Firestore write (stored separately in localStorage)
+    if (!fsData.creditData) {
+      const _cd = getCreditData(clientId);
+      if (_cd) fsData.creditData = _cd;
+    }
     fsSetDash(clientId, fsData).catch(() => {});
   }
 
@@ -5728,6 +5735,7 @@
   }
 
   const _pubTimers = {};
+  const _creditUploadTs = {}; // clientId → timestamp of last credit PDF upload
   function debouncedPublish(clientId) {
     clearTimeout(_pubTimers[clientId]);
     _pubTimers[clientId] = setTimeout(() => publishDashboard(clientId), 700);
