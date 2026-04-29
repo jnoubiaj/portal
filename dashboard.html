@@ -1404,6 +1404,10 @@
     .util-pct.mid { color: var(--warning); }
     .util-pct.high { color: var(--danger); }
 
+    /* Mobile/desktop text toggle for upload zone */
+    .dropzone-title-mobile,
+    .dropzone-sub-mobile { display: none; }
+
     /* ── PROFILE ─────────────────────────────────────── */
     .cp-section { background:var(--white); border:1px solid var(--gray-200); border-radius:14px; overflow:hidden; margin-bottom:14px; }
     .cp-section-header { display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--gray-100); background:var(--gray-50); }
@@ -2051,6 +2055,68 @@
       .doc-name { font-size: 14px; }
       .doc-req-item { padding: 14px; border-radius: 12px; }
       .doc-req-name { font-size: 14px; }
+
+      /* Upload zone — tap-friendly on mobile */
+      .dropzone-title-desktop, .dropzone-sub-desktop { display: none; }
+      .dropzone-title-mobile, .dropzone-sub-mobile { display: block; }
+      .doc-dropzone { padding: 32px 20px; min-height: 180px; touch-action: manipulation; }
+      .doc-dropzone h4 { font-size: 17px; font-weight: 700; }
+      .doc-dropzone p { font-size: 13px; margin-bottom: 16px; }
+      .doc-dropzone-btn {
+        display: inline-block;
+        height: 48px;
+        padding: 0 28px;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 48px;
+      }
+
+      /* Document req upload button — bigger tap target */
+      .doc-req-badge { height: 36px; line-height: 36px; padding: 0 14px; font-size: 12px; cursor: pointer; }
+
+      /* Chat — dynamic height, keyboard-safe */
+      #section-chat .card-body {
+        height: calc(100dvh - 220px) !important;
+        min-height: 360px;
+        max-height: 600px;
+      }
+      .chat-input-row { padding: 12px 0 0; gap: 10px; }
+      .chat-input { height: 48px; font-size: 15px; border-radius: 14px; }
+      .chat-send { width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0; }
+
+      /* Chat bubbles — easier reading */
+      .chat-bubble { font-size: 14px; padding: 11px 16px; max-width: 85%; }
+      .chat-time { font-size: 11px; }
+
+      /* Profile grid — 2 columns */
+      .cp-grid { grid-template-columns: 1fr 1fr !important; }
+      .cp-field:nth-child(3n) { border-right: 1px solid var(--gray-100); }
+      .cp-field:nth-child(2n) { border-right: none; }
+      .cp-field { padding: 14px 14px; }
+      .cp-field-label { font-size: 10px; }
+      .cp-field-val { font-size: 13px; }
+      .cp-section-header { padding: 14px 16px; }
+      .cp-section-edit { height: 34px; padding: 0 14px; }
+      .cp-save-row { flex-wrap: wrap; gap: 8px; }
+      .cp-save-btn, .cp-cancel-btn { height: 44px; flex: 1; font-size: 13px; }
+
+      /* Funding applications table — already has 600px stacked override */
+      .fa-table td { padding: 10px 14px; }
+
+      /* Funding sequence — larger apply buttons */
+      .fs-apply-btn { height: 34px; line-height: 34px; padding: 0 12px; font-size: 11px; }
+
+      /* Tasks — full-width tap targets */
+      .task-item {
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        border-radius: 12px;
+      }
+      .task-check { width: 26px; height: 26px; }
+      .task-name { font-size: 14px; }
+
+      /* My Profile edit inputs — proper mobile sizing */
+      .cp-edit-input { height: 44px; font-size: 15px; border-radius: 10px; }
     }
 
     /* ── RESPONSIVE: SMALL PHONE (≤480px) ───────────── */
@@ -2060,6 +2126,14 @@
       .welcome-banner { padding: 18px 16px; border-radius: 16px; }
       .welcome-text h2 { font-size: 16px; }
       .welcome-funding .amount { font-size: 26px; }
+
+      /* Profile grid → single column on small phones */
+      .cp-grid { grid-template-columns: 1fr !important; }
+      .cp-field:nth-child(2n) { border-right: none; }
+      .cp-field { border-right: none !important; }
+
+      /* Chat height on small phones */
+      #section-chat .card-body { height: calc(100dvh - 200px) !important; min-height: 320px; }
 
       .stats-row { gap: 10px; }
       .stat-card { padding: 14px 12px; }
@@ -2471,8 +2545,10 @@
               <div class="doc-dropzone-icon">
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
               </div>
-              <h4>Drag &amp; drop files here</h4>
-              <p>or click to browse from your device</p>
+              <h4 class="dropzone-title-desktop">Drag &amp; drop files here</h4>
+              <h4 class="dropzone-title-mobile">Tap to Upload Files</h4>
+              <p class="dropzone-sub-desktop">or click to browse from your device</p>
+              <p class="dropzone-sub-mobile">Tap below to select from your device</p>
               <label class="doc-dropzone-btn" for="doc-file-input" onclick="event.stopPropagation()">Browse Files</label>
               <div class="doc-dropzone-note">Supported: PDF, JPG, PNG, DOCX</div>
             </div>
