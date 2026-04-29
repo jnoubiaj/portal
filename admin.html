@@ -4297,27 +4297,25 @@
           { name:'Regions Bank',    color:'#005DAA', patterns:['REGIONS'] },
           { name:'Fifth Third',     color:'#6B2D8B', patterns:['FIFTH THIRD','5TH THIRD'] },
         ];
-        const acctNames = d.accounts.map(a=>({ upper:(a.name||'').toUpperCase(), isOpen:a.isOpen, type:a.type||'' }));
+        const CARD_TYPES = ['credit card','revolving','charge card'];
+        const openCards = d.accounts.filter(a => a.isOpen && CARD_TYPES.some(t => (a.type||'').toLowerCase().includes(t)));
+        const acctNames = openCards.map(a=>({ upper:(a.name||'').toUpperCase() }));
         const found = [];
         for(const bp of BANK_PATTERNS){
           const matched = acctNames.filter(a=>bp.patterns.some(p=>a.upper.includes(p)));
-          if(matched.length){
-            const hasOpen = matched.some(m=>m.isOpen);
-            const types = [...new Set(matched.map(m=>m.type).filter(Boolean))];
-            found.push({ name:bp.name, color:bp.color, count:matched.length, hasOpen, types });
-          }
+          if(matched.length) found.push({ name:bp.name, color:bp.color, count:matched.length });
         }
         if(!found.length) return '';
         const chips = found.map(b=>`
-          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid ${b.hasOpen?'rgba(16,185,129,0.25)':'var(--gray-100)'};background:${b.hasOpen?'rgba(16,185,129,0.05)':'var(--gray-50)'}">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1.5px solid rgba(16,185,129,0.25);background:rgba(16,185,129,0.05)">
             <div style="width:30px;height:30px;border-radius:7px;background:${b.color};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0">${b.name[0]}</div>
             <div style="min-width:0">
               <div style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap">${b.name}</div>
-              <div style="font-size:11px;color:${b.hasOpen?'#10b981':'var(--gray-400)'};">${b.hasOpen?'Active':'Closed only'} · ${b.count} acct${b.count>1?'s':''}</div>
+              <div style="font-size:11px;color:#10b981;">Active · ${b.count} card${b.count>1?'s':''}</div>
             </div>
-            <div style="margin-left:auto;font-size:15px">${b.hasOpen?'✓':'○'}</div>
+            <div style="margin-left:auto;font-size:15px">✓</div>
           </div>`).join('');
-        return `<div class="section-card"><div class="card-header"><div class="card-title">Bank Relationships</div><div class="card-meta">${found.length} bank${found.length>1?'s':''} identified</div></div><div class="card-body"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">${chips}</div><div style="margin-top:12px;font-size:11px;color:var(--gray-400)">Green = active open account. Existing relationships improve approval odds for business cards at the same bank.</div></div></div>`;
+        return `<div class="section-card"><div class="card-header"><div class="card-title">Bank Relationships</div><div class="card-meta">${found.length} bank${found.length>1?'s':''} identified</div></div><div class="card-body"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">${chips}</div><div style="margin-top:12px;font-size:11px;color:var(--gray-400)">Open credit cards only. Existing relationships improve approval odds for business cards at the same bank.</div></div></div>`;
       })()}
       `;
   }
