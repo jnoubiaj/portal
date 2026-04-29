@@ -2074,18 +2074,43 @@
       /* Document req upload button — bigger tap target */
       .doc-req-badge { height: 36px; line-height: 36px; padding: 0 14px; font-size: 12px; cursor: pointer; }
 
-      /* Chat — dynamic height, keyboard-safe */
-      #section-chat .card-body {
-        height: calc(100dvh - 220px) !important;
-        min-height: 360px;
-        max-height: 600px;
+      /* Chat — full screen, edge-to-edge on mobile */
+      #section-chat {
+        margin: 0 -14px;
       }
-      .chat-input-row { padding: 12px 0 0; gap: 10px; }
+      #section-chat .section-card {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+        height: calc(100dvh - 58px);
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0;
+      }
+      #section-chat .card-header { flex-shrink: 0; }
+      #section-chat .card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: auto !important;
+        min-height: 0;
+        overflow: hidden;
+        padding: 12px 16px 16px !important;
+      }
+      #section-chat .chat-preview {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 2px 8px;
+      }
+      .chat-msg.mine { padding-right: 2px; }
+      .chat-input-row { padding: 12px 0 0; gap: 10px; flex-shrink: 0; }
       .chat-input { height: 48px; font-size: 15px; border-radius: 14px; }
       .chat-send { width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0; }
 
       /* Chat bubbles — easier reading */
-      .chat-bubble { font-size: 14px; padding: 11px 16px; max-width: 85%; }
+      .chat-bubble { font-size: 14px; padding: 11px 16px; max-width: 78%; }
       .chat-time { font-size: 11px; }
 
       /* Profile grid — 2 columns */
@@ -2144,8 +2169,8 @@
       .cp-field:nth-child(2n) { border-right: none; }
       .cp-field { border-right: none !important; }
 
-      /* Chat height on small phones */
-      #section-chat .card-body { height: calc(100dvh - 200px) !important; min-height: 320px; }
+      /* Chat — small phones, same full-screen treatment */
+      #section-chat .section-card { height: calc(100dvh - 58px); }
 
       .stats-row { gap: 10px; }
       .stat-card { padding: 14px 12px; }
