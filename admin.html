@@ -4652,15 +4652,17 @@
       const yearMatches=[...phText.matchAll(/\b(19|20)\d{2}\b/g)];
       const lastYear=yearMatches.length?yearMatches[yearMatches.length-1]:null;
       const gridText=lastYear?phText.substring(0,lastYear.index+250):phText.substring(0,400);
+      // Re-join multi-char codes that PDF extractors sometimes split with spaces (e.g. "C LS" → "CLS")
+      const cleanGrid=gridText.replace(/\bC\s+LS\b/gi,'CLS').replace(/\bC\s+L\s+S\b/gi,'CLS').replace(/\bC\s+O\b/gi,'CO').replace(/\bB\s+K\b/gi,'BK').replace(/\bF\s+S\b/gi,'FS').replace(/\bV\s+S\b/gi,'VS').replace(/\bI\s+C\b/gi,'IC');
       // Multi-letter codes only — single-letter codes (R,F,D,G) are too broad and cause false positives
-      const hasCO = /\bCO\b/.test(gridText);   // Charge off
-      const hasBK = /\bBK\b/.test(gridText);   // Bankruptcy
-      const hasFS = /\bFS\b/.test(gridText);   // Foreclosure started
-      const hasVS = /\bVS\b/.test(gridText);   // Voluntary surrender
-      const hasIC = /\bIC\b/.test(gridText);   // Insurance claim
-      const hasC  = /\bC\b/.test(gridText);    // Collection (\bC\b excludes CO,CLS,IC,PBC via word boundary)
-      const lateNums=[...gridText.matchAll(/\b(180|150|120|90|60|30)\b/g)].map(m=>+m[1]);
-      const _cnt=rx=>(gridText.match(rx)||[]).length;
+      const hasCO = /\bCO\b/.test(cleanGrid);   // Charge off
+      const hasBK = /\bBK\b/.test(cleanGrid);   // Bankruptcy
+      const hasFS = /\bFS\b/.test(cleanGrid);   // Foreclosure started
+      const hasVS = /\bVS\b/.test(cleanGrid);   // Voluntary surrender
+      const hasIC = /\bIC\b/.test(cleanGrid);   // Insurance claim
+      const hasC  = /\bC\b/.test(cleanGrid);    // Collection — real C codes remain after CLS/CO normalization
+      const lateNums=[...cleanGrid.matchAll(/\b(180|150|120|90|60|30)\b/g)].map(m=>+m[1]);
+      const _cnt=rx=>(cleanGrid.match(rx)||[]).length;
       const negCount=_cnt(/\bCO\b/g)+_cnt(/\bBK\b/g)+_cnt(/\bFS\b/g)+_cnt(/\bVS\b/g)+_cnt(/\bIC\b/g)+_cnt(/\bC\b/g)+lateNums.length;
       if(!statusKnown){
         if(hasCO) {a.payHistory='Charged Off';     a.isNeverLate=false;a.hasDerog=true;}
