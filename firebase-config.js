@@ -139,10 +139,21 @@ async function fsGetAllOnboarding() {
 }
 
 function fsListenOnboarding(clientId, callback) {
-  return db.collection('onboarding').doc(clientId).onSnapshot(
-    snap => { if (snap.exists) callback(snap.data()); },
-    () => {}
-  );
+  let unsub = null;
+  let retries = 0;
+  let stopped = false;
+  function attach() {
+    if (stopped) return;
+    unsub = db.collection('onboarding').doc(clientId).onSnapshot(
+      snap => { retries = 0; if (snap.exists) callback(snap.data()); },
+      () => {
+        const delay = Math.min(1000 * Math.pow(2, Math.min(retries, 5)), 30000);
+        setTimeout(() => { if (!stopped) { retries++; attach(); } }, delay);
+      }
+    );
+  }
+  attach();
+  return () => { stopped = true; if (unsub) unsub(); };
 }
 
 // ── MESSAGES ─────────────────────────────────────────────────────────────
@@ -160,10 +171,21 @@ async function fsSetMessages(clientId, msgs) {
 }
 
 function fsListenMessages(clientId, callback) {
-  return db.collection('messages').doc(clientId).onSnapshot(
-    snap => { callback(snap.exists ? (snap.data().msgs || []) : []); },
-    () => {}
-  );
+  let unsub = null;
+  let retries = 0;
+  let stopped = false;
+  function attach() {
+    if (stopped) return;
+    unsub = db.collection('messages').doc(clientId).onSnapshot(
+      snap => { retries = 0; callback(snap.exists ? (snap.data().msgs || []) : []); },
+      () => {
+        const delay = Math.min(1000 * Math.pow(2, Math.min(retries, 5)), 30000);
+        setTimeout(() => { if (!stopped) { retries++; attach(); } }, delay);
+      }
+    );
+  }
+  attach();
+  return () => { stopped = true; if (unsub) unsub(); };
 }
 
 // ── FIREBASE AUTH ─────────────────────────────────────────────────────────

@@ -2117,6 +2117,18 @@
 
       /* My Profile edit inputs — proper mobile sizing */
       .cp-edit-input { height: 44px; font-size: 15px; border-radius: 10px; }
+
+      /* Notification panel — fixed to viewport so it never overflows */
+      .notif-panel {
+        position: fixed;
+        top: 66px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-height: calc(100dvh - 80px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
     }
 
     /* ── RESPONSIVE: SMALL PHONE (≤480px) ───────────── */
@@ -2650,11 +2662,12 @@
                   : (sessionStorage.getItem('cq_dash_section') || localStorage.getItem('cq_dash_section') || 'dashboard');
       switchSection(_sec, null, true);
       try { document.querySelector('.content-area').classList.add('ready'); } catch(e) {}
-      // If page was restored from bfcache, also reload data
+      // If page was restored from bfcache, reload data and force a fresh Firestore fetch
       if (e.persisted) {
         loadDashboardData();
         renderApplyingCard();
         renderFundingSequence();
+        try { if (typeof window._fsRefreshNow === 'function') window._fsRefreshNow(); } catch(e2) {}
       }
     } catch(e) {}
   });
@@ -4072,8 +4085,11 @@
             cs: fd.currentStage,
             cr: fd.creditScore,
             fa: fd.fundingApproved,
-            cf: (fd.clientFiles || []).map(f => f.id || f.name),
-            ad: (fd.adminDocs   || []).map(f => f.id || f.name),
+            cf: (fd.clientFiles  || []).map(f => f.id || f.name),
+            ad: (fd.adminDocs    || []).map(f => f.id || f.name),
+            dr: (fd.docRequests  || []).map(r => r.id + ':' + r.name),
+            cd: fd.creditData ? (fd.creditData.fico || '') : '',
+            pd: fd.profileData ? (fd.profileData.firstName || '') : '',
           });
           if (hash === _lastPollHash) return; // nothing changed — skip re-render
           _lastPollHash = hash;
@@ -4089,6 +4105,7 @@
           _renderNow();
         }).catch(() => {});
       }
+      window._fsRefreshNow = _fsRefreshNow; // expose for pageshow bfcache restore
       setInterval(_fsRefreshNow, 2000);
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') _fsRefreshNow();
