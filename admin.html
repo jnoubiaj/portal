@@ -4421,8 +4421,16 @@
       _creditUploadTs[clientId] = _now;
       localStorage.setItem('cq_credit_' + clientId, JSON.stringify(data));
       localStorage.setItem('cq_credit_ts_' + clientId, String(_now));
-      // Write creditData directly to Firestore immediately — don't wait for debouncedPublish chain
-      fsSetDash(clientId, { creditData: data }).catch(() => {});
+      // Write creditData directly to Firestore — also update creditScore so dashboard stat reflects new FICO
+      const _directUpdate = { creditData: data };
+      if (data.fico) _directUpdate.creditScore = data.fico;
+      fsSetDash(clientId, _directUpdate).then(() => {
+        setMsg('✓ Credit data saved & synced to client portal');
+      }).catch(err => {
+        const msg = err && err.message ? err.message : String(err);
+        setMsg('⚠ Firestore sync failed: ' + msg);
+        console.error('fsSetDash creditData error:', err);
+      });
       // Auto-fill credit score in dashboard editor
       if (data.fico) {
         const ficoInput = document.getElementById('db-fico-' + clientId);

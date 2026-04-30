@@ -77,9 +77,7 @@ async function fsGetDash(clientId) {
 }
 
 async function fsSetDash(clientId, data) {
-  try {
-    await db.collection('dashboards').doc(clientId).set(data, { merge: true });
-  } catch(e) {}
+  await db.collection('dashboards').doc(clientId).set(data, { merge: true });
 }
 
 // ── FILE STORAGE ──────────────────────────────────────────────────────────
