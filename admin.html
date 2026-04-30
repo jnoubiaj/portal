@@ -4452,7 +4452,7 @@
         await worker.terminate();
         fullText = pageTexts.join('\n');
       }
-      const rawText = fullText.replace(/ /g,'').replace(/[ --]/g,' ').trim();
+      const rawText = fullText.replace(/\u0000/g,'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,' ').trim();
       const text = rawText.replace(/	/g,' ').replace(/  +/g,' ');
       setMsg('Parsing credit data…');
       const data = buildCaData(text, rawText);
