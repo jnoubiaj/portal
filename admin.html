@@ -3913,6 +3913,8 @@
   function showAdminProfileEdit(clientId) {
     const o = getOnboardDataForClient(clientId);
     const personalBanks = Array.isArray(o.personalBanks) ? o.personalBanks.join(', ') : (o.personalBanks || '');
+    const bizBanksVal = Array.isArray(o.bizBanks) ? o.bizBanks.join(', ') : (o.bizBanks || '');
+    const bizCardsVal = Array.isArray(o.bizCreditCards) ? o.bizCreditCards.join(', ') : (o.bizCreditCards || '');
     const homeAddress = o.address || [o.street, o.city, o.state, o.zip].filter(Boolean).join(', ') || '';
     const bizAddress = o.bizAddress || [o.bizStreet, o.bizCity, o.bizState, o.bizZip].filter(Boolean).join(', ') || '';
 
@@ -3943,14 +3945,24 @@
             ${field('Phone', inp('phone', o.phone, 'Phone'))}
             ${field('Date of Birth', inp('dob', o.dob, 'YYYY-MM-DD'))}
             ${field('Annual Income', inp('annualIncome', o.annualIncome, '75000'))}
+            ${field('SSN', inp('ssn', o.ssn, '123456789'))}
+            ${field("Mother's Maiden Name", inp('maidenName', o.maidenName, 'Maiden name'))}
+            <div class="prof-field">
+              <div class="prof-field-label">US Citizen</div>
+              <select id="ape-citizen" style="width:100%;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;padding:0 10px;font-size:13px;font-family:var(--font-b);color:var(--navy);outline:none;background:#fff;transition:border-color 0.15s" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-200)'">
+                <option value="">— Select —</option>
+                <option value="yes" ${(o.citizen==='yes'||o.citizen===true||o.citizen==='Yes'||o.citizen==='true')?'selected':''}>Yes</option>
+                <option value="no" ${(o.citizen==='no'||o.citizen===false||o.citizen==='No'||o.citizen==='false')?'selected':''}>No</option>
+              </select>
+            </div>
           </div>
           <div style="margin-bottom:20px">
             <div class="prof-field-label" style="margin-bottom:6px">Home Address</div>
             ${inp('address', homeAddress, 'Full home address')}
           </div>
-          <div style="margin-bottom:20px">
-            <div class="prof-field-label" style="margin-bottom:6px">Personal Banks (comma-separated)</div>
-            ${inp('personalBanks', personalBanks, 'Chase, Bank of America')}
+          <div class="prof-grid" style="margin-bottom:20px">
+            ${field('Personal Banks (comma-separated)', inp('personalBanks', personalBanks, 'Chase, Bank of America'))}
+            ${field('New Credit Accounts Opened', inp('newCreditAccts', o.newCreditAccts, 'e.g. 2'))}
           </div>
 
           <!-- Business -->
@@ -3966,10 +3978,26 @@
             ${field('Ownership %', inp('ownership', o.ownership, '100'))}
             ${field('Business Phone', inp('bizPhone', o.bizPhone, 'Business phone'))}
             ${field('Date Established', inp('dateEstablished', o.dateEstablished, 'YYYY-MM-DD'))}
+            ${field('Loan Amount', inp('loanAmount', o.loanAmount, '50000'))}
+            ${field('Loan Purpose', inp('loanReason', o.loanReason, 'e.g. Working capital'))}
           </div>
-          <div style="margin-bottom:24px">
+          <div style="margin-bottom:20px">
             <div class="prof-field-label" style="margin-bottom:6px">Business Address</div>
             ${inp('bizAddress', bizAddress, 'Full business address')}
+          </div>
+          <div class="prof-grid" style="margin-bottom:20px">
+            ${field('Business Banks (comma-separated)', inp('bizBanks', bizBanksVal, 'Chase, Wells Fargo'))}
+            ${field('Business Credit Cards (comma-separated)', inp('bizCreditCards', bizCardsVal, 'Amex, Capital One'))}
+          </div>
+
+          <!-- Experian & Security -->
+          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;margin-top:8px;padding-bottom:8px;border-bottom:1px solid var(--gray-100)">Experian Access & Security</div>
+          <div class="prof-grid" style="margin-bottom:20px">
+            ${field('Experian Email', inp('experianEmail', o.experianEmail, 'email@experian.com'))}
+            ${field('Experian Password', inp('experianPass', o.experianPass, 'Password'))}
+            ${field('PIN', inp('pin', o.pin, 'PIN'))}
+            ${field('Security Question', inp('secQuestion', o.secQuestion, 'Question'))}
+            ${field('Security Answer', inp('secAnswer', o.secAnswer, 'Answer'))}
           </div>
 
           <div style="display:flex;gap:10px;align-items:center">
@@ -3994,17 +4022,28 @@
     let o = getOnboardDataForClient(clientId);
     const g = id => (document.getElementById('ape-' + id) || {}).value || '';
     const personalBanks = g('personalBanks').split(',').map(s=>s.trim()).filter(Boolean);
+    const bizBanks = g('bizBanks').split(',').map(s=>s.trim()).filter(Boolean);
+    const bizCreditCards = g('bizCreditCards').split(',').map(s=>s.trim()).filter(Boolean);
+    const citizenVal = g('citizen');
 
     Object.assign(o, {
       firstName: g('firstName'), lastName: g('lastName'),
       email: g('email'), phone: g('phone'), dob: g('dob'),
       annualIncome: g('annualIncome'), address: g('address'),
+      ssn: g('ssn') || o.ssn,
+      maidenName: g('maidenName'),
+      citizen: citizenVal || o.citizen,
+      newCreditAccts: g('newCreditAccts'),
       personalBanks,
       bizName: g('bizName'), dba: g('dba'), ein: g('ein'),
       bizType: g('bizType'), industry: g('industry'), employees: g('employees'),
       monthlySales: g('monthlySales'), ownership: g('ownership'),
       bizPhone: g('bizPhone'), dateEstablished: g('dateEstablished'),
+      loanAmount: g('loanAmount'), loanReason: g('loanReason'),
       bizAddress: g('bizAddress'),
+      bizBanks, bizCreditCards,
+      experianEmail: g('experianEmail'), experianPass: g('experianPass'),
+      pin: g('pin'), secQuestion: g('secQuestion'), secAnswer: g('secAnswer'),
     });
 
     // Update admin client record name/phone
@@ -4371,7 +4410,7 @@
             const y = Math.round(item.transform[5]);
             if (!lines[y]) lines[y] = [];
             const fontSize = Math.abs(item.transform[0]) || 8;
-            lines[y].push({ str: item.str, x: item.transform[4], w: item.width > 0 ? item.width : item.str.length * fontSize * 0.30 });
+            lines[y].push({ str: item.str, x: item.transform[4], w: item.str.length * fontSize * 0.30 });
           });
           const sortedLines = Object.keys(lines).sort((a,b) => b - a).map(y => {
             const items = lines[y].sort((a,b) => a.x - b.x);
@@ -4413,8 +4452,8 @@
         await worker.terminate();
         fullText = pageTexts.join('\n');
       }
-      const rawText = fullText.replace(/\u0000/g,'').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,' ').trim();
-      const text = rawText.replace(/\t/g,' ').replace(/  +/g,' ');
+      const rawText = fullText.replace(/ /g,'').replace(/[ --]/g,' ').trim();
+      const text = rawText.replace(/	/g,' ').replace(/  +/g,' ');
       setMsg('Parsing credit data…');
       const data = buildCaData(text, rawText);
       const _now = Date.now();
@@ -4537,20 +4576,30 @@
     d.pubRecords=!/no public records/i.test(t)&&/public record|bankruptcy|judgment|lien/i.test(t);
     const acctBlocks=text.split(/\nAccount name\s+/i);
     for(let i=1;i<acctBlocks.length;i++){const a=parseAcctBlock(acctBlocks[i]);if(a.name)d.accounts.push(a);}
-    // Use rawText so tab column-separators are preserved (tabs are inserted for gap>10px in extractor)
+    // Use rawText so tab column-separators are preserved for inquiry name detection
     const _inqSrc = rawText || text;
     const inqSec=_inqSrc.match(/\n(?:Hard\s+)?Inquir(?:ies|y)\n([\s\S]*?)(?:\nCredit\s+scores|\nPrepared\s+For\b|\nDisclaimer\b|https:\/\/usa\.experian|$)/i);
     if(inqSec){
       const inqText=inqSec[1];
       const lines=inqText.split('\n').filter(l=>l.trim());
-      // Helper: split a line into column parts — tabs first (inserted by extractor for large gaps), then 2+spaces fallback
+      // Split a line into column parts — tabs first (gap-detected by extractor), then 2+spaces fallback
       const splitCols=s=>{
         const parts=(s.indexOf('\t')>=0?s.split('\t'):s.split(/\s{2,}/)).map(p=>p.trim()).filter(p=>p);
         return parts;
       };
+      // Fallback: split concatenated names by institution-suffix boundaries
+      // e.g. "FIRST TECH FCU SOFI BANK NA BK OF AMER" → ["FIRST TECH FCU","SOFI BANK NA","BK OF AMER"]
+      const splitByInst=(str,n)=>{
+        if(n<=1)return[str.trim()];
+        const INST=/\b(FCU|CU|NA|FSB|LLC|INC|CORP|LLP|LP|ASSOC|ASSN|FED|NFCU|USAA|PENFED)\b(?=\s+[A-Z])/g;
+        const parts=[];let last=0,m;
+        while((m=INST.exec(str))!==null){parts.push(str.slice(last,m.index+m[0].length).trim());last=m.index+m[0].length;if(parts.length>=n-1)break;}
+        parts.push(str.slice(last).trim());
+        return parts.filter(Boolean);
+      };
       const isColumnar=lines.some(l=>(l.match(/Inquired\s+on/gi)||[]).length>1);
       if(!isColumnar){
-        // Detect runs of consecutive "Inquired on" lines — each run shares a names line above the run
+        // Detect runs of consecutive "Inquired on" lines — each run shares a names line above
         const dateIdxs=lines.map((l,i)=>/^[\t ]*Inquired\s+on\s+/i.test(l)?i:-1).filter(i=>i>=0);
         const runs=[];
         let ri=0;
@@ -4562,7 +4611,8 @@
         }
         runs.forEach(runIdxs=>{
           const namesLine=runIdxs[0]>0?(lines[runIdxs[0]-1]||''):'';
-          const nameParts=!/Business Type|Inquired|PO BOX|record until|\d{5}/i.test(namesLine.trim())?splitCols(namesLine):[];
+          let nameParts=!/Business Type|Inquired|PO BOX|record until|\d{5}/i.test(namesLine.trim())?splitCols(namesLine):[];
+          if(nameParts.length<runIdxs.length&&namesLine.trim())nameParts=splitByInst(namesLine,runIdxs.length);
           runIdxs.forEach((li,j)=>{
             const dateM=lines[li].match(/Inquired\s+on\s+([A-Za-z]+\s+\d{1,2},?\s*\d{4})/i);
             d.inquiries.push({name:nameParts[j]||'Creditor '+(d.inquiries.length+1),date:dateM?dateM[1].trim():'—',status:'active'});
@@ -4571,8 +4621,10 @@
       } else {
         for(let i=0;i<lines.length;i++){
           const rowDates=[...lines[i].matchAll(/Inquired\s+on\s+([A-Za-z]+\s+\d{1,2},?\s*\d{4})/gi)].map(m=>m[1].trim());
-          if(rowDates.length<2)continue;
-          const nameParts=splitCols(lines[i-1]||'');
+          if(!rowDates.length)continue;
+          const prevLine=lines[i-1]||'';
+          let nameParts=/Business Type|Inquired|PO BOX|record until|\d{5}/i.test(prevLine)?[]:splitCols(prevLine);
+          if(nameParts.length<rowDates.length&&prevLine.trim())nameParts=splitByInst(prevLine,rowDates.length);
           rowDates.forEach((date,j)=>{
             d.inquiries.push({name:nameParts[j]||'Creditor '+(d.inquiries.length+1),date,status:'active'});
           });
@@ -5258,8 +5310,8 @@
     const smsText = `Hi${displayName ? ' ' + displayName.split(' ')[0] : ''}! Your CapitalQuest client portal is ready.\n\nJust tap the link below and log in using your phone number. We'll text you a quick verification code:\n\n{{trigger_link.N1sQbpkk1gVCyF7v1nOL}}\n\n- CapitalQuest Consulting`;
     document.getElementById('nc-sms-preview').textContent = smsText;
     document.getElementById('client-created-modal').style.display = 'flex';
-    // Auto-send via GHL
-    sendGHLWelcomeSMS(displayName, phone, email, smsText);
+    // Auto-send via GHL (disabled — uncomment to re-enable)
+    // sendGHLWelcomeSMS(displayName, phone, email, smsText);
 
     renderClientList();
     renderOverview();
@@ -5378,11 +5430,10 @@
       // Never overwrite Firestore adminDocs with an empty array
       delete fsData.adminDocs;
     }
-    // Always include latest creditData in Firestore write (stored separately in localStorage)
-    if (!fsData.creditData) {
-      const _cd = getCreditData(clientId);
-      if (_cd) fsData.creditData = _cd;
-    }
+    // Always use freshest credit data from cq_credit_ (updated on every PDF upload).
+    // Prevents a stale cq_dash_ cache from overwriting a just-uploaded credit report.
+    const _cd = getCreditData(clientId);
+    if (_cd) fsData.creditData = _cd;
     fsSetDash(clientId, fsData).catch(() => {});
   }
 
