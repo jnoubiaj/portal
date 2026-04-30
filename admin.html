@@ -4371,7 +4371,7 @@
             const y = Math.round(item.transform[5]);
             if (!lines[y]) lines[y] = [];
             const fontSize = Math.abs(item.transform[0]) || 8;
-            lines[y].push({ str: item.str, x: item.transform[4], w: item.width > 0 ? item.width : item.str.length * fontSize * 0.55 });
+            lines[y].push({ str: item.str, x: item.transform[4], w: item.width > 0 ? item.width : item.str.length * fontSize * 0.30 });
           });
           const sortedLines = Object.keys(lines).sort((a,b) => b - a).map(y => {
             const items = lines[y].sort((a,b) => a.x - b.x);
@@ -4380,7 +4380,7 @@
               if (k === 0) { str = items[k].str; continue; }
               const prev = items[k-1];
               const gap = items[k].x - (prev.x + prev.w);
-              str += (gap > 10 ? '\t' : ' ') + items[k].str;
+              str += (gap > 8 ? '\t' : ' ') + items[k].str;
             }
             return str;
           });
@@ -4543,8 +4543,11 @@
     if(inqSec){
       const inqText=inqSec[1];
       const lines=inqText.split('\n').filter(l=>l.trim());
-      // Helper: split a line into column parts — tabs first (from extractor gap>10), then 2+spaces fallback
-      const splitCols=s=>{ const t=s.split('\t').map(p=>p.trim()).filter(p=>p); return t.length>1?t:s.split(/\s{2,}/).map(p=>p.trim()).filter(p=>p); };
+      // Helper: split a line into column parts — tabs first (inserted by extractor for large gaps), then 2+spaces fallback
+      const splitCols=s=>{
+        const parts=(s.indexOf('\t')>=0?s.split('\t'):s.split(/\s{2,}/)).map(p=>p.trim()).filter(p=>p);
+        return parts;
+      };
       const isColumnar=lines.some(l=>(l.match(/Inquired\s+on/gi)||[]).length>1);
       if(!isColumnar){
         // Detect runs of consecutive "Inquired on" lines — each run shares a names line above the run
