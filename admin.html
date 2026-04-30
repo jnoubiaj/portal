@@ -50,7 +50,7 @@
     /* ── LOGIN ─────────────────────────────────── */
     #admin-login {
       min-height: 100vh;
-      display: none;
+      display: flex;
       align-items: center;
       justify-content: center;
       background: var(--navy);
@@ -1887,13 +1887,8 @@
         document.getElementById('sb-avatar').textContent = _profile.initials;
         document.getElementById('sb-name').textContent = _profile.name;
         if (typeof initAdminApp === 'function') initAdminApp();
-      } else {
-        // No cached session — show login immediately, don't wait for Firebase
-        document.getElementById('admin-login').style.display = 'flex';
       }
-    } catch(e) {
-      document.getElementById('admin-login').style.display = 'flex';
-    }
+    } catch(e) {}
   })();
 
   // Firebase Auth state — confirm or revoke fast-restore
