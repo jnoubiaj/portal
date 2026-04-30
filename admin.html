@@ -4421,6 +4421,8 @@
       _creditUploadTs[clientId] = _now;
       localStorage.setItem('cq_credit_' + clientId, JSON.stringify(data));
       localStorage.setItem('cq_credit_ts_' + clientId, String(_now));
+      // Write creditData directly to Firestore immediately — don't wait for debouncedPublish chain
+      fsSetDash(clientId, { creditData: data }).catch(() => {});
       // Auto-fill credit score in dashboard editor
       if (data.fico) {
         const ficoInput = document.getElementById('db-fico-' + clientId);
@@ -4429,7 +4431,7 @@
           if (typeof previewScoreChange === 'function') previewScoreChange(clientId);
         }
       }
-      // Always publish after upload so creditData reaches Firestore via saveDashData
+      // Also trigger debouncedPublish so creditScore field and other dashboard fields sync
       if (typeof debouncedPublish === 'function') debouncedPublish(clientId);
       const tabPane = document.getElementById('dtab-credit');
       if (tabPane) tabPane.innerHTML = renderCreditTab(data, clientId);
