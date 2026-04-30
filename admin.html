@@ -1213,7 +1213,7 @@
 <body>
 
 <!-- ── LOGIN ───────────────────────────────────────────────────────── -->
-<div id="admin-login">
+<div id="admin-login" style="display:none">
   <div class="login-box">
     <div class="login-logo">
       <img src="Brand_assets/CapitalQuest%20Consulting-R-02.png" alt="CapitalQuest" />
@@ -1887,8 +1887,12 @@
         document.getElementById('sb-avatar').textContent = _profile.initials;
         document.getElementById('sb-name').textContent = _profile.name;
         if (typeof initAdminApp === 'function') initAdminApp();
+      } else {
+        document.getElementById('admin-login').style.display = 'flex';
       }
-    } catch(e) {}
+    } catch(e) {
+      document.getElementById('admin-login').style.display = 'flex';
+    }
   })();
 
   // Firebase Auth state — confirm or revoke fast-restore
