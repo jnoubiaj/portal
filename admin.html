@@ -222,51 +222,63 @@
     .a-section { display: none; }
     .a-section.active { display: block; }
 
-    /* ── OVERVIEW CARDS ─────────────────────────── */
-    .ov-cards-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
-    .ov-stat-card {
-      background: var(--white); border-radius: 16px;
-      border: 2px solid var(--gray-100); padding: 22px 24px;
-      box-shadow: 0 2px 8px rgba(10,22,40,0.05);
-      cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
-      display: flex; align-items: center; gap: 16px;
+    /* ── OVERVIEW KPI STRIP ─────────────────────── */
+    .ov-cards-row {
+      display: flex; align-items: stretch; margin-bottom: 14px;
+      background: var(--white); border: 1.5px solid var(--gray-100);
+      border-radius: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(10,22,40,0.04);
     }
-    .ov-stat-card:hover { box-shadow: 0 4px 18px rgba(10,22,40,0.1); transform: translateY(-1px); }
-    .ov-stat-card.active { box-shadow: 0 6px 22px rgba(10,22,40,0.12); transform: translateY(-2px); }
-    .ov-card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ov-stat-card {
+      flex: 1; padding: 14px 18px; border-right: 1px solid var(--gray-100);
+      cursor: pointer; transition: background 0.13s; position: relative; overflow: hidden;
+    }
+    .ov-stat-card:last-child { border-right: none; }
+    .ov-stat-card:hover { background: var(--gray-50); }
+    .ov-stat-card.active { background: var(--blue-xl); }
+    .ov-stat-card .ov-card-accent-bar { position:absolute; bottom:0; left:0; right:0; height:2px; }
+    .ov-card-icon { display: none; }
     .ov-card-body { min-width: 0; }
-    .ov-card-count { font-family: var(--font-h); font-size: 34px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin-bottom: 4px; }
-    .ov-card-label { font-family: var(--font-h); font-size: 13px; font-weight: 700; color: var(--gray-600); }
-    .ov-card-sub { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+    .ov-card-count { font-family: var(--font-h); font-size: 20px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin-bottom: 4px; }
+    .ov-card-label { font-size: 10px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.06em; }
+    .ov-card-sub { font-size: 10px; color: var(--gray-400); margin-top: 2px; }
+
+    /* ── OVERVIEW WORKSPACE GRID ──────────────── */
+    .ov-main-grid { display: grid; grid-template-columns: 1fr 300px; gap: 14px; margin-bottom: 18px; align-items: start; }
+    .ov-panel { background: var(--white); border-radius: 14px; border: 1.5px solid var(--gray-100); box-shadow: 0 1px 5px rgba(10,22,40,0.05); overflow: hidden; }
+    .ov-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1.5px solid var(--gray-100); }
+    .ov-panel-title { font-family: var(--font-h); font-size: 14px; font-weight: 800; color: var(--navy); letter-spacing: -0.02em; }
+    .ov-panel-sub { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+    .ov-link-btn { font-size: 11px; font-weight: 600; color: var(--blue); background: none; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 4px 12px; cursor: pointer; font-family: var(--font-b); transition: background 0.15s; white-space: nowrap; flex-shrink: 0; }
+    .ov-link-btn:hover { background: #eff6ff; }
 
     /* ── OVERVIEW KPI ROW ───────────────────────── */
-    .ov-kpi-row { display: grid; grid-template-columns: 260px 1fr; gap: 20px; margin-bottom: 24px; align-items: start; }
-    .ov-kpi-card { background: var(--navy); border-radius: 16px; padding: 28px 24px; color: var(--white); }
-    .ov-kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.5); margin-bottom: 10px; }
-    .ov-kpi-val { font-family: var(--font-h); font-size: 38px; font-weight: 800; letter-spacing: -0.04em; color: var(--white); line-height: 1; margin-bottom: 6px; }
-    .ov-kpi-sub { font-size: 12px; color: rgba(255,255,255,0.45); }
-    .ov-kpi-badge { display: inline-flex; align-items: center; gap: 4px; background: rgba(16,185,129,0.2); color: #6ee7b7; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; margin-top: 10px; }
+    .ov-kpi-row { display: grid; grid-template-columns: 230px 1fr; gap: 14px; margin-bottom: 18px; align-items: start; }
+    .ov-kpi-card { background: var(--navy); border-radius: 14px; padding: 24px 22px; color: var(--white); }
+    .ov-kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.45); margin-bottom: 8px; }
+    .ov-kpi-val { font-family: var(--font-h); font-size: 30px; font-weight: 800; letter-spacing: -0.04em; color: var(--white); line-height: 1; margin-bottom: 5px; }
+    .ov-kpi-sub { font-size: 11px; color: rgba(255,255,255,0.4); }
+    .ov-kpi-badge { display: inline-flex; align-items: center; gap: 4px; background: rgba(16,185,129,0.2); color: #6ee7b7; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; margin-top: 10px; }
 
     /* ── OVERVIEW TABLES ────────────────────────── */
-    .ov-table-card { background: var(--white); border-radius: 16px; border: 1px solid var(--gray-100); overflow: hidden; box-shadow: 0 2px 8px rgba(10,22,40,0.04); }
-    .ov-table-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--gray-100); gap: 12px; flex-wrap: wrap; }
-    .ov-table-title { font-family: var(--font-h); font-size: 14px; font-weight: 700; color: var(--navy); }
+    .ov-table-card { background: var(--white); border-radius: 14px; border: 1.5px solid var(--gray-100); overflow: hidden; box-shadow: 0 1px 5px rgba(10,22,40,0.04); }
+    .ov-table-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1.5px solid var(--gray-100); gap: 12px; flex-wrap: wrap; }
+    .ov-table-title { font-family: var(--font-h); font-size: 13px; font-weight: 700; color: var(--navy); }
     .ov-table-filters { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     .ov-filter-select {
-      height: 30px; padding: 0 10px; border: 1.5px solid var(--gray-200); border-radius: 7px;
+      height: 28px; padding: 0 10px; border: 1.5px solid var(--gray-200); border-radius: 7px;
       font-family: var(--font-b); font-size: 12px; color: var(--gray-600); background: var(--white);
       outline: none; cursor: pointer;
     }
     .ov-filter-input {
-      height: 30px; padding: 0 10px; border: 1.5px solid var(--gray-200); border-radius: 7px;
+      height: 28px; padding: 0 10px; border: 1.5px solid var(--gray-200); border-radius: 7px;
       font-family: var(--font-b); font-size: 12px; color: var(--navy); background: var(--white);
       outline: none; width: 160px;
     }
     .ov-filter-input:focus, .ov-filter-select:focus { border-color: var(--blue); }
     .ov-table-wrap { overflow-x: auto; }
     .ov-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .ov-table th { padding: 10px 14px; background: var(--gray-50); text-align: left; font-family: var(--font-h); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray-400); white-space: nowrap; border-bottom: 1px solid var(--gray-100); }
-    .ov-table td { padding: 11px 14px; border-bottom: 1px solid var(--gray-50); vertical-align: middle; color: var(--gray-600); white-space: nowrap; }
+    .ov-table th { padding: 9px 14px; background: var(--gray-50); text-align: left; font-family: var(--font-h); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray-400); white-space: nowrap; border-bottom: 1px solid var(--gray-100); }
+    .ov-table td { padding: 10px 14px; border-bottom: 1px solid var(--gray-50); vertical-align: middle; color: var(--gray-600); white-space: nowrap; }
     .ov-table tr:last-child td { border-bottom: none; }
     .ov-table tr:hover td { background: var(--gray-50); }
     .ov-table tr.overdue td { background: #fff9f9; }
@@ -287,7 +299,47 @@
     .ov-pri-medium { color: var(--warning); font-weight: 700; }
     .ov-pri-low    { color: var(--gray-400); font-weight: 600; }
     .ov-avatar-sm  { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-h); font-weight: 700; font-size: 10px; color: var(--white); vertical-align: middle; margin-right: 5px; }
-    .ov-no-rows { text-align: center; padding: 28px; font-size: 13px; color: var(--gray-400); }
+    .ov-no-rows { text-align: center; padding: 24px; font-size: 13px; color: var(--gray-400); }
+
+    /* ── STUCK STRIP ─────────────────────────── */
+    .ov-stuck-strip { display:flex; align-items:center; gap:10px; padding:10px 14px; background:#fffbeb; border:1.5px solid #fde68a; border-radius:12px; margin-bottom:14px; font-size:12px; color:#92400e; }
+    .ov-stuck-icon { flex-shrink:0; width:28px; height:28px; background:#fde68a; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#92400e; }
+    .ov-stuck-text { flex:1; line-height:1.5; }
+    .ov-stuck-name { font-weight:700; cursor:pointer; text-decoration:underline; color:#92400e; }
+    .ov-stuck-dismiss { flex-shrink:0; width:22px; height:22px; border:none; background:none; font-size:18px; line-height:1; color:#b45309; cursor:pointer; border-radius:6px; transition:background .12s; display:flex; align-items:center; justify-content:center; padding:0; }
+    .ov-stuck-dismiss:hover { background:#fef3c7; }
+
+    /* ── NEXT ACTIONS PANEL ──────────────────── */
+    .ov-na-panel { background:var(--white); border:1.5px solid var(--gray-100); border-radius:14px; box-shadow:0 1px 5px rgba(10,22,40,.05); overflow:hidden; }
+    .ov-na-head { padding:14px 18px 12px; border-bottom:1.5px solid var(--gray-100); display:flex; align-items:flex-end; justify-content:space-between; }
+    .ov-na-title { font-family:var(--font-h); font-size:14px; font-weight:800; color:var(--navy); letter-spacing:-0.02em; }
+    .ov-na-subtitle { font-size:11px; color:var(--gray-400); }
+    .ov-na-body-wrap { max-height:500px; overflow-y:auto; padding:10px; }
+    .ov-na-section { margin-bottom:12px; }
+    .ov-na-section:last-child { margin-bottom:0; }
+    .ov-na-section-head { display:flex; align-items:center; gap:6px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; padding:3px 6px; margin-bottom:6px; border-radius:6px; }
+    .ov-na-overdue { color:#dc2626; background:#fff5f5; }
+    .ov-na-today { color:#d97706; background:#fffbeb; }
+    .ov-na-upcoming { color:#64748b; background:#f8fafc; }
+    .ov-na-dot { width:5px; height:5px; border-radius:50%; background:currentColor; flex-shrink:0; }
+    .ov-na-count { margin-left:auto; background:currentColor; color:#fff; width:17px; height:17px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:900; flex-shrink:0; }
+    .ov-na-item { display:flex; align-items:flex-start; gap:8px; padding:7px 10px; border-radius:8px; border:1.5px solid transparent; cursor:pointer; transition:background .12s,border-color .12s; margin-bottom:3px; background:var(--gray-50); }
+    .ov-na-item:hover { background:var(--blue-xl); border-color:#bfdbfe; }
+    .ov-na-check { width:15px; height:15px; border:1.5px solid var(--gray-300); border-radius:4px; flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center; transition:all .12s; color:transparent; }
+    .ov-na-item:hover .ov-na-check { border-color:var(--blue); color:var(--blue); }
+    .ov-na-itembody { flex:1; min-width:0; }
+    .ov-na-task { font-size:11px; font-weight:600; color:var(--navy); line-height:1.3; margin-bottom:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ov-na-meta { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+    .ov-na-client { font-size:10px; font-weight:600; color:var(--gray-500); }
+    .ov-na-stage { font-size:9px; font-weight:700; padding:1px 5px; border-radius:999px; }
+    .ov-na-due { font-size:9px; font-weight:700; padding:1px 6px; border-radius:999px; background:#f1f5f9; color:#64748b; }
+    .ov-na-due.overdue { background:#fee2e2; color:#dc2626; }
+    .ov-na-more { font-size:11px; color:var(--gray-400); padding:4px 8px; font-weight:500; }
+    .ov-snap-row:hover td { background:var(--gray-50) !important; }
+    .ov-stat-card.kpi-alert-red { background:#fff5f5 !important; }
+    .ov-stat-card.kpi-alert-amber { background:#fffbeb !important; }
+    .ov-na-item-focus { background:#fff !important; border-color:#e2e8f0 !important; box-shadow:0 2px 8px rgba(10,22,40,.08); }
+    .ov-na-focus-header { display:flex; align-items:center; gap:6px; font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:#dc2626; padding:6px 10px 4px; }
 
     /* ── STATS (legacy, keep for sidebar count) ── */
     .a-stats-grid { display: none; }
@@ -783,13 +835,15 @@
     /* ── RESPONSIVE ────────────────────────────── */
     @media (max-width: 1100px) {
       .ov-cards-row { grid-template-columns: repeat(3, 1fr); }
+      .ov-main-grid { grid-template-columns: 1fr; }
       .ov-kpi-row { grid-template-columns: 1fr; }
       .a-clients-wrap { grid-template-columns: 1fr; }
       .a-client-list-card { position: static; }
       .a-cl-list { max-height: 320px; }
     }
     @media (max-width: 780px) {
-      .ov-cards-row { grid-template-columns: 1fr 1fr; }
+      .ov-cards-row { grid-template-columns: 1fr 1fr 1fr; }
+      .ov-main-grid { grid-template-columns: 1fr; }
       .anl-grid { grid-template-columns: repeat(2, 1fr) !important; }
     }
     @media (max-width: 768px) {
@@ -817,9 +871,10 @@
       .a-content { padding: 14px 12px 40px; overflow-x: hidden; }
 
       /* Overview stats */
-      .ov-cards-row { grid-template-columns: 1fr 1fr; gap: 10px; }
-      .ov-stat-card { padding: 16px; gap: 12px; }
-      .ov-card-count { font-size: 26px; }
+      .ov-cards-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .ov-main-grid { grid-template-columns: 1fr; }
+      .ov-stat-card { padding: 14px 14px 12px; }
+      .ov-card-count { font-size: 22px; }
       .ov-card-sub { display: none; }
 
       /* KPI row */
@@ -866,7 +921,8 @@
       .login-box { padding: 32px 24px; margin: 0 16px; max-width: 100%; }
     }
     @media (max-width: 480px) {
-      .ov-cards-row { grid-template-columns: 1fr; }
+      .ov-cards-row { grid-template-columns: 1fr 1fr; }
+      .ov-main-grid { grid-template-columns: 1fr; }
       .a-content { padding: 12px 10px 36px; }
       .a-credit-grid { grid-template-columns: 1fr; }
       .anl-grid { grid-template-columns: 1fr !important; }
@@ -1015,17 +1071,54 @@
     /* ── Pipeline ─────────────────────────────── */
     .pl-board{display:flex;gap:14px;overflow-x:auto;padding-bottom:16px;align-items:flex-start}
     .pl-col{flex:0 0 220px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
-    /* Compact pipeline in overview — columns flex to fill available width */
-    #ov-pipeline-wrap .pl-board{gap:6px;padding-bottom:4px;flex-wrap:nowrap}
-    #ov-pipeline-wrap .pl-col{flex:1 1 120px;min-width:120px;max-width:200px;padding:9px}
-    #ov-pipeline-wrap .pl-card{padding:7px 9px;margin-bottom:5px}
+    /* Pipeline in overview — dominant, scrollable columns */
+    #ov-pipeline-wrap .pl-board{gap:8px;padding-bottom:6px;flex-wrap:nowrap;min-height:460px;align-items:stretch}
+    #ov-pipeline-wrap .pl-col{flex:1 1 148px;min-width:148px;max-width:210px;padding:10px;overflow-y:auto;max-height:540px}
+    #ov-pipeline-wrap .pl-card{padding:9px 10px;margin-bottom:7px}
     #ov-pipeline-wrap .pl-card-name{font-size:11px}
-    #ov-pipeline-wrap .pl-col-head{margin-bottom:7px;font-size:10px}
-    #ov-pipeline-wrap .pl-col-badge{font-size:9px;padding:1px 6px}
+    #ov-pipeline-wrap .pl-col-head{margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid #f1f5f9}
+    #ov-pipeline-wrap .pl-col-badge{font-size:9px;padding:1px 7px}
+    /* Pipeline panel visual dominance */
+    #asec-overview .ov-panel{border-color:#c8d5e6;box-shadow:0 2px 12px rgba(10,22,40,.08)}
+    /* Lighter weight on lower sections */
+    #ov-task-section .ov-table-card,#ov-kpi-row .ov-table-card{box-shadow:none}
+    /* Urgency card highlight */
+    .pl-card-overdue{background:#fff5f5!important}
+    .pl-card-today{background:#fffdf5!important}
     .pl-col-head{font-size:11px;font-weight:800;color:#0f2044;margin-bottom:12px;display:flex;align-items:flex-start;justify-content:space-between}
     .pl-col-badge{font-size:10px;font-weight:800;color:#fff;padding:2px 8px;border-radius:20px;flex-shrink:0;margin-top:1px}
-    .pl-card{background:#fafafa;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s,border-color .15s,transform .1s}
-    .pl-card:hover{border-color:#93c5fd;box-shadow:0 4px 16px rgba(37,99,235,.10);transform:translateY(-1px)}
+    .pl-card{background:#fafafa;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:box-shadow .18s,border-color .18s,transform .14s;position:relative}
+    .pl-card:hover{border-color:#93c5fd;box-shadow:0 6px 20px rgba(37,99,235,.12);transform:translateY(-2px)}
+    .pl-card:active{transform:translateY(0)}
+    @keyframes pl-urgent-pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.18)}60%{box-shadow:0 0 0 5px rgba(220,38,38,.05)}}
+    .pl-card-urgent{animation:pl-urgent-pulse 2.8s ease-in-out infinite}
+    .pl-flow-hint{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#b0bec8;letter-spacing:.06em;text-transform:uppercase;padding:0 2px 10px;user-select:none}
+    .pl-days-badge{position:absolute;top:9px;right:10px;font-family:var(--font-h);font-weight:900;font-size:13px;line-height:1;padding:3px 7px;border-radius:6px;letter-spacing:-.02em}
+    .ov-kpi-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:5px}
+    .pl-stage-icon{width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+    .pl-rep-row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+    .pl-rep-avatar{width:16px;height:16px;border-radius:50%;background:#475569;color:#fff;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .pl-funding-line{font-size:9px;font-weight:700;padding:2px 0;margin-bottom:5px}
+    .pl-na-box{border-radius:6px;padding:5px 8px;margin-bottom:6px}
+    .pl-na-label{font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;opacity:.55;margin-bottom:2px;display:flex;align-items:center;gap:3px}
+    .pl-na-text{font-size:10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+    .pl-empty-col{padding:16px 8px;text-align:center;font-size:10px;color:#cbd5e1;font-style:italic}
+    /* Quick-action overlay — slides up on hover */
+    #ov-pipeline-wrap .pl-card{overflow:hidden}
+    .pl-card-actions{position:absolute;bottom:0;left:0;right:0;display:flex;opacity:0;transform:translateY(3px);transition:opacity .16s,transform .16s;background:rgba(255,255,255,.97);border-top:1px solid #e2e8f0;border-radius:0 0 9px 9px;overflow:hidden;pointer-events:none;z-index:3}
+    .pl-card:hover .pl-card-actions{opacity:1;transform:translateY(0);pointer-events:auto}
+    .pl-qa-btn{flex:1;padding:6px 4px;font-size:10px;font-weight:700;color:#475569;background:none;border:none;cursor:pointer;font-family:var(--font-b);transition:background .12s;text-align:center;display:flex;align-items:center;justify-content:center;gap:3px}
+    .pl-qa-btn:hover{background:#f0f9ff;color:#0f2044}
+    .pl-qa-btn+.pl-qa-btn{border-left:1px solid #e2e8f0}
+    /* Priority badge */
+    .pl-pri{display:inline-flex;align-items:center;gap:2px;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border-radius:4px;flex-shrink:0}
+    /* High-value indicator */
+    .pl-card-highval{border-top:2px solid #f59e0b !important}
+    /* Stuck warning */
+    .pl-stuck-warn{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:#dc2626;background:#fee2e2;padding:1px 6px;border-radius:4px;flex-shrink:0}
+    /* NBA suggestion */
+    .pl-nba{font-size:9px;color:#64748b;margin-top:2px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pl-nba-alert{color:#b45309;font-style:normal;font-weight:600}
     .pl-card-name{font-family:var(--font-h);font-size:13px;font-weight:700;color:#0f2044;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .pl-prog-bar{height:5px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-top:8px}
     .pl-prog-fill{height:100%;border-radius:99px;transition:width .3s}
@@ -1320,30 +1413,32 @@
 
         <!-- OVERVIEW -->
         <div class="a-section active" id="asec-overview">
-          <!-- Status Cards -->
+          <!-- KPI Strip -->
           <div class="ov-cards-row" id="ov-cards-row"></div>
+          <!-- Stuck Clients Alert -->
+          <div class="ov-stuck-strip" id="ov-stuck-strip" style="display:none"></div>
           <!-- Filtered client list (shown when a card is selected) -->
-          <div id="ov-client-table-wrap" style="display:none;margin-bottom:24px"></div>
-          <!-- Monthly Funding KPI + Report -->
-          <div class="ov-kpi-row" id="ov-kpi-row"></div>
-          <!-- Client Task Ownership Table -->
-          <div id="ov-task-section"></div>
-          <!-- Client Tasks + Pipeline Row -->
-          <div style="display:flex;gap:16px;margin-top:24px;align-items:flex-start;min-width:0">
-            <!-- Left: Client Tasks Queue -->
-            <div id="ov-client-tasks-panel" style="flex:0 0 260px;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.05);overflow:hidden"></div>
-            <!-- Right: Pipeline -->
-            <div style="flex:1;min-width:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.05)">
-              <div style="padding:12px 20px;border-bottom:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+          <div id="ov-client-table-wrap" style="display:none;margin-bottom:18px"></div>
+          <!-- Main Grid: Pipeline (left) + Next Actions (right) -->
+          <div class="ov-main-grid">
+            <!-- Pipeline Panel -->
+            <div class="ov-panel">
+              <div class="ov-panel-head">
                 <div>
-                  <div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:#0f2044;letter-spacing:-0.02em">Pipeline</div>
-                  <div id="ov-pl-counts" style="font-size:11px;color:#64748b;margin-top:1px"></div>
+                  <div class="ov-panel-title">Pipeline</div>
+                  <div id="ov-pl-counts" class="ov-panel-sub"></div>
                 </div>
-                <button onclick="switchAdminSection('pipeline',document.querySelector('.a-nav-item[onclick*=\'pipeline\']'))" style="font-size:11px;font-weight:600;color:#22A7F0;background:none;border:1.5px solid #bfdbfe;border-radius:8px;padding:4px 12px;cursor:pointer;font-family:var(--font-b);transition:background .15s;white-space:nowrap;flex-shrink:0" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='none'">View Full Board</button>
+                <button class="ov-link-btn" onclick="switchAdminSection('pipeline',document.querySelector('.a-nav-item[onclick*=\'pipeline\']'))">View Full Board →</button>
               </div>
               <div id="ov-pipeline-wrap" style="padding:12px;overflow-x:auto"></div>
             </div>
+            <!-- Next Actions Panel (tasks queue) -->
+            <div id="ov-client-tasks-panel"></div>
           </div>
+          <!-- Client Snapshot Table -->
+          <div id="ov-task-section" style="margin-bottom:18px"></div>
+          <!-- Funding Report -->
+          <div class="ov-kpi-row" id="ov-kpi-row"></div>
         </div>
 
         <!-- CLIENTS -->
@@ -1632,6 +1727,9 @@
     document.getElementById('sb-avatar').textContent = profile.initials;
     document.getElementById('sb-name').textContent = profile.name;
     if (!_adminAppInited) { _adminAppInited = true; if (typeof initAdminApp === 'function') initAdminApp(); }
+    // Always re-init notification listeners once Firebase auth is confirmed
+    // (fast-restore runs before auth is ready, so listeners may have failed silently)
+    try { initNotifListeners(); } catch(e) {}
   }
 
   function adminLogout() {
@@ -2310,6 +2408,7 @@
   function renderOverview() {
     try { checkAndSaveMonthlyReport(); } catch(e) {}
     try { renderOvCards(); } catch(e) { console.error('renderOvCards', e); }
+    try { renderStuckClients(); } catch(e) { console.error('renderStuckClients', e); }
     try { renderOvClientTable(); } catch(e) { console.error('renderOvClientTable', e); }
     try { renderOvKpi(); } catch(e) { console.error('renderOvKpi', e); }
     try { renderOvClients(); } catch(e) { console.error('renderOvClients', e); }
@@ -2318,37 +2417,88 @@
   }
 
   function renderOvCards() {
-    const pending  = clients.filter(c => c.status === 'pending' || c.status === 'new').length;
-    const progress = clients.filter(c => c.status === 'progress').length;
-    const approved = clients.filter(c => c.status === 'approved').length;
-    const cards = [
-      {
-        key:'pending', count:pending, label:'Pending Review', sub:'Awaiting action',
-        color:'#f59e0b', bg:'#fffbeb',
-        icon:`<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>`
-      },
-      {
-        key:'progress', count:progress, label:'Clients In Progress', sub:'Active funding',
-        color:'#22A7F0', bg:'#e8f5fd',
-        icon:`<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`
-      },
-      {
-        key:'approved', count:approved, label:'Approved', sub:'Fully funded',
-        color:'#10b981', bg:'#ecfdf5',
-        icon:`<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
-      }
+    var active  = clients.filter(function(c){ return !c.archived; });
+    var pending  = active.filter(function(c){ return c.status === 'pending' || c.status === 'new'; }).length;
+    var progress = active.filter(function(c){ return c.status === 'progress'; }).length;
+    var total    = active.length;
+    var monthly  = (function(){ try { return calcMonthlyFunding(); } catch(e) { return 0; } })();
+
+    // Stuck: in-progress with no activity in 48h
+    var cutoff48 = Date.now() - 48 * 3600000;
+    var stuck = active.filter(function(c) {
+      if (c.status !== 'progress') return false;
+      var lastAct = c.lastActivity ? new Date(c.lastActivity).getTime() : 0;
+      return lastAct < cutoff48;
+    }).length;
+
+    // Pending tasks: all unchecked assigned tasks across active clients
+    var pendingTasks = 0;
+    active.forEach(function(c) {
+      var t = getClientTasks(c.id);
+      if (!t) return;
+      var si = t.stage;
+      var stage = PIPELINE_STAGES[si];
+      var iassigned = (t.iassigned && t.iassigned[si]) || [];
+      var assigned  = (t.assigned  && t.assigned[si])  || [];
+      var cs = (t.customTasks && t.customTasks[si]) || {};
+      iassigned.forEach(function(idx){ if (!t.checked['s'+si+'i'+idx]) pendingTasks++; });
+      assigned.forEach(function(ti){  if (!t.checked['s'+si+'c'+ti])  pendingTasks++; });
+      (cs.i||[]).forEach(function(_,i){ if (!t.checked['s'+si+'xi'+i]) pendingTasks++; });
+      (cs.c||[]).forEach(function(_,i){ if (!t.checked['s'+si+'xc'+i]) pendingTasks++; });
+    });
+
+    var kpiDefs = [
+      { key:null,       count:fmtMoney(monthly), label:'This Month',      sub:'Funding approved',   color:'#10b981', iconBg:'#d1fae5',
+        icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>' },
+      { key:'progress', count:progress,           label:'Active Deals',   sub:'In progress',        color:'#22A7F0', iconBg:'#e0f2fe',
+        icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' },
+      { key:'pending',  count:pending,            label:'Pending Review', sub:'Awaiting action',    color:'#f59e0b', iconBg:'#fef3c7',
+        icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
+      { key:null,       count:stuck,              label:'Stuck 48h+',     sub:'No recent activity', color:stuck>0?'#ef4444':'#94a3b8', iconBg:stuck>0?'#fee2e2':'#f1f5f9', alert:stuck>0?'kpi-alert-red':'',
+        icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="'+(stuck>0?'#ef4444':'#94a3b8')+'" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+      { key:null,       count:pendingTasks,       label:'Pending Tasks',  sub:'Across all clients', color:pendingTasks>5?'#f97316':'#94a3b8', iconBg:pendingTasks>5?'#fff7ed':'#f1f5f9', alert:pendingTasks>5?'kpi-alert-amber':'',
+        icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="'+(pendingTasks>5?'#f97316':'#94a3b8')+'" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>' },
+      { key:null,       count:total,              label:'Total Clients',  sub:'All active',         color:'#64748b', iconBg:'#f1f5f9',
+        icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#64748b" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>' }
     ];
-    document.getElementById('ov-cards-row').innerHTML = cards.map(c => `
-      <div class="ov-stat-card ${ovActiveFilter===c.key?'active':''}"
-           style="${ovActiveFilter===c.key?`border-color:${c.color};box-shadow:0 6px 22px ${c.color}28`:''}"
-           onclick="ovCardClick('${c.key}')">
-        <div class="ov-card-icon" style="background:${c.bg}">${c.icon}</div>
-        <div class="ov-card-body">
-          <div class="ov-card-count" style="color:${c.color}">${c.count}</div>
-          <div class="ov-card-label">${c.label}</div>
-          <div class="ov-card-sub">${c.count === 1 ? '1 Client' : c.count+' Clients'} · ${c.sub}</div>
-        </div>
-      </div>`).join('');
+
+    document.getElementById('ov-cards-row').innerHTML = kpiDefs.map(function(c) {
+      var isActive = c.key && ovActiveFilter === c.key;
+      var alertClass = c.alert || '';
+      return '<div class="ov-stat-card' + (isActive ? ' active' : '') + (alertClass ? ' ' + alertClass : '') + '"'
+        + (!c.key ? ' style="cursor:default"' : '')
+        + (c.key ? ' onclick="ovCardClick(\'' + c.key + '\')"' : '')
+        + ' title="' + c.label + ': ' + c.count + '">'
+        + '<div class="ov-card-body">'
+        + '<div class="ov-kpi-icon" style="background:' + c.iconBg + '">' + c.icon + '</div>'
+        + '<div class="ov-card-count" style="color:' + c.color + '">' + c.count + '</div>'
+        + '<div class="ov-card-label">' + c.label + '</div>'
+        + '<div class="ov-card-sub">' + c.sub + '</div>'
+        + '</div>'
+        + '<div class="ov-card-accent-bar" style="background:' + (isActive ? c.color : 'transparent') + '"></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function renderStuckClients() {
+    var strip = document.getElementById('ov-stuck-strip');
+    if (!strip) return;
+    var cutoff = Date.now() - 48 * 3600000;
+    var stuck = clients.filter(function(c) {
+      if (c.archived || c.status !== 'progress') return false;
+      var lastAct = c.lastActivity ? new Date(c.lastActivity).getTime() : 0;
+      return lastAct < cutoff;
+    });
+    if (stuck.length === 0) { strip.style.display = 'none'; return; }
+    strip.style.display = 'flex';
+    var names = stuck.slice(0, 4).map(function(c) {
+      var n = _getClientNames(c);
+      return '<span class="ov-stuck-name" onclick="selectClientFromOv(\'' + c.id + '\')">' + n.fn + ' ' + n.ln + '</span>';
+    }).join(', ');
+    strip.innerHTML = '<div class="ov-stuck-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>'
+      + '<div class="ov-stuck-text"><strong>' + stuck.length + ' client' + (stuck.length !== 1 ? 's' : '') + ' stuck</strong> — no activity in 48h: '
+      + names + (stuck.length > 4 ? ' and ' + (stuck.length - 4) + ' more' : '') + '</div>'
+      + '<button class="ov-stuck-dismiss" onclick="this.parentElement.style.display=\'none\'" title="Dismiss">&#x00D7;</button>';
   }
 
   function ovCardClick(key) {
@@ -2419,31 +2569,30 @@
     }).length;
 
     document.getElementById('ov-kpi-row').innerHTML = `
-      <div class="ov-kpi-card">
-        <div class="ov-kpi-label">Monthly Funding Approved</div>
-        <div class="ov-kpi-val">${fmtMoney(monthly)}</div>
-        <div class="ov-kpi-sub">Last 30 days · ${approvedCount} funded client${approvedCount!==1?'s':''}</div>
-        ${monthly > 0 ? `<div class="ov-kpi-badge"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg> Active period</div>` : ''}
+      <div class="ov-kpi-card" style="display:flex;flex-direction:column;justify-content:space-between">
+        <div>
+          <div class="ov-kpi-label">Funding This Month</div>
+          <div class="ov-kpi-val">${fmtMoney(monthly)}</div>
+          <div class="ov-kpi-sub">${approvedCount} client${approvedCount!==1?'s':''} funded · last 30 days</div>
+        </div>
+        ${monthly > 0 ? `<div class="ov-kpi-badge" style="margin-top:14px"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>&nbsp;Active period</div>` : ''}
       </div>
       <div class="ov-table-card">
         <div class="ov-table-header">
-          <div class="ov-table-title">Monthly Funding Report</div>
-          <span style="font-size:11px;color:var(--gray-400)">Saved every 30 days</span>
+          <div>
+            <div class="ov-table-title">Monthly Funding Report</div>
+            <div style="font-size:11px;color:var(--gray-400);margin-top:2px">Auto-saved every 30 days</div>
+          </div>
         </div>
         <div class="ov-table-wrap">
           <table class="ov-table">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Total Funding Approved</th>
-                <th>Funded Clients</th>
-                <th>Report Generated</th>
-              </tr>
-            </thead>
+            <thead><tr>
+              <th>Month</th><th>Total Approved</th><th>Clients Funded</th><th>Generated</th>
+            </tr></thead>
             <tbody>
-              ${reports.length === 0 ? `<tr><td colspan="4" class="ov-no-rows">No monthly reports yet — first report saves at end of cycle</td></tr>` :
-                reports.map(r => `
-                  <tr>
+              ${reports.length === 0
+                ? `<tr><td colspan="4" class="ov-no-rows">No reports yet — first saves at end of month</td></tr>`
+                : reports.map(r => `<tr>
                     <td style="font-weight:700;color:var(--navy)">${r.month}</td>
                     <td style="font-weight:700;color:var(--success)">${fmtMoney(r.total)}</td>
                     <td>${r.funded} client${r.funded!==1?'s':''}</td>
@@ -2458,7 +2607,8 @@
   function renderOvClients() {
     var el = document.getElementById('ov-task-section');
     if (!el) return;
-    var q = (document.getElementById('ov-cl-search')?.value || '').toLowerCase();
+    var searchEl = document.getElementById('ov-cl-search');
+    var q = (searchEl ? searchEl.value : '').toLowerCase();
     var active = clients.filter(function(c) {
       if (c.archived) return false;
       var name = (c.fname + ' ' + c.lname).toLowerCase();
@@ -2466,44 +2616,61 @@
     });
 
     var rows = active.length === 0
-      ? '<div style="padding:20px;text-align:center;font-size:13px;color:#94a3b8">No clients found</div>'
+      ? '<tr><td colspan="9" style="text-align:center;padding:28px;color:#94a3b8;font-size:13px">No clients found</td></tr>'
       : active.map(function(c) {
           var ob = getOnboardDataForClient(c.id);
           var fn = (ob && ob.firstName) ? ob.firstName : c.fname;
-          var ln = (ob && ob.lastName) ? ob.lastName : c.lname;
-          var statusClass = c.status==='progress'?'progress':c.status==='approved'?'approved':c.status==='disqualified'?'disqual':c.status==='new'?'new':'pending';
-          var t = getClientTasks(c.id);
+          var ln = (ob && ob.lastName)  ? ob.lastName  : c.lname;
+          var t  = getClientTasks(c.id);
           var si = t ? t.stage : null;
-          var stageBadge = si !== null
-            ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:' + PIPELINE_STAGES[si].light + ';color:' + PIPELINE_STAGES[si].color + ';border:1px solid ' + PIPELINE_STAGES[si].border + '">' + PIPELINE_STAGES[si].name + '</span>'
-            : '';
-          return '<div class="a-client-row" onclick="selectClient(\'' + c.id + '\')" style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .12s" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'
-            + '<div class="a-cl-avatar" style="background:' + c.color + ';flex-shrink:0">'
-            + (c.photo ? '<img src="' + c.photo + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>' : (fn[0] || '') + (ln ? ln[0] : ''))
-            + '</div>'
-            + '<div style="flex:1;min-width:0">'
-            + '<div style="font-size:13px;font-weight:700;color:#0f2044">' + fn + ' ' + ln + '</div>'
-            + '<div style="font-size:11px;color:#94a3b8;margin-top:1px">' + (c.email || fmtPhoneAdmin(c.phone)) + '</div>'
-            + '</div>'
-            + '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
-            + stageBadge
-            + (c.fico ? '<div class="a-cl-fico">FICO ' + c.fico + '</div>' : '')
-            + '<span class="status-pill sp-' + statusClass + '">' + statusLabel(c.status) + '</span>'
-            + '</div>'
-            + '</div>';
+          var stage = si !== null ? PIPELINE_STAGES[si] : null;
+          var p  = (t && si !== null) ? plGetProgress(c.id, si) : null;
+          var days = (t && si !== null) ? plDaysInStage(c.id, si) : 0;
+          var pct  = (p && p.total) ? Math.round(p.done / p.total * 100) : 0;
+
+          var stageBadge = stage
+            ? '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:' + stage.light + ';color:' + stage.color + ';border:1px solid ' + stage.border + ';white-space:nowrap">S' + (si+1) + ' ' + stage.name + '</span>'
+            : '<span style="font-size:10px;color:#cbd5e1">—</span>';
+
+          var tasksCell = p
+            ? '<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:4px;background:#e2e8f0;border-radius:99px;overflow:hidden;min-width:36px"><div style="height:100%;background:' + (stage ? stage.color : '#64748b') + ';border-radius:99px;width:' + pct + '%"></div></div><span style="font-size:11px;color:#64748b;white-space:nowrap">' + p.done + '/' + p.total + '</span></div>'
+            : '<span style="font-size:11px;color:#cbd5e1">—</span>';
+
+          var daysBadge = days > 0 ? plDaysBadge(days) : '<span style="font-size:11px;color:#cbd5e1">—</span>';
+          var initials = ((fn||'?')[0] + (ln ? ln[0] : '')).toUpperCase();
+          var ficoColor = c.fico >= 700 ? '#10b981' : c.fico >= 600 ? '#f59e0b' : '#ef4444';
+
+          return '<tr class="ov-snap-row" onclick="selectClientFromOv(\'' + c.id + '\')" style="cursor:pointer">'
+            + '<td><div style="display:flex;align-items:center;gap:9px">'
+            + '<div style="width:28px;height:28px;border-radius:7px;background:' + c.color + ';color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + initials + '</div>'
+            + '<div><div style="font-weight:700;font-size:12px;color:#0f2044;white-space:nowrap">' + fn + ' ' + ln + '</div>'
+            + '<div style="font-size:10px;color:#94a3b8">' + (c.email || '') + '</div></div></div></td>'
+            + '<td style="font-family:var(--font-h);font-size:12px;font-weight:700;color:' + ficoColor + '">' + (c.fico || '—') + '</td>'
+            + '<td>' + statusPill(c.status) + '</td>'
+            + '<td>' + stageBadge + '</td>'
+            + '<td>' + svcBadge(c.serviceType) + '</td>'
+            + '<td style="font-size:11px;color:#64748b">' + (c.assignedTo || '—') + '</td>'
+            + '<td>' + tasksCell + '</td>'
+            + '<td>' + daysBadge + '</td>'
+            + '<td style="color:#94a3b8;font-size:11px;white-space:nowrap">' + fmtDate(c.lastActivity) + '</td>'
+            + '</tr>';
         }).join('');
 
-    el.innerHTML = '<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.05);overflow:hidden;margin-bottom:0">'
-      + '<div style="padding:14px 20px;border-bottom:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:12px">'
-      + '<div><div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:#0f2044;letter-spacing:-0.02em">Clients</div>'
-      + '<div style="font-size:12px;color:#64748b;margin-top:1px">' + active.length + ' active client' + (active.length !== 1 ? 's' : '') + '</div></div>'
+    el.innerHTML = '<div class="ov-table-card" style="margin-bottom:0">'
+      + '<div class="ov-table-header">'
+      + '<div><div class="ov-table-title">Client Snapshot</div>'
+      + '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + active.length + ' active client' + (active.length !== 1 ? 's' : '') + '</div></div>'
       + '<div style="display:flex;align-items:center;gap:8px">'
-      + '<div style="position:relative"><svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);pointer-events:none" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>'
-      + '<input id="ov-cl-search" type="text" placeholder="Search clients…" oninput="renderOvClients()" style="height:32px;padding:0 10px 0 28px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:var(--font-b);color:#0f2044;outline:none;width:180px" onfocus="this.style.borderColor=\'#22A7F0\'" onblur="this.style.borderColor=\'#e2e8f0\'"></div>'
-      + '<button onclick="switchAdminSection(\'clients\',document.querySelector(\'.a-nav-item[onclick*=\\\'clients\\\']\'))" style="font-size:11px;font-weight:600;color:#22A7F0;background:none;border:1.5px solid #bfdbfe;border-radius:8px;padding:4px 12px;cursor:pointer;font-family:var(--font-b);white-space:nowrap;transition:background .15s" onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\'none\'">View All</button>'
+      + '<div style="position:relative"><svg style="position:absolute;left:8px;top:50%;transform:translateY(-50%);pointer-events:none" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>'
+      + '<input id="ov-cl-search" type="text" placeholder="Search…" oninput="renderOvClients()" style="height:30px;padding:0 10px 0 26px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:var(--font-b);color:#0f2044;outline:none;width:150px" onfocus="this.style.borderColor=\'#22A7F0\'" onblur="this.style.borderColor=\'#e2e8f0\'"></div>'
+      + '<button onclick="switchAdminSection(\'clients\',document.querySelector(\'.a-nav-item[onclick*=\\\'clients\\\']\'))" class="ov-link-btn">View All →</button>'
       + '</div></div>'
-      + rows
-      + '</div>';
+      + '<div class="ov-table-wrap"><table class="ov-table">'
+      + '<thead><tr>'
+      + '<th>Client</th><th>FICO</th><th>Status</th><th>Stage</th><th>Service</th><th>Assigned</th><th>Tasks</th><th>In Stage</th><th>Last Activity</th>'
+      + '</tr></thead>'
+      + '<tbody>' + rows + '</tbody>'
+      + '</table></div></div>';
   }
 
   function renderOvTaskTable() {
@@ -7938,133 +8105,132 @@
     if (!panel) return;
 
     var active = clients.filter(function(c){ return !c.archived; });
-    // Include any client in the pipeline who has at least one unchecked task this stage
-    var withTasks = active.filter(function(c) {
+    var now = Date.now();
+    var todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    var todayEnd   = new Date(); todayEnd.setHours(23,59,59,999);
+    var overdueTasks = [], todayTasks = [], upcomingTasks = [];
+
+    active.forEach(function(c) {
       var t = getClientTasks(c.id);
-      if (!t) return false;
+      if (!t) return;
       var si = t.stage;
-      var iassigned = (t.iassigned && t.iassigned[si]) || [];
-      var assigned = (t.assigned && t.assigned[si]) || [];
+      var stage = PIPELINE_STAGES[si];
+      var stageStart = (t.stageStartedAt && t.stageStartedAt[si]) ? t.stageStartedAt[si] : null;
+      var iassigned  = (t.iassigned && t.iassigned[si]) || [];
+      var assigned   = (t.assigned && t.assigned[si]) || [];
       var cs = (t.customTasks && t.customTasks[si]) || {};
       var customInt = cs.i || [];
       var customCli = cs.c || [];
-      var anyInternal = iassigned.some(function(i){ return !t.checked['s'+si+'i'+i]; });
-      var anyClient = assigned.some(function(ti){ return !t.checked['s'+si+'c'+ti]; });
-      var anyCustomI = customInt.some(function(_, i){ return !t.checked['s'+si+'xi'+i]; });
-      var anyCustomC = customCli.some(function(_, i){ return !t.checked['s'+si+'xc'+i]; });
-      return anyInternal || anyClient || anyCustomI || anyCustomC;
+
+      function addTask(key, label, dueTs) {
+        if (t.checked[key]) return;
+        var item = { clientId: c.id, client: c, key: key, label: label, stage: stage, si: si, dueTs: dueTs };
+        if (!dueTs) { upcomingTasks.push(item); return; }
+        if (dueTs < todayStart.getTime()) overdueTasks.push(item);
+        else if (dueTs <= todayEnd.getTime()) todayTasks.push(item);
+        else upcomingTasks.push(item);
+      }
+
+      iassigned.forEach(function(idx) {
+        var key = 's' + si + 'i' + idx;
+        var offsetDays = (stage.idays && stage.idays[idx] !== undefined) ? stage.idays[idx] : null;
+        var dueTs = (stageStart !== null && offsetDays !== null) ? stageStart + offsetDays * 86400000 : null;
+        addTask(key, stage.internal[idx], dueTs);
+      });
+      assigned.forEach(function(ti) { addTask('s'+si+'c'+ti, stage.client[ti]||'', null); });
+      customInt.forEach(function(task, i) { addTask('s'+si+'xi'+i, task.label, null); });
+      customCli.forEach(function(task, i) { addTask('s'+si+'xc'+i, task.label, null); });
     });
 
-    if (withTasks.length === 0) {
-      panel.innerHTML = '<div style="padding:24px 20px;text-align:center">'
-        + '<div style="width:44px;height:44px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">'
-        + '<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>'
-        + '<div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:#0f2044;margin-bottom:6px">All Caught Up</div>'
-        + '<div style="font-size:12px;color:#94a3b8">No pending tasks across any client.</div></div>';
+    overdueTasks.sort(function(a,b){ return a.dueTs - b.dueTs; });
+    var totalPending = overdueTasks.length + todayTasks.length + upcomingTasks.length;
+
+    if (totalPending === 0) {
+      panel.innerHTML = '<div class="ov-na-panel">'
+        + '<div class="ov-na-head"><div class="ov-na-title">Next Actions</div></div>'
+        + '<div style="padding:32px 20px;text-align:center">'
+        + '<div style="width:40px;height:40px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">'
+        + '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>'
+        + '<div style="font-weight:700;color:#0f2044;font-size:13px;margin-bottom:4px">All caught up!</div>'
+        + '<div style="font-size:11px;color:#94a3b8">No pending tasks right now.</div></div></div>';
       return;
     }
 
-    if (window._ovTaskIdx === undefined || window._ovTaskIdx >= withTasks.length) window._ovTaskIdx = 0;
-    var idx = window._ovTaskIdx;
-    var c = withTasks[idx];
-    var t = initClientTasks(c.id);
-    var si = t.stage;
-    var stage = PIPELINE_STAGES[si];
-    var assigned = (t.assigned && t.assigned[si]) || [];
-    var iassigned = (t.iassigned && t.iassigned[si]) || [];
-    var ocs = (t.customTasks && t.customTasks[si]) || {};
-    var ocustomInt = ocs.i || [];
-    var ocustomCli = ocs.c || [];
-    var p = plGetProgress(c.id, si);
-    var pct = p.total ? Math.round(p.done / p.total * 100) : 0;
-    var days = plDaysInStage(c.id, si);
-    var stageStart = (t.stageStartedAt && t.stageStartedAt[si]) ? t.stageStartedAt[si] : null;
+    var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function taskItem(item) {
+      var dueLabel = '', dueDateStr = '';
+      if (item.dueTs) {
+        var diff = Math.floor((item.dueTs - now) / 86400000);
+        dueLabel = diff < 0 ? (Math.abs(diff) + 'd overdue') : diff === 0 ? 'today' : ('in ' + diff + 'd');
+        var dd = new Date(item.dueTs);
+        dueDateStr = MONTHS_SHORT[dd.getMonth()] + ' ' + dd.getDate();
+      }
+      var isOver = item.dueTs && item.dueTs < now;
+      var _n = _getClientNames(item.client);
+      var assignedTo = item.client.assignedTo || '';
+      var bgColor = isOver ? '#fff5f5' : '';
+      return '<div class="ov-na-item" style="' + (bgColor ? 'background:' + bgColor + ';' : '') + '" onclick="ovPlToggle(\'' + item.clientId + '\',\'' + item.key + '\',' + item.si + ')">'
+        + '<div class="ov-na-check"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>'
+        + '<div class="ov-na-itembody">'
+        + '<div class="ov-na-task">' + item.label + '</div>'
+        + '<div class="ov-na-meta">'
+        + '<span class="ov-na-client">' + _n.fn + ' ' + _n.ln + '</span>'
+        + (assignedTo ? '<span style="font-size:9px;color:#94a3b8">· ' + assignedTo + '</span>' : '')
+        + '<span class="ov-na-stage" style="background:' + item.stage.light + ';color:' + item.stage.color + ';border:1px solid ' + item.stage.border + '">S' + (item.si+1) + '</span>'
+        + (dueDateStr ? '<span style="font-size:9px;color:#64748b;margin-left:1px">' + dueDateStr + '</span>' : '')
+        + (dueLabel ? '<span class="ov-na-due' + (isOver ? ' overdue' : '') + '">' + dueLabel + '</span>' : '')
+        + '</div></div></div>';
+    }
 
-    function taskRow(key, label, chk, isDue) {
-      return '<div onclick="ovPlToggle(\'' + c.id + '\',\'' + key + '\',' + si + ')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;margin-bottom:5px;background:' + (chk ? stage.light : '#f8fafc') + ';border:1.5px solid ' + (chk ? stage.border : '#f1f5f9') + ';cursor:pointer;transition:all .15s">'
-        + '<div style="width:18px;height:18px;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px solid ' + (chk ? stage.color : '#cbd5e1') + ';background:' + (chk ? stage.color : '#fff') + ';transition:all .15s">'
-        + (chk ? '<svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '')
-        + '</div>'
-        + '<span style="flex:1;font-size:12px;font-weight:' + (chk ? '400' : '600') + ';color:' + (chk ? '#94a3b8' : '#0f2044') + ';' + (chk ? 'text-decoration:line-through' : '') + '">' + label + '</span>'
-        + (isDue && !chk ? '<span style="font-size:10px;font-weight:700;color:#dc2626;background:#fee2e2;padding:1px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0">Due</span>' : '')
+    function taskItemFocused(item, rank) {
+      // First 3 overdue items get extra visual emphasis
+      var dueLabel = '', dueDateStr = '';
+      if (item.dueTs) {
+        var diff = Math.floor((item.dueTs - now) / 86400000);
+        dueLabel = diff < 0 ? (Math.abs(diff) + 'd overdue') : diff === 0 ? 'today' : ('in ' + diff + 'd');
+        var dd = new Date(item.dueTs);
+        dueDateStr = MONTHS_SHORT[dd.getMonth()] + ' ' + dd.getDate();
+      }
+      var isOver = item.dueTs && item.dueTs < now;
+      var _n = _getClientNames(item.client);
+      var assignedTo = item.client.assignedTo || '';
+      var focusBg = isOver ? '#fff0f0' : '';
+      var extraClass = rank < 3 ? ' ov-na-item-focus' : '';
+      return '<div class="ov-na-item' + extraClass + '" style="' + (focusBg ? 'background:' + focusBg + ';' : '') + '" onclick="ovPlToggle(\'' + item.clientId + '\',\'' + item.key + '\',' + item.si + ')">'
+        + '<div class="ov-na-check"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>'
+        + '<div class="ov-na-itembody">'
+        + '<div class="ov-na-task" style="' + (rank < 3 ? 'font-size:12px;' : '') + '">' + item.label + '</div>'
+        + '<div class="ov-na-meta">'
+        + '<span class="ov-na-client">' + _n.fn + ' ' + _n.ln + '</span>'
+        + (assignedTo ? '<span style="font-size:9px;color:#94a3b8">· ' + assignedTo + '</span>' : '')
+        + '<span class="ov-na-stage" style="background:' + item.stage.light + ';color:' + item.stage.color + ';border:1px solid ' + item.stage.border + '">S' + (item.si+1) + '</span>'
+        + (dueDateStr ? '<span style="font-size:9px;color:#64748b">' + dueDateStr + '</span>' : '')
+        + (dueLabel ? '<span class="ov-na-due' + (isOver ? ' overdue' : '') + '">' + dueLabel + '</span>' : '')
+        + '</div></div></div>';
+    }
+
+    function naSection(title, items, colorClass) {
+      if (!items.length) return '';
+      var isOverdue = colorClass === 'ov-na-overdue';
+      var header = isOverdue && items.length > 0
+        ? '<div class="ov-na-focus-header"><svg width="11" height="11" viewBox="0 0 24 24" fill="#dc2626"><path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32-2.59 2.05-3.61 5.75-2.39 8.9.04.1.08.2.08.33 0 .22-.15.42-.35.5-.23.1-.47.04-.66-.12a.58.58 0 01-.14-.17c-1.13-1.43-1.31-3.48-.55-5.12C5.78 10 4.87 12.3 5 14.47c.06.5.12 1 .29 1.5.14.6.41 1.2.71 1.73 1.08 1.73 2.95 2.97 4.96 3.22 2.14.27 4.43-.12 6.07-1.6 1.83-1.66 2.47-4.1 1.63-6.12zm-1.89 6.3c-.58.51-1.35.73-2.1.82-1.5.2-3.02-.35-4.05-1.43-.97-1-.71-2.25.18-3.06.61-.55 1.35-.82 2.06-1.18.62-.33 1.19-.74 1.65-1.28.06.56.21 1.1.46 1.6.37.73.96 1.32 1.5 1.93.49.54.94 1.19 1.11 1.92.15.62.07 1.3-.81 1.68z"/></svg> Focus Now</div>'
+        : '';
+      return '<div class="ov-na-section">'
+        + header
+        + '<div class="ov-na-section-head ' + colorClass + '"><span class="ov-na-dot"></span>' + title + '<span class="ov-na-count">' + items.length + '</span></div>'
+        + items.slice(0, 8).map(function(item, i){ return taskItemFocused(item, i); }).join('')
+        + (items.length > 8 ? '<div class="ov-na-more">+' + (items.length - 8) + ' more</div>' : '')
         + '</div>';
     }
 
-    // Internal tasks (assigned only)
-    var intRows = iassigned.map(function(idx) {
-      var key = 's' + si + 'i' + idx;
-      var chk = !!t.checked[key];
-      var offsetDays = (stage.idays && stage.idays[idx] !== undefined) ? stage.idays[idx] : null;
-      var isDue = false;
-      if (stageStart && offsetDays !== null && !chk) {
-        isDue = Date.now() >= (stageStart + offsetDays * 86400000);
-      }
-      return taskRow(key, stage.internal[idx], chk, isDue);
-    }).join('');
-
-    // Custom internal tasks
-    var customIRows = ocustomInt.map(function(task, i) {
-      var key = 's' + si + 'xi' + i;
-      var chk = !!t.checked[key];
-      return taskRow(key, task.label, chk, false);
-    }).join('');
-
-    // Client tasks (assigned only)
-    var clientRows = assigned.map(function(ti) {
-      var key = 's' + si + 'c' + ti;
-      var chk = !!t.checked[key];
-      return taskRow(key, stage.client[ti] || '', chk, false);
-    }).join('');
-
-    // Custom client tasks
-    var customCRows = ocustomCli.map(function(task, i) {
-      var key = 's' + si + 'xc' + i;
-      var chk = !!t.checked[key];
-      return taskRow(key, task.label, chk, false);
-    }).join('');
-
-    panel.innerHTML =
-      // Header
-      '<div style="padding:16px 20px 14px;border-bottom:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">'
-      + '<div><div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:#0f2044;letter-spacing:-0.02em">Tasks Due</div>'
-      + '<div style="font-size:12px;color:#64748b;margin-top:2px">' + withTasks.length + ' client' + (withTasks.length !== 1 ? 's' : '') + ' with pending tasks</div></div>'
-      + '</div>'
-      // Navigator
-      + '<div style="padding:10px 20px;border-bottom:1.5px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;background:#fafbfc">'
-      + '<button onclick="ovTaskNav(-1)" style="width:28px;height:28px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:16px;color:#64748b;line-height:1;transition:background .15s" onmouseover="this.style.background=\'#f1f5f9\'" onmouseout="this.style.background=\'#fff\'">&#x2039;</button>'
-      + '<span style="font-size:12px;font-weight:600;color:#64748b">' + (idx + 1) + ' <span style="color:#cbd5e1">of</span> ' + withTasks.length + '</span>'
-      + '<button onclick="ovTaskNav(1)" style="width:28px;height:28px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:16px;color:#64748b;line-height:1;transition:background .15s" onmouseover="this.style.background=\'#f1f5f9\'" onmouseout="this.style.background=\'#fff\'">&#x203a;</button>'
-      + '</div>'
-      // Client info
-      + '<div style="padding:14px 20px 12px;border-bottom:1.5px solid #f1f5f9">'
-      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'
-      + '<div style="width:38px;height:38px;border-radius:10px;background:' + stage.light + ';color:' + stage.color + ';font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + plInitials(c) + '</div>'
-      + '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#0f2044;font-family:var(--font-h)">' + c.fname + ' ' + c.lname + '</div>'
-      + '<div style="font-size:11px;color:#64748b">' + (c.fico ? 'FICO ' + c.fico : c.email || '—') + '</div></div>'
-      + plDaysBadge(days) + '</div>'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
-      + '<span style="font-size:10px;font-weight:800;color:#fff;background:' + stage.color + ';padding:3px 10px;border-radius:20px">S' + (si + 1) + ' ' + stage.name + '</span>'
-      + '<span style="font-size:11px;font-weight:700;color:' + stage.color + '">' + p.done + '/' + p.total + ' done</span></div>'
-      + '<div style="height:4px;background:#e2e8f0;border-radius:99px;overflow:hidden"><div style="height:100%;background:' + stage.color + ';border-radius:99px;width:' + pct + '%;transition:width .3s"></div></div>'
-      + '</div>'
-      // Task lists
-      + '<div style="padding:12px 20px 6px;max-height:360px;overflow-y:auto">'
-      + (intRows || customIRows
-          ? '<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Internal</div>'
-            + intRows + customIRows
-          : '')
-      + (clientRows || customCRows
-          ? '<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin:12px 0 8px">Client</div>'
-            + clientRows + customCRows
-          : '')
-      + (!intRows && !customIRows && !clientRows && !customCRows
-          ? '<div style="font-size:12px;color:#94a3b8;text-align:center;padding:16px;font-style:italic">No tasks assigned yet.<br>Open the full task view to assign them.</div>'
-          : '')
-      + '</div>'
-      // Footer button
-      + '<div style="padding:10px 20px 16px">'
-      + '<button onclick="openTaskModal(\'' + c.id + '\')" style="width:100%;height:36px;background:#0f2044;border:none;border-radius:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--font-b);transition:background .15s" onmouseover="this.style.background=\'#1a3a6b\'" onmouseout="this.style.background=\'#0f2044\'">Open Full Task View &#x2197;</button>'
-      + '</div>';
+    panel.innerHTML = '<div class="ov-na-panel">'
+      + '<div class="ov-na-head"><div class="ov-na-title">Next Actions</div>'
+      + '<div class="ov-na-subtitle">' + totalPending + ' task' + (totalPending!==1?'s':'') + ' pending</div></div>'
+      + '<div class="ov-na-body-wrap">'
+      + naSection('Overdue', overdueTasks, 'ov-na-overdue')
+      + naSection('Due Today', todayTasks, 'ov-na-today')
+      + naSection('Upcoming', upcomingTasks, 'ov-na-upcoming')
+      + '</div></div>';
   }
 
   function renderPipeline() {
@@ -8157,11 +8323,250 @@
 
     var html = summaryBar + '<div class="pl-board">' + unCol + cols + '</div>';
     wrap.innerHTML = html;
+
     if (ovWrap) {
-      ovWrap.innerHTML = '<div class="pl-board">' + unCol + cols + '</div>';
+      // ── Enhanced overview cards with Next Action + urgency ───────────────
+      var ovNow = Date.now();
+      var ovTodayEnd = new Date(); ovTodayEnd.setHours(23,59,59,999);
+      var OV_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var OV_STAGE_ICONS = [
+        '<svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+        '<svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+        '<svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+        '<svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="22" x2="6" y2="12"/><line x1="10" y1="22" x2="10" y2="12"/><line x1="14" y1="22" x2="14" y2="12"/><line x1="18" y1="22" x2="18" y2="12"/><polyline points="2 12 22 12 12 2 2 12"/></svg>',
+        '<svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
+        '<svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+      ];
+
+      var ovCols = PIPELINE_STAGES.map(function(stage, si) {
+        var stageClients = active.filter(function(c){ var t=getClientTasks(c.id); return t && t.stage===si; });
+
+        var cards = stageClients.map(function(c) {
+          var t = getClientTasks(c.id);
+          if (!t) return '';
+          var p = plGetProgress(c.id, si);
+          var pct = p.total ? Math.round(p.done/p.total*100) : 0;
+          var days = plDaysInStage(c.id, si);
+          var _pn = _getClientNames(c);
+          var stageStart = (t.stageStartedAt && t.stageStartedAt[si]) ? t.stageStartedAt[si] : null;
+          var iassigned  = (t.iassigned && t.iassigned[si]) || [];
+          var assigned   = (t.assigned  && t.assigned[si])  || [];
+          var cs = (t.customTasks && t.customTasks[si]) || {};
+
+          // Find next incomplete task + its due timestamp
+          var nextTask = null, nextTaskDue = null;
+          for (var ii = 0; ii < iassigned.length; ii++) {
+            var idx = iassigned[ii];
+            if (!t.checked['s'+si+'i'+idx]) {
+              nextTask = stage.internal[idx];
+              var off = (stage.idays && stage.idays[idx] !== undefined) ? stage.idays[idx] : null;
+              if (stageStart !== null && off !== null) nextTaskDue = stageStart + off * 86400000;
+              break;
+            }
+          }
+          if (!nextTask) {
+            for (var ci = 0; ci < assigned.length; ci++) {
+              if (!t.checked['s'+si+'c'+assigned[ci]]) { nextTask = stage.client[assigned[ci]] || ''; break; }
+            }
+          }
+          if (!nextTask) { (cs.i||[]).forEach(function(task,i){ if (!nextTask && !t.checked['s'+si+'xi'+i]) nextTask = task.label; }); }
+          if (!nextTask) { (cs.c||[]).forEach(function(task,i){ if (!nextTask && !t.checked['s'+si+'xc'+i]) nextTask = task.label; }); }
+
+          // Urgency
+          var urgency = 'none';
+          if (nextTaskDue) {
+            if (nextTaskDue < ovNow) urgency = 'overdue';
+            else if (nextTaskDue <= ovTodayEnd.getTime()) urgency = 'today';
+          }
+          var borderColor = urgency === 'overdue' ? '#dc2626' : urgency === 'today' ? '#f59e0b' : stage.color;
+          var cardBg = urgency === 'overdue' ? 'background:#fff5f5;' : urgency === 'today' ? 'background:#fffdf5;' : '';
+
+          // Last activity
+          var lastActStr = '—';
+          if (c.lastActivity) {
+            var diffDays = Math.floor((ovNow - new Date(c.lastActivity).getTime()) / 86400000);
+            lastActStr = diffDays === 0 ? 'today' : diffDays === 1 ? '1d ago' : diffDays + 'd ago';
+          }
+
+          // FICO color
+          var ficoColor = c.fico >= 700 ? '#10b981' : c.fico >= 600 ? '#f59e0b' : c.fico ? '#ef4444' : '#94a3b8';
+          var ficoBg    = c.fico >= 700 ? '#d1fae5'  : c.fico >= 600 ? '#fef3c7'  : c.fico ? '#fee2e2'  : '#f1f5f9';
+
+          // Assigned rep initials
+          var repStr = c.assignedTo || '';
+          var repInit = repStr ? repStr.split(' ').map(function(w){ return w[0]||''; }).join('').toUpperCase().slice(0,2) : '';
+
+          // Days badge
+          var daysBg    = days <= 2 ? '#f1f5f9' : days <= 6 ? '#fef3c7' : '#fee2e2';
+          var daysColor = days <= 2 ? '#64748b'  : days <= 6 ? '#92400e'  : '#991b1b';
+
+          // Next action area background
+          var naBg = urgency === 'overdue' ? '#fee2e2' : urgency === 'today' ? '#fef3c7' : '#f1f5f9';
+          var naColor = urgency === 'overdue' ? '#991b1b' : urgency === 'today' ? '#92400e' : '#0f2044';
+
+          // ── Intelligence layer ──────────────────────────────────────────
+          // Days thresholds: >3d amber, >5d red
+          var daysBg2    = days <= 3 ? '#f1f5f9' : days <= 5 ? '#fef3c7' : '#fee2e2';
+          var daysColor2 = days <= 3 ? '#475569'  : days <= 5 ? '#92400e'  : '#991b1b';
+
+          // Stuck 48h+ indicator
+          var lastActMs  = c.lastActivity ? (ovNow - new Date(c.lastActivity).getTime()) : Infinity;
+          var isStuck48  = lastActMs > 48 * 3600000 && c.status === 'progress';
+          var isStuck24  = lastActMs > 24 * 3600000;
+
+          // Last activity — color-coded by age
+          var lastActColor = '#94a3b8';
+          var lastActDays  = c.lastActivity ? Math.floor(lastActMs / 86400000) : -1;
+          if      (lastActDays === 0)  { lastActStr = 'today';              lastActColor = '#10b981'; }
+          else if (lastActDays === 1)  { lastActStr = '1d ago';             lastActColor = '#10b981'; }
+          else if (lastActDays <= 3)   { lastActStr = lastActDays + 'd ago'; lastActColor = '#f59e0b'; }
+          else if (lastActDays > 0)    { lastActStr = lastActDays + 'd ago'; lastActColor = '#ef4444'; }
+
+          // Funding context — show Goal AND Approved if both exist
+          var fundingParts = [];
+          if (c.loanAmount)             fundingParts.push('<span style="color:#64748b;font-weight:600">Goal: ' + fmtMoney(c.loanAmount) + '</span>');
+          if (c.fundingApprovedAmount)  fundingParts.push('<span style="color:#10b981;font-weight:700">&#x2713; ' + fmtMoney(c.fundingApprovedAmount) + '</span>');
+          var fundingLine = fundingParts.join('<span style="color:#cbd5e1;margin:0 3px">·</span>');
+          var isHighValue = (c.loanAmount && c.loanAmount >= 100000) || (c.fundingApprovedAmount && c.fundingApprovedAmount >= 100000);
+
+          // Priority: HIGH / MED / LOW
+          var priLabel, priBg, priColor;
+          if (urgency === 'overdue' || isStuck48) {
+            priLabel = 'High'; priBg = '#fee2e2'; priColor = '#dc2626';
+          } else if (urgency === 'today' || days > 3 || isHighValue || isStuck24) {
+            priLabel = 'Med'; priBg = '#fef3c7'; priColor = '#d97706';
+          } else {
+            priLabel = 'Low'; priBg = '#f1f5f9'; priColor = '#64748b';
+          }
+
+          // Next Best Action — intelligent suggestion
+          var nbaText = '';
+          var nbaAlert = false;
+          if (isStuck48) {
+            nbaText = 'Follow up — no activity 48h+'; nbaAlert = true;
+          } else if (urgency === 'overdue') {
+            nbaText = 'Clear overdue items immediately'; nbaAlert = true;
+          } else if (pct === 100) {
+            nbaText = 'Ready to advance to next stage';
+          } else if (urgency === 'today') {
+            nbaText = 'Complete today\'s task';
+          } else if (!nextTask) {
+            nbaText = 'Assign tasks to move forward';
+          } else if (si === 0) { nbaText = 'Finish credit profile review'; }
+          else if (si === 1)   { nbaText = 'Execute optimization items'; }
+          else if (si === 2)   { nbaText = 'Confirm funding sequence'; }
+          else if (si === 3)   { nbaText = 'Open banking relationships'; }
+          else if (si === 4)   { nbaText = 'Submit & track applications'; }
+          else if (si === 5)   { nbaText = 'Collect approvals & fund client'; }
+
+          // Urgency card class + border
+          var urgentClass = urgency === 'overdue' ? ' pl-card-urgent' : '';
+          var highValClass = isHighValue ? ' pl-card-highval' : '';
+          var cardBgFinal = isStuck48 ? 'background:#fff8f8;' : cardBg;
+
+          // Next action icon
+          var naIcon = urgency === 'overdue'
+            ? '<svg width="9" height="9" fill="#dc2626" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>'
+            : urgency === 'today'
+            ? '<svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#d97706" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+            : '<svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="#64748b" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>';
+
+          // Quote for onclick attributes
+          var safeId = c.id.replace(/'/g,"\\'");
+
+          return '<div class="pl-card' + urgentClass + highValClass + '" onclick="openTaskModal(\'' + safeId + '\')" style="border-left:3px solid ' + borderColor + ';' + cardBgFinal + 'padding-right:14px;padding-bottom:30px" title="' + _pn.fn + ' ' + _pn.ln + ' · Stage ' + (si+1) + ': ' + stage.name + '">'
+            // Large days badge — top right (absolute)
+            + '<div class="pl-days-badge" style="background:' + daysBg2 + ';color:' + daysColor2 + '" title="' + days + ' days in this stage">' + days + 'd</div>'
+            // Row 1: avatar + name + priority badge
+            + '<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;padding-right:34px">'
+            + '<div style="width:26px;height:26px;border-radius:6px;background:' + stage.light + ';color:' + stage.color + ';font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">' + plInitials(c) + '</div>'
+            + '<div style="flex:1;min-width:0">'
+            + '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'
+            + '<div class="pl-card-name" style="font-size:11px;line-height:1.2">' + _pn.fn + ' ' + _pn.ln + '</div>'
+            + '<span class="pl-pri" style="background:' + priBg + ';color:' + priColor + '" title="Priority: ' + priLabel + '">' + priLabel + '</span>'
+            + (isStuck48 ? '<span class="pl-stuck-warn" title="No activity in 48h+"><svg width="8" height="8" fill="currentColor" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>Stuck</span>' : '')
+            + '</div>'
+            + (c.fico ? '<div style="font-size:9px;font-weight:700;color:' + ficoColor + ';background:' + ficoBg + ';display:inline-block;padding:0 4px;border-radius:3px;margin-top:2px">' + c.fico + '</div>' : '')
+            + '</div></div>'
+            // Row 2: rep avatar + name
+            + (repStr ? '<div class="pl-rep-row" title="Assigned to ' + repStr + '">'
+              + '<div class="pl-rep-avatar" style="background:#3b82f6">' + repInit + '</div>'
+              + '<span style="font-size:9px;font-weight:600;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + repStr + '</span>'
+              + '</div>' : '')
+            // Row 3: Funding Goal + Approved Amount
+            + (fundingLine ? '<div class="pl-funding-line" style="font-size:9px;display:flex;align-items:center;gap:2px;flex-wrap:wrap">' + fundingLine + (isHighValue ? '&nbsp;<span style="font-size:9px;color:#f59e0b" title="High-value deal">&#x2605;</span>' : '') + '</div>' : '')
+            // Row 4: Next Action + NBA
+            + '<div class="pl-na-box" style="background:' + naBg + ';margin-bottom:4px" title="' + (nextTask || 'No action assigned') + '">'
+            + '<div class="pl-na-label">' + naIcon + 'Next Action</div>'
+            + '<div class="pl-na-text" style="color:' + naColor + ';font-weight:' + (urgency!=='none'?'800':'700') + '">'
+            + (nextTask || '<span style="color:#94a3b8;font-weight:400;font-style:italic;font-size:9px">No action assigned</span>')
+            + '</div>'
+            + (nbaText ? '<div class="pl-nba' + (nbaAlert ? ' pl-nba-alert' : '') + '">&#x1F4A1; ' + nbaText + '</div>' : '')
+            + '</div>'
+            // Progress bar + task count + last activity (color-coded)
+            + '<div class="pl-prog-bar" title="' + p.done + ' of ' + p.total + ' tasks complete"><div class="pl-prog-fill" style="width:' + pct + '%;background:' + (urgency==='overdue'?'#dc2626':stage.color) + '"></div></div>'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">'
+            + '<span style="font-size:9px;color:#94a3b8" title="Task progress">' + p.done + '/' + p.total + ' tasks</span>'
+            + '<span style="font-size:9px;font-weight:' + (lastActDays > 3 ? '700' : '500') + ';color:' + lastActColor + '" title="Last activity">' + lastActStr + '</span>'
+            + '</div>'
+            // Hover quick-action bar
+            + '<div class="pl-card-actions">'
+            + '<button class="pl-qa-btn" onclick="event.stopPropagation();selectClientFromOv(\'' + safeId + '\')" title="Open client profile">'
+            + '<svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Open'
+            + '</button>'
+            + '<button class="pl-qa-btn" onclick="event.stopPropagation();openTaskModal(\'' + safeId + '\')" title="Open task view">'
+            + '<svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> Tasks'
+            + '</button>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+
+        var stageIconHtml = OV_STAGE_ICONS[si] || '';
+        return '<div class="pl-col" style="border-top:3px solid ' + stage.color + '">'
+          + '<div class="pl-col-head">'
+          + '<div class="pl-stage-icon" style="background:' + stage.light + ';color:' + stage.color + ';margin-right:5px" title="' + stage.name + '">' + stageIconHtml + '</div>'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:11px;font-weight:800;color:#0f2044;letter-spacing:-.01em">' + stage.name + '</div>'
+          + '<div style="font-size:9px;color:#94a3b8;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + stage.sub + '</div>'
+          + '</div>'
+          + '<span class="pl-col-badge" style="background:' + stage.color + ';margin-left:4px;font-size:10px;padding:2px 8px" title="' + stageClients.length + ' clients in this stage">' + stageClients.length + '</span></div>'
+          + (stageClients.length ? cards : '<div class="pl-empty-col">No clients yet</div>')
+          + '</div>';
+      }).join('');
+
+      // "Not Started" overview column — minimal
+      var ovUnCards = unstarted.map(function(c) {
+        var _un = _getClientNames(c);
+        var ficoColor = c.fico >= 700 ? '#10b981' : c.fico >= 600 ? '#f59e0b' : c.fico ? '#ef4444' : '#94a3b8';
+        return '<div class="pl-card" onclick="openTaskModal(\'' + c.id + '\')">'
+          + '<div style="display:flex;align-items:center;gap:7px">'
+          + '<div style="width:26px;height:26px;border-radius:6px;background:#f1f5f9;color:#94a3b8;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + plInitials(c) + '</div>'
+          + '<div style="flex:1;min-width:0"><div class="pl-card-name" style="font-size:11px">' + _un.fn + ' ' + _un.ln + '</div>'
+          + (c.fico ? '<div style="font-size:9px;color:' + ficoColor + ';margin-top:1px">' + c.fico + '</div>' : '')
+          + '</div></div>'
+          + '<div style="font-size:10px;color:#3b82f6;font-weight:700;margin-top:7px">Start &#x2192;</div></div>';
+      }).join('');
+
+      var ovUnCol = '<div class="pl-col" style="border-top:3px solid #cbd5e1">'
+        + '<div class="pl-col-head">'
+        + '<div class="pl-stage-icon" style="background:#f1f5f9;color:#94a3b8;margin-right:5px">'
+        + '<svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>'
+        + '<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:800;color:#0f2044">Not Started</div>'
+        + '<div style="font-size:9px;color:#94a3b8;margin-top:1px">Awaiting kickoff</div></div>'
+        + '<span class="pl-col-badge" style="background:#94a3b8;margin-left:4px;font-size:10px;padding:2px 8px">' + unstarted.length + '</span></div>'
+        + (unstarted.length ? ovUnCards : '<div class="pl-empty-col">No clients yet</div>')
+        + '</div>';
+
+      var flowHint = '<div class="pl-flow-hint">'
+        + '<svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>'
+        + 'Funding Flow'
+        + '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'
+        + '</div>';
+
+      ovWrap.innerHTML = flowHint + '<div class="pl-board">' + ovUnCol + ovCols + '</div>';
       var countsEl = document.getElementById('ov-pl-counts');
       if (countsEl) {
-        countsEl.textContent = totalActive + ' active client' + (totalActive !== 1 ? 's' : '') + ' · ' + overallPct + '% complete';
+        countsEl.textContent = totalActive + ' active · ' + overallPct + '% complete';
       }
     }
   }
