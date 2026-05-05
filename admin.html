@@ -349,65 +349,106 @@
     .a-stat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
 
     /* ── CLIENTS LAYOUT ────────────────────────── */
-    .a-clients-wrap { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+    .a-clients-wrap { display: grid; grid-template-columns: 300px 1fr; gap: 0; align-items: start; transition: grid-template-columns 0.25s ease; }
+    .a-clients-wrap.cl-collapsed { grid-template-columns: 44px 1fr; }
     .a-client-list-card {
-      background: var(--white); border-radius: 16px;
-      border: 1px solid var(--gray-100); overflow: hidden;
-      box-shadow: 0 2px 8px rgba(10,22,40,0.04);
+      background: var(--white); border-radius: 16px 0 0 16px;
+      border: 1px solid var(--gray-100); border-right: none;
+      box-shadow: 2px 0 12px rgba(10,22,40,0.06);
       position: sticky; top: calc(var(--header-h) + 28px);
+      display: flex; flex-direction: column;
+      max-height: calc(100vh - var(--header-h) - 56px);
     }
-    .a-cl-header { padding: 18px 20px; border-bottom: 1px solid var(--gray-100); }
-    .a-cl-title { font-family: var(--font-h); font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
+    .a-clients-wrap.cl-collapsed .a-client-list-card { overflow: hidden; }
+    /* Collapsed rail */
+    .a-cl-rail { display: none; flex-direction: column; align-items: center; padding: 12px 0; gap: 10px; }
+    .a-clients-wrap.cl-collapsed .a-cl-header,
+    .a-clients-wrap.cl-collapsed .a-cl-search-wrap,
+    .a-clients-wrap.cl-collapsed .a-cl-filters,
+    .a-clients-wrap.cl-collapsed .a-cl-state-row,
+    .a-clients-wrap.cl-collapsed .a-cl-list { display: none; }
+    .a-clients-wrap.cl-collapsed .a-cl-rail { display: flex; }
+    /* Panel header */
+    .a-cl-header { padding: 12px 14px 0; flex-shrink: 0; }
+    .a-cl-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .a-cl-title { font-family: var(--font-h); font-size: 13px; font-weight: 700; color: var(--navy); }
+    .a-cl-client-count { font-size: 11px; font-weight: 600; color: var(--gray-400); margin-left: 6px; }
+    .a-cl-collapse-btn { width: 24px; height: 24px; border: 1px solid var(--gray-200); border-radius: 6px; background: var(--gray-50); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--gray-400); flex-shrink: 0; }
+    .a-cl-collapse-btn:hover { background: var(--navy); color: white; border-color: var(--navy); }
+    /* Search */
+    .a-cl-search-wrap { padding: 0 14px 8px; flex-shrink: 0; }
     .a-cl-search {
       display: flex; align-items: center; gap: 8px;
       background: var(--gray-50); border: 1.5px solid var(--gray-100);
-      border-radius: 8px; padding: 0 12px; height: 36px;
+      border-radius: 8px; padding: 0 10px; height: 30px;
     }
-    .a-cl-search input {
-      flex: 1; background: none; border: none; outline: none;
-      font-family: var(--font-b); font-size: 13px; color: var(--navy);
-    }
-    .a-cl-filters { display: flex; gap: 6px; padding: 12px 20px; border-bottom: 1px solid var(--gray-100); flex-wrap: wrap; }
+    .a-cl-search input { flex: 1; background: none; border: none; outline: none; font-family: var(--font-b); font-size: 12px; color: var(--navy); }
+    /* Status filters */
+    .a-cl-filters { display: flex; gap: 3px; padding: 0 14px 8px; flex-wrap: wrap; flex-shrink: 0; }
     .a-filter-btn {
-      height: 26px; padding: 0 10px; border-radius: 6px;
+      height: 20px; padding: 0 7px; border-radius: 4px;
       border: 1.5px solid var(--gray-200); background: none;
-      font-size: 11px; font-weight: 600; color: var(--gray-500);
+      font-size: 10px; font-weight: 600; color: var(--gray-500);
       cursor: pointer; transition: all 0.13s; white-space: nowrap;
     }
     .a-filter-btn.active { background: var(--navy); border-color: var(--navy); color: var(--white); }
-    .a-cl-list { max-height: calc(100vh - 280px); overflow-y: auto; }
+    /* State filter */
+    .a-cl-state-row { display: flex; align-items: center; gap: 6px; padding: 0 14px 8px; border-bottom: 1px solid var(--gray-100); flex-shrink: 0; }
+    .a-cl-state-row select { font-family: var(--font-b); font-size: 11px; color: var(--navy); border: 1.5px solid var(--gray-100); border-radius: 6px; padding: 3px 8px; outline: none; background: white; cursor: pointer; flex: 1; }
+    /* Client list scroll */
+    .a-cl-list { flex: 1; overflow-y: auto; min-height: 0; }
+    /* Stage group headers */
+    .a-cl-stage-hdr {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 14px 6px; cursor: pointer; user-select: none;
+      border-top: 1px solid var(--gray-100); background: var(--gray-50);
+      position: sticky; top: 0; z-index: 1;
+    }
+    .a-cl-stage-hdr:first-child { border-top: none; }
+    .a-cl-stage-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .a-cl-stage-name { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray-500); flex: 1; }
+    .a-cl-stage-count { font-size: 9px; font-weight: 700; color: var(--white); background: var(--gray-300); border-radius: 999px; padding: 1px 6px; }
+    .a-cl-stage-chev { color: var(--gray-300); transition: transform 0.2s; }
+    .a-cl-stage-chev.closed { transform: rotate(-90deg); }
+    /* Client row */
     .a-client-row {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 20px; cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; cursor: pointer;
       border-bottom: 1px solid var(--gray-50);
-      transition: background 0.12s;
+      transition: background 0.1s;
     }
     .a-client-row:hover { background: var(--gray-50); }
-    .a-client-row.active { background: var(--blue-xl); border-left: 3px solid var(--blue); }
+    .a-client-row.active { background: var(--blue-xl); border-left: 3px solid var(--blue); padding-left: 11px; }
     .a-cl-avatar {
-      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-h); font-weight: 700; font-size: 14px; color: var(--white);
+      font-family: var(--font-h); font-weight: 700; font-size: 12px; color: var(--white);
     }
-    .a-cl-name { font-size: 13px; font-weight: 600; color: var(--navy); }
-    .a-cl-info { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
-    .a-cl-right { margin-left: auto; text-align: right; flex-shrink: 0; }
+    .a-cl-body { flex: 1; min-width: 0; }
+    .a-cl-name { font-size: 12px; font-weight: 600; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .a-cl-meta { font-size: 10px; color: var(--gray-400); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .a-cl-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+    /* Days-in-stage badge */
+    .a-cl-days { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 20px; white-space: nowrap; }
+    .a-cl-days.ok  { background: #f1f5f9; color: #64748b; }
+    .a-cl-days.warn { background: #fef3c7; color: #92400e; }
+    .a-cl-days.hot  { background: #fee2e2; color: #991b1b; }
     .status-pill {
-      display: inline-block; font-size: 10px; font-weight: 700;
+      display: inline-block; font-size: 9px; font-weight: 700;
       letter-spacing: 0.05em; text-transform: uppercase;
-      padding: 3px 8px; border-radius: 999px;
+      padding: 2px 7px; border-radius: 999px;
     }
     .sp-approved   { background: var(--success-bg); color: var(--success); }
     .sp-pending    { background: var(--warn-bg);    color: var(--warning); }
     .sp-progress   { background: var(--blue-light); color: var(--blue);    }
     .sp-disqual    { background: var(--danger-bg);  color: var(--danger);  }
     .sp-new        { background: var(--purple-bg);  color: var(--purple);  }
-    .a-cl-fico { font-size: 11px; color: var(--gray-400); margin-top: 3px; }
+    .a-cl-fico { font-size: 10px; color: var(--gray-400); }
 
     /* ── CLIENT DETAIL ─────────────────────────── */
     .a-detail-card {
-      background: var(--white); border-radius: 16px;
-      border: 1px solid var(--gray-100);
+      background: var(--white); border-radius: 0 16px 16px 0;
+      border: 1px solid var(--gray-100); border-left: none;
       box-shadow: 0 2px 8px rgba(10,22,40,0.04);
     }
     .a-detail-empty {
@@ -1301,6 +1342,280 @@
   .anl-risk-item { font-size:12px;color:#92400e;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:7px 12px; }
   .anl-risk-item.hard { color:var(--danger);background:rgba(239,68,68,0.06);border-color:rgba(239,68,68,0.2); }
 
+  /* ── SINGLE-PAGE CLIENT DETAIL ───────────── */
+  .a-csh {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--white); border-bottom: 1px solid var(--gray-100);
+    padding: 10px 20px; display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 2px 8px rgba(10,22,40,0.06);
+    border-radius: 16px 16px 0 0;
+  }
+  .a-csh-info { min-width: 0; flex-shrink: 1; }
+  .a-csh-name { font-family: var(--font-h); font-size: 14px; font-weight: 800; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .a-csh-sub { font-size: 11px; color: var(--gray-400); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+  .a-csh-pills { display: flex; align-items: center; gap: 5px; flex-shrink: 0; flex-wrap: wrap; }
+  .a-csh-pill { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .a-csh-pill.fico { background: rgba(34,167,240,0.1); color: var(--blue); }
+  .a-csh-pill.stage { background: rgba(139,92,246,0.1); color: #7c3aed; }
+  .a-csh-pill.s-new { background: rgba(139,92,246,0.1); color: #7c3aed; }
+  .a-csh-pill.s-pending { background: rgba(245,158,11,0.1); color: #b45309; }
+  .a-csh-pill.s-progress { background: rgba(34,167,240,0.1); color: var(--blue); }
+  .a-csh-pill.s-approved { background: rgba(16,185,129,0.1); color: var(--success); }
+  .a-csh-pill.s-disqualified { background: rgba(239,68,68,0.08); color: var(--danger); }
+  .a-csh-pill.funded { background: rgba(16,185,129,0.1); color: var(--success); }
+  .a-csh-actions { margin-left: auto; display: flex; gap: 5px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .a-sp-ab { display: flex; gap: 8px; padding: 7px 16px; background: var(--gray-50); border-bottom: 1px solid var(--gray-100); flex-wrap: wrap; }
+  .a-sp-ab-btn {
+    height: 26px; padding: 0 10px; border-radius: 6px;
+    border: 1.5px solid var(--gray-200); background: var(--white);
+    font-family: var(--font-h); font-size: 11px; font-weight: 700;
+    color: var(--gray-600); cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .a-sp-ab-btn:hover { background: var(--gray-100); border-color: var(--gray-300); }
+  .a-sp-ab-btn.blue { border-color: rgba(34,167,240,0.3); color: var(--blue); background: rgba(34,167,240,0.05); }
+  .a-sp-ab-btn.blue:hover { background: rgba(34,167,240,0.12); }
+  .a-sp-ab-btn.green { border-color: rgba(16,185,129,0.3); color: var(--success); background: rgba(16,185,129,0.05); }
+  .a-sp-ab-btn.green:hover { background: rgba(16,185,129,0.12); }
+
+  /* Workspace grid — full width, left flexible, right fixed */
+  .a-sp-workspace {
+    display: grid; grid-template-columns: 1fr 380px;
+    align-items: start; width: 100%; max-width: none; margin: 0;
+  }
+  .a-sp-left { border-right: none; min-width: 0; width: 100%; }
+  .a-sp-right {
+    min-width: 0; width: 380px;
+    position: sticky; top: calc(var(--header-h) + 28px);
+    align-self: start; justify-self: end;
+    height: calc(100vh - var(--header-h) - 56px);
+    overflow: hidden;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .a-sp-right > .a-card { flex-shrink: 0; margin-bottom: 0 !important; }
+  /* Messages card expands to fill remaining sidebar height */
+  .a-sp-right > #sp-dtab-messages { flex: 1 !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden; }
+  .a-sp-right > #sp-dtab-messages > #dtab-messages { flex: 1 !important; min-height: 0 !important; height: auto !important; }
+
+  /* Sections */
+  .a-sp-sec { border-bottom: 1px solid var(--gray-100); }
+  .a-sp-sec:last-child { border-bottom: none; }
+  .a-sp-sec-hdr {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px 8px; cursor: pointer;
+    user-select: none; transition: background 0.1s;
+  }
+  .a-sp-sec-hdr:hover { background: var(--gray-50); }
+  .a-sp-sec-icon {
+    width: 24px; height: 24px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .a-sp-sec-title { font-family: var(--font-h); font-size: 12px; font-weight: 800; color: var(--navy); flex: 1; text-transform: uppercase; letter-spacing: 0.04em; }
+  .a-sp-sec-chev { color: var(--gray-300); transition: transform 0.2s; flex-shrink: 0; }
+  .a-sp-sec.collapsed .a-sp-sec-chev { transform: rotate(-90deg); }
+  .a-sp-sec.collapsed .a-sp-sec-body { display: none; }
+  .a-sp-sec-body { padding: 0 14px 14px; }
+
+  /* Funding section — visually dominant */
+  #sp-dtab-funding > .a-sp-sec-hdr {
+    background: rgba(16,185,129,0.04);
+    border-bottom: 1px solid rgba(16,185,129,0.12);
+    padding: 12px 14px 10px;
+  }
+  #sp-dtab-funding > .a-sp-sec-hdr .a-sp-sec-title { font-size: 13px; color: #065f46; }
+  #sp-dtab-funding { border-left: 3px solid #10b981; }
+
+  /* Right column: tighter, no stretch */
+  .a-sp-right .a-sp-sec-body { padding: 0 12px 12px; }
+  .a-sp-right .a-card { padding: 14px 16px; }
+  .a-sp-right .a-chat-wrap { display: flex; flex-direction: column; height: auto; }
+  .a-sp-right .a-chat-msgs { min-height: 0; overflow-y: auto; }
+
+  /* Tables: prevent full-width stretch */
+  .a-sp-left table, .a-sp-left .ca-tbl { max-width: 100%; table-layout: fixed; }
+  .a-sp-sec-body table { width: auto; max-width: 100%; }
+
+  /* Quick info rows in right column */
+  .a-qi-row { display: flex; align-items: baseline; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--gray-50); }
+  .a-qi-row:last-child { border-bottom: none; }
+  .a-qi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); width: 76px; flex-shrink: 0; }
+  .a-qi-val { font-size: 12px; font-weight: 600; color: var(--navy); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Next action items in right column */
+  .a-na-item { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--gray-50); }
+  .a-na-item:last-child { border-bottom: none; }
+  .a-na-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .a-na-dot.todo { background: var(--gray-300); }
+  .a-na-dot.progress { background: var(--blue); }
+  .a-na-text { font-size: 12px; font-weight: 600; color: var(--navy); line-height: 1.4; }
+  .a-na-desc { font-size: 11px; color: var(--gray-400); margin-top: 1px; }
+
+  /* ── CARD SYSTEM ─────────────────────────── */
+  .a-card {
+    background: var(--white); border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(10,22,40,0.06), 0 1px 2px rgba(10,22,40,0.04);
+  }
+  .a-card:last-child { margin-bottom: 0; }
+  .a-card-hdr {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding-bottom: 10px; margin-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9; gap: 8px;
+  }
+  .a-card-hdrl { min-width: 0; flex: 1; }
+  .a-card-title { font-family: var(--font-h); font-size: 13px; font-weight: 800; color: var(--navy); }
+  .a-card-sub { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .a-card-btns { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+  .a-card-btn {
+    height: 26px; padding: 0 10px; border-radius: 6px;
+    border: 1.5px solid var(--gray-200); background: var(--white);
+    font-family: var(--font-h); font-size: 11px; font-weight: 700;
+    color: var(--gray-600); cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+  .a-card-btn:hover { background: var(--gray-50); border-color: var(--gray-300); }
+  .a-card-btn.primary { border-color: rgba(34,167,240,0.4); color: var(--blue); background: rgba(34,167,240,0.05); }
+  .a-card-btn.primary:hover { background: rgba(34,167,240,0.12); }
+  .a-card-btn.success { border-color: rgba(16,185,129,0.4); color: #059669; background: rgba(16,185,129,0.05); }
+  .a-card-btn.success:hover { background: rgba(16,185,129,0.12); }
+
+  /* Workspace layout */
+  .a-sp-workspace { gap: 12px; padding: 14px 16px; }
+
+  /* Row 2: inner 2-col for Funding section */
+.a-fund-sum-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .a-fund-sum-tile { background: var(--gray-50); border: 1px solid #e5e7eb; border-radius: 8px; padding: 9px 10px; }
+  .a-fund-sum-tile-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); }
+  .a-fund-sum-tile-val { font-family: var(--font-h); font-size: 15px; font-weight: 800; color: var(--navy); line-height: 1.3; }
+  .a-fund-sum-tile.green { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.2); }
+  .a-fund-sum-tile.green .a-fund-sum-tile-val { color: #059669; }
+  .a-fund-sum-tile.red .a-fund-sum-tile-val { color: #dc2626; }
+  .a-fund-outcome-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+  .a-fund-op { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .a-fund-op.approved { background: rgba(16,185,129,0.1); color: #059669; }
+  .a-fund-op.pending { background: rgba(245,158,11,0.1); color: #b45309; }
+  .a-fund-op.denied { background: rgba(239,68,68,0.08); color: #dc2626; }
+
+  /* Collapsible sections */
+  .a-coll-body { overflow: hidden; transition: max-height 0.3s ease; }
+  .a-coll-hdr { cursor: pointer; user-select: none; }
+  .a-coll-hdr:hover .a-card-title { color: var(--blue); }
+  .a-coll-chev { width: 16px; height: 16px; transition: transform 0.25s; flex-shrink: 0; color: var(--gray-300); }
+
+  /* Right side - full padding restored */
+  .a-sp-right .a-card { padding: 14px 16px; }
+
+  /* Messages height handled by flex layout below */
+
+  /* Funding summary stats */
+  .a-fund-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; }
+  .a-fund-stat { background: var(--gray-50); border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; }
+  .a-fund-stat-val { font-family: var(--font-h); font-size: 18px; font-weight: 800; color: var(--navy); }
+  .a-fund-stat-lbl { font-size: 10px; font-weight: 600; color: var(--gray-400); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .a-fund-stat.green { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.2); }
+  .a-fund-stat.green .a-fund-stat-val { color: #059669; }
+  .a-fund-stat.red { background: rgba(239,68,68,0.05); border-color: rgba(239,68,68,0.15); }
+  .a-fund-stat.red .a-fund-stat-val { color: var(--danger); }
+  .a-fund-prog-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; color: var(--gray-500); margin-bottom: 5px; }
+  .a-fund-prog-bar { height: 7px; background: #f1f5f9; border-radius: 999px; overflow: hidden; }
+  .a-fund-prog-fill { height: 100%; background: linear-gradient(90deg,#10b981,#34d399); border-radius: 999px; transition: width 0.3s; }
+
+  /* Compact funding banner (replaces 4-box grid) */
+  .a-fund-banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0 0; }
+  .a-fund-banner-item { display: flex; flex-direction: column; }
+  .a-fund-banner-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); line-height: 1.3; }
+  .a-fund-banner-val { font-family: var(--font-h); font-size: 15px; font-weight: 800; color: var(--navy); line-height: 1.3; }
+  .a-fund-banner-val.green { color: #059669; }
+  .a-fund-banner-val.red { color: var(--danger); }
+  .a-fund-banner-sep { width: 1px; height: 26px; background: #e5e7eb; flex-shrink: 0; align-self: center; }
+
+  /* Suppress duplicate inner fund-header (card hdr replaces it) */
+  #sp-dtab-funding .fund-header { display: none !important; }
+  /* Neutralize old section border on funding */
+  #sp-dtab-funding { border-left: none !important; }
+  /* Remove old section-hdr green tint (cards replace it) */
+  #sp-dtab-funding > .a-sp-sec-hdr { display: none !important; }
+
+  /* Messages card: flex column — chat scrolls, input always pinned at bottom */
+  #sp-dtab-messages { display: flex; flex-direction: column; overflow: hidden; }
+  #sp-dtab-messages .a-card-hdr { flex-shrink: 0; }
+  #sp-dtab-messages #dtab-messages { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+  #sp-dtab-messages .a-chat-msgs { flex: 1 !important; overflow-y: auto !important; max-height: none !important; min-height: 0 !important; margin-bottom: 0 !important; padding: 4px 0 !important; }
+  #sp-dtab-messages .a-chat-input-row { flex-shrink: 0 !important; margin-top: 8px; border-top: 1px solid var(--gray-100); padding-top: 8px; }
+  #sp-dtab-messages .a-chat-wrap { height: auto !important; }
+
+  /* Tighter internal spacing for funding + dashboard content */
+  .a-sp-left .fund-header { margin-bottom: 12px; }
+  .a-sp-left .bank-app-card { padding: 10px 14px; }
+  .a-sp-left .bank-app-list { gap: 7px; margin-bottom: 16px; }
+  .a-sp-left .bank-form { padding: 14px; margin-bottom: 10px; }
+  .a-sp-left .fund-empty { padding: 20px; font-size: 12px; }
+  .a-sp-left .a-req-list { gap: 5px; margin-bottom: 8px; }
+  .a-sp-left .a-req-row { padding: 7px 10px; }
+  .a-sp-left .a-add-req-row { margin-bottom: 10px; }
+  .a-sp-left .a-doc-divider { margin: 10px 0; }
+  .a-sp-left .a-drop-zone { padding: 14px; margin-bottom: 8px; }
+  .a-sp-left .a-doc-file-list { gap: 5px; }
+  .a-sp-left .a-doc-file-row { padding: 8px 10px; }
+
+  /* Constrain summary stats grid in funding */
+  .a-sp-left [style*="grid-template-columns:repeat(4,1fr)"] { gap: 8px; margin-bottom: 12px; }
+  .a-sp-left [style*="grid-template-columns:repeat(4,1fr)"] > div { padding: 10px 12px; }
+  .a-sp-left [style*="grid-template-columns:repeat(4,1fr)"] [style*="font-size:22px"] { font-size: 18px !important; }
+
+  /* ── COMMAND CENTER ──────────────────────── */
+  .a-cmd-card { border-top: 3px solid var(--blue); padding-top: 14px; }
+  .a-cmd-na {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);
+    border: 1px solid rgba(34,167,240,0.15); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 14px;
+  }
+  .a-cmd-na-label {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--blue); background: rgba(34,167,240,0.1); border: 1px solid rgba(34,167,240,0.2);
+    border-radius: 999px; padding: 3px 9px; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+  }
+  .a-cmd-na-text { font-family: var(--font-h); font-size: 14px; font-weight: 700; color: var(--navy); line-height: 1.4; }
+  .a-cmd-stats { display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .a-cmd-stat { display: flex; flex-direction: column; padding: 0 14px; }
+  .a-cmd-stat:first-child { padding-left: 0; }
+  .a-cmd-stat-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); }
+  .a-cmd-stat-val { font-family: var(--font-h); font-size: 16px; font-weight: 800; color: var(--navy); line-height: 1.3; }
+  .a-cmd-stat-sep { width: 1px; height: 32px; background: #e5e7eb; flex-shrink: 0; }
+  .a-cmd-prog { margin-top: 4px; }
+  .a-cmd-prog-meta { display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; color: var(--gray-400); margin-top: 5px; }
+
+  /* Credit status colors */
+  .a-cr-status-blocked { color: #dc2626 !important; }
+  .a-cr-status-caution { color: #d97706 !important; }
+  .a-cr-status-ready { color: #059669 !important; }
+  .a-cr-status-none { color: var(--gray-400) !important; }
+  .a-cr-status-badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; margin-left: auto; }
+  .a-cr-status-badge.blocked { background: rgba(239,68,68,0.08); color: #dc2626; }
+  .a-cr-status-badge.caution { background: rgba(245,158,11,0.1); color: #d97706; }
+  .a-cr-status-badge.ready { background: rgba(16,185,129,0.1); color: #059669; }
+  .a-cr-status-badge.none { background: var(--gray-50); color: var(--gray-400); }
+
+  /* Credit snapshot row inside card header */
+  .a-cr-snap { display: flex; align-items: center; flex-wrap: wrap; margin-top: 7px; }
+  .a-cr-snap-item { display: flex; flex-direction: column; padding: 0 10px; }
+  .a-cr-snap-item:first-child { padding-left: 0; }
+  .a-cr-snap-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-400); }
+  .a-cr-snap-val { font-family: var(--font-h); font-size: 13px; font-weight: 800; color: var(--navy); }
+  .a-cr-snap-sep { width: 1px; height: 24px; background: #e5e7eb; flex-shrink: 0; align-self: center; }
+
+  /* Full Profile modal */
+  .a-fp-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .a-fp-modal-box { background: white; border-radius: 16px; max-width: 840px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+  .a-fp-modal-hdr { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; background: white; z-index: 1; border-radius: 16px 16px 0 0; }
+  .a-fp-modal-title { font-family: var(--font-h); font-size: 15px; font-weight: 800; color: var(--navy); }
+  .a-fp-modal-close { width: 30px; height: 30px; border-radius: 8px; border: 1px solid #e5e7eb; background: transparent; font-size: 18px; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+  .a-fp-modal-close:hover { background: var(--gray-50); }
+  .a-fp-modal-body { padding: 20px 24px; }
+
 </style>
 </head>
 <body>
@@ -1447,9 +1762,19 @@
             <!-- List -->
             <div class="a-client-list-card">
               <div class="a-cl-header">
-                <div class="a-cl-title">All Clients</div>
+                <div class="a-cl-title-row">
+                  <div style="display:flex;align-items:center;gap:0">
+                    <div class="a-cl-title">Clients</div>
+                    <span class="a-cl-client-count" id="a-cl-total-count"></span>
+                  </div>
+                  <button class="a-cl-collapse-btn" onclick="toggleClientPanel()" title="Collapse panel">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M15 19l-7-7 7-7"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="a-cl-search-wrap">
                 <div class="a-cl-search">
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#8A97B0" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#8A97B0" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                   <input type="text" id="client-search" placeholder="Search clients…" oninput="renderClientList()" />
                 </div>
               </div>
@@ -1462,11 +1787,18 @@
                 <button class="a-filter-btn" onclick="setFilter('disqualified',this)">Disqualified</button>
                 <button class="a-filter-btn" id="filter-archived-btn" onclick="setFilter('archived',this)" style="border-color:#8b5cf6;color:#8b5cf6" onmouseover="this.style.background='#8b5cf6';this.style.color='white'" onmouseout="if(!this.classList.contains('active')){this.style.background='';this.style.color='#8b5cf6'}">Archived</button>
               </div>
-              <div style="padding:0 16px 10px;display:flex;align-items:center;gap:8px;">
-                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#8A97B0" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                <select id="state-filter" onchange="renderClientList()" style="font-family:var(--font-b);font-size:12px;color:var(--navy);border:1.5px solid var(--gray-200);border-radius:8px;padding:4px 10px;outline:none;background:white;cursor:pointer;">
+              <div class="a-cl-state-row">
+                <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="#8A97B0" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                <select id="state-filter" onchange="renderClientList()">
                   <option value="">All States</option>
                 </select>
+              </div>
+              <!-- Collapsed rail -->
+              <div class="a-cl-rail">
+                <button onclick="toggleClientPanel()" title="Expand panel" style="width:28px;height:28px;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-500)">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <div id="a-cl-rail-count" style="font-size:9px;font-weight:800;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.05em;writing-mode:vertical-rl;transform:rotate(180deg);margin-top:4px"></div>
               </div>
               <div class="a-cl-list" id="a-cl-list"></div>
             </div>
@@ -1967,6 +2299,19 @@
       if (lastSection && lastSection !== 'overview' && document.getElementById('asec-' + lastSection)) {
         const navEl = document.querySelector(`.a-nav-item[onclick*="'${lastSection}'"]`);
         switchAdminSection(lastSection, navEl);
+      }
+    } catch(e) {}
+    // Restore last selected client on refresh
+    try {
+      const lastClientId = localStorage.getItem('lastSelectedClientId');
+      if (lastClientId) {
+        const exists = clients.find(function(c) { return c.id === lastClientId; });
+        if (exists) {
+          // Auto-load without re-navigating the section (selectClient handles section switch)
+          selectClient(lastClientId);
+        } else {
+          localStorage.removeItem('lastSelectedClientId');
+        }
       }
     } catch(e) {}
     // Start notification listeners
@@ -2862,6 +3207,18 @@
   }
 
   // ── CLIENT LIST ───────────────────────────────────────────────────────
+  function toggleClientPanel() {
+    const wrap = document.querySelector('.a-clients-wrap');
+    if (!wrap) return;
+    const collapsed = wrap.classList.toggle('cl-collapsed');
+    // Update rail client count
+    const railCount = document.getElementById('a-cl-rail-count');
+    if (railCount) railCount.textContent = clients.filter(c => !c.archived).length + ' clients';
+    // Flip the collapse button arrow direction
+    const btn = document.querySelector('.a-cl-collapse-btn svg path');
+    if (btn) btn.setAttribute('d', collapsed ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7');
+  }
+
   function setFilter(f, el) {
     activeFilter = f;
     document.querySelectorAll('.a-filter-btn').forEach(b => b.classList.remove('active'));
@@ -2874,7 +3231,7 @@
     const stateFilter = (document.getElementById('state-filter')?.value || '').toLowerCase();
     const showArchived = activeFilter === 'archived';
 
-    // Populate state dropdown from onboarding data
+    // Populate state dropdown
     const stateEl = document.getElementById('state-filter');
     if (stateEl) {
       const states = [...new Set(clients.map(c => {
@@ -2896,29 +3253,114 @@
       const matchState = !stateFilter || clientState === stateFilter;
       return matchQ && matchF && matchState;
     });
+
     const archivedCount = clients.filter(c => c.archived).length;
-    // Update archived tab badge
     const archTab = document.getElementById('filter-archived-btn');
     if (archTab) archTab.textContent = archivedCount > 0 ? `Archived (${archivedCount})` : 'Archived';
 
-    document.getElementById('a-cl-list').innerHTML = filtered.length === 0
-      ? '<div style="padding:24px;text-align:center;font-size:13px;color:var(--gray-400)">' + (showArchived ? 'No archived clients' : 'No clients found') + '</div>'
-      : filtered.map(function(c) {
-          var archivedBadge = c.archived ? ' <span style="font-size:10px;background:#f5f3ff;color:#8b5cf6;padding:1px 6px;border-radius:4px;font-weight:700;vertical-align:middle">ARCHIVED</span>' : '';
-          var statusClass = c.status==='progress'?'progress':c.status==='approved'?'approved':c.status==='disqualified'?'disqual':c.status==='new'?'new':'pending';
-          var statusBadge = c.archived
-            ? '<span class="status-pill" style="background:#f5f3ff;color:#8b5cf6;border:1px solid #ede9fe">Archived</span>'
-            : '<span class="status-pill sp-' + statusClass + '">' + statusLabel(c.status) + '</span>';
-          var ficoBadge = c.fico ? '<div class="a-cl-fico">FICO ' + c.fico + '</div>' : '';
-          return '<div class="a-client-row ' + (selectedClientId===c.id?'active':'') + '" onclick="selectClient(\'' + c.id + '\')">' +
-            (function(){var ob=getOnboardDataForClient(c.id);var df=ob&&ob.firstName?ob.firstName:c.fname;var dl=ob&&ob.lastName?ob.lastName:c.lname;return '<div class="a-cl-avatar" style="background:' + (c.archived?'#8b5cf6':c.color) + ';' + (c.photo?'padding:0':'') + '">' + (c.photo ? '<img src="'+c.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />' : df[0] + (dl?dl[0]:'')) + '</div>' +
-            '<div style="min-width:0">' +
-              '<div class="a-cl-name">' + df + ' ' + dl + archivedBadge + '</div>';})() +
-              '<div class="a-cl-info">' + fmtPhoneAdmin(c.phone) + (function(){var ob=getOnboardDataForClient(c.id);return ob&&ob.state?' · <span style="font-size:11px;font-weight:700;color:var(--blue)">'+ob.state+'</span>':'';})() + '</div>' +
-            '</div>' +
-            '<div class="a-cl-right">' + statusBadge + ficoBadge + '</div>' +
-          '</div>';
-        }).join('');
+    // Update total count badge
+    const totalCount = document.getElementById('a-cl-total-count');
+    if (totalCount) totalCount.textContent = '(' + filtered.length + ')';
+
+    // Update collapsed rail count
+    const railCount = document.getElementById('a-cl-rail-count');
+    if (railCount) railCount.textContent = filtered.length + ' client' + (filtered.length !== 1 ? 's' : '');
+
+    if (filtered.length === 0) {
+      document.getElementById('a-cl-list').innerHTML = '<div style="padding:24px;text-align:center;font-size:12px;color:var(--gray-400)">' + (showArchived ? 'No archived clients' : 'No clients found') + '</div>';
+      return;
+    }
+
+    function _renderClientRow(c) {
+      var ob = getOnboardDataForClient(c.id);
+      var df = ob&&ob.firstName ? ob.firstName : c.fname;
+      var dl = ob&&ob.lastName  ? ob.lastName  : c.lname;
+      var t = getClientTasks(c.id);
+      var si = (t && typeof t.stage === 'number') ? t.stage : -1;
+      var days = (si >= 0) ? plDaysInStage(c.id, si) : 0;
+      var daysCls = days <= 2 ? 'ok' : days <= 5 ? 'warn' : 'hot';
+      var daysBadge = (si >= 0) ? '<span class="a-cl-days ' + daysCls + '">' + days + 'd</span>' : '';
+      var fico = c.fico || (ob && ob.fico) || '';
+      var d = getDashData(c.id);
+      var funded = (d.fundingRows||[]).filter(function(r){ return r.status==='approved'; }).reduce(function(s,r){ return s+(Number(r.amount)||0); }, 0);
+      var meta = '';
+      if (fico) meta += 'FICO ' + fico;
+      if (funded > 0) meta += (meta ? ' · ' : '') + '$' + Number(funded).toLocaleString();
+      var statusClass = c.status==='progress'?'progress':c.status==='approved'?'approved':c.status==='disqualified'?'disqual':c.status==='new'?'new':'pending';
+      var statusBadge = c.archived
+        ? '<span class="status-pill" style="background:#f5f3ff;color:#8b5cf6;border:1px solid #ede9fe">Archived</span>'
+        : '<span class="status-pill sp-' + statusClass + '">' + statusLabel(c.status) + '</span>';
+      return '<div class="a-client-row ' + (selectedClientId===c.id?'active':'') + '" onclick="selectClient(\'' + c.id + '\')">' +
+        '<div class="a-cl-avatar" style="background:' + (c.archived?'#8b5cf6':c.color) + ';' + (c.photo?'padding:0':'') + '">' + (c.photo ? '<img src="'+c.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />' : df[0] + (dl?dl[0]:'')) + '</div>' +
+        '<div class="a-cl-body">' +
+          '<div class="a-cl-name">' + df + ' ' + dl + (c.archived ? ' <span style="font-size:9px;background:#f5f3ff;color:#8b5cf6;padding:1px 5px;border-radius:3px;font-weight:700">ARC</span>' : '') + '</div>' +
+          (meta ? '<div class="a-cl-meta">' + meta + '</div>' : '') +
+        '</div>' +
+        '<div class="a-cl-right">' + (si >= 0 ? daysBadge : statusBadge) + '</div>' +
+      '</div>';
+    }
+
+    function _stageToggle(grpId, chevId) {
+      var b = document.getElementById(grpId);
+      var chev = document.getElementById(chevId);
+      if (!b) return;
+      var open = b.style.display !== 'none';
+      b.style.display = open ? 'none' : '';
+      if (chev) chev.classList.toggle('closed', open);
+    }
+
+    // If searching/filtering, show flat list still grouped by stage
+    // Group by pipeline stage
+    var groups = {};
+    var noStage = [];
+    filtered.forEach(function(c) {
+      var t = getClientTasks(c.id);
+      var si = (t && typeof t.stage === 'number') ? t.stage : -1;
+      if (si >= 0 && si < PIPELINE_STAGES.length) {
+        if (!groups[si]) groups[si] = [];
+        groups[si].push(c);
+      } else {
+        noStage.push(c);
+      }
+    });
+
+    var html = '';
+    for (var i = 0; i < PIPELINE_STAGES.length; i++) {
+      var grp = groups[i];
+      if (!grp || grp.length === 0) continue;
+      var st = PIPELINE_STAGES[i];
+      var grpId = 'cl-stage-grp-' + i;
+      var chevId = 'cl-stage-chev-' + i;
+      html += '<div class="a-cl-stage-hdr" onclick="_stageToggle(\'' + grpId + '\',\'' + chevId + '\')">' +
+        '<div class="a-cl-stage-dot" style="background:' + st.color + '"></div>' +
+        '<div class="a-cl-stage-name">' + st.name + '</div>' +
+        '<div class="a-cl-stage-count" style="background:' + st.color + '">' + grp.length + '</div>' +
+        '<svg id="' + chevId + '" class="a-cl-stage-chev" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>' +
+      '</div>' +
+      '<div id="' + grpId + '">' + grp.map(_renderClientRow).join('') + '</div>';
+    }
+
+    if (noStage.length > 0) {
+      var nsId = 'cl-stage-grp-ns';
+      html += '<div class="a-cl-stage-hdr" onclick="_stageToggle(\'' + nsId + '\',\'cl-stage-chev-ns\')">' +
+        '<div class="a-cl-stage-dot" style="background:#8A97B0"></div>' +
+        '<div class="a-cl-stage-name">Not Started</div>' +
+        '<div class="a-cl-stage-count">' + noStage.length + '</div>' +
+        '<svg id="cl-stage-chev-ns" class="a-cl-stage-chev" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>' +
+      '</div>' +
+      '<div id="' + nsId + '">' + noStage.map(_renderClientRow).join('') + '</div>';
+    }
+
+    document.getElementById('a-cl-list').innerHTML = html || '<div style="padding:24px;text-align:center;font-size:12px;color:var(--gray-400)">No clients found</div>';
+  }
+
+  function _stageToggle(grpId, chevId) {
+    var b = document.getElementById(grpId);
+    var chev = document.getElementById(chevId);
+    if (!b) return;
+    var open = b.style.display !== 'none';
+    b.style.display = open ? 'none' : '';
+    if (chev) chev.classList.toggle('closed', open);
   }
 
   function statusLabel(s) {
@@ -2936,9 +3378,24 @@
   function selectClient(id) {
     selectedClientId = id;
     activeDetailTab = 'overview';
+    // Persist selection so refresh restores this client
+    try { localStorage.setItem('lastSelectedClientId', id); } catch(e) {}
     loadClients(); // re-read from localStorage to pick up any client-side updates
     renderClientList();
     renderClientDetail(id);
+    // Scroll just enough to trigger sticky sidebar (makes messages input always visible)
+    setTimeout(function() {
+      var right = document.querySelector('.a-sp-right');
+      if (right) {
+        var rect = right.getBoundingClientRect();
+        var stickyTop = parseInt(getComputedStyle(right).top) || 92;
+        if (rect.top > stickyTop) {
+          var scrollNeeded = rect.top - stickyTop;
+          document.body.scrollTop += scrollNeeded;
+          document.documentElement.scrollTop += scrollNeeded;
+        }
+      }
+    }, 150);
     // Real-time listener: refresh docs when client uploads or admin data changes
     if (_clientDashUnsub) { try { _clientDashUnsub(); } catch(e) {} }
     _clientDashUnsub = fsListenDash(id, (snapData) => { loadClientDocsFromFirestore(id, snapData); });
@@ -2982,115 +3439,376 @@
     const _displayFirst = _ob?.firstName || c.fname;
     const _displayLast  = _ob?.lastName  || c.lname;
 
+    const _d = getDashData(id);
+    const _fico = _d.creditScore || (creditData && creditData.fico) || '';
+    const _stageName = (_d.stageNames || [])[Math.max(0, (_d.currentStage || 1) - 1)] || 'Setup';
+    const _fundingApproved = _d.fundingApproved ? '$' + Number(_d.fundingApproved).toLocaleString() : '';
+    const _statusCls = { new:'s-new', pending:'s-pending', progress:'s-progress', approved:'s-approved', disqualified:'s-disqualified' }[c.status] || 's-new';
+    const _statusLabel = { new:'New', pending:'Pending', progress:'In Progress', approved:'Approved', disqualified:'Disqualified' }[c.status] || 'New';
+    const _nextTask = (_d.tasks || []).find(t => t.status !== 'done');
+
+    const _apps = (_d.fundingRows || []);
+    const _appApproved  = _apps.filter(a => a.status === 'approved').length;
+    const _appDenied    = _apps.filter(a => a.status === 'denied').length;
+    const _appPending   = _apps.filter(a => a.status === 'pending' || a.status === 'applied').length;
+    const _totalFunded  = _apps.filter(a => a.status === 'approved').reduce((s,a) => s + (Number(a.amount)||0), 0);
+    const _fundGoal     = _d.fundingGoal ? Number(_d.fundingGoal) : 0;
+    const _fundPct      = _fundGoal > 0 ? Math.min(100, Math.round((_totalFunded / _fundGoal) * 100)) : (_totalFunded > 0 ? 100 : 0);
+    const _fmtMoney     = n => n > 0 ? '$' + Number(n).toLocaleString() : '—';
+
+    const _fundGap = _fundGoal > 0 ? Math.max(0, _fundGoal - _totalFunded) : 0;
+    const _nextAction = (function() {
+      const t = (_d.tasks || []).find(function(x) { return x.status !== 'done'; });
+      if (t) return t.text;
+      if (_apps.length === 0) return 'Add first bank application to begin funding';
+      if (_appPending > 0) return _appPending + ' application' + (_appPending !== 1 ? 's' : '') + ' pending — follow up with lenders';
+      if (_appDenied > 0 && _appApproved === 0) return 'All applications denied — rebuild strategy with client';
+      if (_fundGoal > 0 && _totalFunded < _fundGoal) return 'Continue applications — $' + Number(_fundGap).toLocaleString() + ' remaining to goal';
+      if (_totalFunded > 0 && (_fundGoal === 0 || _totalFunded >= _fundGoal)) return 'Funding secured — confirm disbursement with client';
+      return 'Review profile and define next funding steps';
+    })();
+    const _crBlock = creditData ? (creditData.fico < 700 || (creditData.collections || 0) > 0 || creditData.pubRecords || (creditData.recentInquiries || 0) > 6 || (creditData.late || 0) > 3 || (creditData.recentCCAccounts || 0) >= 5) : false;
+    const _crCaution = !_crBlock && creditData ? ((creditData.fico >= 700 && creditData.fico < 740) || (creditData.recentInquiries || 0) > 4 || (creditData.late || 0) > 0 || (creditData.util || 0) > 50 || (creditData.recentCCAccounts || 0) >= 3) : false;
+    const _crStatusLabel = !creditData ? 'No Report' : _crBlock ? 'Blocked' : _crCaution ? 'Caution' : 'Ready';
+    const _crStatusCls = !creditData ? 'none' : _crBlock ? 'blocked' : _crCaution ? 'caution' : 'ready';
+
     document.getElementById('a-detail-card').innerHTML = `
-      <div class="a-dh">
-        <div class="a-dh-top">
-          <div class="a-dh-avatar" style="background:${c.color};${c.photo?'padding:0;':''}" onclick="triggerPhotoUpload('${id}')" title="Upload photo">
-            ${c.photo ? `<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />` : `${(c.fname||'?')[0]}${(c.lname||'')[0]||''}`}
-            <div class="a-avatar-overlay"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
-          </div>
-          <input type="file" id="photo-upload-${id}" accept="image/*" style="display:none" onchange="handlePhotoUpload('${id}',this)" />
-          <div style="min-width:0">
-            <div class="a-dh-name">${_displayFirst} ${_displayLast}${_ob?.state ? ` <span style="font-size:12px;font-weight:700;color:var(--blue);background:#f0f9ff;padding:2px 8px;border-radius:6px;border:1px solid rgba(34,167,240,0.2);vertical-align:middle">${_ob.state}</span>` : ''}</div>
-            <div class="a-dh-sub">${c.email} · ${c.phone || 'No phone'}${_ob?.city ? ' · ' + _ob.city : ''}</div>
-          </div>
-          <div class="a-dh-actions">
-            ${c.status !== 'approved'    ? `<button class="a-action-btn approve" onclick="updateStatus('${id}','approved')">Approve</button>` : ''}
-            ${c.status !== 'disqualified'? `<button class="a-action-btn disqual" onclick="updateStatus('${id}','disqualified')">Disqualify</button>` : ''}
-            <button class="a-action-btn primary" onclick="switchDetailTab('messages')">Message</button>
-            <button class="a-action-btn" onclick="showAdminProfileEdit('${id}')" style="border-color:var(--navy);color:var(--navy);background:transparent;display:inline-flex;align-items:center;gap:5px"
-              onmouseover="this.style.background='var(--navy)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              Edit Profile
-            </button>
-            <button class="a-action-btn" onclick="showClientAnalysis('${id}')" style="border-color:var(--blue);color:var(--blue);background:rgba(34,167,240,0.06);font-weight:700;display:inline-flex;align-items:center;gap:5px"
-              onmouseover="this.style.background='var(--blue)';this.style.color='white'" onmouseout="this.style.background='rgba(34,167,240,0.06)';this.style.color='var(--blue)'">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              Analyze
-            </button>
-            ${c.archived
-              ? `<button class="a-action-btn" onclick="restoreClient('${id}')" style="border-color:#10b981;color:#10b981;background:transparent" onmouseover="this.style.background='#10b981';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#10b981'">↩ Restore</button>`
-              : `<button class="a-action-btn" onclick="archiveClient('${id}')" style="border-color:#8b5cf6;color:#8b5cf6;background:transparent" onmouseover="this.style.background='#8b5cf6';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#8b5cf6'">Archive</button>`}
-            <button class="a-action-btn" onclick="deleteClient('${id}')" style="border-color:#ef4444;color:#ef4444;background:transparent" onmouseover="this.style.background='#ef4444';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#ef4444'">Delete</button>
-          </div>
+
+      <!-- COMPACT STICKY HEADER -->
+      <div class="a-csh">
+        <div class="a-dh-avatar" style="background:${c.color};${c.photo?'padding:0;':''}width:36px;height:36px;font-size:13px;" onclick="triggerPhotoUpload('${id}')" title="Upload photo">
+          ${c.photo ? `<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />` : `${(c.fname||'?')[0]}${(c.lname||'')[0]||''}`}
+          <div class="a-avatar-overlay"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
         </div>
-        <div class="a-tabs">
-          <div class="a-tab ${activeDetailTab==='overview'?'active':''}" onclick="switchDetailTab('overview')">Overview</div>
-          <div class="a-tab ${activeDetailTab==='dashboard'?'active':''}" onclick="switchDetailTab('dashboard')">Dashboard</div>
-          <div class="a-tab ${activeDetailTab==='documents'?'active':''}" onclick="switchDetailTab('documents')">Documents</div>
-          <div class="a-tab ${activeDetailTab==='credit'?'active':''}" onclick="switchDetailTab('credit')">Credit</div>
-          <div class="a-tab ${activeDetailTab==='funding'?'active':''}" onclick="switchDetailTab('funding')">Funding</div>
-          <div class="a-tab ${activeDetailTab==='messages'?'active':''}" onclick="switchDetailTab('messages')">Messages <span style="font-size:11px;color:var(--gray-400)">(${msgs.length})</span></div>
+        <input type="file" id="photo-upload-${id}" accept="image/*" style="display:none" onchange="handlePhotoUpload('${id}',this)" />
+        <div class="a-csh-info">
+          <div class="a-csh-name">${_displayFirst} ${_displayLast}${_ob?.state ? ` <span style="font-size:10px;font-weight:700;color:var(--blue);background:#f0f9ff;padding:2px 7px;border-radius:5px;border:1px solid rgba(34,167,240,0.2);vertical-align:middle">${_ob.state}</span>` : ''}</div>
+          <div class="a-csh-sub" id="csh-sub-${id}">${c.email}${_nextTask ? ` · Next: ${_nextTask.text}` : ''}</div>
+        </div>
+        <div class="a-csh-pills">
+          ${_fico ? `<span class="a-csh-pill fico" id="csh-fico-${id}">${_fico} FICO</span>` : ''}
+          <span class="a-csh-pill ${_statusCls}" id="csh-status-${id}">${_statusLabel}</span>
+          <span class="a-csh-pill stage" id="csh-stage-${id}">${_stageName}</span>
+          <span class="a-csh-pill funded" id="csh-funded-${id}" style="${_fundingApproved ? '' : 'display:none'}">${_fundingApproved ? _fundingApproved + ' funded' : ''}</span>
+        </div>
+        <div class="a-csh-actions">
+          ${c.status !== 'approved'     ? `<button class="a-action-btn approve" onclick="updateStatus('${id}','approved')">Approve</button>` : ''}
+          ${c.status !== 'disqualified' ? `<button class="a-action-btn disqual" onclick="updateStatus('${id}','disqualified')">Disqualify</button>` : ''}
+          <button class="a-action-btn" onclick="showAdminProfileEdit('${id}')" style="border-color:var(--navy);color:var(--navy);background:transparent;display:inline-flex;align-items:center;gap:5px"
+            onmouseover="this.style.background='var(--navy)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">
+            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+          </button>
+          <button class="a-action-btn" onclick="showClientAnalysis('${id}')" style="border-color:var(--blue);color:var(--blue);background:rgba(34,167,240,0.06);font-weight:700;display:inline-flex;align-items:center;gap:5px"
+            onmouseover="this.style.background='var(--blue)';this.style.color='white'" onmouseout="this.style.background='rgba(34,167,240,0.06)';this.style.color='var(--blue)'">
+            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Analyze
+          </button>
+          ${c.archived
+            ? `<button class="a-action-btn" onclick="restoreClient('${id}')" style="border-color:#10b981;color:#10b981;background:transparent" onmouseover="this.style.background='#10b981';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#10b981'">↩ Restore</button>`
+            : `<button class="a-action-btn" onclick="archiveClient('${id}')" style="border-color:#8b5cf6;color:#8b5cf6;background:transparent" onmouseover="this.style.background='#8b5cf6';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#8b5cf6'">Archive</button>`}
+          <button class="a-action-btn" onclick="deleteClient('${id}')" style="border-color:#ef4444;color:#ef4444;background:transparent" onmouseover="this.style.background='#ef4444';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#ef4444'">Delete</button>
         </div>
       </div>
 
-      <!-- OVERVIEW TAB -->
-      <div class="a-tab-pane ${activeDetailTab==='overview'?'active':''}" id="dtab-overview">
-        ${renderOverviewTab(id, c)}
+      <!-- ACTION BAR -->
+      <div class="a-sp-ab">
+        <button class="a-sp-ab-btn blue" onclick="(function(){var s=document.getElementById('sp-dtab-funding');if(s)s.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(function(){var b=document.getElementById('fa-bank-sel-${id}');if(b){b.focus();b.style.outline='2px solid var(--blue)';}},350);})()">
+          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Add Application
+        </button>
+        <button class="a-sp-ab-btn" onclick="openTaskModal('${id}')">
+          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Add Task
+        </button>
+        <button class="a-sp-ab-btn" onclick="(function(){var s=document.getElementById('sp-dtab-documents');if(s){s.classList.remove('collapsed');s.scrollIntoView({behavior:'smooth'});}setTimeout(function(){var e=document.getElementById('new-req-input-${id}');if(e)e.focus();},350)})()">
+          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Request Docs
+        </button>
+        <button class="a-sp-ab-btn green" onclick="(function(){var s=document.getElementById('sp-dtab-messages');if(s){s.classList.remove('collapsed');s.scrollIntoView({behavior:'smooth'});}setTimeout(function(){var e=document.getElementById('dchat-input-${id}');if(e)e.focus();},350)})()">
+          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Send Message
+        </button>
       </div>
 
-      <!-- DOCUMENTS TAB -->
-      <div class="a-tab-pane ${activeDetailTab==='documents'?'active':''}" id="dtab-documents">
-        <div class="a-doc-section-title">Document Requests</div>
-        <div class="a-req-list" id="dreq-list-${id}">
-          ${reqs.length === 0 ? `<div style="font-size:13px;color:var(--gray-400);padding:12px 0">No requests yet. Add one below.</div>` :
-            reqs.map(r => `
-              <div class="a-req-row" id="areq-${r.id}">
-                <div class="a-req-name">${r.name}</div>
-                <span class="a-req-status ${r.received ? 'ars-received' : 'ars-pending'}">${r.received ? 'Received' : 'Pending'}</span>
-                <button class="a-req-del" onclick="removeDocReq('${id}','${r.id}')" title="Remove">
-                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      <!-- WORKSPACE: 60/40 GRID -->
+      <div class="a-sp-workspace">
+
+        <!-- ══ LEFT: WORK ZONE ══ -->
+        <div class="a-sp-left">
+
+          <!-- COMMAND CENTER (full width) -->
+          <div class="a-card a-cmd-card">
+            <div class="a-cmd-na">
+              <span class="a-cmd-na-label">NEXT ACTION</span>
+              <div class="a-cmd-na-text" id="cmd-next-action-${id}">${_nextAction}</div>
+            </div>
+            <div class="a-cmd-stats">
+              <div class="a-cmd-stat">
+                <span class="a-cmd-stat-lbl">Stage</span>
+                <span class="a-cmd-stat-val" id="cmd-stage-${id}">${_stageName}</span>
+              </div>
+              <div class="a-cmd-stat-sep"></div>
+              <div class="a-cmd-stat">
+                <span class="a-cmd-stat-lbl">Approved</span>
+                <span class="a-cmd-stat-val" id="cmd-approved-${id}" style="color:#059669">${_fmtMoney(_totalFunded)}</span>
+              </div>
+              ${_fundGoal > 0 ? `
+              <div class="a-cmd-stat-sep"></div>
+              <div class="a-cmd-stat">
+                <span class="a-cmd-stat-lbl">Goal</span>
+                <span class="a-cmd-stat-val">${_fmtMoney(_fundGoal)}</span>
+              </div>
+              <div class="a-cmd-stat-sep"></div>
+              <div class="a-cmd-stat">
+                <span class="a-cmd-stat-lbl">Remaining</span>
+                <span class="a-cmd-stat-val ${_fundGap > 0 ? 'a-cr-status-blocked' : 'a-cr-status-ready'}" id="cmd-remaining-${id}">${_fundGap > 0 ? _fmtMoney(_fundGap) : 'Goal Met!'}</span>
+              </div>` : ''}
+              <div class="a-cmd-stat-sep"></div>
+              <div class="a-cmd-stat">
+                <span class="a-cmd-stat-lbl">Active Apps</span>
+                <span class="a-cmd-stat-val" id="cmd-active-apps-${id}">${_appPending}</span>
+              </div>
+              ${creditData ? `
+              <div class="a-cmd-stat-sep"></div>
+              <div class="a-cmd-stat">
+                <span class="a-cmd-stat-lbl">Credit</span>
+                <span class="a-cmd-stat-val a-cr-status-${_crStatusCls}">${_crStatusLabel}</span>
+              </div>` : ''}
+            </div>
+            <div class="a-cmd-prog" id="cmd-prog-wrap-${id}" style="${_fundGoal > 0 || _totalFunded > 0 ? '' : 'display:none'}">
+              <div class="a-fund-prog-bar" style="height:8px">
+                <div class="a-fund-prog-fill" id="cmd-prog-fill-${id}" style="width:${_fundPct}%"></div>
+              </div>
+              <div class="a-cmd-prog-meta">
+                <span id="cmd-prog-pct-${id}">${_fundPct}% funded</span>
+                ${_fico ? `<span>FICO ${_fico}</span>` : ''}
+                <span>Stage ${_d.currentStage || 1} of ${(_d.stageNames || []).length || 1}</span>
+              </div>
+            </div>
+            <div id="cmd-prog-hint-${id}" style="${_fundGoal > 0 || _totalFunded > 0 ? 'display:none' : 'font-size:11px;color:var(--gray-400);margin-top:4px'}">Set a funding goal and add applications to track progress.</div>
+          </div>
+
+          <!-- Funding Applications (full-width) -->
+          <div class="a-card" id="sp-dtab-funding" style="margin-bottom:14px">
+            <div class="a-card-hdr">
+              <div class="a-card-hdrl">
+                <div class="a-card-title">Funding Applications</div>
+                <div class="a-card-sub" id="fapp-count-${id}">${_apps.length > 0 ? _apps.length + ' application' + (_apps.length !== 1 ? 's' : '') : 'No applications yet'}</div>
+              </div>
+            </div>
+            <div id="dtab-funding">${renderFundingTab(id)}</div>
+          </div>
+
+          <!-- Funding Summary (full-width, below Funding Applications) -->
+          <div class="a-card" style="margin-bottom:14px">
+            <div class="a-card-hdr">
+              <div class="a-card-hdrl">
+                <div class="a-card-title">Funding Summary</div>
+              </div>
+            </div>
+            <div class="a-fund-sum-bar">
+              <div class="a-fund-sum-tile green">
+                <div class="a-fund-sum-tile-lbl">Approved</div>
+                <div class="a-fund-sum-tile-val" id="fsum-approved-${id}">${_fmtMoney(_totalFunded)}</div>
+              </div>
+              <div class="a-fund-sum-tile">
+                <div class="a-fund-sum-tile-lbl">Goal</div>
+                <div class="a-fund-sum-tile-val">${_fmtMoney(_fundGoal)}</div>
+              </div>
+              <div class="a-fund-sum-tile ${_fundGap > 0 ? 'red' : 'green'}" id="fsum-rem-tile-${id}">
+                <div class="a-fund-sum-tile-lbl">Remaining</div>
+                <div class="a-fund-sum-tile-val" id="fsum-remaining-${id}">${_fundGoal > 0 ? _fmtMoney(_fundGap) : '—'}</div>
+              </div>
+            </div>
+            <div id="fsum-prog-wrap-${id}" style="${_fundGoal > 0 || _totalFunded > 0 ? '' : 'display:none'}">
+              <div class="a-fund-prog-bar" style="margin-bottom:6px">
+                <div class="a-fund-prog-fill" id="fsum-prog-fill-${id}" style="width:${_fundPct}%"></div>
+              </div>
+              <div style="font-size:10px;font-weight:600;color:var(--gray-400);margin-bottom:12px" id="fsum-prog-pct-${id}">${_fundPct}% of goal funded</div>
+            </div>
+            <div class="a-fund-outcome-pills" id="fsum-pills-${id}">
+              ${_appApproved > 0 ? `<span class="a-fund-op approved">${_appApproved} Approved</span>` : ''}
+              ${_appPending > 0 ? `<span class="a-fund-op pending">${_appPending} Pending</span>` : ''}
+              ${_appDenied > 0 ? `<span class="a-fund-op denied">${_appDenied} Denied</span>` : ''}
+              ${_apps.length === 0 ? `<span style="font-size:11px;color:var(--gray-400)">No applications yet</span>` : ''}
+            </div>
+          </div>
+
+          <!-- CREDIT ANALYZER (collapsible, default OPEN) -->
+          <div class="a-card" id="sp-dtab-credit" style="margin-bottom:14px">
+            <div class="a-card-hdr a-coll-hdr" onclick="aToggle('coll-credit-${id}','chev-credit-${id}')">
+              <div class="a-card-hdrl">
+                <div class="a-card-title">Credit Analyzer
+                  ${creditData ? `<span class="a-cr-status-badge ${_crStatusCls}" style="margin-left:8px;vertical-align:middle">${_crStatusLabel}</span>` : ''}
+                </div>
+                ${creditData ? `
+                <div class="a-cr-snap" style="margin-top:6px">
+                  <div class="a-cr-snap-item"><span class="a-cr-snap-lbl">Score</span><span class="a-cr-snap-val" style="color:${(creditData.fico||0)>=700?'#059669':(creditData.fico||0)>=680?'#d97706':'#dc2626'}">${creditData.fico||'—'}</span></div>
+                  <div class="a-cr-snap-sep"></div>
+                  <div class="a-cr-snap-item"><span class="a-cr-snap-lbl">Utilization</span><span class="a-cr-snap-val" style="color:${(creditData.util||0)<=30?'#059669':(creditData.util||0)<=50?'#d97706':'#dc2626'}">${creditData.util!=null?creditData.util+'%':'—'}</span></div>
+                  <div class="a-cr-snap-sep"></div>
+                  <div class="a-cr-snap-item"><span class="a-cr-snap-lbl">Inquiries</span><span class="a-cr-snap-val" style="color:${(creditData.recentInquiries||0)<=4?'#059669':(creditData.recentInquiries||0)<=6?'#d97706':'#dc2626'}">${creditData.recentInquiries??'—'}</span></div>
+                  <div class="a-cr-snap-sep"></div>
+                  <div class="a-cr-snap-item"><span class="a-cr-snap-lbl">Late</span><span class="a-cr-snap-val" style="color:${(creditData.late||0)===0?'#059669':(creditData.late||0)<=1?'#d97706':'#dc2626'}">${creditData.late??'—'}</span></div>
+                </div>` : '<div class="a-card-sub">No credit report uploaded yet</div>'}
+              </div>
+              <svg id="chev-credit-${id}" class="a-coll-chev" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="a-coll-body" id="coll-credit-${id}" data-open="1" style="max-height:4000px">
+              <div id="dtab-credit">${renderCreditTab(creditData, id)}</div>
+            </div>
+          </div>
+
+          <!-- DOCUMENTS (collapsible, default CLOSED) -->
+          <div class="a-card" id="sp-dtab-documents" style="margin-bottom:14px">
+            <div class="a-card-hdr a-coll-hdr" onclick="aToggle('coll-docs-${id}','chev-docs-${id}')">
+              <div class="a-card-hdrl">
+                <div class="a-card-title">Documents</div>
+                <div class="a-card-sub">${reqs.length} request${reqs.length !== 1 ? 's' : ''} · ${adminDocs.length + clientDocs.length} file${adminDocs.length + clientDocs.length !== 1 ? 's' : ''}</div>
+              </div>
+              <svg id="chev-docs-${id}" class="a-coll-chev" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="transform:rotate(-90deg)"><path d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="a-coll-body" id="coll-docs-${id}" data-open="0" style="max-height:0">
+              <div id="dtab-documents">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray-400);margin-bottom:7px">Document Requests</div>
+                <div class="a-req-list" id="dreq-list-${id}" style="margin-bottom:8px">
+                  ${reqs.length === 0
+                    ? `<div style="font-size:12px;color:var(--gray-400);padding:4px 0">No requests yet.</div>`
+                    : reqs.map(r => `
+                        <div class="a-req-row" id="areq-${r.id}" style="padding:7px 10px">
+                          <div class="a-req-name" style="font-size:12px">${r.name}</div>
+                          <span class="a-req-status ${r.received ? 'ars-received' : 'ars-pending'}">${r.received ? 'Received' : 'Pending'}</span>
+                          <button class="a-req-del" onclick="removeDocReq('${id}','${r.id}')" title="Remove">
+                            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          </button>
+                        </div>`).join('')}
+                </div>
+                <div class="a-add-req-row" style="margin-bottom:12px">
+                  <input class="a-add-req-input" id="new-req-input-${id}" placeholder="Request a document…" onkeydown="if(event.key==='Enter')addDocReq('${id}')" style="height:32px;font-size:12px" />
+                  <button class="a-add-req-btn" onclick="addDocReq('${id}')" style="height:32px;font-size:11px;padding:0 12px">+ Add</button>
+                </div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray-400);margin-bottom:7px">Upload Files</div>
+                <div class="a-drop-zone" id="adz-${id}" style="padding:14px;margin-bottom:10px"
+                  onclick="document.getElementById('adf-${id}').click()"
+                  ondragover="adzDragOver(event,'${id}')" ondragleave="adzDragLeave('${id}')" ondrop="adzDrop(event,'${id}')">
+                  <p style="font-size:12px;margin:0">Drag & drop or <strong>click to browse</strong> — PDF, JPG, PNG, DOCX</p>
+                </div>
+                <input type="file" id="adf-${id}" multiple accept=".pdf,.jpg,.jpeg,.png,.docx" style="display:none" onchange="adminUploadDocs('${id}',this.files)" />
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray-400);margin-bottom:7px">Files</div>
+                <div class="a-doc-file-list" id="adoc-list-${id}">
+                  ${[...adminDocs.map(d => docFileRowHTML(d.name, d.size, d.date, 'admin', d.url || null)),
+                     ...clientDocs.map(d => docFileRowHTML(d.name, d.size, d.date, 'client', d.url || null))].join('')}
+                  ${(adminDocs.length + clientDocs.length) === 0 ? '<div style="font-size:12px;color:var(--gray-400);padding:4px 0">No files yet</div>' : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PIPELINE & TASKS (collapsible, default CLOSED) -->
+          <div class="a-card" id="sp-dtab-dashboard" style="margin-bottom:14px">
+            <div class="a-card-hdr a-coll-hdr" onclick="aToggle('coll-dash-${id}','chev-dash-${id}')">
+              <div class="a-card-hdrl">
+                <div class="a-card-title">Pipeline & Tasks</div>
+                <div class="a-card-sub">Stage ${_d.currentStage || 1} · ${(_d.tasks||[]).filter(t=>t.status!=='done').length} task${(_d.tasks||[]).filter(t=>t.status!=='done').length !== 1 ? 's' : ''} pending</div>
+              </div>
+              <div class="a-card-btns">
+                <button class="a-card-btn" onclick="event.stopPropagation();openTaskModal('${id}')">+ Task</button>
+                <svg id="chev-dash-${id}" class="a-coll-chev" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="transform:rotate(-90deg)"><path d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </div>
+            <div class="a-coll-body" id="coll-dash-${id}" data-open="0" style="max-height:0">
+              <div id="dtab-dashboard">${renderDashboardEditor(id)}</div>
+            </div>
+          </div>
+
+          <!-- Hidden: Firestore sync + Full Profile modal -->
+          <div id="dtab-overview" style="display:none">${renderOverviewTab(id, c)}</div>
+
+        </div><!-- /a-sp-left -->
+
+        <!-- ══ RIGHT: CONTROL PANEL (sticky) ══ -->
+        <div class="a-sp-right">
+
+          <!-- NEXT ACTIONS / TASKS (top) -->
+          <div class="a-card" id="sp-right-tasks-top">
+            <div class="a-card-hdr">
+              <div class="a-card-hdrl">
+                <div class="a-card-title">Next Actions</div>
+                ${(_d.tasks||[]).filter(t=>t.status!=='done').length > 0
+                  ? `<div class="a-card-sub">${(_d.tasks||[]).filter(t=>t.status!=='done').length} pending</div>`
+                  : (_d.tasks||[]).length > 0 ? '<div class="a-card-sub" style="color:#059669">All done</div>' : ''}
+              </div>
+              <div class="a-card-btns">
+                <button class="a-card-btn" onclick="openTaskModal('${id}')">+ Task</button>
+              </div>
+            </div>
+            <div id="sp-right-tasks-body">
+            ${(_d.tasks||[]).length === 0
+              ? `<div style="font-size:12px;color:var(--gray-400);padding:2px 0;display:flex;align-items:center;gap:6px"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>No tasks yet</div>`
+              : ((_d.tasks||[]).filter(t => t.status !== 'done').map(t => `
+                  <div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0">
+                    <button onclick="sidebarToggleTask('${id}','${t.id}')" title="Mark done" style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--gray-300);background:white;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"></button>
+                    <div style="min-width:0"><div class="a-na-text">${t.text}</div>${t.desc ? `<div class="a-na-desc">${t.desc}</div>` : ''}</div>
+                  </div>`).join('')
+              + ((_d.tasks||[]).filter(t => t.status === 'done').length > 0 ? `
+                  <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">
+                    ${(_d.tasks||[]).filter(t => t.status === 'done').map(t => `
+                      <div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;opacity:0.55">
+                        <button onclick="sidebarToggleTask('${id}','${t.id}')" title="Mark undone" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #10b981;background:#10b981;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></button>
+                        <div class="a-na-text" style="text-decoration:line-through;color:var(--gray-400)">${t.text}</div>
+                      </div>`).join('')}
+                  </div>` : ''))}
+            </div>
+          </div>
+
+          <!-- CLIENT SNAPSHOT -->
+          <div class="a-card" id="sp-right-info">
+            <div class="a-card-hdr">
+              <div class="a-card-hdrl">
+                <div class="a-card-title">Client Snapshot</div>
+              </div>
+              <div class="a-card-btns">
+                <button class="a-card-btn" onclick="showAdminProfileEdit('${id}')">Edit</button>
+              </div>
+            </div>
+            ${_ob ? `
+              ${_fico ? `<div class="a-qi-row"><span class="a-qi-label">FICO</span><span class="a-qi-val" style="color:${Number(_fico)>=700?'#059669':Number(_fico)>=680?'#d97706':'#dc2626'};font-weight:800;font-size:14px">${_fico}</span></div>` : ''}
+              <div class="a-qi-row"><span class="a-qi-label">Phone</span><span class="a-qi-val">${_ob.phone || c.phone || '—'}</span></div>
+              <div class="a-qi-row"><span class="a-qi-label">Email</span><span class="a-qi-val">${c.email || '—'}</span></div>
+              ${_ob.bizName ? `<div class="a-qi-row"><span class="a-qi-label">Business</span><span class="a-qi-val">${_ob.bizName}</span></div>` : ''}
+              ${_ob.industry ? `<div class="a-qi-row"><span class="a-qi-label">Industry</span><span class="a-qi-val">${_ob.industry}</span></div>` : ''}
+              ${_ob.monthlySales ? `<div class="a-qi-row"><span class="a-qi-label">Mo. Revenue</span><span class="a-qi-val">${_fmtMoney(Number(_ob.monthlySales))}</span></div>` : ''}
+              ${_ob.loanAmount ? `<div class="a-qi-row"><span class="a-qi-label">Loan Ask</span><span class="a-qi-val">${_fmtMoney(Number(_ob.loanAmount))}</span></div>` : ''}
+              ${_ob.ein ? `<div class="a-qi-row"><span class="a-qi-label">EIN</span><span class="a-qi-val">${_ob.ein}</span></div>` : ''}`
+            : `<div style="font-size:12px;color:var(--gray-400);margin-bottom:10px">Onboarding not submitted yet.</div>`}
+            <button onclick="showClientFullProfile('${id}')" style="width:100%;margin-top:10px;height:30px;border-radius:7px;border:1.5px solid var(--navy);background:transparent;font-family:var(--font-h);font-size:11px;font-weight:700;color:var(--navy);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--navy)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">View Full Profile</button>
+          </div>
+
+          <!-- MESSAGES (bottom — tall for full chat history) -->
+          <div class="a-card" id="sp-dtab-messages">
+            <div class="a-card-hdr">
+              <div class="a-card-hdrl">
+                <div class="a-card-title">Messages</div>
+                ${msgs.length > 0 ? `<div class="a-card-sub">${msgs.length} total</div>` : '<div class="a-card-sub">No messages yet</div>'}
+              </div>
+            </div>
+            <div id="dtab-messages" style="display:flex;flex-direction:column">
+              <div class="a-chat-msgs" id="dchat-msgs-${id}" style="overflow-y:auto;padding:4px 0">
+                ${msgs.map(m => chatMsgHTML(m)).join('')}
+              </div>
+              <div class="a-chat-input-row">
+                <input class="a-chat-input" id="dchat-input-${id}" placeholder="Message ${c.fname}…" onkeydown="if(event.key==='Enter')sendMsg('${id}')" />
+                <button class="a-chat-send" onclick="sendMsg('${id}')">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
                 </button>
-              </div>`).join('')}
-        </div>
-        <div class="a-add-req-row">
-          <input class="a-add-req-input" id="new-req-input-${id}" placeholder="e.g. Bank Statements — Last 3 Months" onkeydown="if(event.key==='Enter')addDocReq('${id}')" />
-          <button class="a-add-req-btn" onclick="addDocReq('${id}')">+ Add Request</button>
-        </div>
-        <hr class="a-doc-divider" />
-        <div class="a-doc-section-title">Upload Document to Client</div>
-        <div class="a-drop-zone" id="adz-${id}"
-          onclick="document.getElementById('adf-${id}').click()"
-          ondragover="adzDragOver(event,'${id}')" ondragleave="adzDragLeave('${id}')" ondrop="adzDrop(event,'${id}')">
-          <p>Drag & drop or <strong>click to browse</strong> — PDF, JPG, PNG, DOCX</p>
-        </div>
-        <input type="file" id="adf-${id}" multiple accept=".pdf,.jpg,.jpeg,.png,.docx" style="display:none" onchange="adminUploadDocs('${id}',this.files)" />
-        <div class="a-doc-file-list" id="adoc-list-${id}">
-          ${[...adminDocs.map(d => docFileRowHTML(d.name, d.size, d.date, 'admin', d.url || null)),
-             ...clientDocs.map(d => docFileRowHTML(d.name, d.size, d.date, 'client', d.url || null))].join('')}
-          ${(adminDocs.length + clientDocs.length) === 0 ? '<div style="font-size:13px;color:var(--gray-400);padding:8px 0">No documents yet</div>' : ''}
-        </div>
-      </div>
-
-      <!-- CREDIT TAB -->
-      <div class="a-tab-pane ${activeDetailTab==='credit'?'active':''}" id="dtab-credit">
-        ${renderCreditTab(creditData, id)}
-      </div>
-
-      <!-- DASHBOARD EDITOR TAB -->
-      <div class="a-tab-pane ${activeDetailTab==='dashboard'?'active':''}" id="dtab-dashboard">
-        ${renderDashboardEditor(id)}
-      </div>
-
-      <!-- FUNDING TAB -->
-      <div class="a-tab-pane ${activeDetailTab==='funding'?'active':''}" id="dtab-funding">
-        ${renderFundingTab(id)}
-      </div>
-
-      <!-- MESSAGES TAB -->
-      <div class="a-tab-pane ${activeDetailTab==='messages'?'active':''}" id="dtab-messages">
-        <div class="a-chat-wrap">
-          <div class="a-chat-msgs" id="dchat-msgs-${id}">
-            ${msgs.map(m => chatMsgHTML(m)).join('')}
+              </div>
+            </div>
           </div>
-          <div class="a-chat-input-row">
-            <input class="a-chat-input" id="dchat-input-${id}" placeholder="Message ${c.fname}…" onkeydown="if(event.key==='Enter')sendMsg('${id}')" />
-            <button class="a-chat-send" onclick="sendMsg('${id}')">
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
-            </button>
-          </div>
-        </div>
-      </div>`;
+
+        </div><!-- /a-sp-right -->
+
+      </div><!-- /a-sp-workspace -->`;
 
     // Start real-time message listener for this client
     _listenMsgs(id);
@@ -3191,7 +3909,7 @@
             localStorage.setItem('cq_credit_ts_' + clientId, String(fsTs));
           } catch(e) {}
           const creditPane = document.getElementById('dtab-credit');
-          if (creditPane && activeDetailTab === 'credit') {
+          if (creditPane) {
             creditPane.innerHTML = renderCreditTab(fsDash.creditData, clientId);
           }
         }
@@ -3235,8 +3953,15 @@
 
   function switchDetailTab(tab) {
     activeDetailTab = tab;
-    if (selectedClientId) {
-      renderClientDetail(selectedClientId);
+    if (!selectedClientId) return;
+    // Map old tab names to the new section IDs in the 2-column layout
+    const idMap = { overview: 'sp-right-info', messages: 'sp-dtab-messages', dashboard: 'sp-dtab-dashboard', documents: 'sp-dtab-documents', funding: 'sp-dtab-funding', credit: null };
+    const secId = idMap[tab] !== undefined ? idMap[tab] : ('sp-dtab-' + tab);
+    if (!secId) return;
+    const sec = document.getElementById(secId);
+    if (sec) {
+      sec.classList.remove('collapsed');
+      sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (tab === 'dashboard') setTimeout(function(){ autoCalcFundingApproved(selectedClientId); }, 60);
     }
   }
@@ -4073,6 +4798,233 @@
     return o || {};
   }
 
+  function aToggle(bodyId, chevId) {
+    var el = document.getElementById(bodyId);
+    if (!el) return;
+    var open = el.dataset.open === '1';
+    el.style.maxHeight = open ? '0' : '4000px';
+    el.dataset.open = open ? '0' : '1';
+    if (chevId) {
+      var ch = document.getElementById(chevId);
+      if (ch) ch.style.transform = open ? 'rotate(-90deg)' : '';
+    }
+  }
+
+  function refreshFundingUI(clientId) {
+    var d = getDashData(clientId);
+    var rows = d.fundingRows || [];
+    var fundGoal = d.fundingGoal ? Number(d.fundingGoal) : 0;
+    var approved = rows.filter(function(r){ return r.status === 'approved'; });
+    var totalFunded = approved.reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+    var appApproved = approved.length;
+    var appPending  = rows.filter(function(r){ return r.status === 'pending' || r.status === 'applied'; }).length;
+    var appDenied   = rows.filter(function(r){ return r.status === 'denied'; }).length;
+    var fundGap = fundGoal > 0 ? Math.max(0, fundGoal - totalFunded) : 0;
+    var fundPct = fundGoal > 0 ? Math.min(100, Math.round(totalFunded / fundGoal * 100)) : (totalFunded > 0 ? 100 : 0);
+    var fmt = function(n){ return n > 0 ? '$' + Number(n).toLocaleString() : '—'; };
+
+    var el = function(id){ return document.getElementById(id); };
+
+    // Command Center
+    var cmdA = el('cmd-approved-' + clientId);
+    if (cmdA) cmdA.textContent = fmt(totalFunded);
+
+    var cmdR = el('cmd-remaining-' + clientId);
+    if (cmdR) {
+      cmdR.textContent = fundGoal > 0 ? (fundGap > 0 ? fmt(fundGap) : 'Goal Met!') : '—';
+      cmdR.className = 'a-cmd-stat-val ' + (fundGap > 0 ? 'a-cr-status-blocked' : 'a-cr-status-ready');
+    }
+
+    var cmdApps = el('cmd-active-apps-' + clientId);
+    if (cmdApps) cmdApps.textContent = appPending;
+
+    var cmdFill = el('cmd-prog-fill-' + clientId);
+    if (cmdFill) cmdFill.style.width = fundPct + '%';
+
+    var cmdPct = el('cmd-prog-pct-' + clientId);
+    if (cmdPct) cmdPct.textContent = fundPct + '% funded';
+
+    var cmdWrap = el('cmd-prog-wrap-' + clientId);
+    var cmdHint = el('cmd-prog-hint-' + clientId);
+    if (cmdWrap) cmdWrap.style.display = (fundGoal > 0 || totalFunded > 0) ? '' : 'none';
+    if (cmdHint) cmdHint.style.display = (fundGoal > 0 || totalFunded > 0) ? 'none' : '';
+
+    // Funding Summary
+    var fsA = el('fsum-approved-' + clientId);
+    if (fsA) fsA.textContent = fmt(totalFunded);
+
+    var fsR = el('fsum-remaining-' + clientId);
+    if (fsR) fsR.textContent = fundGoal > 0 ? fmt(fundGap) : '—';
+
+    var fsRemTile = el('fsum-rem-tile-' + clientId);
+    if (fsRemTile) {
+      fsRemTile.className = 'a-fund-sum-tile ' + (fundGap > 0 ? 'red' : 'green');
+    }
+
+    var fsFill = el('fsum-prog-fill-' + clientId);
+    if (fsFill) fsFill.style.width = fundPct + '%';
+
+    var fsPct = el('fsum-prog-pct-' + clientId);
+    if (fsPct) fsPct.textContent = fundPct + '% of goal funded';
+
+    var fsWrap = el('fsum-prog-wrap-' + clientId);
+    if (fsWrap) fsWrap.style.display = (fundGoal > 0 || totalFunded > 0) ? '' : 'none';
+
+    var fsPills = el('fsum-pills-' + clientId);
+    if (fsPills) fsPills.innerHTML =
+      (appApproved > 0 ? '<span class="a-fund-op approved">' + appApproved + ' Approved</span>' : '') +
+      (appPending  > 0 ? '<span class="a-fund-op pending">'  + appPending  + ' Pending</span>'  : '') +
+      (appDenied   > 0 ? '<span class="a-fund-op denied">'   + appDenied   + ' Denied</span>'   : '') +
+      (rows.length === 0 ? '<span style="font-size:11px;color:var(--gray-400)">No applications yet</span>' : '');
+
+    // Funding apps header count
+    var fappCount = el('fapp-count-' + clientId);
+    if (fappCount) fappCount.textContent = rows.length > 0
+      ? rows.length + ' application' + (rows.length !== 1 ? 's' : '')
+      : 'No applications yet';
+
+    // Next Action text — recompute live
+    var cmdNextAction = el('cmd-next-action-' + clientId);
+    if (cmdNextAction) {
+      var d2 = getDashData(clientId);
+      var nextTask2 = (d2.tasks || []).find(function(t){ return t.status !== 'done'; });
+      var nextActionText;
+      if (nextTask2) {
+        nextActionText = nextTask2.text;
+      } else if (rows.length === 0) {
+        nextActionText = 'Add first bank application to begin funding';
+      } else if (appPending > 0) {
+        nextActionText = appPending + ' application' + (appPending !== 1 ? 's' : '') + ' pending — follow up with lenders';
+      } else if (appDenied > 0 && appApproved === 0) {
+        nextActionText = 'All applications denied — rebuild strategy with client';
+      } else if (fundGoal > 0 && totalFunded < fundGoal) {
+        nextActionText = 'Continue applications — $' + Number(fundGap).toLocaleString() + ' remaining to goal';
+      } else if (totalFunded > 0 && (fundGoal === 0 || totalFunded >= fundGoal)) {
+        nextActionText = 'Funding secured — confirm disbursement with client';
+      } else {
+        nextActionText = 'Review profile and define next funding steps';
+      }
+      cmdNextAction.textContent = nextActionText;
+    }
+  }
+
+  function refreshSidebarTasks(clientId) {
+    var card = document.getElementById('sp-right-tasks-top');
+    if (!card) return;
+    var d = getDashData(clientId);
+    var tasks = d.tasks || [];
+    var active = tasks.filter(function(t) { return t.status !== 'done'; });
+    var done   = tasks.filter(function(t) { return t.status === 'done'; });
+    var pendingCount = active.length;
+
+    var taskRow = function(t, isDone) {
+      var chk = isDone
+        ? '<button onclick="sidebarToggleTask(\'' + clientId + '\',\'' + t.id + '\')" title="Mark undone" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #10b981;background:#10b981;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></button>'
+        : '<button onclick="sidebarToggleTask(\'' + clientId + '\',\'' + t.id + '\')" title="Mark done" style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--gray-300);background:white;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"></button>';
+      var txt = isDone
+        ? '<div class="a-na-text" style="text-decoration:line-through;color:var(--gray-400)">' + t.text + '</div>'
+        : '<div class="a-na-text">' + t.text + '</div>' + (t.desc ? '<div class="a-na-desc">' + t.desc + '</div>' : '');
+      var opacity = isDone ? 'opacity:0.55;' : '';
+      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:' + (isDone?'4':'5') + 'px 0;' + opacity + '">' + chk + '<div style="min-width:0">' + txt + '</div></div>';
+    };
+
+    var subCount = pendingCount > 0
+      ? '<div class="a-card-sub">' + pendingCount + ' pending</div>'
+      : (tasks.length > 0 ? '<div class="a-card-sub" style="color:#059669">All done</div>' : '');
+
+    var body;
+    if (tasks.length === 0) {
+      body = '<div style="font-size:12px;color:var(--gray-400);padding:2px 0;display:flex;align-items:center;gap:6px"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>No tasks yet</div>';
+    } else {
+      body = active.map(function(t) { return taskRow(t, false); }).join('');
+      if (done.length > 0) {
+        body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">' + done.map(function(t) { return taskRow(t, true); }).join('') + '</div>';
+      }
+    }
+
+    card.innerHTML =
+      '<div class="a-card-hdr">' +
+        '<div class="a-card-hdrl">' +
+          '<div class="a-card-title">Next Actions</div>' + subCount +
+        '</div>' +
+        '<div class="a-card-btns"><button class="a-card-btn" onclick="openTaskModal(\'' + clientId + '\')">+ Task</button></div>' +
+      '</div>' +
+      '<div id="sp-right-tasks-body">' + body + '</div>';
+  }
+
+  function sidebarToggleTask(clientId, taskId) {
+    var d = getDashData(clientId);
+    var task = (d.tasks || []).find(function(t) { return t.id === taskId; });
+    if (!task) return;
+    task.status = task.status === 'done' ? 'todo' : 'done';
+    recalcSubtitle(d);
+    saveDashData(clientId, d);
+    refreshSidebarTasks(clientId);
+    refreshClientUI(clientId);
+  }
+
+  // ── REAL-TIME CLIENT UI REFRESH ─────────────────────────────────────────
+  // Call after any mutation to keep all visible client UI in sync instantly
+  function refreshClientUI(clientId) {
+    if (!clientId) return;
+    refreshFundingUI(clientId);
+    refreshSidebarTasks(clientId);
+    renderClientList();
+
+    // Update compact sticky header badges without full re-render
+    var d = getDashData(clientId);
+    var rows = d.fundingRows || [];
+    var totalFunded = rows.filter(function(r){ return r.status === 'approved'; })
+                         .reduce(function(s,r){ return s + (Number(r.amount)||0); }, 0);
+
+    // Stage name — read from pipeline tasks (authoritative source) → PIPELINE_STAGES
+    var _ct = getClientTasks(clientId);
+    var _stageIdx = (_ct && typeof _ct.stage === 'number') ? _ct.stage : Math.max(0, (d.currentStage || 1) - 1);
+    var stageName = (PIPELINE_STAGES[_stageIdx] && PIPELINE_STAGES[_stageIdx].name) || (d.stageNames || [])[_stageIdx] || 'Setup';
+    var stageBadge = document.getElementById('csh-stage-' + clientId);
+    if (stageBadge) stageBadge.textContent = stageName;
+    var cmdStage = document.getElementById('cmd-stage-' + clientId);
+    if (cmdStage) cmdStage.textContent = stageName;
+
+    // Funded badge
+    var fundedBadge = document.getElementById('csh-funded-' + clientId);
+    if (fundedBadge) {
+      if (totalFunded > 0) {
+        fundedBadge.textContent = '$' + Number(totalFunded).toLocaleString() + ' funded';
+        fundedBadge.style.display = '';
+      } else {
+        fundedBadge.style.display = 'none';
+      }
+    }
+
+    // Subtitle — next task
+    var subEl = document.getElementById('csh-sub-' + clientId);
+    var cl = getClient(clientId);
+    if (subEl && cl) {
+      var nextTask = (d.tasks || []).find(function(t){ return t.status !== 'done'; });
+      subEl.textContent = cl.email + (nextTask ? ' · Next: ' + nextTask.text : '');
+    }
+  }
+
+  function showClientFullProfile(clientId) {
+    const src = document.getElementById('dtab-overview');
+    if (!src) return;
+    const existing = document.getElementById('a-fp-modal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'a-fp-modal';
+    modal.className = 'a-fp-modal-overlay';
+    modal.innerHTML = '<div class="a-fp-modal-box">' +
+      '<div class="a-fp-modal-hdr">' +
+        '<div class="a-fp-modal-title">Full Client Profile</div>' +
+        '<button class="a-fp-modal-close" onclick="document.getElementById(\'a-fp-modal\').remove()">&times;</button>' +
+      '</div>' +
+      '<div class="a-fp-modal-body">' + src.innerHTML + '</div>' +
+    '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+  }
+
   function showAdminProfileEdit(clientId) {
     const o = getOnboardDataForClient(clientId);
     const personalBanks = Array.isArray(o.personalBanks) ? o.personalBanks.join(', ') : (o.personalBanks || '');
@@ -4465,7 +5417,7 @@
 
     // Account tables
     function mkOpenCols(){return[
-      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy)">${a.name||'—'}</span>`},
+      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy);display:block;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.name||''}">${a.name||'—'}</span>`},
       {label:'Type',render:a=>adminCaTypeBadge(a.type)+(a.isAuthUser?'<div style="font-size:10px;color:var(--gray-400);margin-top:1px">Auth User</div>':"")},
       {label:'Opened',render:a=>`<span style="color:var(--gray-500)">${a.dateOpened||'—'}</span>`},
       {label:'Balance',right:true,render:a=>`<span style="font-weight:600;color:var(--danger)">${a.balance>0?'$'+a.balance.toLocaleString():'$0'}</span>`},
@@ -4473,7 +5425,7 @@
       {label:'Payment History',render:a=>{const cls=a.isNeverLate?'pay-ok':a.hasDerog?'pay-bad':'pay-warn';return`<span class="${cls}">${a.payHistory}</span>${a.negativeMonths>0?`<div style="font-size:10px;color:#ef4444;margin-top:1px">${a.negativeMonths} neg months</div>`:''}`;}},
     ];}
     function mkGoodOpenCols(type){const isR=['Credit Card','Line of Credit'].includes(type);const isI=['Mortgage','Auto Loan','Personal Loan','Student Loan'].includes(type);return[
-      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy)">${a.name||'—'}</span>`},
+      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy);display:block;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.name||''}">${a.name||'—'}</span>`},
       {label:'Type',render:a=>adminCaTypeBadge(a.type)+(a.isAuthUser?'<div style="font-size:10px;color:var(--gray-400);margin-top:1px">Auth User</div>':"")},
       {label:'Opened',render:a=>`<span style="color:var(--gray-500)">${a.dateOpened||'—'}</span>`},
       {label:'Balance',right:true,render:a=>`<span style="font-weight:600">${a.balance>0?'$'+a.balance.toLocaleString():'$0'}</span>`},
@@ -4485,7 +5437,7 @@
       {label:'Payment',render:a=>`<span class="pay-ok">${a.payHistory}</span>`},
     ];}
     const closedDerogCols=[
-      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy)">${a.name||'—'}</span>`},
+      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy);display:block;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.name||''}">${a.name||'—'}</span>`},
       {label:'Type',render:a=>adminCaTypeBadge(a.type)},
       {label:'Opened',render:a=>`<span style="color:var(--gray-500)">${a.dateOpened||'—'}</span>`},
       {label:'Closed',render:a=>`<span style="color:var(--gray-500)">${a.dateClosed||'—'}</span>`},
@@ -4494,7 +5446,7 @@
       {label:'Payment',render:a=>{const cls=a.hasDerog?'pay-bad':'pay-warn';return`<span class="${cls}">${a.payHistory}</span>`;}},
     ];
     const closedGoodCols=[
-      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy)">${a.name||'—'}</span>`},
+      {label:'Lender',render:a=>`<span style="font-weight:600;color:var(--navy);display:block;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.name||''}">${a.name||'—'}</span>`},
       {label:'Type',render:a=>adminCaTypeBadge(a.type)},
       {label:'Opened',render:a=>`<span style="color:var(--gray-500)">${a.dateOpened||'—'}</span>`},
       {label:'Closed',render:a=>`<span style="color:var(--gray-500)">${a.dateClosed||'—'}</span>`},
@@ -5091,9 +6043,11 @@
     msgs.push(_buildAdminMsg(text));
     saveMsgs(clientId, msgs);
     inp.value = '';
-    // UI update handled by Firestore listener; scroll immediately for responsiveness
     const el = document.getElementById('dchat-msgs-'+clientId);
     if (el) { el.innerHTML = msgs.map(m => chatMsgHTML(m)).join(''); el.scrollTop = el.scrollHeight; }
+    // Update message count in card header
+    const hdr = el && el.closest('.a-card') && el.closest('.a-card').querySelector('.a-card-sub');
+    if (hdr) hdr.textContent = msgs.length + ' total';
   }
 
   // ── MESSAGES SECTION ──────────────────────────────────────────────────
@@ -5800,25 +6754,7 @@
             <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Funding Goal ($) <span style="font-weight:400;color:var(--gray-400)">(from onboarding)</span></div>
               <input class="a-add-req-input" style="width:100%;background:var(--gray-50);color:var(--gray-500)" type="text" id="db-goal-${clientId}" value="${d.fundingGoal ? Number(d.fundingGoal).toLocaleString() : ''}" readonly /></div>
             <div style="grid-column:1/-1">
-              <div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:8px">
-                Funding Applications
-                ${(d.fundingRows||[]).length ? `<span style="color:var(--blue);font-weight:700;margin-left:6px">${(d.fundingRows||[]).length} row${(d.fundingRows||[]).length!==1?'s':''}</span>` : ''}
-              </div>
-              <!-- Cascading bank → card selector -->
-              <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-                <select id="fa-bank-sel-${clientId}" class="a-add-req-input" style="flex:1;min-width:140px;cursor:pointer" onchange="faPopulateCards('${clientId}')">
-                  <option value="">— Select bank —</option>
-                  ${Object.keys(CARD_LIBRARY).map(bank => `<option value="${bank}">${bank}</option>`).join('')}
-                </select>
-                <select id="fa-card-sel-${clientId}" class="a-add-req-input" style="flex:2;min-width:180px;cursor:pointer">
-                  <option value="">— Select card —</option>
-                </select>
-                <button onclick="addFundingRow('${clientId}')" style="padding:0 16px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;height:38px">+ Add</button>
-              </div>
-              <!-- Funding rows list -->
-              <div id="fa-rows-${clientId}" style="display:flex;flex-direction:column;gap:8px">
-                ${renderFundingRowsAdmin(clientId, d.fundingRows||[])}
-              </div>
+              <div style="font-size:11px;color:var(--gray-400);font-style:italic;padding:4px 0">Funding applications are managed in the Funding Applications card above.</div>
             </div>
           </div>
           <div><div style="font-size:11px;font-weight:600;color:var(--gray-500);margin-bottom:4px">Banner Subtitle <span style="font-weight:400;color:var(--gray-400)">(auto-generated from tasks)</span></div>
@@ -5922,6 +6858,7 @@
     recalcSubtitle(d);
     saveDashData(clientId, d);
     inp.value = '';
+    refreshSidebarTasks(clientId);
     renderClientDetail(clientId);
   }
 
@@ -5930,6 +6867,7 @@
     d.tasks = d.tasks.filter(t => t.id !== taskId);
     recalcSubtitle(d);
     saveDashData(clientId, d);
+    refreshSidebarTasks(clientId);
     renderClientDetail(clientId);
   }
 
@@ -5968,36 +6906,38 @@
   }
 
   function renderFundingRowsAdmin(clientId, rows) {
-    if (!rows.length) return `<div style="font-size:12px;color:var(--gray-400);padding:8px 0;font-style:italic">No applications added yet. Choose a bank and card above.</div>`;
-    const statusOpts = ['pending','applied','approved','denied'].map(s =>
-      `<option value="${s}">${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('');
-    return rows.map((r, i) => `
-      <div style="border:1px solid var(--gray-100);border-radius:10px;padding:12px 14px;background:var(--gray-50)">
-        <div style="display:flex;align-items:flex-start;gap:10px">
-          <span style="width:22px;height:22px;background:var(--navy);color:white;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">${i+1}</span>
+    if (!rows.length) return '<div style="font-size:12px;color:var(--gray-400);padding:6px 0;font-style:italic">No applications added yet. Choose a bank and card above to add one.</div>';
+    const statusColor = { pending:'#d97706', applied:'#2563eb', approved:'#059669', denied:'#dc2626' };
+    const statusBg    = { pending:'rgba(245,158,11,0.08)', applied:'rgba(37,99,235,0.08)', approved:'rgba(16,185,129,0.08)', denied:'rgba(239,68,68,0.06)' };
+    return rows.map((r, i) => {
+      const sc = statusColor[r.status] || '#6b7280';
+      const sb = statusBg[r.status]   || 'var(--gray-50)';
+      const hasNotes = (r.instructions || '').trim().length > 0;
+      const noteId = 'fr-notes-' + r.id;
+      return `
+      <div style="border:1px solid #eef0f3;border-radius:9px;padding:8px 10px;background:#fafbfc;margin-bottom:6px">
+        <!-- TOP ROW -->
+        <div style="display:flex;align-items:center;gap:7px;min-width:0">
+          <span style="width:18px;height:18px;background:var(--navy);color:white;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</span>
           <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:13px;color:var(--navy)">${r.bank}</div>
-            <div style="font-size:12px;color:var(--gray-500);margin-top:1px">${r.cardName}</div>
-            <div style="font-size:11px;color:var(--blue-dark);margin-top:2px">${r.introPeriod || 'N/A'}</div>
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
-              <select id="fr-status-${r.id}" onchange="faUpdateRow('${clientId}','${r.id}','status',this.value)" style="height:30px;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;padding:0 6px;cursor:pointer;background:white">
-                ${['pending','applied','approved','denied'].map(s => `<option value="${s}"${r.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
-              </select>
-              <input type="number" id="fr-amount-${r.id}" placeholder="Amount $" value="${r.amount||''}" oninput="faUpdateRow('${clientId}','${r.id}','amount',this.value)"
-                style="height:30px;width:110px;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;padding:0 8px" />
-            </div>
-            <div style="margin-top:8px">
-              <textarea placeholder="Instructions (optional)…" rows="2" onchange="faUpdateRow('${clientId}','${r.id}','instructions',this.value)"
-                style="width:100%;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;padding:6px 8px;resize:vertical;font-family:inherit">${r.instructions||''}</textarea>
-            </div>
+            <div style="font-weight:700;font-size:12px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.bank}</div>
+            <div style="font-size:11px;color:var(--gray-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.cardName}${r.introPeriod && r.introPeriod !== 'N/A' ? ' · <span style="color:var(--blue)">' + r.introPeriod + '</span>' : ''}</div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-            ${i > 0 ? `<button onclick="faMove('${clientId}','${r.id}',-1)" title="Move up" style="background:var(--gray-100);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center">↑</button>` : '<span style="width:26px;height:26px"></span>'}
-            ${i < rows.length-1 ? `<button onclick="faMove('${clientId}','${r.id}',1)" title="Move down" style="background:var(--gray-100);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center">↓</button>` : '<span style="width:26px;height:26px"></span>'}
-            <button onclick="faRemove('${clientId}','${r.id}')" title="Delete" style="background:var(--danger-bg);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--danger);font-size:15px;display:flex;align-items:center;justify-content:center">×</button>
-          </div>
+          <select id="fr-status-${r.id}" onchange="(function(el){var sc={'pending':'#d97706','applied':'#2563eb','approved':'#059669','denied':'#dc2626'};var sb={'pending':'rgba(245,158,11,0.08)','applied':'rgba(37,99,235,0.08)','approved':'rgba(16,185,129,0.08)','denied':'rgba(239,68,68,0.06)'};el.style.color=sc[el.value]||'#6b7280';el.style.background=sb[el.value]||'var(--gray-50)';faUpdateRow('${clientId}','${r.id}','status',el.value);})(this)" style="height:26px;border:none;border-radius:5px;font-size:11px;font-weight:700;padding:0 6px;cursor:pointer;background:${sb};color:${sc};flex-shrink:0">
+            ${['pending','applied','approved','denied'].map(s => `<option value="${s}"${r.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+          </select>
+          <input type="text" inputmode="numeric" id="fr-amount-${r.id}" placeholder="0" value="${r.amount ? Number(r.amount).toLocaleString() : ''}" oninput="(function(el){var raw=(el.value||'').replace(/[^0-9]/g,'');var num=raw?parseInt(raw,10):0;el.value=num>0?num.toLocaleString():'';faUpdateRow('${clientId}','${r.id}','amount',num);})(this)"
+            style="height:26px;width:80px;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;font-weight:600;padding:0 6px;flex-shrink:0;background:white;color:var(--navy);text-align:right" />
+          <button onclick="(function(){var n=document.getElementById('${noteId}');n.style.display=n.style.display==='none'?'block':'none';})()" title="Notes" style="width:22px;height:22px;border:1px solid #e5e7eb;border-radius:5px;background:white;cursor:pointer;font-size:11px;color:var(--gray-400);flex-shrink:0;display:flex;align-items:center;justify-content:center">${hasNotes ? '📝' : '···'}</button>
+          <button onclick="faRemove('${clientId}','${r.id}')" title="Delete" style="width:22px;height:22px;border:none;border-radius:5px;background:rgba(239,68,68,0.07);cursor:pointer;color:#dc2626;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">×</button>
         </div>
-      </div>`).join('');
+        <!-- NOTES PANEL (collapsed by default) -->
+        <div id="${noteId}" style="display:${hasNotes?'block':'none'};margin-top:7px">
+          ${r.status === 'denied' ? `<input placeholder="Denial reason…" value="${r.denialReason||''}" oninput="faUpdateRow('${clientId}','${r.id}','denialReason',this.value)" style="width:100%;height:26px;border:1px solid #fecaca;border-radius:5px;font-size:11px;padding:0 8px;background:#fff5f5;color:#dc2626;margin-bottom:5px;box-sizing:border-box" />` : ''}
+          <textarea placeholder="Instructions / notes…" rows="2" oninput="faUpdateRow('${clientId}','${r.id}','instructions',this.value)" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;padding:5px 7px;resize:none;font-family:inherit;background:white;box-sizing:border-box">${r.instructions||''}</textarea>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   function addFundingRow(clientId) {
@@ -6016,6 +6956,7 @@
     const container = document.getElementById('fa-rows-'+clientId);
     if (container) container.innerHTML = renderFundingRowsAdmin(clientId, d.fundingRows);
     bankSel.value = ''; cardSel.innerHTML = '<option value="">— Select card —</option>';
+    refreshClientUI(clientId);
   }
 
   const _amountTimers = {};
@@ -6034,10 +6975,12 @@
       if (newTotal > 0) { d.fundingApproved = newTotal; d.fundingSecured = newTotal; }
       saveDashData(clientId, d);          // immediate Firestore write
       autoCalcFundingApproved(clientId);  // update display + standard debounce
+      refreshClientUI(clientId);
     } else if (field === 'amount') {
       // Amount: localStorage only while typing, NO debouncedPublish from autoCalc
       saveDashData(clientId, d, true);    // localStorage only — no Firestore
       autoCalcFundingApproved(clientId, true); // update display only, skip publish
+      refreshClientUI(clientId);
       // Separate timer: write final value 700ms after last keystroke
       clearTimeout(_amountTimers[clientId]);
       _amountTimers[clientId] = setTimeout(() => {
@@ -6061,6 +7004,7 @@
     const container = document.getElementById('fa-rows-'+clientId);
     if (container) container.innerHTML = renderFundingRowsAdmin(clientId, d.fundingRows);
     autoCalcFundingApproved(clientId);
+    refreshClientUI(clientId);
   }
 
   function faMove(clientId, rowId, dir) {
@@ -6107,7 +7051,7 @@
         if (sel.value === 'approved') {
           const rowId = sel.id.replace('fr-status-', '');
           const amountEl = document.getElementById('fr-amount-' + rowId);
-          total += amountEl ? (+amountEl.value || 0) : 0;
+          total += amountEl ? (parseInt((amountEl.value || '').replace(/,/g, ''), 10) || 0) : 0;
         }
       });
     }
@@ -7758,70 +8702,23 @@
   }
 
   function renderFundingTab(clientId) {
-    const c = getClient(clientId);
-    const apps = getBankApps(clientId);
-    const rows = apps.map((app, i) => {
-      const badgeCls = app.outcome === 'approved' ? 'approved' : app.outcome === 'denied' ? 'denied' : 'pending';
-      const badgeTxt = app.outcome === 'approved' ? '✓ Approved' : app.outcome === 'denied' ? '✕ Denied' : '⏳ Pending';
-      return `
-      <div class="bank-app-card" id="bac-${clientId}-${app.id}">
-        <div>
-          <div class="bac-bank">${app.bank || 'Unknown Bank'}</div>
-          <div class="bac-meta">
-            <span><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${app.date ? new Date(app.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</span>
-            ${app.amount ? `<span>$${Number(app.amount).toLocaleString()}</span>` : ''}
-            <span class="bac-badge ${badgeCls}">${badgeTxt}</span>
-          </div>
-          ${app.denialReason ? `<div class="bac-notes" style="color:var(--danger)">Reason: ${app.denialReason}</div>` : ''}
-          ${app.notes ? `<div class="bac-notes">${app.notes}</div>` : ''}
-        </div>
-        <div class="bac-actions">
-          <button class="bac-btn" onclick="editBankApp('${clientId}','${app.id}')">Edit</button>
-          <button class="bac-btn danger" onclick="deleteBankApp('${clientId}','${app.id}')">Delete</button>
-        </div>
-      </div>`;
-    }).join('');
-
-    const empty = apps.length === 0 ? `<div class="fund-empty">No bank applications logged yet.<br>Click "Add Application" to get started.</div>` : '';
-
-    // Summary stats
-    const approved = apps.filter(a => a.outcome === 'approved').length;
-    const denied   = apps.filter(a => a.outcome === 'denied').length;
-    const pending  = apps.filter(a => a.outcome === 'pending').length;
-    const totalApproved = apps.filter(a => a.outcome === 'approved').reduce((s,a) => s + (Number(a.amount)||0), 0);
-
-    const summary = apps.length > 0 ? `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
-      <div style="background:var(--white);border-radius:10px;border:1.5px solid var(--gray-100);padding:14px 16px;">
-        <div style="font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--navy)">${apps.length}</div>
-        <div style="font-size:11px;color:var(--gray-500);font-weight:600;margin-top:2px">Applications</div>
-      </div>
-      <div style="background:var(--success-bg);border-radius:10px;border:1.5px solid rgba(16,185,129,0.2);padding:14px 16px;">
-        <div style="font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--success)">${approved}</div>
-        <div style="font-size:11px;color:var(--success);font-weight:600;margin-top:2px">Approved</div>
-      </div>
-      <div style="background:var(--danger-bg);border-radius:10px;border:1.5px solid rgba(239,68,68,0.2);padding:14px 16px;">
-        <div style="font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--danger)">${denied}</div>
-        <div style="font-size:11px;color:var(--danger);font-weight:600;margin-top:2px">Denied</div>
-      </div>
-      <div style="background:var(--white);border-radius:10px;border:1.5px solid var(--gray-100);padding:14px 16px;">
-        <div style="font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--navy)">${totalApproved > 0 ? '$'+Number(totalApproved).toLocaleString() : '—'}</div>
-        <div style="font-size:11px;color:var(--gray-500);font-weight:600;margin-top:2px">Total Approved</div>
-      </div>
-    </div>` : '';
-
+    const d = getDashData(clientId);
+    const rows = d.fundingRows || [];
     return `
     <div>
-      ${summary}
-      <div class="fund-header">
-        <div class="fund-title">Bank Applications</div>
-        <button class="btn-add-bank" onclick="showAddBankForm('${clientId}')">
-          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Application
-        </button>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+        <select id="fa-bank-sel-${clientId}" class="a-add-req-input" style="flex:1;min-width:130px;cursor:pointer;height:34px;font-size:12px" onchange="faPopulateCards('${clientId}')">
+          <option value="">— Select Bank —</option>
+          ${Object.keys(CARD_LIBRARY).map(bank => `<option value="${bank}">${bank}</option>`).join('')}
+        </select>
+        <select id="fa-card-sel-${clientId}" class="a-add-req-input" style="flex:2;min-width:160px;cursor:pointer;height:34px;font-size:12px">
+          <option value="">— Select Card —</option>
+        </select>
+        <button onclick="addFundingRow('${clientId}')" style="padding:0 14px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;height:34px;flex-shrink:0">+ Add</button>
       </div>
-      <div id="bank-form-wrap-${clientId}"></div>
-      <div class="bank-app-list">${rows}${empty}</div>
+      <div id="fa-rows-${clientId}" style="display:flex;flex-direction:column;gap:8px">
+        ${rows.length ? renderFundingRowsAdmin(clientId, rows) : '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;font-style:italic">No applications added yet. Choose a bank and card above to add one.</div>'}
+      </div>
     </div>`;
   }
 
@@ -8941,6 +9838,7 @@
     renderTaskModal(clientId, newStage);
     renderPipeline();
     renderOvClientTasks();
+    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
   function plRemoveAssigned(clientId, stageIdx, taskIdx) {
@@ -9042,6 +9940,7 @@
     renderTaskModal(clientId, viewStage);
     renderPipeline();
     renderOvClientTasks();
+    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
   function plAdvance(clientId, currentStage) {
@@ -9077,6 +9976,7 @@
     }
     renderPipeline();
     renderOvClientTasks();
+    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
 
