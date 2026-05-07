@@ -6230,10 +6230,8 @@
 
   // ── CREDIT ────────────────────────────────────────────────────────────
   function getCreditData(clientId) {
-    if (clientId === 'c1') {
-      try { return JSON.parse(localStorage.getItem('cq_credit_data') || 'null'); } catch(e) { return null; }
-    }
-    try { return JSON.parse(localStorage.getItem('cq_credit_'+clientId) || 'null'); } catch(e) { return null; }
+    if (!clientId) return null;
+    try { return JSON.parse(localStorage.getItem('cq_credit_' + clientId) || 'null'); } catch(e) { return null; }
   }
 
   function adminCrUploadZoneHTML(clientId) {
@@ -6451,12 +6449,27 @@
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
         <div>
           <div style="font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--navy);letter-spacing:-0.02em">Credit Report</div>
-          <div style="font-size:12px;color:var(--gray-400);margin-top:2px">FICO Score 8: ${d.fico||'—'} · ${rating} · ${d.openCount||openAccts.length} open · ${d.accounts?.length??0} accounts parsed</div>
+          <div style="font-size:12px;color:var(--gray-400);margin-top:2px">
+            ${d.ficoManualOverride ? '<span style="color:#059669;font-weight:700">&#10003; Manually Confirmed</span> · ' : (d.ficoConfidence < 0.85 && d.fico ? '<span style="color:#d97706;font-weight:600">Score needs review</span> · ' : '')}
+            FICO: <strong style="color:var(--navy)">${d.fico||'—'}</strong> (${d.ficoSource||'unknown'}) · ${rating} · ${d.openCount||openAccts.length} open · ${d.accounts?.length??0} accounts
+            ${d.reportDate ? ' · Report date: ' + d.reportDate : ''}
+            ${d.reportOwner ? ' · Prepared for: ' + d.reportOwner : ''}
+          </div>
         </div>
-        <button onclick="(function(cid){document.getElementById('acr-reupload-'+cid).style.display=document.getElementById('acr-reupload-'+cid).style.display==='none'?'block':'none'})('${cid}')"
-          style="font-size:12px;padding:6px 14px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;color:var(--gray-500);cursor:pointer;flex-shrink:0">
-          Re-upload Report
-        </button>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap">
+          <button onclick="adminCrManualScore('${cid}')"
+            style="font-size:11px;padding:5px 10px;border:1.5px solid rgba(245,158,11,0.5);border-radius:7px;background:rgba(245,158,11,0.05);color:#b45309;cursor:pointer;font-weight:600">
+            Override Score
+          </button>
+          <button onclick="adminCrReparse('${cid}')"
+            style="font-size:11px;padding:5px 10px;border:1.5px solid var(--gray-200);border-radius:7px;background:white;color:var(--gray-500);cursor:pointer;font-weight:600">
+            Re-parse
+          </button>
+          <button onclick="(function(cid){document.getElementById('acr-reupload-'+cid).style.display=document.getElementById('acr-reupload-'+cid).style.display==='none'?'block':'none'})('${cid}')"
+            style="font-size:11px;padding:5px 10px;border:1.5px solid var(--gray-200);border-radius:7px;background:white;color:var(--gray-500);cursor:pointer;font-weight:600">
+            Re-upload
+          </button>
+        </div>
       </div>
       <div id="acr-reupload-${cid}" style="display:none;margin-bottom:16px">${adminCrUploadZoneHTML(cid)}</div>
       <div class="verdict-banner ${vClass}">
@@ -6530,6 +6543,58 @@
     const r = new FileReader();
     r.onload = e => adminParseCreditPDF(e.target.result, clientId);
     r.readAsArrayBuffer(file);
+  }
+
+  function adminCrReparse(clientId) {
+    const raw = localStorage.getItem('cq_credit_raw_' + clientId);
+    if (!raw) { alert('No stored report text for this client. Please re-upload the PDF.'); return; }
+    const text = raw.replace(/ /g,'').replace(/[ --]/g,' ').trim()
+                    .replace(/\t/g,' ').replace(/  +/g,' ');
+    localStorage.removeItem('cq_credit_' + clientId);
+    localStorage.removeItem('cq_credit_ts_' + clientId);
+    const data = buildCaData(text, raw);
+    const _now = Date.now();
+    data._ts = _now;
+    data._uploadedAt = _now;
+    const _cl = getClient(clientId);
+    const _clNames = _cl ? _getClientNames(_cl) : {fn:'?',ln:'?'};
+    console.group('[CQ Credit Analyzer] Re-parse');
+    console.log('clientId:', clientId, 'name:', (_clNames.fn+' '+_clNames.ln).trim());
+    console.log('FICO candidates:', data.ficoCandidates);
+    console.log('FICO selected:', data.fico, '| confidence:', data.ficoConfidence, '| source:', data.ficoSource);
+    console.groupEnd();
+    localStorage.setItem('cq_credit_' + clientId, JSON.stringify(data));
+    localStorage.setItem('cq_credit_ts_' + clientId, String(_now));
+    fsSetDash(clientId, { creditData: data, ...(data.fico ? { creditScore: data.fico } : {}) }).catch(e => console.error('re-parse sync', e));
+    if (typeof debouncedPublish === 'function') debouncedPublish(clientId);
+    const tabPane = document.getElementById('dtab-credit');
+    if (tabPane) tabPane.innerHTML = renderCreditTab(data, clientId);
+  }
+
+  function adminCrManualScore(clientId) {
+    const existing = getCreditData(clientId);
+    const old = existing ? existing.fico : 0;
+    const raw = prompt('Enter confirmed FICO Score 8 (300–850):', old || '');
+    if (!raw) return;
+    const score = parseInt(raw, 10);
+    if (!score || score < 300 || score > 850) { alert('Invalid score. Must be 300–850.'); return; }
+    const reason = prompt('Reason for manual override (required):');
+    if (!reason || !reason.trim()) { alert('Reason is required for manual override.'); return; }
+    const data = existing || {};
+    data.fico = score;
+    data.ficoManualOverride = { score, reason: reason.trim(), confirmedBy: 'admin', confirmedAt: Date.now() };
+    data.ficoSource = 'Manual override';
+    data.ficoConfidence = 1.0;
+    data._ts = Date.now();
+    localStorage.setItem('cq_credit_' + clientId, JSON.stringify(data));
+    localStorage.setItem('cq_credit_ts_' + clientId, String(data._ts));
+    fsSetDash(clientId, { creditData: data, creditScore: score }).catch(e => console.error('manual score sync', e));
+    if (typeof debouncedPublish === 'function') debouncedPublish(clientId);
+    const tabPane = document.getElementById('dtab-credit');
+    if (tabPane) tabPane.innerHTML = renderCreditTab(data, clientId);
+    const ficoInput = document.getElementById('db-fico-' + clientId);
+    if (ficoInput) { ficoInput.value = score; if (typeof previewScoreChange === 'function') previewScoreChange(clientId); }
+    console.log('[CQ Credit Analyzer] Manual score override:', score, 'by admin. Reason:', reason);
   }
 
   async function adminParseCreditPDF(buffer, clientId) {
@@ -6610,10 +6675,58 @@
       const rawText = fullText.replace(/\u0000/g,'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,' ').trim();
       const text = rawText.replace(/	/g,' ').replace(/  +/g,' ');
       setMsg('Parsing credit data…');
+      // Clear old data for this client before writing new result
+      localStorage.removeItem('cq_credit_' + clientId);
+      localStorage.removeItem('cq_credit_ts_' + clientId);
       const data = buildCaData(text, rawText);
       const _now = Date.now();
       data._ts = _now;
+      data._uploadedAt = _now;
+      // Store raw text for re-parse capability (max 100KB to protect localStorage)
+      const _rawSlice = rawText ? rawText.substring(0, 100000) : '';
+      try { localStorage.setItem('cq_credit_raw_' + clientId, _rawSlice); } catch(e) {}
       _creditUploadTs[clientId] = _now;
+
+      // ── Console debug log ─────────────────────────────────────────────────
+      const _cl = getClient(clientId);
+      const _clNames = _cl ? _getClientNames(_cl) : {fn:'?',ln:'?'};
+      const _selectedName = (_clNames.fn + ' ' + _clNames.ln).trim();
+      console.group('[CQ Credit Analyzer] Parse Complete');
+      console.log('Storage key:', 'cq_credit_' + clientId);
+      console.log('Selected client:', _selectedName, '(id:', clientId + ')');
+      console.log('Report owner (parsed):', data.reportOwner || 'not found');
+      console.log('Report date:', data.reportDate || 'not found');
+      console.log('FICO candidates:', data.ficoCandidates);
+      console.log('FICO selected:', data.fico, '(confidence:', data.ficoConfidence + ', source:', data.ficoSource + ')');
+      console.log('Previous score being overwritten: check cq_credit_' + clientId + ' if was set');
+      if (data.fico === 0) console.warn('⚠ Could not extract FICO score — needs manual review');
+      console.groupEnd();
+
+      // ── Report owner mismatch warning ─────────────────────────────────────
+      if (data.reportOwner) {
+        const _ownerLower = data.reportOwner.toLowerCase();
+        const _clientLower = _selectedName.toLowerCase();
+        const _firstName = _clNames.fn.toLowerCase();
+        const _lastName = _clNames.ln.toLowerCase();
+        const _nameMatch = _ownerLower.includes(_firstName) || _ownerLower.includes(_lastName)
+                        || _clientLower.includes(_ownerLower.split(' ')[0]);
+        if (!_nameMatch) {
+          const proceed = confirm(
+            '⚠ Report Owner Mismatch\n\n' +
+            'Parsed name: ' + data.reportOwner + '\n' +
+            'Selected client: ' + _selectedName + '\n\n' +
+            'This report may belong to a different client.\n' +
+            'Continue attaching it to ' + _selectedName + '?'
+          );
+          if (!proceed) {
+            setMsg('Upload cancelled — report not saved.');
+            const proc = document.getElementById('acr-processing-' + clientId);
+            if (proc) { proc.style.display = 'none'; const z = document.getElementById('acr-upload-zone-' + clientId); if (z) z.style.display = 'block'; }
+            return;
+          }
+        }
+      }
+
       localStorage.setItem('cq_credit_' + clientId, JSON.stringify(data));
       localStorage.setItem('cq_credit_ts_' + clientId, String(_now));
       // Write creditData directly to Firestore — also update creditScore so dashboard stat reflects new FICO
@@ -6652,7 +6765,9 @@
 
   function buildCaData(text, rawText) {
     const d = {
-      fico:0, util:null, avgYrs:0, avgMos:0, oldYrs:0, oldMos:0,
+      fico:0, ficoConfidence:0, ficoSource:'', ficoCandidates:[],
+      reportOwner:null, reportDate:null, parsedAt:Date.now(),
+      util:null, avgYrs:0, avgMos:0, oldYrs:0, oldMos:0,
       inqCount:0, late:0, collections:0, pubRecords:false,
       avgAge:null, oldAge:null, accounts:[], inquiries:[],
       openCount:0, closedCount:0,
@@ -6661,19 +6776,84 @@
       recentCCAccounts:0, recentInquiries:0
     };
     const t = text.replace(/\s+/g,' ');
+
+    // ── REPORT OWNER ───────────────────────────────────────────────────────
     {
-      const bwdM = t.match(/\b([3-8]\d{2})\s+FICOSCORE/i);
-      const bwdVal = bwdM ? +bwdM[1] : 0;
-      let fwdVal = 0;
-      const ficoIdx = t.search(/FICO/i);
-      if (ficoIdx >= 0) {
-        const near = t.substring(Math.max(0, ficoIdx - 30), ficoIdx + 250);
-        const all = [...near.matchAll(/\b([3-8]\d{2})\b/g)].map(m => +m[1]).filter(n => n >= 300 && n <= 850);
-        fwdVal = all.find(n => n > 300 && n < 850) || 0;
+      const ownerM = t.match(/prepared\s+for\s*:?\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)/i)
+                  || t.match(/credit\s+report\s+for\s*:?\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)/i)
+                  || t.match(/report\s+prepared\s+for\s*:?\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)+)/i);
+      if (ownerM) d.reportOwner = ownerM[1].trim();
+    }
+
+    // ── REPORT DATE ────────────────────────────────────────────────────────
+    {
+      const dateM = t.match(/date\s+generated\s*:?\s*([A-Za-z]+\s+\d{1,2},?\s*\d{4}|\d{1,2}\/\d{1,2}\/\d{4})/i)
+                 || t.match(/prepared\s+(?:on|date)\s*:?\s*([A-Za-z]+\s+\d{1,2},?\s*\d{4}|\d{1,2}\/\d{1,2}\/\d{4})/i)
+                 || t.match(/report\s+date\s*:?\s*([A-Za-z]+\s+\d{1,2},?\s*\d{4}|\d{1,2}\/\d{1,2}\/\d{4})/i)
+                 || t.match(/as\s+of\s*:?\s*([A-Za-z]+\s+\d{1,2},?\s*\d{4}|\d{1,2}\/\d{1,2}\/\d{4})/i);
+      if (dateM) d.reportDate = dateM[1].trim();
+    }
+
+    // ── FICO SCORE — confidence-based multi-pattern extraction ─────────────
+    {
+      const candidates = [];
+      const isValidFico = n => n >= 300 && n <= 850;
+
+      // P1 (0.99): Score immediately after "FICO Score 8" within 15 chars
+      const p1 = t.match(/FICO\s+Score\s*8\s*[:\-]?\s*(\d{3})\b/i);
+      if (p1 && isValidFico(+p1[1])) candidates.push({ score: +p1[1], source: 'FICO Score 8 (direct)', confidence: 0.99 });
+
+      // P2 (0.98): Score immediately before "FICO Score 8"
+      const p2 = t.match(/\b(\d{3})\s+FICO\s+Score\s*8\b/i);
+      if (p2 && isValidFico(+p2[1])) candidates.push({ score: +p2[1], source: 'FICO Score 8 (reverse)', confidence: 0.98 });
+
+      // P3 (0.97): Score near "At a glance" section with FICO Score 8 label
+      const glanceM = t.match(/at\s+a\s+glance([\s\S]{0,500}?)(?=account\s+history|account\s+name|credit\s+card|hard\s+inq|$)/i);
+      if (glanceM) {
+        const section = glanceM[1];
+        const sp3 = section.match(/FICO\s+Score\s*8\s*[:\-]?\s*(\d{3})\b/i)
+                 || section.match(/\b(\d{3})\s+FICO\s+Score\s*8/i);
+        if (sp3 && isValidFico(+sp3[1])) candidates.push({ score: +sp3[1], source: 'At a glance/FICO 8', confidence: 0.97 });
+        else {
+          // All 3-digit numbers in section: if exactly one valid FICO range candidate
+          const nums = [...section.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
+          if (nums.length === 1) candidates.push({ score: nums[0], source: 'At a glance only candidate', confidence: 0.80 });
+        }
       }
-      if (bwdVal > 300 && bwdVal < 850) d.fico = bwdVal;
-      else if (fwdVal) d.fico = fwdVal;
-      else d.fico = bwdVal || fwdVal || 0;
+
+      // P4 (0.75): Nearest 3-digit number within 60 chars of "FICO Score 8" (no other match found)
+      if (candidates.length === 0) {
+        const ficoIdx = t.search(/FICO\s+Score\s*8/i);
+        if (ficoIdx >= 0) {
+          const near = t.substring(Math.max(0, ficoIdx - 20), ficoIdx + 80);
+          const nums = [...near.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
+          if (nums.length > 0) candidates.push({ score: nums[0], source: 'FICO Score 8 nearby', confidence: 0.75 });
+        }
+      }
+
+      // P5 (0.70): Legacy "FICOSCORE" format or any FICO near mention
+      if (candidates.length === 0) {
+        const bwdM = t.match(/\b([3-8]\d{2})\s+FICOSCORE/i) || t.match(/FICOSCORE\s*:?\s*([3-8]\d{2})/i);
+        if (bwdM && isValidFico(+bwdM[1])) candidates.push({ score: +bwdM[1], source: 'FICOSCORE legacy', confidence: 0.70 });
+      }
+
+      // P6 (0.60): Any FICO mention — wider search
+      if (candidates.length === 0) {
+        const ficoIdx = t.search(/FICO/i);
+        if (ficoIdx >= 0) {
+          const near = t.substring(Math.max(0, ficoIdx - 30), ficoIdx + 250);
+          const nums = [...near.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(n => n > 300 && n < 850);
+          if (nums.length > 0) candidates.push({ score: nums[0], source: 'FICO wide search', confidence: 0.60 });
+        }
+      }
+
+      candidates.sort((a,b) => b.confidence - a.confidence);
+      d.ficoCandidates = candidates;
+      if (candidates.length > 0) {
+        d.fico = candidates[0].score;
+        d.ficoConfidence = candidates[0].confidence;
+        d.ficoSource = candidates[0].source;
+      }
     }
     const ocM=t.match(/open accounts\s+(\d+)/i); if(ocM)d.openCount=+ocM[1];
     const ccM=t.match(/closed accounts\s+(\d+)/i); if(ccM)d.closedCount=+ccM[1];
@@ -6884,15 +7064,22 @@
       const lastYear=yearMatches.length?yearMatches[yearMatches.length-1]:null;
       const gridText=lastYear?phText.substring(0,lastYear.index+600):phText.substring(0,700);
       // Re-join multi-char codes that PDF extractors sometimes split with spaces (e.g. "C LS" → "CLS")
-      const cleanGrid=gridText.replace(/\bC\s+LS\b/gi,'CLS').replace(/\bC\s+L\s+S\b/gi,'CLS').replace(/\bC\s+O\b/gi,'CO').replace(/\bB\s+K\b/gi,'BK').replace(/\bF\s+S\b/gi,'FS').replace(/\bV\s+S\b/gi,'VS').replace(/\bI\s+C\b/gi,'IC');
-      // Multi-letter codes only — single-letter codes (R,F,D,G) are too broad and cause false positives
-      const hasCO = /\bCO\b/.test(cleanGrid);   // Charge off
-      const hasBK = /\bBK\b/.test(cleanGrid);   // Bankruptcy
-      const hasFS = /\bFS\b/.test(cleanGrid);   // Foreclosure started
-      const hasVS = /\bVS\b/.test(cleanGrid);   // Voluntary surrender
-      const hasIC = /\bIC\b/.test(cleanGrid);   // Insurance claim
-      // 3+ standalone C codes in grid, OR "C Collection" appears in the legend at bottom of payment history
-      const hasC  = (cleanGrid.match(/\bC\b/g)||[]).length >= 3 || /\bC\s+Collection\b/i.test(phText);
+      // CLS = Closed/Current — POSITIVE status, NOT collection
+      const cleanGrid=gridText
+        .replace(/\bC\s+LS\b/gi,'CLS').replace(/\bC\s+L\s+S\b/gi,'CLS')
+        .replace(/\bC\s+O\b/gi,'CO').replace(/\bB\s+K\b/gi,'BK')
+        .replace(/\bF\s+S\b/gi,'FS').replace(/\bV\s+S\b/gi,'VS').replace(/\bI\s+C\b/gi,'IC');
+      const hasCO = /\bCO\b/.test(cleanGrid);
+      const hasBK = /\bBK\b/.test(cleanGrid);
+      const hasFS = /\bFS\b/.test(cleanGrid);
+      const hasVS = /\bVS\b/.test(cleanGrid);
+      const hasIC = /\bIC\b/.test(cleanGrid);
+      // "C" alone means collection ONLY when: (a) explicitly labeled in legend, OR
+      // (b) 5+ standalone C codes AND the account is explicitly a Collection type.
+      // Requiring 5+ (not 3+) reduces false positives on closed/current (CLS) accounts
+      // where PDFs may produce isolated "C" characters from rendering artifacts.
+      const hasC  = /\bC\s+Collection\b/i.test(phText)
+                 || ((cleanGrid.match(/\bC\b/g)||[]).length >= 5 && a.type === 'Collection');
       const lateNums=[...cleanGrid.matchAll(/\b(180|150|120|90|60|30)\b/g)].map(m=>+m[1]);
       const _cnt=rx=>(cleanGrid.match(rx)||[]).length;
       const negCount=_cnt(/\bCO\b/g)+_cnt(/\bBK\b/g)+_cnt(/\bFS\b/g)+_cnt(/\bVS\b/g)+_cnt(/\bIC\b/g)+_cnt(/\bC\b/g)+lateNums.length;
@@ -6917,7 +7104,8 @@
       if(a.isNeverLate&&hasC){a.payHistory='Collection';a.isNeverLate=false;a.hasDerog=true;}
       if(!a.isNeverLate&&negCount>0)a.negativeMonths=negCount;
     }
-    if(a.payHistory==='Collection'&&a.type!=='Collection')a.type='Collection';
+    // Do NOT overwrite account type here: an Auto Loan that went to collections
+    // should keep type='Auto Loan' and only have payHistory='Collection'.
     const respM=c.match(/responsibility\s+(authorized\s+user|joint|individual)/i);
     if(respM)a.isAuthUser=/authorized/i.test(respM[1]);
     const cuM2=c.match(/credit usage\s+(\d+)%/i);if(cuM2)a.util=+cuM2[1];else if(a.limit&&a.limit>0&&a.balance>=0)a.util=Math.round((a.balance/a.limit)*100);
