@@ -2403,10 +2403,20 @@
         if (exists) {
           // Auto-load without re-navigating the section (selectClient handles section switch)
           selectClient(lastClientId);
+          // Debug: log tasks for restored client
+          try {
+            var _rt = JSON.parse(localStorage.getItem('cq_ops_tasks_' + lastClientId) || '[]');
+            console.log('[Tasks] Page load restored client', lastClientId, '— task count:', _rt.length, '— titles:', _rt.map(function(t){return t.title;}));
+          } catch(e) {}
         } else {
           localStorage.removeItem('lastSelectedClientId');
         }
       }
+      // Debug: log all clients with saved tasks
+      try {
+        var _taskClients = clients.filter(function(c){ return localStorage.getItem('cq_ops_tasks_' + c.id); });
+        console.log('[Tasks] Page load — clients with saved tasks:', _taskClients.map(function(c){ return c.id; }));
+      } catch(e) {}
     } catch(e) {}
     // Start notification listeners
     try { initNotifListeners(); } catch(e) {}
@@ -3969,6 +3979,15 @@
     if (_reqs.length > 0) {
       fsSetDash(id, { docRequests: _reqs }).catch(()=>{});
     }
+    // Load persisted ops tasks into the sidebar panel
+    setTimeout(function() {
+      if (typeof refreshSidebarTasks === 'function') refreshSidebarTasks(id);
+      // Debug: log loaded tasks for this client
+      try {
+        var _loaded = JSON.parse(localStorage.getItem('cq_ops_tasks_' + id) || '[]');
+        console.log('[Tasks] Loaded for client', id, '— count:', _loaded.length, '— titles:', _loaded.map(function(t){return t.title;}));
+      } catch(e) {}
+    }, 0);
   }
 
   async function loadClientDocsFromFirestore(clientId, snapData) {
@@ -6795,35 +6814,69 @@
     }
 
     // ── FICO SCORE — confidence-based multi-pattern extraction ─────────────
+    // NOTE: Experian reports use "FICO® Score 8" (with ® symbol) and also include
+    // specialty scores like "FICO® Bankcard Score 8" (higher) and "FICO® Auto Score 8".
+    // All patterns use [®©]? to handle the trademark symbol, and specialty scores are excluded.
     {
       const candidates = [];
       const isValidFico = n => n >= 300 && n <= 850;
+      // Regex fragment: matches "FICO® Score 8" but NOT "FICO Bankcard Score 8" / "FICO Auto Score 8"
+      // The negative lookahead (?!\s*(Bankcard|Auto|Mortgage|Personal)) ensures specialty scores are skipped
+      const FICO8_RE = /FICO[®©]?\s*Score\s*8\b(?!\s*(?:Bankcard|Auto|Mortgage|Personal|Home|Version))/i;
+      const FICO8_RE_G = /FICO[®©]?\s*Score\s*8\b(?!\s*(?:Bankcard|Auto|Mortgage|Personal|Home|Version))/gi;
 
-      // P1 (0.99): Score immediately after "FICO Score 8" within 15 chars
-      const p1 = t.match(/FICO\s+Score\s*8\s*[:\-]?\s*(\d{3})\b/i);
-      if (p1 && isValidFico(+p1[1])) candidates.push({ score: +p1[1], source: 'FICO Score 8 (direct)', confidence: 0.99 });
-
-      // P2 (0.98): Score immediately before "FICO Score 8"
-      const p2 = t.match(/\b(\d{3})\s+FICO\s+Score\s*8\b/i);
-      if (p2 && isValidFico(+p2[1])) candidates.push({ score: +p2[1], source: 'FICO Score 8 (reverse)', confidence: 0.98 });
-
-      // P3 (0.97): Score near "At a glance" section with FICO Score 8 label
-      const glanceM = t.match(/at\s+a\s+glance([\s\S]{0,500}?)(?=account\s+history|account\s+name|credit\s+card|hard\s+inq|$)/i);
-      if (glanceM) {
-        const section = glanceM[1];
-        const sp3 = section.match(/FICO\s+Score\s*8\s*[:\-]?\s*(\d{3})\b/i)
-                 || section.match(/\b(\d{3})\s+FICO\s+Score\s*8/i);
-        if (sp3 && isValidFico(+sp3[1])) candidates.push({ score: +sp3[1], source: 'At a glance/FICO 8', confidence: 0.97 });
-        else {
-          // All 3-digit numbers in section: if exactly one valid FICO range candidate
-          const nums = [...section.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
-          if (nums.length === 1) candidates.push({ score: nums[0], source: 'At a glance only candidate', confidence: 0.80 });
+      // P0 (0.999): All occurrences of "FICO® Score 8" (excluding specialty) — look ahead AND behind for score
+      {
+        let m0;
+        const re0 = new RegExp(FICO8_RE_G.source, 'gi');
+        while ((m0 = re0.exec(t)) !== null) {
+          // Look ahead up to 80 chars
+          const ahead = t.substring(m0.index, m0.index + 80);
+          const am = ahead.match(/\b([3-8]\d{2})\b/);
+          if (am && isValidFico(+am[1])) {
+            candidates.push({ score: +am[1], source: 'FICO Score 8 (exact)', confidence: 0.999 });
+            break;
+          }
+          // Look behind up to 25 chars (score before label)
+          const behind = t.substring(Math.max(0, m0.index - 25), m0.index + 20);
+          const bm = behind.match(/\b([3-8]\d{2})\b/);
+          if (bm && isValidFico(+bm[1])) {
+            candidates.push({ score: +bm[1], source: 'FICO Score 8 (reverse exact)', confidence: 0.998 });
+            break;
+          }
         }
       }
 
-      // P4 (0.75): Nearest 3-digit number within 60 chars of "FICO Score 8" (no other match found)
+      // P1 (0.99): Direct "FICO Score 8 772" — handles ® symbol
       if (candidates.length === 0) {
-        const ficoIdx = t.search(/FICO\s+Score\s*8/i);
+        const p1 = t.match(/FICO[®©]?\s*Score\s*8\s*[:\-]?\s*(\d{3})\b/i);
+        if (p1 && isValidFico(+p1[1])) candidates.push({ score: +p1[1], source: 'FICO Score 8 (direct)', confidence: 0.99 });
+      }
+
+      // P2 (0.98): Reverse "772 FICO Score 8" — handles ®
+      if (candidates.length === 0) {
+        const p2 = t.match(/\b(\d{3})\s+FICO[®©]?\s*Score\s*8\b/i);
+        if (p2 && isValidFico(+p2[1])) candidates.push({ score: +p2[1], source: 'FICO Score 8 (reverse)', confidence: 0.98 });
+      }
+
+      // P3 (0.97): Score near "At a glance" or "Score Summary" section
+      if (candidates.length === 0) {
+        const glanceM = t.match(/(?:at\s+a\s+glance|score\s+summary)([\s\S]{0,600}?)(?=account\s+history|account\s+name|credit\s+card|hard\s+inq|$)/i);
+        if (glanceM) {
+          const section = glanceM[1];
+          const sp3 = section.match(/FICO[®©]?\s*Score\s*8\s*[:\-]?\s*(\d{3})\b/i)
+                   || section.match(/\b(\d{3})\s+FICO[®©]?\s*Score\s*8/i);
+          if (sp3 && isValidFico(+sp3[1])) candidates.push({ score: +sp3[1], source: 'At a glance/FICO 8', confidence: 0.97 });
+          else {
+            const nums = [...section.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
+            if (nums.length === 1) candidates.push({ score: nums[0], source: 'At a glance only candidate', confidence: 0.80 });
+          }
+        }
+      }
+
+      // P4 (0.75): Nearest 3-digit number within 80 chars of "FICO Score 8" — handles ®
+      if (candidates.length === 0) {
+        const ficoIdx = t.search(FICO8_RE);
         if (ficoIdx >= 0) {
           const near = t.substring(Math.max(0, ficoIdx - 20), ficoIdx + 80);
           const nums = [...near.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
@@ -6831,18 +6884,19 @@
         }
       }
 
-      // P5 (0.70): Legacy "FICOSCORE" format or any FICO near mention
+      // P5 (0.70): Legacy "FICOSCORE" format
       if (candidates.length === 0) {
         const bwdM = t.match(/\b([3-8]\d{2})\s+FICOSCORE/i) || t.match(/FICOSCORE\s*:?\s*([3-8]\d{2})/i);
         if (bwdM && isValidFico(+bwdM[1])) candidates.push({ score: +bwdM[1], source: 'FICOSCORE legacy', confidence: 0.70 });
       }
 
-      // P6 (0.60): Any FICO mention — wider search
+      // P6 (0.60): Any FICO mention — last resort, wider search, skip specialty scores
       if (candidates.length === 0) {
-        const ficoIdx = t.search(/FICO/i);
+        // Find FICO Score 8 first (even without ® handling) then grab nearest number
+        const ficoIdx = t.search(/FICO[®©]?\s*Score\s*8/i);
         if (ficoIdx >= 0) {
           const near = t.substring(Math.max(0, ficoIdx - 30), ficoIdx + 250);
-          const nums = [...near.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(n => n > 300 && n < 850);
+          const nums = [...near.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(n => n >= 300 && n <= 850);
           if (nums.length > 0) candidates.push({ score: nums[0], source: 'FICO wide search', confidence: 0.60 });
         }
       }
@@ -11114,7 +11168,10 @@
     try { return JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]'); } catch(e) { return []; }
   }
   function _saveOpsTasks(clientId, tasks) {
-    try { localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(tasks)); } catch(e) {}
+    try {
+      localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(tasks));
+      console.log('[Tasks] Saved — clientId:', clientId, '| key: cq_ops_tasks_' + clientId, '| count:', tasks.length, '| titles:', tasks.map(function(t){return t.title;}));
+    } catch(e) { console.error('[Tasks] Save failed:', e); }
   }
   function createOpsTask(clientId, fields) {
     var tasks = getOpsTasks(clientId);
