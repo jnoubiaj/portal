@@ -6572,6 +6572,7 @@
   }
 
   function adminCrReparse(clientId) {
+    const existing = getCreditData(clientId);
     const raw = localStorage.getItem('cq_credit_raw_' + clientId);
     if (!raw) { alert('No stored report text for this client. Please re-upload the PDF.'); return; }
     const text = raw.replace(/\x00/g,'').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,' ').trim()
@@ -6579,6 +6580,29 @@
     localStorage.removeItem('cq_credit_' + clientId);
     localStorage.removeItem('cq_credit_ts_' + clientId);
     const data = buildCaData(text, raw);
+    // If text extraction gave a bad FICO, try the stored OCR text from the original upload
+    if (!data.fico || data.fico === 300 || data.fico === 850 || (data.ficoConfidence||0) < 0.95) {
+      const _storedOcr = localStorage.getItem('cq_credit_ocr1_' + clientId);
+      if (_storedOcr) {
+        const _ocrData = buildCaData(_storedOcr, _storedOcr);
+        if (_ocrData.fico && _ocrData.fico !== 300 && _ocrData.fico !== 850 && (_ocrData.ficoConfidence||0) >= 0.85) {
+          data.fico = _ocrData.fico;
+          data.ficoConfidence = _ocrData.ficoConfidence;
+          data.ficoSource = 'Visual scan (stored OCR, page 1)';
+          data.ficoCandidates = _ocrData.ficoCandidates;
+          console.log('[CQ Credit Analyzer] Re-parse: OCR rescued FICO score:', data.fico);
+        }
+      }
+    }
+    // Preserve manual override when both text and OCR still can't find a valid score
+    if (existing && existing.ficoManualOverride &&
+        (!data.fico || data.fico === 300 || data.fico === 850 || (data.ficoConfidence||0) < 0.95)) {
+      data.fico = existing.ficoManualOverride.score;
+      data.ficoConfidence = 1.0;
+      data.ficoSource = 'Manual override (preserved on re-parse)';
+      data.ficoManualOverride = existing.ficoManualOverride;
+      console.log('[CQ Credit Analyzer] Manual override preserved:', data.fico, '— auto-parse returned:', data.ficoCandidates);
+    }
     const _now = Date.now();
     data._ts = _now;
     data._uploadedAt = _now;
@@ -6707,6 +6731,44 @@
       localStorage.removeItem('cq_credit_' + clientId);
       localStorage.removeItem('cq_credit_ts_' + clientId);
       const data = buildCaData(text, rawText);
+
+      // OCR fallback: if text extraction returned no score, a boundary value (300/850),
+      // or low confidence, visually render page 1 and OCR it — bypasses display-font encoding issues
+      if (!data.fico || data.fico === 300 || data.fico === 850 || (data.ficoConfidence||0) < 0.95) {
+        try {
+          setMsg('Visual scan for score…');
+          if (!window.Tesseract) {
+            await new Promise((res, rej) => {
+              const s = document.createElement('script');
+              s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+              s.onload = res; s.onerror = rej;
+              document.head.appendChild(s);
+            });
+          }
+          const _p1 = await pdf.getPage(1);
+          const _vp = _p1.getViewport({ scale: 2.5 });
+          const _cv = document.createElement('canvas');
+          _cv.width = _vp.width; _cv.height = _vp.height;
+          await _p1.render({ canvasContext: _cv.getContext('2d'), viewport: _vp }).promise;
+          const _ocrWorker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
+          const { data: { text: _ocrText } } = await _ocrWorker.recognize(_cv);
+          await _ocrWorker.terminate();
+          _cv.remove();
+          // Store OCR text for future re-parse
+          try { localStorage.setItem('cq_credit_ocr1_' + clientId, _ocrText.substring(0, 50000)); } catch(e) {}
+          const _ocrData = buildCaData(_ocrText, _ocrText);
+          if (_ocrData.fico && _ocrData.fico !== 300 && _ocrData.fico !== 850 && (_ocrData.ficoConfidence||0) >= 0.85) {
+            data.fico = _ocrData.fico;
+            data.ficoConfidence = _ocrData.ficoConfidence;
+            data.ficoSource = 'Visual scan (OCR page 1)';
+            data.ficoCandidates = _ocrData.ficoCandidates;
+            console.log('[CQ Credit Analyzer] OCR rescued FICO score:', data.fico);
+          }
+        } catch(_ocrErr) {
+          console.warn('[CQ Credit Analyzer] OCR fallback error:', _ocrErr);
+        }
+      }
+
       const _now = Date.now();
       data._ts = _now;
       data._uploadedAt = _now;
