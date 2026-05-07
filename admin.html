@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -6548,7 +6548,7 @@
   function adminCrReparse(clientId) {
     const raw = localStorage.getItem('cq_credit_raw_' + clientId);
     if (!raw) { alert('No stored report text for this client. Please re-upload the PDF.'); return; }
-    const text = raw.replace(/ /g,'').replace(/[ --]/g,' ').trim()
+    const text = raw.replace(/\x00/g,'').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,' ').trim()
                     .replace(/\t/g,' ').replace(/  +/g,' ');
     localStorage.removeItem('cq_credit_' + clientId);
     localStorage.removeItem('cq_credit_ts_' + clientId);
