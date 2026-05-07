@@ -6824,10 +6824,14 @@
     }
 
     // ── FICO SCORE — confidence-based multi-pattern extraction ─────────────
-    // Experian layout: score printed as big number next to "FICOSCORE8" label.
-    // PDF text extraction can mix in debt figures (e.g. "$15,810") whose sub-numbers
-    // match naively — use (?<![,\d]) lookbehind to prevent matching inside dollar amounts.
     {
+      // TEMP DEBUG: find where 772 (and other score candidates) actually land in the extracted text
+      const _dbgIdx = t.indexOf('772');
+      console.log('[FICO DEBUG] "772" in text at index:', _dbgIdx, '| total text length:', t.length);
+      if (_dbgIdx >= 0) console.log('[FICO DEBUG] Context around 772:', JSON.stringify(t.substring(Math.max(0,_dbgIdx-80), _dbgIdx+80)));
+      else console.log('[FICO DEBUG] 772 NOT FOUND — first 500 chars:', JSON.stringify(t.substring(0, 500)));
+      const _f8Idx = t.search(/FICO[®©]?\s*Score\s*8/i);
+      console.log('[FICO DEBUG] "FICO Score 8" at index:', _f8Idx, '| gap to 772:', _dbgIdx - _f8Idx);
       const candidates = [];
       const isValidFico = n => n >= 300 && n <= 850;
       // Match isolated 3-digit numbers — NOT preceded by comma or digit (stops "$15,810" → 810)
