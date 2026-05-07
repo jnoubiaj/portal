@@ -6887,14 +6887,38 @@
         }
       }
 
-      // P2 (0.85): Any "FICOSCORE" reference (legacy format)
+      // P2 (0.95): Rating label anchor — Experian prints "Very Good", "Exceptional" etc.
+      // directly below the score on the bar. Search near each label for a score in its range.
+      if (candidates.length === 0 || (candidates[0] && (candidates[0].score === 300 || candidates[0].score === 850))) {
+        const ratingMap = [
+          { re: /\bExceptional\b/gi,  min: 800, max: 850 },
+          { re: /\bVery\s+Good\b/gi,  min: 740, max: 799 },
+          { re: /\bGood\b/gi,         min: 670, max: 739 },
+          { re: /\bFair\b/gi,         min: 580, max: 669 },
+          { re: /\bPoor\b/gi,         min: 300, max: 579 },
+        ];
+        for (const { re, min, max } of ratingMap) {
+          let rm;
+          while ((rm = re.exec(t)) !== null) {
+            const window = t.substring(Math.max(0, rm.index - 100), rm.index + 50);
+            const found = extractNums(window).filter(n => n >= min && n <= max);
+            if (found.length > 0) {
+              candidates.unshift({ score: found[0], source: 'Rating label (' + rm[0].trim() + ')', confidence: 0.95 });
+              break;
+            }
+          }
+          if (candidates.length > 0 && candidates[0].confidence === 0.95) break;
+        }
+      }
+
+      // P3 (0.85): Any "FICOSCORE" reference (legacy format)
       if (candidates.length === 0) {
         const bwdM = t.match(/(?<![,\d])([3-8]\d{2})(?!\d)\s+FICOSCORE/i)
                   || t.match(/FICOSCORE\s*:?\s*(?<![,\d])([3-8]\d{2})(?!\d)/i);
         if (bwdM && isValidFico(+bwdM[1])) candidates.push({ score: +bwdM[1], source: 'FICOSCORE legacy', confidence: 0.85 });
       }
 
-      // P3 (0.70): Near "FICO Score 8" text — last resort
+      // P4 (0.70): Full-text scan for score next to "FICO Score 8" — last resort
       if (candidates.length === 0) {
         const ficoIdx = t.search(/FICO[®©]?\s*Score\s*8/i);
         if (ficoIdx >= 0) {
