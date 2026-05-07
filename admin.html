@@ -3771,7 +3771,7 @@
                 </div>
                 ${creditData ? `
                 <div class="a-cr-snap" style="margin-top:6px">
-                  <div class="a-cr-snap-item"><span class="a-cr-snap-lbl">Score</span><span class="a-cr-snap-val" style="color:${(creditData.fico||0)>=700?'#059669':(creditData.fico||0)>=680?'#d97706':'#dc2626'}">${creditData.fico||'—'}</span></div>
+                  <div class="a-cr-snap-item"><span class="a-cr-snap-lbl">Score</span><span id="ca-snap-score-${id}" class="a-cr-snap-val" style="color:${(creditData.fico||0)>=700?'#059669':(creditData.fico||0)>=680?'#d97706':'#dc2626'}">${creditData.fico||'—'}</span></div>
                   <div class="a-cr-snap-sep"></div>
                   <div class="a-cr-snap-item"><span class="a-cr-snap-lbl">Utilization</span><span class="a-cr-snap-val" style="color:${(creditData.util||0)<=30?'#059669':(creditData.util||0)<=50?'#d97706':'#dc2626'}">${creditData.util!=null?creditData.util+'%':'—'}</span></div>
                   <div class="a-cr-snap-sep"></div>
@@ -6564,6 +6564,13 @@
     r.readAsArrayBuffer(file);
   }
 
+  function _refreshCaSnapScore(clientId, score) {
+    var el = document.getElementById('ca-snap-score-' + clientId);
+    if (!el) return;
+    el.textContent = score || '—';
+    el.style.color = (score >= 700) ? '#059669' : (score >= 680) ? '#d97706' : '#dc2626';
+  }
+
   function adminCrReparse(clientId) {
     const raw = localStorage.getItem('cq_credit_raw_' + clientId);
     if (!raw) { alert('No stored report text for this client. Please re-upload the PDF.'); return; }
@@ -6588,6 +6595,7 @@
     if (typeof debouncedPublish === 'function') debouncedPublish(clientId);
     const tabPane = document.getElementById('dtab-credit');
     if (tabPane) tabPane.innerHTML = renderCreditTab(data, clientId);
+    if (data.fico) _refreshCaSnapScore(clientId, data.fico);
   }
 
   function adminCrManualScore(clientId) {
@@ -6611,6 +6619,7 @@
     if (typeof debouncedPublish === 'function') debouncedPublish(clientId);
     const tabPane = document.getElementById('dtab-credit');
     if (tabPane) tabPane.innerHTML = renderCreditTab(data, clientId);
+    _refreshCaSnapScore(clientId, score);
     const ficoInput = document.getElementById('db-fico-' + clientId);
     if (ficoInput) { ficoInput.value = score; if (typeof previewScoreChange === 'function') previewScoreChange(clientId); }
     console.log('[CQ Credit Analyzer] Manual score override:', score, 'by admin. Reason:', reason);
@@ -6770,6 +6779,7 @@
       if (typeof debouncedPublish === 'function') debouncedPublish(clientId);
       const tabPane = document.getElementById('dtab-credit');
       if (tabPane) tabPane.innerHTML = renderCreditTab(data, clientId);
+      if (data.fico) _refreshCaSnapScore(clientId, data.fico);
     } catch(err) {
       console.error('Admin credit parse error:', err);
       const proc = document.getElementById('acr-processing-' + clientId);
