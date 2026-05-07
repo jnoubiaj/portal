@@ -1,0 +1,838 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "updated": "2026-05-05",
+    "description": "0% Business Credit Card funding database by state — Experian / TransUnion / Equifax / Regional / Elan"
+  },
+  "banks": {
+    "chase": {
+      "name": "Chase",
+      "card": "Ink Business Cash / Ink Business Unlimited",
+      "bureau": "Experian",
+      "revenue": 50000,
+      "income": 3000,
+      "monthlySpend": 5000,
+      "requirements": "Under Chase 5/24 rule; no Chase biz card opened in last 24 months",
+      "notes": "Best 0% intro APR; apply online or in branch; 3+ years in business preferred"
+    },
+    "barclays": {
+      "name": "Barclays",
+      "card": "Barclays Business Rewards Mastercard",
+      "bureau": "Experian",
+      "revenue": 50000,
+      "income": 3000,
+      "monthlySpend": 3000,
+      "requirements": "Good Experian profile; 2+ years in business",
+      "notes": "Pulls Experian primary; good for EX-heavy strategy"
+    },
+    "fnbo": {
+      "name": "FNBO",
+      "card": "FNBO Business Edition Visa",
+      "bureau": "Experian",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "Select states only; good Experian profile",
+      "notes": "First National Bank of Omaha; pulls Experian"
+    },
+    "boa": {
+      "name": "Bank of America",
+      "card": "Business Advantage Unlimited Cash Rewards",
+      "bureau": "TransUnion",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "Preferred Rewards for Business membership helps; 2+ years business",
+      "notes": "Pulls TransUnion primarily; existing BofA relationship improves odds significantly"
+    },
+    "capital-one": {
+      "name": "Capital One",
+      "card": "Spark Cash Select for Business",
+      "bureau": "Equifax + TransUnion + Experian",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "Pulls all 3 bureaus — counts as 3 separate inquiries",
+      "notes": "Apply last in sequence; bureau diversity killer — save for when other inquiries are low"
+    },
+    "navy-federal": {
+      "name": "Navy Federal",
+      "card": "Navy Federal Business Visa",
+      "bureau": "TransUnion",
+      "revenue": 36000,
+      "income": 2500,
+      "monthlySpend": 2000,
+      "requirements": "Military membership required (veteran, active duty, or eligible family)",
+      "notes": "Excellent approval odds for members; pulls TransUnion only; high limits"
+    },
+    "citizens": {
+      "name": "Citizens Bank",
+      "card": "Citizens Business Platinum Mastercard",
+      "bureau": "TransUnion",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "NE states; existing Citizens relationship preferred",
+      "notes": "Pulls TransUnion; strong NE regional bank"
+    },
+    "key-bank": {
+      "name": "KeyBank",
+      "card": "KeyBank Business Rewards Visa",
+      "bureau": "TransUnion",
+      "revenue": 50000,
+      "income": 3000,
+      "monthlySpend": 3000,
+      "requirements": "Existing KeyBank relationship preferred; select states",
+      "notes": "Pulls TransUnion; relationship banking required"
+    },
+    "us-bank": {
+      "name": "US Bank",
+      "card": "Business Triple Cash Rewards World Elite",
+      "bureau": "Equifax",
+      "revenue": 75000,
+      "income": 3000,
+      "monthlySpend": 4000,
+      "requirements": "Existing US Bank business checking account required",
+      "notes": "High limits; must have existing US Bank relationship to approve"
+    },
+    "wells-fargo": {
+      "name": "Wells Fargo",
+      "card": "Business Platinum Credit Card",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2000,
+      "monthlySpend": 3000,
+      "requirements": "Existing Wells Fargo business account preferred; apply in branch",
+      "notes": "Pulls Equifax; relationship banking; branch visit improves approval odds"
+    },
+    "amex": {
+      "name": "American Express",
+      "card": "Blue Business Cash Card",
+      "bureau": "Equifax",
+      "revenue": 100000,
+      "income": 4000,
+      "monthlySpend": 5000,
+      "requirements": "700+ FICO required; clean credit profile; strong revenue",
+      "notes": "Highest limits available; no preset spending limit options; charge card also available"
+    },
+    "citi": {
+      "name": "Citi",
+      "card": "Citi Double Cash Business Card",
+      "bureau": "Equifax",
+      "revenue": 75000,
+      "income": 3000,
+      "monthlySpend": 4000,
+      "requirements": "Good Equifax profile; existing Citi relationship helps",
+      "notes": "Pulls Equifax; good for clients with clean EQ bureau"
+    },
+    "discover": {
+      "name": "Discover",
+      "card": "Discover it Business Card",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2500,
+      "monthlySpend": 2000,
+      "requirements": "700+ FICO; clean payment history",
+      "notes": "Good entry-level business card; pulls Equifax; easier approval threshold"
+    },
+    "truist": {
+      "name": "Truist",
+      "card": "Truist Business Cash Rewards Credit Card",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "SE and Mid-Atlantic states; existing Truist relationship preferred",
+      "notes": "Formerly BB&T/SunTrust; pulls Equifax; strong regional presence"
+    },
+    "fifth-third": {
+      "name": "Fifth Third Bank",
+      "card": "Fifth Third Business Cash Rewards Credit Card",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "Midwest and SE states; Fifth Third relationship preferred",
+      "notes": "Pulls Equifax; great for Midwest/SE clients with Fifth Third account"
+    },
+    "huntington": {
+      "name": "Huntington Bank",
+      "card": "Huntington Business Credit Card",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "Midwest states; Huntington business account preferred",
+      "notes": "Pulls Equifax; strong Midwest regional; good relationship bank"
+    },
+    "pnc": {
+      "name": "PNC Bank",
+      "card": "PNC Visa Business Credit Card",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "Existing PNC relationship preferred; most states",
+      "notes": "Pulls Equifax; widely available regional bank"
+    },
+    "regions": {
+      "name": "Regions Bank",
+      "card": "Regions Business Visa Platinum",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "SE and Midwest states; Regions relationship preferred",
+      "notes": "Pulls Equifax; strong SE regional bank"
+    },
+    "frost": {
+      "name": "Frost Bank",
+      "card": "Frost Bank Business Visa",
+      "bureau": "Experian",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "Texas only; Frost Bank relationship preferred",
+      "notes": "Strong TX regional bank; pulls Experian; great for TX EX strategy"
+    },
+    "bokf": {
+      "name": "BOK Financial",
+      "card": "BOK Business Visa",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "OK, TX, NM, CO, AZ, KS, MO; existing BOKF relationship preferred",
+      "notes": "Bank of Oklahoma parent company; solid regional option"
+    },
+    "umb": {
+      "name": "UMB Bank",
+      "card": "UMB Business Visa",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "MO, KS, CO, AZ, NM, NE, OK, IL; UMB relationship preferred",
+      "notes": "Strong Midwest/Plains bank; pulls Equifax"
+    },
+    "commerce": {
+      "name": "Commerce Bank",
+      "card": "Commerce Bank Business Visa",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "MO, KS, IL, OK, CO, NE; Commerce relationship preferred",
+      "notes": "Strong MO/KS bank; pulls Equifax"
+    },
+    "banner": {
+      "name": "Banner Bank",
+      "card": "Banner Bank Business Visa",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2000,
+      "monthlySpend": 2500,
+      "requirements": "WA, OR, ID, CA; Banner Bank relationship preferred",
+      "notes": "Pacific Northwest regional bank; pulls Equifax"
+    },
+    "glacier": {
+      "name": "Glacier Bank",
+      "card": "Glacier Bank Business Visa",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "MT, ID, WY, CO, AZ, NV, UT, WA; Glacier relationship preferred",
+      "notes": "Mountain West regional bank; pulls Equifax"
+    },
+    "columbia-bank": {
+      "name": "Columbia Bank",
+      "card": "Columbia Bank Business Visa",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2000,
+      "monthlySpend": 2500,
+      "requirements": "OR, WA, ID; Columbia Bank relationship preferred",
+      "notes": "Pacific Northwest regional; pulls Equifax"
+    },
+    "independent-tx": {
+      "name": "Independent Bank (TX)",
+      "card": "Independent Bank Business Visa",
+      "bureau": "Experian",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "Texas only; Independent Bank relationship preferred",
+      "notes": "Texas regional bank; pulls Experian"
+    },
+    "mercantile-mi": {
+      "name": "Mercantile Bank (MI)",
+      "card": "Mercantile Business Visa",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2000,
+      "monthlySpend": 2500,
+      "requirements": "Michigan only; Mercantile relationship preferred",
+      "notes": "Michigan community bank; pulls Equifax"
+    },
+    "flagstar": {
+      "name": "Flagstar Bank",
+      "card": "Flagstar Business Credit Card",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "MI, IN, CA, WI, OH; Flagstar relationship preferred",
+      "notes": "Pulls Equifax; Michigan-based national bank"
+    },
+    "comerica": {
+      "name": "Comerica Bank",
+      "card": "Comerica Business Visa",
+      "bureau": "Equifax",
+      "revenue": 75000,
+      "income": 3000,
+      "monthlySpend": 4000,
+      "requirements": "MI, TX, CA, FL, AZ; Comerica relationship preferred",
+      "notes": "Pulls Equifax; strong MI/TX commercial bank"
+    },
+    "first-midwest": {
+      "name": "First Midwest Bank",
+      "card": "First Midwest Business Visa",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "IL, IA, WI, MN, IN; relationship preferred",
+      "notes": "Pulls Equifax; solid Midwest option"
+    },
+    "east-west": {
+      "name": "East West Bank",
+      "card": "East West Business Visa",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 3000,
+      "monthlySpend": 3000,
+      "requirements": "CA, NY, TX, WA; East West relationship preferred",
+      "notes": "Pulls Equifax; strong CA presence"
+    },
+    "pacific-premier": {
+      "name": "Pacific Premier Bank",
+      "card": "Pacific Premier Business Visa",
+      "bureau": "Equifax",
+      "revenue": 50000,
+      "income": 2500,
+      "monthlySpend": 3000,
+      "requirements": "CA, WA, AZ, NV, OR; relationship preferred",
+      "notes": "Pulls Equifax; West Coast commercial bank"
+    },
+    "elan-tcf": {
+      "name": "TCF / Huntington (Elan)",
+      "card": "Elan Business Visa via TCF/Huntington",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "MN, MI, IL, CO; TCF/Huntington bank relationship",
+      "notes": "Elan-issued white-label card; pulls Equifax; good for additional credit"
+    },
+    "elan-isabella": {
+      "name": "Isabella Bank (Elan)",
+      "card": "Isabella Bank Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "Michigan only; Isabella Bank relationship",
+      "notes": "Elan-issued; Michigan community bank partner"
+    },
+    "elan-associated": {
+      "name": "Associated Bank (Elan)",
+      "card": "Associated Bank Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "WI, IL, MN; Associated Bank relationship",
+      "notes": "Elan-issued; pulls Equifax"
+    },
+    "elan-old-national": {
+      "name": "Old National Bank (Elan)",
+      "card": "Old National Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "IN, IL, KY, MI, MN, WI; Old National relationship",
+      "notes": "Elan-issued; Midwest community bank"
+    },
+    "elan-commerce": {
+      "name": "Commerce Bank (Elan)",
+      "card": "Commerce Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "MO, KS; Commerce Bank relationship",
+      "notes": "Elan-issued; pulls Equifax"
+    },
+    "elan-midwest": {
+      "name": "MidWestOne Bank (Elan)",
+      "card": "MidWestOne Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "IA, MN, WI, FL; MidWestOne relationship",
+      "notes": "Elan-issued; Iowa-headquartered community bank"
+    },
+    "elan-columbia": {
+      "name": "Columbia Bank (Elan)",
+      "card": "Columbia Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "OR, WA; Columbia Bank relationship",
+      "notes": "Elan-issued; Pacific Northwest regional"
+    },
+    "elan-glacier": {
+      "name": "Glacier Bank (Elan)",
+      "card": "Glacier Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "MT, ID, WY, CO; Glacier Bank relationship",
+      "notes": "Elan-issued; Mountain West community bank"
+    },
+    "elan-wintrust": {
+      "name": "Wintrust Bank (Elan)",
+      "card": "Wintrust Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "IL, WI; Wintrust relationship",
+      "notes": "Elan-issued; Chicago-area regional bank"
+    },
+    "elan-heartland": {
+      "name": "Heartland Bank (Elan)",
+      "card": "Heartland Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "OH, MN; Heartland relationship",
+      "notes": "Elan-issued; Midwest community bank"
+    },
+    "elan-independent-tx": {
+      "name": "Independent Bank TX (Elan)",
+      "card": "Independent Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "TX; Independent Bank relationship",
+      "notes": "Elan-issued; Texas community bank partner"
+    },
+    "elan-nb": {
+      "name": "National Community Bank (Elan)",
+      "card": "Community Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "Select states; community bank relationship",
+      "notes": "Elan white-label card through local partner banks"
+    },
+    "elan-banner": {
+      "name": "Banner Bank (Elan)",
+      "card": "Banner Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "WA, OR, ID; Banner Bank relationship",
+      "notes": "Elan-issued; Pacific Northwest community bank"
+    },
+    "elan-pinnacle": {
+      "name": "Pinnacle Bank (Elan)",
+      "card": "Pinnacle Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "TN, VA, NC, TX; Pinnacle relationship",
+      "notes": "Elan-issued; SE community bank"
+    },
+    "elan-bokf": {
+      "name": "BOK Financial (Elan)",
+      "card": "BOK Business Visa via Elan",
+      "bureau": "Equifax",
+      "revenue": 36000,
+      "income": 2000,
+      "monthlySpend": 2000,
+      "requirements": "OK, TX, NM, CO, AZ; BOKF relationship",
+      "notes": "Elan-issued; South-Central regional"
+    }
+  },
+  "states": {
+    "AL": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "regions", "pnc"],
+      "regional": ["regions", "truist"],
+      "elan": ["elan-nb", "elan-pinnacle"]
+    },
+    "AK": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "glacier"],
+      "regional": ["glacier", "key-bank"],
+      "elan": ["elan-glacier", "elan-nb"]
+    },
+    "AZ": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "glacier", "bokf", "umb", "comerica", "pacific-premier"],
+      "regional": ["glacier", "bokf", "umb", "pacific-premier"],
+      "elan": ["elan-glacier", "elan-bokf", "elan-nb"]
+    },
+    "AR": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "regions"],
+      "regional": ["regions", "truist"],
+      "elan": ["elan-nb"]
+    },
+    "CA": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "east-west", "pacific-premier", "banner"],
+      "regional": ["east-west", "pacific-premier", "banner"],
+      "elan": ["elan-banner", "elan-nb"]
+    },
+    "CO": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "glacier", "umb", "bokf", "huntington"],
+      "regional": ["glacier", "umb", "bokf"],
+      "elan": ["elan-glacier", "elan-tcf", "elan-bokf"]
+    },
+    "CT": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "pnc"],
+      "regional": ["citizens", "pnc"],
+      "elan": ["elan-nb"]
+    },
+    "DE": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "pnc"],
+      "regional": ["citizens", "pnc", "truist"],
+      "elan": ["elan-nb"]
+    },
+    "FL": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "regions", "fifth-third", "pnc"],
+      "regional": ["truist", "regions", "fifth-third"],
+      "elan": ["elan-midwest", "elan-nb"]
+    },
+    "GA": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "regions", "fifth-third", "pnc"],
+      "regional": ["truist", "regions", "fifth-third"],
+      "elan": ["elan-pinnacle", "elan-nb"]
+    },
+    "HI": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover"],
+      "regional": [],
+      "elan": ["elan-nb"]
+    },
+    "ID": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "glacier", "banner", "columbia-bank"],
+      "regional": ["glacier", "banner", "columbia-bank"],
+      "elan": ["elan-glacier", "elan-banner", "elan-columbia"]
+    },
+    "IL": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "first-midwest", "regions", "huntington", "pnc", "umb"],
+      "regional": ["first-midwest", "huntington", "umb"],
+      "elan": ["elan-wintrust", "elan-old-national", "elan-commerce", "elan-tcf"]
+    },
+    "IN": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "fifth-third", "huntington", "pnc", "flagstar", "regions", "truist"],
+      "regional": ["fifth-third", "huntington", "flagstar"],
+      "elan": ["elan-old-national", "elan-tcf", "elan-nb"]
+    },
+    "IA": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "first-midwest", "commerce"],
+      "regional": ["first-midwest", "commerce"],
+      "elan": ["elan-midwest", "elan-nb"]
+    },
+    "KS": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "umb", "commerce", "bokf"],
+      "regional": ["umb", "commerce", "bokf"],
+      "elan": ["elan-commerce", "elan-bokf", "elan-nb"]
+    },
+    "KY": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "fifth-third", "huntington", "pnc", "regions", "truist"],
+      "regional": ["fifth-third", "huntington", "regions"],
+      "elan": ["elan-old-national", "elan-nb"]
+    },
+    "LA": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "regions", "truist"],
+      "regional": ["regions"],
+      "elan": ["elan-nb"]
+    },
+    "ME": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "pnc"],
+      "regional": ["citizens", "key-bank"],
+      "elan": ["elan-nb"]
+    },
+    "MD": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "pnc"],
+      "regional": ["truist", "pnc"],
+      "elan": ["elan-nb"]
+    },
+    "MA": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "pnc"],
+      "regional": ["citizens", "pnc"],
+      "elan": ["elan-nb"]
+    },
+    "MI": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "fifth-third", "huntington", "pnc", "flagstar", "mercantile-mi", "comerica"],
+      "regional": ["fifth-third", "huntington", "flagstar", "mercantile-mi", "comerica"],
+      "elan": ["elan-tcf", "elan-isabella", "elan-old-national"]
+    },
+    "MN": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "first-midwest", "huntington"],
+      "regional": ["first-midwest", "huntington"],
+      "elan": ["elan-tcf", "elan-associated", "elan-midwest", "elan-heartland"]
+    },
+    "MS": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "regions", "truist"],
+      "regional": ["regions", "truist"],
+      "elan": ["elan-nb"]
+    },
+    "MO": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "umb", "commerce", "bokf", "regions"],
+      "regional": ["umb", "commerce", "bokf"],
+      "elan": ["elan-commerce", "elan-nb"]
+    },
+    "MT": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "glacier"],
+      "regional": ["glacier"],
+      "elan": ["elan-glacier", "elan-nb"]
+    },
+    "NE": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "umb", "commerce"],
+      "regional": ["umb", "commerce"],
+      "elan": ["elan-nb"]
+    },
+    "NV": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "glacier"],
+      "regional": ["glacier"],
+      "elan": ["elan-glacier", "elan-nb"]
+    },
+    "NH": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover"],
+      "regional": ["citizens"],
+      "elan": ["elan-nb"]
+    },
+    "NJ": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "pnc"],
+      "regional": ["citizens", "pnc", "truist"],
+      "elan": ["elan-nb"]
+    },
+    "NM": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "bokf", "umb"],
+      "regional": ["bokf", "umb"],
+      "elan": ["elan-bokf", "elan-nb"]
+    },
+    "NY": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "east-west", "pnc"],
+      "regional": ["citizens", "east-west", "pnc"],
+      "elan": ["elan-nb"]
+    },
+    "NC": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "fifth-third", "pnc", "regions"],
+      "regional": ["truist", "fifth-third"],
+      "elan": ["elan-pinnacle", "elan-nb"]
+    },
+    "ND": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover"],
+      "regional": [],
+      "elan": ["elan-nb"]
+    },
+    "OH": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "fifth-third", "huntington", "pnc", "truist", "regions"],
+      "regional": ["fifth-third", "huntington", "pnc"],
+      "elan": ["elan-heartland", "elan-old-national", "elan-nb"]
+    },
+    "OK": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "bokf", "umb", "commerce", "regions"],
+      "regional": ["bokf", "umb", "commerce"],
+      "elan": ["elan-bokf", "elan-commerce", "elan-nb"]
+    },
+    "OR": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "banner", "columbia-bank"],
+      "regional": ["banner", "columbia-bank"],
+      "elan": ["elan-banner", "elan-columbia", "elan-nb"]
+    },
+    "PA": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "huntington", "pnc"],
+      "regional": ["pnc", "huntington", "truist"],
+      "elan": ["elan-nb"]
+    },
+    "RI": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover"],
+      "regional": ["citizens"],
+      "elan": ["elan-nb"]
+    },
+    "SC": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "regions", "pnc"],
+      "regional": ["truist", "regions"],
+      "elan": ["elan-nb"]
+    },
+    "SD": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "huntington"],
+      "regional": ["huntington"],
+      "elan": ["elan-nb"]
+    },
+    "TN": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "regions", "fifth-third"],
+      "regional": ["truist", "regions", "fifth-third"],
+      "elan": ["elan-pinnacle", "elan-nb"]
+    },
+    "TX": {
+      "experian": ["chase", "barclays", "fnbo", "frost", "independent-tx"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "bokf", "comerica", "regions", "truist"],
+      "regional": ["frost", "bokf", "comerica", "independent-tx"],
+      "elan": ["elan-independent-tx", "elan-bokf", "elan-nb"]
+    },
+    "UT": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "glacier"],
+      "regional": ["glacier"],
+      "elan": ["elan-glacier", "elan-nb"]
+    },
+    "VT": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover"],
+      "regional": ["citizens", "key-bank"],
+      "elan": ["elan-nb"]
+    },
+    "VA": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "pnc"],
+      "regional": ["truist", "pnc"],
+      "elan": ["elan-pinnacle", "elan-nb"]
+    },
+    "WA": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "key-bank"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "banner", "columbia-bank", "glacier", "east-west"],
+      "regional": ["banner", "columbia-bank", "glacier"],
+      "elan": ["elan-banner", "elan-columbia", "elan-glacier"]
+    },
+    "WV": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "huntington", "pnc"],
+      "regional": ["huntington", "truist"],
+      "elan": ["elan-nb"]
+    },
+    "WI": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "first-midwest", "huntington", "flagstar"],
+      "regional": ["first-midwest", "huntington", "flagstar"],
+      "elan": ["elan-associated", "elan-old-national", "elan-wintrust"]
+    },
+    "WY": {
+      "experian": ["chase", "barclays", "fnbo"],
+      "transunion": ["boa", "capital-one", "navy-federal"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "glacier"],
+      "regional": ["glacier"],
+      "elan": ["elan-glacier", "elan-pinnacle", "elan-nb"]
+    },
+    "DC": {
+      "experian": ["chase", "barclays"],
+      "transunion": ["boa", "capital-one", "navy-federal", "citizens"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "truist", "pnc"],
+      "regional": ["truist", "pnc"],
+      "elan": ["elan-nb"]
+    }
+  }
+}

@@ -1607,6 +1607,64 @@
   .a-cr-snap-val { font-family: var(--font-h); font-size: 13px; font-weight: 800; color: var(--navy); }
   .a-cr-snap-sep { width: 1px; height: 24px; background: #e5e7eb; flex-shrink: 0; align-self: center; }
 
+  /* ── FUNDING STRATEGY GENERATOR ──────────────────────────────── */
+  .fsg-nba { padding: 10px 12px; background: var(--blue-xl); border-radius: 10px; border: 1.5px solid rgba(34,167,240,0.25); margin-bottom: 12px; }
+  .fsg-nba-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--blue); margin-bottom: 3px; }
+  .fsg-nba-text { font-family: var(--font-h); font-size: 12px; font-weight: 700; color: var(--navy); line-height: 1.4; }
+  .fsg-nba-why { font-size: 10px; color: var(--gray-500); margin-top: 3px; line-height: 1.4; }
+  .fsg-section { margin-bottom: 14px; }
+  .fsg-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray-400); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .fsg-readiness { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px; margin-bottom: 4px; }
+  .fsg-readiness.ready { background: #ecfdf5; border: 1.5px solid rgba(16,185,129,0.35); }
+  .fsg-readiness.optimize { background: #fffbeb; border: 1.5px solid rgba(245,158,11,0.35); }
+  .fsg-readiness.blocked { background: #fef2f2; border: 1.5px solid rgba(239,68,68,0.35); }
+  .fsg-readiness-icon { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .fsg-readiness.ready .fsg-readiness-icon { background: #10b981; }
+  .fsg-readiness.optimize .fsg-readiness-icon { background: #f59e0b; }
+  .fsg-readiness.blocked .fsg-readiness-icon { background: #ef4444; }
+  .fsg-readiness-title { font-size: 12px; font-weight: 700; line-height: 1.2; }
+  .fsg-readiness.ready .fsg-readiness-title { color: #065f46; }
+  .fsg-readiness.optimize .fsg-readiness-title { color: #92400e; }
+  .fsg-readiness.blocked .fsg-readiness-title { color: #991b1b; }
+  .fsg-readiness-reason { font-size: 10px; margin-top: 3px; color: var(--gray-600); line-height: 1.4; }
+  .fsg-bureau-group { margin-bottom: 8px; }
+  .fsg-bureau-row { display: flex; align-items: flex-start; gap: 8px; }
+  .fsg-bureau-badge { display: inline-flex; align-items: center; font-size: 9px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; min-width: 30px; justify-content: center; }
+  .fsg-bureau-badge.ex { background: #fff7ed; color: #c2410c; border: 1px solid rgba(194,65,12,0.2); }
+  .fsg-bureau-badge.tu { background: #eff6ff; color: #1d4ed8; border: 1px solid rgba(29,78,216,0.2); }
+  .fsg-bureau-badge.eq { background: #f0fdf4; color: #166534; border: 1px solid rgba(22,101,52,0.2); }
+  .fsg-bureau-badge.all { background: #faf5ff; color: #6d28d9; border: 1px solid rgba(109,40,217,0.2); }
+  .fsg-bank-chips { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+  .fsg-bank-chip { display: inline-flex; align-items: center; font-size: 10px; font-weight: 600; color: var(--navy); background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px; padding: 3px 7px; cursor: default; }
+  .fsg-bank-chip.used { opacity: 0.45; text-decoration: line-through; background: var(--gray-100); }
+  .fsg-bank-chip.approved-chip { border-color: #10b981; background: #ecfdf5; color: #065f46; }
+  .fsg-bank-chip.denied-chip { border-color: #ef4444; background: #fef2f2; color: #991b1b; text-decoration: line-through; opacity: 0.6; }
+  .fsg-bank-row.fsg-bank-used { opacity: 0.5; }
+  .fsg-round { margin-bottom: 10px; border: 1.5px solid var(--gray-200); border-radius: 10px; overflow: hidden; }
+  .fsg-round-hdr { padding: 7px 12px; background: var(--gray-50); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--gray-100); }
+  .fsg-round-title { font-family: var(--font-h); font-size: 11px; font-weight: 800; color: var(--navy); }
+  .fsg-round-sub { font-size: 10px; color: var(--gray-400); }
+  .fsg-round-body { padding: 8px 12px; }
+  .fsg-bank-row { padding: 7px 0; border-bottom: 1px solid var(--gray-100); }
+  .fsg-bank-row:last-child { border-bottom: none; }
+  .fsg-bank-row-top { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+  .fsg-bank-name { font-size: 12px; font-weight: 700; color: var(--navy); }
+  .fsg-bank-card-name { font-size: 10px; color: var(--gray-500); }
+  .fsg-bank-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 3px; }
+  .fsg-bank-meta-item { font-size: 10px; color: var(--gray-500); display: flex; gap: 3px; align-items: center; }
+  .fsg-bank-meta-item strong { color: var(--gray-700); font-weight: 600; }
+  .fsg-bank-note { font-size: 10px; color: var(--gray-400); margin-top: 3px; font-style: italic; line-height: 1.4; }
+  .fsg-bank-req { font-size: 10px; color: var(--gray-500); margin-top: 2px; line-height: 1.4; }
+  .fsg-opt-steps { }
+  .fsg-opt-step { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--gray-100); }
+  .fsg-opt-step:last-child { border-bottom: none; }
+  .fsg-opt-num { width: 18px; height: 18px; border-radius: 50%; background: var(--navy); color: white; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .fsg-opt-text { font-size: 11px; color: var(--gray-700); line-height: 1.4; font-weight: 600; }
+  .fsg-opt-why { font-size: 10px; color: var(--gray-400); margin-top: 2px; line-height: 1.4; }
+  .fsg-generate-btn { width: 100%; height: 34px; background: var(--navy); border: none; border-radius: 8px; font-family: var(--font-h); font-size: 11px; font-weight: 700; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s; letter-spacing: 0.02em; }
+  .fsg-generate-btn:hover { background: var(--navy-light); }
+  .fsg-empty { font-size: 12px; color: var(--gray-400); padding: 4px 0; }
+
   /* Full Profile modal */
   .a-fp-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
   .a-fp-modal-box { background: white; border-radius: 16px; max-width: 840px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
@@ -3635,6 +3693,26 @@
             </div>
           </div>
 
+          <!-- FUNDING STRATEGY GENERATOR (collapsible, default CLOSED) -->
+          <div class="a-card" id="sp-dtab-fsg-${id}" style="margin-bottom:14px">
+            <div class="a-card-hdr a-coll-hdr" onclick="fsgToggle('${id}')">
+              <div class="a-card-hdrl">
+                <div class="a-card-title">Funding Strategy Generator</div>
+                <div class="a-card-sub" id="fsg-sub-${id}">Click Generate to build strategy</div>
+              </div>
+              <svg id="chev-fsg-${id}" class="a-coll-chev" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="transform:rotate(-90deg)"><path d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="a-coll-body" id="coll-fsg-${id}" data-open="0" style="max-height:0">
+              <div style="padding-bottom:4px">
+                <button class="fsg-generate-btn" id="fsg-gen-btn-${id}" onclick="generateAndRenderFSG('${id}')">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  Generate Funding Strategy
+                </button>
+                <div id="fsg-body-${id}" style="margin-top:10px"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- CREDIT ANALYZER (collapsible, default OPEN) -->
           <div class="a-card" id="sp-dtab-credit" style="margin-bottom:14px">
             <div class="a-card-hdr a-coll-hdr" onclick="aToggle('coll-credit-${id}','chev-credit-${id}')">
@@ -4810,6 +4888,674 @@
     }
   }
 
+  // ── FUNDING STRATEGY ENGINE ───────────────────────────────────────────────
+  // Full bureau-aware, relationship-prioritized, Evergreen-sequence engine.
+  // All functions accept a clientId (for DB lookups) or a profile object.
+
+  var _fsgDatabase = null;
+  var _fsgDbLoading = false;
+  var _fsgDbCallbacks = [];
+
+  // Evergreen sequence — ordered application priority for 0% business cards.
+  // Banks earlier in the list = apply first. Round assignment is the default
+  // grouping; relationship banks may be promoted.
+  var FSG_EVERGREEN = [
+    { id: 'chase',       bureau: 'EX',  round: 1, priority: 1,  minScore: 680, minBizAge: 1, requiresRelationship: false, sameDayWith: 'barclays', timing: 'Apply first — highest 0% success rate; subject to 5/24 rule' },
+    { id: 'barclays',    bureau: 'EX',  round: 1, priority: 2,  minScore: 680, minBizAge: 1, requiresRelationship: false, sameDayWith: 'chase',    timing: 'Apply same day as Chase — both pull Experian, count as 1-day inquiry impact' },
+    { id: 'fnbo',        bureau: 'EX',  round: 1, priority: 3,  minScore: 680, minBizAge: 1, requiresRelationship: false, sameDayWith: 'chase',    timing: 'Apply same day as Chase and Barclays if available in state' },
+    { id: 'boa',         bureau: 'TU',  round: 1, priority: 4,  minScore: 680, minBizAge: 2, requiresRelationship: false, sameDayWith: null,       timing: 'Apply with existing BofA relationship for materially better approval odds' },
+    { id: 'us-bank',     bureau: 'EQ',  round: 2, priority: 5,  minScore: 700, minBizAge: 1, requiresRelationship: true,  sameDayWith: null,       timing: 'MUST open US Bank business checking ($100 min) before applying — required for approval' },
+    { id: 'wells-fargo', bureau: 'EQ',  round: 2, priority: 6,  minScore: 680, minBizAge: 1, requiresRelationship: false, sameDayWith: null,       timing: 'Apply in branch with existing Wells Fargo checking account when possible' },
+    { id: 'amex',        bureau: 'EQ',  round: 2, priority: 7,  minScore: 700, minBizAge: 2, requiresRelationship: false, sameDayWith: null,       timing: 'Apply after US Bank — Amex has highest limits and no preset spending cap options' },
+    { id: 'citi',        bureau: 'EQ',  round: 2, priority: 8,  minScore: 680, minBizAge: 1, requiresRelationship: false, sameDayWith: null,       timing: 'Apply with clean Equifax bureau; existing Citi relationship improves outcomes' },
+    { id: 'discover',    bureau: 'EQ',  round: 2, priority: 9,  minScore: 680, minBizAge: 1, requiresRelationship: false, sameDayWith: null,       timing: 'Easiest Equifax approval; good fallback if other EQ banks decline' },
+    { id: 'capital-one', bureau: 'ALL', round: 2, priority: 10, minScore: 670, minBizAge: 1, requiresRelationship: false, sameDayWith: null,       timing: 'Apply LAST — pulls all 3 bureaus simultaneously, consuming inquiry capacity on each' }
+  ];
+
+  // Inquiry threshold by bureau — above these, recommend removal before EX/TU banks
+  var FSG_INQ_WARN = { EX: 4, TU: 5, EQ: 5 };
+  var FSG_INQ_BLOCK = { EX: 7, TU: 8, EQ: 8 };
+
+  function loadFundingStateDatabase(cb) {
+    if (_fsgDatabase) { if (cb) cb(_fsgDatabase); return; }
+    if (cb) _fsgDbCallbacks.push(cb);
+    if (_fsgDbLoading) return;
+    _fsgDbLoading = true;
+    fetch('./data/funding-state-database.json')
+      .then(function(r) { return r.json(); })
+      .then(function(db) {
+        _fsgDatabase = db;
+        _fsgDbLoading = false;
+        _fsgDbCallbacks.forEach(function(fn) { try { fn(db); } catch(e) {} });
+        _fsgDbCallbacks = [];
+      })
+      .catch(function() {
+        _fsgDatabase = { banks: {}, states: {} };
+        _fsgDbLoading = false;
+        _fsgDbCallbacks.forEach(function(fn) { try { fn(_fsgDatabase); } catch(e) {} });
+        _fsgDbCallbacks = [];
+      });
+  }
+
+  function getBanksByState(state) {
+    if (!_fsgDatabase) return null;
+    var key = (state || '').toUpperCase().trim();
+    var sd = (_fsgDatabase.states || {})[key];
+    if (!sd) return null;
+    var banks = _fsgDatabase.banks || {};
+    var expand = function(ids) {
+      return (ids || []).map(function(id) {
+        return Object.assign({ id: id }, banks[id] || { name: id, card: '', bureau: '', revenue: 0, income: 0, monthlySpend: 0, requirements: '', notes: '' });
+      });
+    };
+    return {
+      experian:  expand(sd.experian),
+      transunion: expand(sd.transunion),
+      equifax:   expand(sd.equifax),
+      regional:  expand(sd.regional),
+      elan:      expand(sd.elan)
+    };
+  }
+
+  // ── ENGINE STEP 1: Build normalized client profile ─────────────────────────
+  function fsgBuildClientProfile(clientId) {
+    var d  = getDashData(clientId);
+    var ob = getOnboardDataForClient(clientId);
+    var cr = getCreditData(clientId);
+    var apps = d.fundingRows || [];
+
+    var state       = ((ob && ob.state) || d.clientState || '').toUpperCase().trim();
+    var creditScore = Number(d.creditScore || (cr && cr.fico) || 0);
+    var utilization = Number((cr && cr.util) || 0);
+    // Bureau-specific inquiries: use stored overrides if available, else fall back to Experian report total
+    var expInq = Number(d.experianInquiries != null ? d.experianInquiries : ((cr && cr.recentInquiries) || 0));
+    var tuInq  = Number(d.transUnionInquiries != null ? d.transUnionInquiries : 0);
+    var eqInq  = Number(d.equifaxInquiries   != null ? d.equifaxInquiries   : 0);
+    var newAccounts   = Number((cr && cr.recentCCAccounts) || 0);
+    var latePayments  = Number((cr && cr.late) || 0);
+    var collections   = Number((cr && cr.collections) || 0);
+    var pubRecords    = !!(cr && cr.pubRecords);
+    var businessAge   = Number(d.businessAge || (ob && ob.businessAge) || 0); // years
+    var fundingGoal   = Number(d.fundingGoal) || 0;
+
+    var approvedAmount = apps
+      .filter(function(a) { return a.status === 'approved'; })
+      .reduce(function(s, a) { return s + (Number(a.amount) || 0); }, 0);
+
+    // Existing bank relationships — from dash data array or inferred from approved apps
+    var storedRelationships = d.bankRelationships || [];
+    var approvedBankIds = apps
+      .filter(function(a) { return a.status === 'approved'; })
+      .map(function(a) { return (a.bankId || a.bank || '').toLowerCase(); });
+    var existingRelationships = storedRelationships.concat(approvedBankIds);
+
+    var hasRelationship = function(bankId) {
+      var bid = bankId.toLowerCase();
+      return existingRelationships.some(function(r) {
+        return r && (r.indexOf(bid) !== -1 || bid.indexOf(r.split('-')[0]) !== -1);
+      });
+    };
+
+    // Which banks have already been applied to (any status)
+    var usedBankIds   = apps.map(function(a) { return (a.bankId || '').toLowerCase(); }).filter(Boolean);
+    var usedBankNames = apps.map(function(a) { return (a.bank || '').toLowerCase(); });
+    var deniedBankIds = apps.filter(function(a) { return a.status === 'denied'; })
+                           .map(function(a) { return (a.bankId || a.bank || '').toLowerCase(); });
+    var pendingApps   = apps.filter(function(a) { return a.status === 'pending' || a.status === 'applied'; });
+
+    var isBankUsed = function(b) {
+      if (!b) return false;
+      if (usedBankIds.indexOf(b.id) !== -1) return true;
+      var first = (b.name || '').toLowerCase().split(' ')[0];
+      return first && usedBankNames.some(function(n) { return n.indexOf(first) !== -1; });
+    };
+    var isBankApproved = function(b) {
+      if (!b) return false;
+      if (approvedBankIds.indexOf(b.id) !== -1) return true;
+      var first = (b.name || '').toLowerCase().split(' ')[0];
+      return first && approvedBankIds.some(function(n) { return n.indexOf(first) !== -1; });
+    };
+    var isBankDenied = function(b) {
+      if (!b) return false;
+      var first = (b.name || '').toLowerCase().split(' ')[0];
+      return first && deniedBankIds.some(function(n) { return n.indexOf(first) !== -1; });
+    };
+
+    return {
+      clientId: clientId,
+      state: state,
+      creditScore: creditScore,
+      utilization: utilization,
+      expInq: expInq,
+      tuInq:  tuInq,
+      eqInq:  eqInq,
+      newAccounts: newAccounts,
+      latePayments: latePayments,
+      collections: collections,
+      pubRecords: pubRecords,
+      businessAge: businessAge,
+      fundingGoal: fundingGoal,
+      approvedAmount: approvedAmount,
+      apps: apps,
+      pendingApps: pendingApps,
+      existingRelationships: existingRelationships,
+      hasRelationship: hasRelationship,
+      isBankUsed: isBankUsed,
+      isBankApproved: isBankApproved,
+      isBankDenied: isBankDenied,
+      banksByState: state ? getBanksByState(state) : null
+    };
+  }
+
+  // ── ENGINE STEP 2: Calculate funding gap ──────────────────────────────────
+  function calculateFundingGap(profile) {
+    var gap = profile.fundingGoal > 0 ? Math.max(0, profile.fundingGoal - profile.approvedAmount) : 0;
+    var pct = profile.fundingGoal > 0 ? Math.min(100, Math.round(profile.approvedAmount / profile.fundingGoal * 100)) : 0;
+    return {
+      gap: gap,
+      pct: pct,
+      goalMet: profile.fundingGoal > 0 && gap === 0,
+      hasGoal: profile.fundingGoal > 0
+    };
+  }
+
+  // ── ENGINE STEP 3: Check funding readiness ────────────────────────────────
+  function checkFundingReadiness(profile) {
+    var readiness = 'ready'; // ready | optimize | blocked
+    var reasons = [];
+    var optSteps = [];
+    var inquiryFlags = { ex: false, tu: false, eq: false };
+
+    // Hard blocks first
+    if (profile.pubRecords) {
+      readiness = 'blocked';
+      reasons.push('Public records on file — most banks auto-decline');
+      optSteps.push({ step: 'Dispute and remove public records before any application', why: 'Public records are automatic decline triggers at Chase, Amex, Citi, and most major lenders' });
+    }
+    if (profile.collections > 0) {
+      readiness = 'blocked';
+      reasons.push(profile.collections + ' collection account' + (profile.collections > 1 ? 's' : '') + ' on file');
+      optSteps.push({ step: 'Pay or dispute collection accounts — required before applying', why: 'Collections are hard stops for business credit card approvals at national banks' });
+    }
+    if (profile.creditScore > 0 && profile.creditScore < 680) {
+      readiness = 'blocked';
+      reasons.push('FICO ' + profile.creditScore + ' — below 680 minimum (need +' + (680 - profile.creditScore) + ' points)');
+      optSteps.push({ step: 'Build FICO to 680+ before applying — ' + (680 - profile.creditScore) + ' points needed', why: 'Sub-680 results in automatic decline at Chase, Amex, Citi, and US Bank; wastes inquiries' });
+    }
+
+    // Optimize flags — don't block, but need attention
+    if (readiness !== 'blocked' && profile.creditScore > 0 && profile.creditScore < 700) {
+      if (readiness === 'ready') readiness = 'optimize';
+      reasons.push('FICO ' + profile.creditScore + ' — 700+ unlocks full product range');
+      optSteps.push({ step: 'Improve FICO to 700+ for best limits — ' + (700 - profile.creditScore) + ' points needed', why: '680–699 gets approved at some banks but at 50–70% lower limits; 700+ is the threshold for premium products' });
+    }
+    if (profile.utilization > 50) {
+      if (readiness !== 'blocked') readiness = 'optimize';
+      reasons.push('Utilization ' + profile.utilization + '% — lenders see heavy leverage above 50%');
+      optSteps.push({ step: 'Pay down revolving balances to below 30% before applying', why: 'Above 50% utilization signals credit dependency; lenders cap approvals or deny outright; below 10% is optimal' });
+    } else if (profile.utilization > 30) {
+      if (readiness === 'ready') readiness = 'optimize';
+      reasons.push('Utilization ' + profile.utilization + '% — target is below 30%');
+      optSteps.push({ step: 'Pay down to below 30% utilization before applying (currently ' + profile.utilization + '%)', why: '30% is the industry threshold; above it reduces both approval odds and credit limits offered' });
+    }
+
+    // Inquiry flags by bureau — recommend removal, not exclusion
+    if (profile.expInq > FSG_INQ_BLOCK.EX) {
+      if (readiness !== 'blocked') readiness = 'optimize';
+      inquiryFlags.ex = true;
+      reasons.push(profile.expInq + ' Experian inquiries (above ' + FSG_INQ_BLOCK.EX + ' triggers Chase 5/24 and Barclays decline)');
+      optSteps.push({ step: 'Run Experian inquiry removal before Chase, Barclays, and FNBO applications', why: 'Our process removes inquiries — do not skip EX banks, optimize timing. Remove first, then apply full sequence.' });
+    } else if (profile.expInq > FSG_INQ_WARN.EX) {
+      if (readiness === 'ready') readiness = 'optimize';
+      inquiryFlags.ex = true;
+      reasons.push(profile.expInq + ' Experian inquiries — inquiry removal recommended before Chase/Barclays');
+      optSteps.push({ step: 'Recommend Experian inquiry removal before Round 1 EX banks', why: 'Chase 5/24 rule triggers above ' + FSG_INQ_WARN.EX + ' inquiries; removing first preserves the full Evergreen sequence' });
+    }
+    if (profile.tuInq > FSG_INQ_WARN.TU) {
+      if (readiness === 'ready') readiness = 'optimize';
+      inquiryFlags.tu = true;
+      reasons.push(profile.tuInq + ' TransUnion inquiries — may affect Bank of America approval');
+      optSteps.push({ step: 'Run TransUnion inquiry removal before Bank of America application', why: 'BofA primarily pulls TransUnion; high TU inquiries reduce approval odds and credit limit' });
+    }
+    if (profile.eqInq > FSG_INQ_WARN.EQ) {
+      if (readiness === 'ready') readiness = 'optimize';
+      inquiryFlags.eq = true;
+      reasons.push(profile.eqInq + ' Equifax inquiries — impacts Round 2 banks (US Bank, Amex, Citi)');
+      optSteps.push({ step: 'Run Equifax inquiry removal before Round 2 applications', why: 'US Bank, Amex, and Citi pull Equifax; high EQ inquiries reduce limits and trigger caution holds' });
+    }
+    if (profile.newAccounts > 5) {
+      if (readiness !== 'blocked') readiness = 'optimize';
+      reasons.push(profile.newAccounts + ' new accounts in last 90 days — above 5 triggers lender scrutiny');
+      optSteps.push({ step: 'Wait 60–90 days before applying — too many recent account openings', why: 'Chase 5/24 counts all new accounts regardless of type; rapid opening signals risk to underwriters' });
+    }
+    if (profile.latePayments > 1) {
+      if (readiness === 'ready') readiness = 'optimize';
+      reasons.push(profile.latePayments + ' late payment' + (profile.latePayments > 1 ? 's' : '') + ' in history');
+      optSteps.push({ step: 'Dispute inaccurate late payments and establish clean payment pattern (6 months)', why: 'Recent lates reduce approval odds at Chase and Amex most severely; older lates (2+ years) are less impactful' });
+    }
+    if (profile.businessAge > 0 && profile.businessAge < 1) {
+      if (readiness === 'ready') readiness = 'optimize';
+      reasons.push('Business age under 1 year — limits bank options');
+      optSteps.push({ step: 'Apply to Discover and Capital One now; wait until 2 years for Chase, Amex', why: 'Chase requires 2+ years preferred, Amex requires 2+ years; Discover and Capital One are more flexible with newer businesses' });
+    }
+
+    return { readiness: readiness, reasons: reasons, optSteps: optSteps, inquiryFlags: inquiryFlags };
+  }
+
+  // ── ENGINE STEP 4: Generate recommended sequence ──────────────────────────
+  function generateRecommendedSequence(profile) {
+    if (!profile.banksByState) return [];
+
+    var allStateBanks = []
+      .concat(profile.banksByState.experian)
+      .concat(profile.banksByState.transunion)
+      .concat(profile.banksByState.equifax)
+      .concat(profile.banksByState.regional);
+
+    // Build a lookup: bank ID → Evergreen metadata
+    var evergreenMap = {};
+    FSG_EVERGREEN.forEach(function(e) { evergreenMap[e.id] = e; });
+
+    // Enrich state banks with Evergreen metadata
+    var enriched = allStateBanks
+      .filter(function(b, i, arr) {
+        // deduplicate by id
+        return arr.findIndex(function(x) { return x.id === b.id; }) === i;
+      })
+      .map(function(b) {
+        var ev = evergreenMap[b.id] || { round: 2, priority: 99, minScore: 0, minBizAge: 0, requiresRelationship: false, bureau: b.bureau, timing: b.notes || '' };
+        var hasRel = profile.hasRelationship(b.id);
+        var meetsScore = !profile.creditScore || profile.creditScore >= ev.minScore;
+        var meetsBizAge = !profile.businessAge || profile.businessAge >= ev.minBizAge || ev.minBizAge <= 1;
+        var meetsRel = !ev.requiresRelationship || hasRel;
+        return Object.assign({}, b, {
+          ev_round: ev.round,
+          ev_priority: ev.priority,
+          ev_bureau: ev.bureau || (b.bureau || '').toUpperCase().substring(0, 2),
+          ev_timing: ev.timing,
+          ev_sameDayWith: ev.sameDayWith || null,
+          ev_requiresRel: ev.requiresRelationship,
+          hasRelationship: hasRel,
+          meetsScore: meetsScore,
+          meetsBizAge: meetsBizAge,
+          meetsRel: meetsRel,
+          isUsed: profile.isBankUsed(b),
+          isApproved: profile.isBankApproved(b),
+          isDenied: profile.isBankDenied(b),
+          canApply: meetsScore && meetsBizAge && meetsRel && !profile.isBankUsed(b)
+        });
+      });
+
+    // Sort: relationship banks promoted within their round; then Evergreen priority; then by name
+    enriched.sort(function(a, b) {
+      if (a.ev_round !== b.ev_round) return a.ev_round - b.ev_round;
+      // Relationship banks promoted within their round
+      if (a.hasRelationship !== b.hasRelationship) return a.hasRelationship ? -1 : 1;
+      if (a.ev_priority !== b.ev_priority) return a.ev_priority - b.ev_priority;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    return enriched;
+  }
+
+  // ── ENGINE STEP 5: Generate funding rounds ────────────────────────────────
+  function generateFundingRounds(profile) {
+    var sequence = generateRecommendedSequence(profile);
+    var elanBanks = (profile.banksByState ? profile.banksByState.elan : []).map(function(b) {
+      return Object.assign({}, b, {
+        ev_round: 3, ev_priority: 99, ev_bureau: 'EQ', ev_timing: b.notes || '',
+        hasRelationship: profile.hasRelationship(b.id),
+        isUsed: profile.isBankUsed(b), isApproved: profile.isBankApproved(b),
+        isDenied: profile.isBankDenied(b), canApply: !profile.isBankUsed(b)
+      });
+    });
+
+    var round1 = sequence.filter(function(b) { return b.ev_round === 1; });
+    var round2 = sequence.filter(function(b) { return b.ev_round === 2; });
+    var round3 = elanBanks;
+
+    // Available (not yet used) counts per round
+    var r1Avail = round1.filter(function(b) { return !b.isUsed; });
+    var r2Avail = round2.filter(function(b) { return !b.isUsed; });
+    var r3Avail = round3.filter(function(b) { return !b.isUsed; });
+
+    // Determine current active round
+    var r1Complete = r1Avail.length === 0 && round1.length > 0;
+    var r2Complete = r2Avail.length === 0 && round2.length > 0 && r1Complete;
+    var activeRound = r1Complete ? (r2Complete ? 3 : 2) : 1;
+
+    return { round1: round1, round2: round2, round3: round3, r1Avail: r1Avail, r2Avail: r2Avail, r3Avail: r3Avail, activeRound: activeRound, sequence: sequence };
+  }
+
+  // ── ENGINE STEP 6: Generate next best action ──────────────────────────────
+  function generateNextBestAction(profile, readinessResult, roundsResult, gapResult) {
+    var fmt = function(n) { return '$' + Number(n).toLocaleString(); };
+
+    // 1. No state set — can't do anything
+    if (!profile.state || !profile.banksByState) {
+      return { happened: 'No state set for this client', next: 'Edit profile → set client state → regenerate strategy', why: 'State determines which banks are available and which credit bureau each bank pulls from' };
+    }
+
+    // 2. Hard blocked
+    if (readinessResult.readiness === 'blocked') {
+      var blockReason = readinessResult.reasons[0] || 'Credit profile blocked';
+      var blockStep = readinessResult.optSteps[0] ? readinessResult.optSteps[0].step : 'Run credit repair before applying';
+      return { happened: blockReason, next: blockStep, why: 'Applying now results in automatic declines and wastes inquiry budget — fix first' };
+    }
+
+    // 3. Funding goal reached
+    if (gapResult.goalMet) {
+      return { happened: fmt(profile.approvedAmount) + ' approved — funding goal of ' + fmt(profile.fundingGoal) + ' reached', next: 'Confirm fund disbursement and deployment plan with client', why: 'All target capital secured; next phase is deployment and business execution' };
+    }
+
+    // 4. Pre-application: relationship setup needed for US Bank (Round 2 key bank)
+    var usBank = (roundsResult.round2 || []).find(function(b) { return b.id === 'us-bank'; });
+    if (usBank && !usBank.isUsed && !profile.hasRelationship('us-bank') && profile.apps.length === 0) {
+      return { happened: 'No applications submitted yet — US Bank requires existing account', next: 'Open US Bank business checking account (min $100 deposit) now, then apply Chase + Barclays to start Round 1', why: 'US Bank approval requires an existing US Bank relationship; opening the account now prevents delay when Round 2 starts' };
+    }
+
+    // 5. High inquiries — inquiry removal first (but don't skip banks)
+    if (readinessResult.inquiryFlags.ex && profile.apps.length === 0) {
+      var exBankNames = (roundsResult.round1 || []).filter(function(b) { return b.ev_bureau === 'EX' && !b.isUsed; }).slice(0, 2).map(function(b) { return b.name; }).join(' and ');
+      return { happened: profile.expInq + ' Experian inquiries detected — removal recommended before EX banks', next: 'Start Experian inquiry removal process, then apply ' + (exBankNames || 'Chase and Barclays') + ' same day once cleared', why: 'Chase 5/24 blocks approval above ' + FSG_INQ_BLOCK.EX + ' inquiries; removing first preserves the full funding sequence and maximizes approval odds' };
+    }
+
+    // 6. Pending applications — wait for outcomes
+    if (profile.pendingApps.length > 0) {
+      var pendingNames = profile.pendingApps.slice(0, 2).map(function(a) { return a.bank || 'bank'; }).join(', ');
+      var nextRound = roundsResult.activeRound + (roundsResult.activeRound < 3 ? 1 : 0);
+      return { happened: profile.pendingApps.length + ' application' + (profile.pendingApps.length > 1 ? 's' : '') + ' pending (' + pendingNames + ')', next: 'Wait 7–14 days for outcomes, then apply Round ' + nextRound + ' banks', why: 'Stacking applications before outcomes signals credit desperation; lenders share data through industry networks' };
+    }
+
+    // 7. No applications yet — ready to start
+    if (profile.apps.length === 0) {
+      var r1Banks = (roundsResult.r1Avail || []).slice(0, 3);
+      var r1Names = r1Banks.map(function(b) { return b.name; }).join(' + ');
+      var exBanks = r1Banks.filter(function(b) { return b.ev_bureau === 'EX'; });
+      var sameDayNote = exBanks.length > 1 ? ' (' + exBanks.map(function(b) { return b.name; }).join(' + ') + ' same day — both pull EX)' : '';
+      if (readinessResult.optSteps.length > 0) {
+        return { happened: readinessResult.reasons[0] || 'Profile needs optimization before applying', next: readinessResult.optSteps[0].step, why: readinessResult.optSteps[0].why };
+      }
+      return { happened: 'No applications submitted — profile is ready to begin funding', next: 'Apply to ' + (r1Names || 'Round 1 banks') + sameDayNote, why: 'Starting with EX + TU banks keeps Equifax clean for Round 2 high-limit banks (US Bank, Amex, Citi)' };
+    }
+
+    // 8. Round 1 complete — move to Round 2
+    if (roundsResult.activeRound === 2 && roundsResult.r2Avail.length > 0) {
+      var nextR2 = roundsResult.r2Avail[0];
+      var r2RelNote = nextR2.ev_requiresRel && !nextR2.hasRelationship ? ' (open ' + nextR2.name + ' account first)' : '';
+      var topR2Names = roundsResult.r2Avail.slice(0, 2).map(function(b) { return b.name; }).join(' + ');
+      return { happened: 'Round 1 complete — Experian and TransUnion banks applied', next: 'Apply Round 2 Equifax banks: ' + topR2Names + r2RelNote, why: 'Round 2 targets Equifax; distributing inquiries across all 3 bureaus maximizes total approved credit' };
+    }
+
+    // 9. Round 2 complete — move to Round 3 Elan
+    if (roundsResult.activeRound === 3 && roundsResult.r3Avail.length > 0) {
+      var topElan = roundsResult.r3Avail.slice(0, 2).map(function(b) { return b.name; }).join(' + ');
+      return { happened: 'Rounds 1 and 2 complete — all primary bureaus covered', next: 'Apply Round 3 Elan partner banks: ' + topElan, why: 'Elan cards are easier approvals with less scrutiny; good for stacking additional 0% credit on top of existing approvals' };
+    }
+
+    // 10. Relationship bank available that hasn't been applied
+    var relBank = roundsResult.sequence.find(function(b) { return b.hasRelationship && !b.isUsed && !b.isDenied; });
+    if (relBank) {
+      return { happened: 'Existing relationship with ' + relBank.name + ' detected', next: 'Prioritize ' + relBank.name + ' application — relationship significantly improves approval odds and credit limits', why: 'Banks approve existing customers at 2–3x the rate of new applicants and offer 30–50% higher credit limits' };
+    }
+
+    // 11. Gap remaining but banks available
+    if (gapResult.gap > 0) {
+      var nextBank = roundsResult.sequence.find(function(b) { return !b.isUsed && !b.isDenied && b.canApply; });
+      if (nextBank) {
+        return { happened: fmt(profile.approvedAmount) + ' approved — ' + fmt(gapResult.gap) + ' remaining to reach ' + fmt(profile.fundingGoal) + ' goal', next: 'Apply to ' + nextBank.name + ' (' + (nextBank.ev_bureau || 'EQ') + ') — next in sequence', why: nextBank.ev_timing || 'Continuing the sequence maintains bureau diversity and approval momentum' };
+      }
+    }
+
+    // 12. All available banks used
+    return { happened: 'All available banks in ' + profile.state + ' have been applied to', next: 'Review denied applications for reconsideration or explore additional states', why: 'Recon calls can flip 30–40% of initial denials; some banks allow reapplication after 90 days' };
+  }
+
+  // ── ENGINE ORCHESTRATOR ───────────────────────────────────────────────────
+  function generateFundingStrategy(clientId) {
+    var profile  = fsgBuildClientProfile(clientId);
+    var gap      = calculateFundingGap(profile);
+    var ready    = checkFundingReadiness(profile);
+    var rounds   = generateFundingRounds(profile);
+    var nba      = generateNextBestAction(profile, ready, rounds, gap);
+
+    return {
+      profile:  profile,
+      gap:      gap,
+      ready:    ready,
+      rounds:   rounds,
+      nba:      nba,
+      // Convenience shorthands used by renderer
+      state:       profile.state,
+      creditScore: profile.creditScore,
+      utilization: profile.utilization,
+      readiness:   ready.readiness,
+      reasons:     ready.reasons,
+      optSteps:    ready.optSteps,
+      banksByState: profile.banksByState,
+      round1:  rounds.round1,
+      round2:  rounds.round2,
+      round3:  rounds.round3,
+      r1Avail: rounds.r1Avail,
+      r2Avail: rounds.r2Avail,
+      r3Avail: rounds.r3Avail,
+      activeRound: rounds.activeRound,
+      apps:        profile.apps,
+      isUsed:      profile.isBankUsed,
+      isApproved:  profile.isBankApproved,
+      isDenied:    profile.isBankDenied
+    };
+  }
+
+  // ── RENDERING HELPERS ─────────────────────────────────────────────────────
+  function _fsgBureauBadge(bureau) {
+    if (!bureau) return '';
+    var b = (bureau || '').toLowerCase();
+    if (b === 'all' || b.indexOf('+') !== -1 || b === 'all 3') return '<span class="fsg-bureau-badge all">ALL 3</span>';
+    if (b === 'ex' || b.indexOf('experian') !== -1)  return '<span class="fsg-bureau-badge ex">EX</span>';
+    if (b === 'tu' || b.indexOf('transunion') !== -1) return '<span class="fsg-bureau-badge tu">TU</span>';
+    if (b === 'eq' || b.indexOf('equifax') !== -1)   return '<span class="fsg-bureau-badge eq">EQ</span>';
+    return '<span class="fsg-bureau-badge eq">' + bureau.substring(0, 2).toUpperCase() + '</span>';
+  }
+
+  function _fsgFmt(n) { return n > 0 ? '$' + Number(n).toLocaleString() : '—'; }
+
+  function _fsgBankRow(b, opts) {
+    opts = opts || {};
+    var statusDot = '';
+    if (b.isApproved) statusDot = '<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:#059669;background:#ecfdf5;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:1px 6px">✓ APPROVED</span>';
+    else if (b.isDenied)   statusDot = '<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:#dc2626;background:#fef2f2;border:1px solid rgba(220,38,38,0.3);border-radius:4px;padding:1px 6px">✗ DENIED</span>';
+    else if (b.isUsed)     statusDot = '<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:#6b7280;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;padding:1px 6px">APPLIED</span>';
+    var relBadge = b.hasRelationship ? '<span style="font-size:9px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid rgba(29,78,216,0.2);border-radius:4px;padding:1px 5px">RELATIONSHIP</span>' : '';
+    var warnBadge = (!b.meetsScore && b.meetsScore !== undefined) ? '<span style="font-size:9px;font-weight:700;color:#d97706;background:#fffbeb;border:1px solid rgba(245,158,11,0.3);border-radius:4px;padding:1px 5px">SCORE TOO LOW</span>' : '';
+    var bureau = b.ev_bureau || (b.bureau || '').toUpperCase().substring(0, 2) || 'EQ';
+    return '<div class="fsg-bank-row' + (b.isUsed ? ' fsg-bank-used' : '') + '">' +
+      '<div class="fsg-bank-row-top">' +
+        _fsgBureauBadge(bureau) +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">' +
+            '<span class="fsg-bank-name">' + (b.name || '—') + '</span>' +
+            statusDot + relBadge + warnBadge +
+          '</div>' +
+          (b.card ? '<div class="fsg-bank-card-name">' + b.card + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="fsg-bank-meta">' +
+        (b.revenue > 0 ? '<div class="fsg-bank-meta-item"><strong>Rev</strong>' + _fsgFmt(b.revenue) + '/yr</div>' : '') +
+        (b.income  > 0 ? '<div class="fsg-bank-meta-item"><strong>Income</strong>' + _fsgFmt(b.income) + '/mo</div>' : '') +
+        (b.monthlySpend > 0 ? '<div class="fsg-bank-meta-item"><strong>Spend</strong>' + _fsgFmt(b.monthlySpend) + '/mo</div>' : '') +
+      '</div>' +
+      (b.requirements ? '<div class="fsg-bank-req">' + b.requirements + '</div>' : '') +
+      ((b.ev_timing || b.notes) && !b.isUsed ? '<div class="fsg-bank-note">' + (b.ev_timing || b.notes) + '</div>' : '') +
+    '</div>';
+  }
+
+  // ── RENDER ────────────────────────────────────────────────────────────────
+  function renderFundingStrategy(clientId) {
+    var container = document.getElementById('fsg-body-' + clientId);
+    var subEl     = document.getElementById('fsg-sub-' + clientId);
+    if (!container) return;
+
+    var s = generateFundingStrategy(clientId);
+    if (!s) {
+      container.innerHTML = '<div class="fsg-empty">Could not generate strategy.</div>';
+      return;
+    }
+
+    var html = '';
+
+    // ── Next Best Action ──────────────────────────────────────────────────
+    html += '<div class="fsg-nba">' +
+      '<div class="fsg-nba-label">Next Best Action</div>' +
+      '<div class="fsg-nba-text">' + s.nba.happened + ' → ' + s.nba.next + '</div>' +
+      '<div class="fsg-nba-why">' + s.nba.why + '</div>' +
+    '</div>';
+
+    // ── Funding Readiness ─────────────────────────────────────────────────
+    var readIcons = {
+      ready:    '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>',
+      optimize: '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>',
+      blocked:  '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>'
+    };
+    var readTitles = { ready: 'Ready to Fund', optimize: 'Optimize First', blocked: 'Blocked — Fix Credit First' };
+    html += '<div class="fsg-section">';
+    html += '<div class="fsg-section-title">Funding Readiness</div>';
+    html += '<div class="fsg-readiness ' + s.readiness + '">';
+    html += '<div class="fsg-readiness-icon">' + (readIcons[s.readiness] || readIcons.ready) + '</div>';
+    html += '<div style="flex:1">';
+    html += '<div class="fsg-readiness-title">' + (readTitles[s.readiness] || 'Unknown') + '</div>';
+    var readDetail = s.reasons.length > 0 ? s.reasons.join(' · ') : (s.creditScore ? 'FICO ' + s.creditScore + (s.utilization > 0 ? ' · ' + s.utilization + '% utilization' : '') + ' · All checks passed' : 'Add credit profile for detailed analysis');
+    html += '<div class="fsg-readiness-reason">' + readDetail + '</div>';
+    html += '</div></div></div>';
+
+    // ── Funding Gap ───────────────────────────────────────────────────────
+    if (s.gap.hasGoal) {
+      var pctW = Math.max(2, s.gap.pct);
+      html += '<div class="fsg-section">';
+      html += '<div class="fsg-section-title">Funding Progress</div>';
+      html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">';
+      html += '<span style="font-size:13px;font-weight:800;color:#059669;font-family:var(--font-h)">' + _fsgFmt(s.profile.approvedAmount) + ' approved</span>';
+      html += '<span style="font-size:10px;color:var(--gray-400)">' + _fsgFmt(s.gap.gap) + ' remaining</span>';
+      html += '</div>';
+      html += '<div style="height:7px;background:var(--gray-100);border-radius:999px;overflow:hidden;margin-bottom:5px"><div style="height:100%;width:' + pctW + '%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:999px;transition:width 0.4s"></div></div>';
+      html += '<div style="font-size:10px;color:var(--gray-400)">' + s.gap.pct + '% of ' + _fsgFmt(s.profile.fundingGoal) + ' goal</div>';
+      html += '</div>';
+    }
+
+    // ── Credit Optimization Plan ──────────────────────────────────────────
+    if (s.optSteps.length > 0) {
+      html += '<div class="fsg-section">';
+      html += '<div class="fsg-section-title">Credit Optimization Plan</div>';
+      html += '<div class="fsg-opt-steps">';
+      s.optSteps.forEach(function(step, i) {
+        html += '<div class="fsg-opt-step"><div class="fsg-opt-num">' + (i + 1) + '</div>';
+        html += '<div><div class="fsg-opt-text">' + step.step + '</div><div class="fsg-opt-why">' + step.why + '</div></div></div>';
+      });
+      html += '</div></div>';
+    }
+
+    // ── Available Banks ───────────────────────────────────────────────────
+    if (s.banksByState) {
+      html += '<div class="fsg-section">';
+      html += '<div class="fsg-section-title">Available Banks in ' + (s.state || 'State') + '</div>';
+      var bureauGroups = [
+        { key: 'experian',  label: 'Experian',  cls: 'ex' },
+        { key: 'transunion',label: 'TransUnion', cls: 'tu' },
+        { key: 'equifax',   label: 'Equifax',    cls: 'eq' },
+        { key: 'regional',  label: 'Regional',   cls: 'eq' },
+        { key: 'elan',      label: 'Elan',       cls: 'eq' }
+      ];
+      bureauGroups.forEach(function(g) {
+        var banks = s.banksByState[g.key] || [];
+        if (!banks.length) return;
+        html += '<div class="fsg-bureau-group"><div class="fsg-bureau-row">';
+        html += '<span class="fsg-bureau-badge ' + g.cls + '" style="min-width:60px">' + g.label + '</span>';
+        html += '<div class="fsg-bank-chips">';
+        banks.forEach(function(b) {
+          var used = s.isUsed(b), approved = s.isApproved(b), denied = s.isDenied(b);
+          var cls = approved ? ' approved-chip' : denied ? ' denied-chip' : used ? ' used' : '';
+          var rel = s.profile.hasRelationship(b.id) ? ' title="Existing relationship"' : '';
+          html += '<span class="fsg-bank-chip' + cls + '"' + rel + '>' + b.name + (approved ? ' ✓' : denied ? ' ✗' : '') + '</span>';
+        });
+        html += '</div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    // ── Recommended Funding Sequence ──────────────────────────────────────
+    if (s.banksByState) {
+      var roundDefs = [
+        { num: 1, banks: s.round1, avail: s.r1Avail, label: 'Round 1 — Apply First', sub: 'Experian + TransUnion · Spread inquiries across bureaus', color: '#0A1628' },
+        { num: 2, banks: s.round2, avail: s.r2Avail, label: 'Round 2 — After Round 1', sub: 'Equifax + Regional · Complete bureau coverage for max approved', color: '#065f46' },
+        { num: 3, banks: s.round3, avail: s.r3Avail, label: 'Round 3 — Expansion', sub: 'Elan partner banks · Stack additional 0% credit', color: '#1d4ed8' }
+      ];
+      var hasAnyRound = roundDefs.some(function(r) { return r.banks.length > 0; });
+      if (hasAnyRound) {
+        html += '<div class="fsg-section">';
+        html += '<div class="fsg-section-title">Recommended Funding Sequence</div>';
+        roundDefs.forEach(function(rd) {
+          if (!rd.banks.length) return;
+          var isActive = rd.num === s.activeRound;
+          var availCount = rd.avail.length;
+          var badge = isActive
+            ? '<span style="font-size:9px;font-weight:800;color:#fff;background:var(--blue);border-radius:4px;padding:2px 6px;margin-left:6px">ACTIVE</span>'
+            : (availCount === 0 && rd.banks.length > 0 ? '<span style="font-size:9px;font-weight:700;color:#059669;background:#ecfdf5;border-radius:4px;padding:2px 6px;margin-left:6px;border:1px solid rgba(16,185,129,0.3)">COMPLETE</span>' : '');
+          html += '<div class="fsg-round" style="' + (isActive ? 'border-color:' + rd.color + ';border-width:2px' : '') + '">';
+          html += '<div class="fsg-round-hdr" style="' + (isActive ? 'background:' + rd.color + ';' : '') + '">';
+          html += '<div><span class="fsg-round-title" style="' + (isActive ? 'color:white' : '') + '">' + rd.label + badge + '</span>';
+          html += '<div class="fsg-round-sub" style="' + (isActive ? 'color:rgba(255,255,255,0.7)' : '') + '">' + rd.sub + '</div></div>';
+          html += '<span style="font-size:10px;font-weight:700;' + (isActive ? 'color:rgba(255,255,255,0.8)' : 'color:var(--gray-400)') + '">' + availCount + ' available</span>';
+          html += '</div>';
+          html += '<div class="fsg-round-body">';
+          rd.banks.forEach(function(b) { html += _fsgBankRow(b); });
+          html += '</div></div>';
+        });
+        html += '</div>';
+      }
+    }
+
+    html += '<div style="font-size:10px;color:var(--gray-400);padding:6px 0 2px;border-top:1px solid var(--gray-100);margin-top:2px">Revenue · Income · Monthly Spend shown are recommended minimums. Requirements listed per bank above.</div>';
+
+    container.innerHTML = html;
+
+    // Subtitle
+    if (subEl) {
+      var stLbl = s.state ? s.state + ' · ' : '';
+      var rdLbl = { ready: 'Ready', optimize: 'Optimize First', blocked: 'Blocked' }[s.readiness] || '';
+      var rnLbl = s.r1Avail.length > 0 ? 'Round 1 · ' + s.r1Avail.length + ' banks' : s.r2Avail.length > 0 ? 'Round 2 · ' + s.r2Avail.length + ' banks' : s.r3Avail.length > 0 ? 'Round 3 · ' + s.r3Avail.length + ' banks' : 'Complete';
+      subEl.textContent = stLbl + rdLbl + ' · ' + rnLbl;
+    }
+  }
+
+  function generateAndRenderFSG(clientId) {
+    var body = document.getElementById('fsg-body-' + clientId);
+    if (body) body.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray-400);padding:8px 0"><div style="width:14px;height:14px;border:2px solid var(--blue-light);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>Analyzing profile and building strategy…</div>';
+    loadFundingStateDatabase(function() { renderFundingStrategy(clientId); });
+  }
+
+  function fsgToggle(clientId) {
+    var body = document.getElementById('coll-fsg-' + clientId);
+    var chev = document.getElementById('chev-fsg-' + clientId);
+    if (!body) return;
+    var isOpen = body.dataset.open === '1';
+    body.style.maxHeight = isOpen ? '0' : '8000px';
+    body.dataset.open = isOpen ? '0' : '1';
+    if (chev) chev.style.transform = isOpen ? 'rotate(-90deg)' : '';
+    if (!isOpen) {
+      var genBody = document.getElementById('fsg-body-' + clientId);
+      if (genBody && genBody.innerHTML.trim() === '') generateAndRenderFSG(clientId);
+    }
+  }
+
+  function refreshFundingStrategy(clientId) {
+    var body = document.getElementById('coll-fsg-' + clientId);
+    if (!body || body.dataset.open !== '1') return;
+    var genBody = document.getElementById('fsg-body-' + clientId);
+    if (!genBody || genBody.innerHTML.trim() === '') return;
+    if (!_fsgDatabase) return;
+    renderFundingStrategy(clientId);
+  }
+
   function refreshFundingUI(clientId) {
     var d = getDashData(clientId);
     var rows = d.fundingRows || [];
@@ -4886,8 +5632,34 @@
     // Next Action text — recompute live
     var cmdNextAction = el('cmd-next-action-' + clientId);
     if (cmdNextAction) {
-      var d2 = getDashData(clientId);
-      var nextTask2 = (d2.tasks || []).find(function(t){ return t.status !== 'done'; });
+      // Find first incomplete pipeline task for this client
+      var _pt = getClientTasks(clientId);
+      var _psi = (_pt && typeof _pt.stage === 'number') ? _pt.stage : 0;
+      var _pst = PIPELINE_STAGES[_psi] || PIPELINE_STAGES[0];
+      var _cs2 = (_pt && _pt.customTasks && _pt.customTasks[_psi]) || {};
+      var _allPipelineKeys = [];
+      if (_pt && _pst) {
+        (_pt.iassigned && _pt.iassigned[_psi] || []).forEach(function(i){ _allPipelineKeys.push('s'+_psi+'i'+i); });
+        (_pt.assigned && _pt.assigned[_psi] || []).forEach(function(i){ _allPipelineKeys.push('s'+_psi+'c'+i); });
+        (_cs2.i || []).forEach(function(_, i){ _allPipelineKeys.push('s'+_psi+'xi'+i); });
+        (_cs2.c || []).forEach(function(_, i){ _allPipelineKeys.push('s'+_psi+'xc'+i); });
+      }
+      var _firstUndone = _allPipelineKeys.find(function(k){ return !(_pt && _pt.checked && _pt.checked[k]); });
+      var _firstUndoneLabel = '';
+      if (_firstUndone && _pt && _pst) {
+        var _km = _firstUndone.match(/^s\d+x([ic])(\d+)$/) || _firstUndone.match(/^s\d+([ic])(\d+)$/);
+        if (_km) {
+          var _isCustom = _firstUndone.indexOf('x') !== -1;
+          var _type = _km[1]; var _idx = parseInt(_km[2], 10);
+          if (_isCustom) {
+            var _csList = _type === 'i' ? (_cs2.i || []) : (_cs2.c || []);
+            _firstUndoneLabel = (_csList[_idx] && _csList[_idx].label) || String(_csList[_idx] || '');
+          } else {
+            _firstUndoneLabel = _type === 'i' ? (_pst.internal[_idx] || '') : (_pst.client[_idx] || '');
+          }
+        }
+      }
+      var nextTask2 = _firstUndoneLabel ? { text: _firstUndoneLabel } : null;
       var nextActionText;
       if (nextTask2) {
         nextActionText = nextTask2.text;
@@ -4911,21 +5683,51 @@
   function refreshSidebarTasks(clientId) {
     var card = document.getElementById('sp-right-tasks-top');
     if (!card) return;
-    var d = getDashData(clientId);
-    var tasks = d.tasks || [];
-    var active = tasks.filter(function(t) { return t.status !== 'done'; });
-    var done   = tasks.filter(function(t) { return t.status === 'done'; });
+
+    // Read from pipeline tasks — the authoritative source for client tasks
+    var t = getClientTasks(clientId);
+    var stageIdx = (t && typeof t.stage === 'number') ? t.stage : 0;
+    var stage = PIPELINE_STAGES[stageIdx] || PIPELINE_STAGES[0];
+
+    var tasks = [];
+    if (t && stage) {
+      var assigned  = t.assigned[stageIdx] || [];
+      var iassigned = (t.iassigned && t.iassigned[stageIdx]) || [];
+      var cs        = (t.customTasks && t.customTasks[stageIdx]) || {};
+      var customInt = cs.i || [];
+      var customCli = cs.c || [];
+
+      iassigned.forEach(function(idx) {
+        var key = 's' + stageIdx + 'i' + idx;
+        tasks.push({ key: key, text: stage.internal[idx] || 'Task', done: !!(t.checked && t.checked[key]) });
+      });
+      assigned.forEach(function(idx) {
+        var key = 's' + stageIdx + 'c' + idx;
+        tasks.push({ key: key, text: stage.client[idx] || 'Task', done: !!(t.checked && t.checked[key]) });
+      });
+      customInt.forEach(function(task, i) {
+        var key = 's' + stageIdx + 'xi' + i;
+        tasks.push({ key: key, text: (task && task.label) ? task.label : (task || 'Task'), done: !!(t.checked && t.checked[key]) });
+      });
+      customCli.forEach(function(task, i) {
+        var key = 's' + stageIdx + 'xc' + i;
+        tasks.push({ key: key, text: (task && task.label) ? task.label : (task || 'Task'), done: !!(t.checked && t.checked[key]) });
+      });
+    }
+
+    var active = tasks.filter(function(tk) { return !tk.done; });
+    var done   = tasks.filter(function(tk) { return tk.done; });
     var pendingCount = active.length;
 
-    var taskRow = function(t, isDone) {
+    var taskRow = function(tk, isDone) {
       var chk = isDone
-        ? '<button onclick="sidebarToggleTask(\'' + clientId + '\',\'' + t.id + '\')" title="Mark undone" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #10b981;background:#10b981;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></button>'
-        : '<button onclick="sidebarToggleTask(\'' + clientId + '\',\'' + t.id + '\')" title="Mark done" style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--gray-300);background:white;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"></button>';
+        ? '<button onclick="sidebarTogglePipelineTask(\'' + clientId + '\',\'' + tk.key + '\')" title="Mark undone" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #10b981;background:#10b981;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></button>'
+        : '<button onclick="sidebarTogglePipelineTask(\'' + clientId + '\',\'' + tk.key + '\')" title="Mark done" style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--gray-300);background:white;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"></button>';
       var txt = isDone
-        ? '<div class="a-na-text" style="text-decoration:line-through;color:var(--gray-400)">' + t.text + '</div>'
-        : '<div class="a-na-text">' + t.text + '</div>' + (t.desc ? '<div class="a-na-desc">' + t.desc + '</div>' : '');
+        ? '<div class="a-na-text" style="text-decoration:line-through;color:var(--gray-400)">' + tk.text + '</div>'
+        : '<div class="a-na-text">' + tk.text + '</div>';
       var opacity = isDone ? 'opacity:0.55;' : '';
-      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:' + (isDone?'4':'5') + 'px 0;' + opacity + '">' + chk + '<div style="min-width:0">' + txt + '</div></div>';
+      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:' + (isDone ? '4' : '5') + 'px 0;' + opacity + '">' + chk + '<div style="min-width:0">' + txt + '</div></div>';
     };
 
     var subCount = pendingCount > 0
@@ -4936,9 +5738,9 @@
     if (tasks.length === 0) {
       body = '<div style="font-size:12px;color:var(--gray-400);padding:2px 0;display:flex;align-items:center;gap:6px"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>No tasks yet</div>';
     } else {
-      body = active.map(function(t) { return taskRow(t, false); }).join('');
+      body = active.map(function(tk) { return taskRow(tk, false); }).join('');
       if (done.length > 0) {
-        body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">' + done.map(function(t) { return taskRow(t, true); }).join('') + '</div>';
+        body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">' + done.map(function(tk) { return taskRow(tk, true); }).join('') + '</div>';
       }
     }
 
@@ -4952,6 +5754,20 @@
       '<div id="sp-right-tasks-body">' + body + '</div>';
   }
 
+  // Toggle a pipeline task from the sidebar without re-opening the modal
+  function sidebarTogglePipelineTask(clientId, key) {
+    var t = initClientTasks(clientId);
+    t.checked[key] = !t.checked[key];
+    saveClientTasks(clientId, t);
+    // If the pipeline modal is already open, keep it in sync
+    var modal = document.getElementById('pl-modal-bg');
+    if (modal) renderTaskModal(clientId, t.stage || 0);
+    renderPipeline();
+    renderOvClientTasks();
+    refreshClientUI(clientId);
+  }
+
+  // Keep legacy sidebarToggleTask in place (used by any old d.tasks references)
   function sidebarToggleTask(clientId, taskId) {
     var d = getDashData(clientId);
     var task = (d.tasks || []).find(function(t) { return t.id === taskId; });
@@ -4969,6 +5785,7 @@
     if (!clientId) return;
     refreshFundingUI(clientId);
     refreshSidebarTasks(clientId);
+    refreshFundingStrategy(clientId);
     renderClientList();
 
     // Update compact sticky header badges without full re-render
@@ -9850,6 +10667,7 @@
     renderTaskModal(clientId, stageIdx);
     renderPipeline();
     renderOvClientTasks();
+    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
   function plToggleAssign(clientId, stageIdx, taskIdx) {
@@ -9862,6 +10680,7 @@
     renderTaskModal(clientId, stageIdx);
     renderPipeline();
     renderOvClientTasks();
+    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
   function plToggleIAssign(clientId, stageIdx, taskIdx) {
@@ -9874,6 +10693,7 @@
     renderTaskModal(clientId, stageIdx);
     renderPipeline();
     renderOvClientTasks();
+    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
   function plRemoveIAssigned(clientId, stageIdx, taskIdx) {
@@ -9885,6 +10705,7 @@
     renderTaskModal(clientId, stageIdx);
     renderPipeline();
     renderOvClientTasks();
+    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
   function plAddCustomTask(clientId, stageIdx, type) {
@@ -9902,6 +10723,7 @@
     renderTaskModal(clientId, stageIdx);
     renderPipeline();
     renderOvClientTasks();
+    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
   function plRemoveCustomTask(clientId, stageIdx, type, idx) {
@@ -9922,6 +10744,7 @@
     renderTaskModal(clientId, stageIdx);
     renderPipeline();
     renderOvClientTasks();
+    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
   function plToggleCustom(clientId, key, viewStage) {
@@ -9931,6 +10754,7 @@
     renderTaskModal(clientId, viewStage);
     renderPipeline();
     renderOvClientTasks();
+    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
   function plToggle(clientId, key, viewStage) {
