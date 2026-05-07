@@ -6860,8 +6860,9 @@
             candidates.push({ score: bpicked, source: 'FICO Score 8 (before label)', confidence: 0.999 });
             break;
           }
-          // Look ahead up to 100 chars (scale range 300/850 may appear before actual score)
-          const ahead = t.substring(m0.index, m0.index + 100);
+          // Look ahead up to 600 chars — score may appear well after the label in Experian PDFs
+          // (lookbehind in extractNums already blocks $15,810 → 810 false positives)
+          const ahead = t.substring(m0.index, m0.index + 600);
           const apicked = pickBest(extractNums(ahead));
           if (apicked !== null) {
             candidates.push({ score: apicked, source: 'FICO Score 8 (after label)', confidence: 0.998 });
@@ -6870,13 +6871,15 @@
         }
       }
 
-      // P1 (0.97): Score inside "At a glance" section — Experian page 1 summary block
-      if (candidates.length === 0) {
-        const glanceM = t.match(/at\s+a\s+glance([\s\S]{0,800}?)(?=account\s+summary|account\s+history|$)/i);
+      // P1 (0.97): Score inside "At a glance" section — use only if P0 returned a boundary value
+      if (candidates.length === 0 || (candidates.length > 0 && (candidates[0].score === 300 || candidates[0].score === 850))) {
+        const glanceM = t.match(/at\s+a\s+glance([\s\S]{0,1200}?)(?=open\s+accounts|account\s+history|$)/i);
         if (glanceM) {
           const nums = extractNums(glanceM[1]);
           const picked = pickBest(nums);
-          if (picked !== null) candidates.push({ score: picked, source: 'At a glance section', confidence: 0.97 });
+          if (picked !== null && picked !== 300 && picked !== 850) {
+            candidates.unshift({ score: picked, source: 'At a glance section', confidence: 0.97 });
+          }
         }
       }
 
