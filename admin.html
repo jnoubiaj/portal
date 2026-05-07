@@ -6814,73 +6814,84 @@
     }
 
     // ── FICO SCORE — confidence-based multi-pattern extraction ─────────────
-    // NOTE: Experian reports use "FICO® Score 8" (with ® symbol) and also include
-    // specialty scores like "FICO® Bankcard Score 8" (higher) and "FICO® Auto Score 8".
-    // All patterns use [®©]? to handle the trademark symbol, and specialty scores are excluded.
+    // Experian reports: "FICO® Score 8" with ® symbol; score range "300 850" shown inline
+    // before the actual score, e.g. "FICO® Score 8 300 850 772 Exceptional".
+    // Specialty scores (Bankcard, Auto, Mortgage) are higher and must be excluded.
     {
       const candidates = [];
       const isValidFico = n => n >= 300 && n <= 850;
-      // Regex fragment: matches "FICO® Score 8" but NOT "FICO Bankcard Score 8" / "FICO Auto Score 8"
-      // The negative lookahead (?!\s*(Bankcard|Auto|Mortgage|Personal)) ensures specialty scores are skipped
-      const FICO8_RE = /FICO[®©]?\s*Score\s*8\b(?!\s*(?:Bankcard|Auto|Mortgage|Personal|Home|Version))/i;
-      const FICO8_RE_G = /FICO[®©]?\s*Score\s*8\b(?!\s*(?:Bankcard|Auto|Mortgage|Personal|Home|Version))/gi;
+      // Prefer non-boundary numbers — 300 and 850 appear as scale range labels in Experian reports,
+      // not as the actual score. If the window contains both boundary and non-boundary numbers,
+      // pick the first non-boundary one.
+      const pickBest = nums => {
+        const nonBound = nums.filter(n => n !== 300 && n !== 850);
+        return nonBound.length > 0 ? nonBound[0] : (nums.length > 0 ? nums[0] : null);
+      };
+      // Matches "FICO® Score 8" but NOT specialty variants (Bankcard, Auto, Mortgage, etc.)
+      const FICO8_SRC = 'FICO[\\u00AE\\u00A9®©]?\\s*Score\\s*8\\b(?!\\s*(?:Bankcard|Auto|Mortgage|Personal|Home|Version))';
+      const FICO8_RE  = new RegExp(FICO8_SRC, 'i');
+      const FICO8_REG = new RegExp(FICO8_SRC, 'gi');
 
-      // P0 (0.999): All occurrences of "FICO® Score 8" (excluding specialty) — look ahead AND behind for score
+      // P0 (0.999): Iterate every "FICO® Score 8" occurrence (non-specialty), look ±200 chars for score
       {
         let m0;
-        const re0 = new RegExp(FICO8_RE_G.source, 'gi');
-        while ((m0 = re0.exec(t)) !== null) {
-          // Look ahead up to 80 chars
-          const ahead = t.substring(m0.index, m0.index + 80);
-          const am = ahead.match(/\b([3-8]\d{2})\b/);
-          if (am && isValidFico(+am[1])) {
-            candidates.push({ score: +am[1], source: 'FICO Score 8 (exact)', confidence: 0.999 });
+        while ((m0 = FICO8_REG.exec(t)) !== null) {
+          // Look ahead up to 200 chars — skip range boundaries 300/850
+          const ahead = t.substring(m0.index, m0.index + 200);
+          const aheadNums = [...ahead.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
+          const picked = pickBest(aheadNums);
+          if (picked !== null) {
+            candidates.push({ score: picked, source: 'FICO Score 8 (exact)', confidence: 0.999 });
             break;
           }
-          // Look behind up to 25 chars (score before label)
-          const behind = t.substring(Math.max(0, m0.index - 25), m0.index + 20);
-          const bm = behind.match(/\b([3-8]\d{2})\b/);
-          if (bm && isValidFico(+bm[1])) {
-            candidates.push({ score: +bm[1], source: 'FICO Score 8 (reverse exact)', confidence: 0.998 });
+          // Look behind up to 25 chars (score printed before label)
+          const behind = t.substring(Math.max(0, m0.index - 25), m0.index);
+          const behindNums = [...behind.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
+          const bpicked = pickBest(behindNums);
+          if (bpicked !== null) {
+            candidates.push({ score: bpicked, source: 'FICO Score 8 (reverse exact)', confidence: 0.998 });
             break;
           }
         }
       }
 
-      // P1 (0.99): Direct "FICO Score 8 772" — handles ® symbol
+      // P1 (0.99): Score immediately after "FICO Score 8" — skip 300/850
       if (candidates.length === 0) {
-        const p1 = t.match(/FICO[®©]?\s*Score\s*8\s*[:\-]?\s*(\d{3})\b/i);
-        if (p1 && isValidFico(+p1[1])) candidates.push({ score: +p1[1], source: 'FICO Score 8 (direct)', confidence: 0.99 });
+        const ficoIdx = t.search(FICO8_RE);
+        if (ficoIdx >= 0) {
+          const ahead = t.substring(ficoIdx, ficoIdx + 200);
+          const nums = [...ahead.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
+          const picked = pickBest(nums);
+          if (picked !== null) candidates.push({ score: picked, source: 'FICO Score 8 (direct)', confidence: 0.99 });
+        }
       }
 
-      // P2 (0.98): Reverse "772 FICO Score 8" — handles ®
+      // P2 (0.98): Score immediately before "FICO Score 8" label
       if (candidates.length === 0) {
-        const p2 = t.match(/\b(\d{3})\s+FICO[®©]?\s*Score\s*8\b/i);
-        if (p2 && isValidFico(+p2[1])) candidates.push({ score: +p2[1], source: 'FICO Score 8 (reverse)', confidence: 0.98 });
+        const p2 = t.match(/\b(\d{3})\s+FICO[®©®]?\s*Score\s*8\b/i);
+        if (p2 && isValidFico(+p2[1]) && +p2[1] !== 300 && +p2[1] !== 850)
+          candidates.push({ score: +p2[1], source: 'FICO Score 8 (reverse)', confidence: 0.98 });
       }
 
-      // P3 (0.97): Score near "At a glance" or "Score Summary" section
+      // P3 (0.97): Score inside "At a glance" or "Score Summary" section
       if (candidates.length === 0) {
         const glanceM = t.match(/(?:at\s+a\s+glance|score\s+summary)([\s\S]{0,600}?)(?=account\s+history|account\s+name|credit\s+card|hard\s+inq|$)/i);
         if (glanceM) {
           const section = glanceM[1];
-          const sp3 = section.match(/FICO[®©]?\s*Score\s*8\s*[:\-]?\s*(\d{3})\b/i)
-                   || section.match(/\b(\d{3})\s+FICO[®©]?\s*Score\s*8/i);
-          if (sp3 && isValidFico(+sp3[1])) candidates.push({ score: +sp3[1], source: 'At a glance/FICO 8', confidence: 0.97 });
-          else {
-            const nums = [...section.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
-            if (nums.length === 1) candidates.push({ score: nums[0], source: 'At a glance only candidate', confidence: 0.80 });
-          }
+          const nums = [...section.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
+          const picked = pickBest(nums);
+          if (picked !== null) candidates.push({ score: picked, source: 'At a glance section', confidence: 0.97 });
         }
       }
 
-      // P4 (0.75): Nearest 3-digit number within 80 chars of "FICO Score 8" — handles ®
+      // P4 (0.75): Within 200 chars of "FICO Score 8", skip boundaries
       if (candidates.length === 0) {
         const ficoIdx = t.search(FICO8_RE);
         if (ficoIdx >= 0) {
-          const near = t.substring(Math.max(0, ficoIdx - 20), ficoIdx + 80);
+          const near = t.substring(Math.max(0, ficoIdx - 20), ficoIdx + 200);
           const nums = [...near.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
-          if (nums.length > 0) candidates.push({ score: nums[0], source: 'FICO Score 8 nearby', confidence: 0.75 });
+          const picked = pickBest(nums);
+          if (picked !== null) candidates.push({ score: picked, source: 'FICO Score 8 nearby', confidence: 0.75 });
         }
       }
 
@@ -6890,14 +6901,14 @@
         if (bwdM && isValidFico(+bwdM[1])) candidates.push({ score: +bwdM[1], source: 'FICOSCORE legacy', confidence: 0.70 });
       }
 
-      // P6 (0.60): Any FICO mention — last resort, wider search, skip specialty scores
+      // P6 (0.60): Any FICO mention — last resort
       if (candidates.length === 0) {
-        // Find FICO Score 8 first (even without ® handling) then grab nearest number
-        const ficoIdx = t.search(/FICO[®©]?\s*Score\s*8/i);
+        const ficoIdx = t.search(/FICO[®©®]?\s*Score\s*8/i);
         if (ficoIdx >= 0) {
-          const near = t.substring(Math.max(0, ficoIdx - 30), ficoIdx + 250);
-          const nums = [...near.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(n => n >= 300 && n <= 850);
-          if (nums.length > 0) candidates.push({ score: nums[0], source: 'FICO wide search', confidence: 0.60 });
+          const near = t.substring(Math.max(0, ficoIdx - 30), ficoIdx + 300);
+          const nums = [...near.matchAll(/\b([3-8]\d{2})\b/g)].map(m=>+m[1]).filter(isValidFico);
+          const picked = pickBest(nums);
+          if (picked !== null) candidates.push({ score: picked, source: 'FICO wide search', confidence: 0.60 });
         }
       }
 
