@@ -1674,6 +1674,42 @@
   .a-fp-modal-close:hover { background: var(--gray-50); }
   .a-fp-modal-body { padding: 20px 24px; }
 
+  /* ── OPS TASKS ──────────────────────────────── */
+  .ot-priority { display: inline-flex; align-items: center; font-size: 9px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+  .ot-priority.critical { background: #fef2f2; color: #991b1b; border: 1px solid rgba(153,27,27,0.18); }
+  .ot-priority.high     { background: #fff7ed; color: #c2410c; border: 1px solid rgba(194,65,12,0.18); }
+  .ot-priority.medium   { background: #fffbeb; color: #92400e; border: 1px solid rgba(146,64,14,0.18); }
+  .ot-priority.low      { background: #f0fdf4; color: #166534; border: 1px solid rgba(22,101,52,0.18); }
+  .ot-task-item { padding: 8px 0; border-bottom: 1px solid var(--gray-100); }
+  .ot-task-item:last-child { border-bottom: none; }
+  .ot-task-title { font-size: 12px; font-weight: 600; color: var(--gray-800); line-height: 1.3; }
+  .ot-task-due-overdue { font-size: 10px; font-weight: 700; color: #dc2626; margin-top: 2px; }
+  .ot-task-due-today   { font-size: 10px; font-weight: 700; color: #d97706; margin-top: 2px; }
+  .ot-task-due-future  { font-size: 10px; color: var(--gray-400); margin-top: 2px; }
+  .ot-task-actions { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+  .ot-btn { height: 21px; padding: 0 7px; border-radius: 4px; border: 1.5px solid var(--gray-200); background: white; font-family: var(--font-b); font-size: 10px; font-weight: 600; color: var(--gray-600); cursor: pointer; transition: background 0.1s; }
+  .ot-btn:hover { border-color: var(--gray-300); background: var(--gray-50); }
+  .ot-btn.ok  { border-color: rgba(16,185,129,0.4); color: #059669; background: rgba(16,185,129,0.05); }
+  .ot-btn.ok:hover  { background: rgba(16,185,129,0.14); }
+  .ot-btn.ext { border-color: rgba(245,158,11,0.4); color: #b45309; background: rgba(245,158,11,0.05); }
+  .ot-btn.ext:hover { background: rgba(245,158,11,0.14); }
+  .ot-divider { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray-300); margin: 10px 0 6px; padding-top: 8px; border-top: 1px solid var(--gray-100); }
+  /* Ops Task Modal */
+  .ot-modal-overlay { position: fixed; inset: 0; background: rgba(10,22,40,0.62); backdrop-filter: blur(3px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .ot-modal-box { background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.26); }
+  .ot-modal-title { font-family: var(--font-h); font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 16px; }
+  .ot-fg { margin-bottom: 12px; }
+  .ot-fg label { display: block; font-size: 10px; font-weight: 700; color: var(--gray-500); margin-bottom: 4px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .ot-fg input, .ot-fg select, .ot-fg textarea { width: 100%; padding: 0 10px; height: 36px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: var(--font-b); font-size: 13px; color: var(--navy); outline: none; background: white; box-sizing: border-box; }
+  .ot-fg textarea { height: auto; min-height: 60px; padding: 8px 10px; resize: vertical; }
+  .ot-fg input:focus, .ot-fg select:focus, .ot-fg textarea:focus { border-color: var(--blue); }
+  .ot-fg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ot-modal-acts { display: flex; gap: 8px; margin-top: 16px; }
+  .ot-save-btn { flex: 1; height: 38px; background: var(--navy); border: none; border-radius: 8px; font-family: var(--font-h); font-size: 13px; font-weight: 700; color: white; cursor: pointer; transition: background 0.15s; }
+  .ot-save-btn:hover { background: var(--navy-light); }
+  .ot-cancel-btn { height: 38px; padding: 0 16px; background: white; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: var(--font-h); font-size: 13px; font-weight: 600; color: var(--gray-600); cursor: pointer; transition: background 0.12s; }
+  .ot-cancel-btn:hover { background: var(--gray-50); }
+
 </style>
 </head>
 <body>
@@ -2423,6 +2459,9 @@
           switchAdminSection(lastSection, navEl);
         }
       } catch(e) {}
+      // Ops task overdue detection — run once on load, then every 60 seconds
+      try { updateOverdueTaskStatuses(); } catch(e) {}
+      setInterval(function() { try { updateOverdueTaskStatuses(); } catch(e) {} }, 60000);
     }
   });
 
@@ -5684,42 +5723,78 @@
     var card = document.getElementById('sp-right-tasks-top');
     if (!card) return;
 
-    // Read from pipeline tasks — the authoritative source for client tasks
+    // ── OPS TASKS (new centralized store) ──
+    var opsTasks = getOpsTasks(clientId);
+    var activeOps = sortOpsTasks(opsTasks.filter(function(t){ return t.status !== 'completed'; }));
+    var doneOps   = opsTasks.filter(function(t){ return t.status === 'completed'; });
+
+    // ── PIPELINE TASKS (existing system, unchanged) ──
     var t = getClientTasks(clientId);
     var stageIdx = (t && typeof t.stage === 'number') ? t.stage : 0;
     var stage = PIPELINE_STAGES[stageIdx] || PIPELINE_STAGES[0];
-
-    var tasks = [];
+    var plTasks = [];
     if (t && stage) {
       var assigned  = t.assigned[stageIdx] || [];
       var iassigned = (t.iassigned && t.iassigned[stageIdx]) || [];
       var cs        = (t.customTasks && t.customTasks[stageIdx]) || {};
       var customInt = cs.i || [];
       var customCli = cs.c || [];
-
       iassigned.forEach(function(idx) {
         var key = 's' + stageIdx + 'i' + idx;
-        tasks.push({ key: key, text: stage.internal[idx] || 'Task', done: !!(t.checked && t.checked[key]) });
+        plTasks.push({ key: key, text: stage.internal[idx] || 'Task', done: !!(t.checked && t.checked[key]) });
       });
       assigned.forEach(function(idx) {
         var key = 's' + stageIdx + 'c' + idx;
-        tasks.push({ key: key, text: stage.client[idx] || 'Task', done: !!(t.checked && t.checked[key]) });
+        plTasks.push({ key: key, text: stage.client[idx] || 'Task', done: !!(t.checked && t.checked[key]) });
       });
       customInt.forEach(function(task, i) {
         var key = 's' + stageIdx + 'xi' + i;
-        tasks.push({ key: key, text: (task && task.label) ? task.label : (task || 'Task'), done: !!(t.checked && t.checked[key]) });
+        plTasks.push({ key: key, text: (task && task.label) ? task.label : (task || 'Task'), done: !!(t.checked && t.checked[key]) });
       });
       customCli.forEach(function(task, i) {
         var key = 's' + stageIdx + 'xc' + i;
-        tasks.push({ key: key, text: (task && task.label) ? task.label : (task || 'Task'), done: !!(t.checked && t.checked[key]) });
+        plTasks.push({ key: key, text: (task && task.label) ? task.label : (task || 'Task'), done: !!(t.checked && t.checked[key]) });
       });
     }
+    var activePl = plTasks.filter(function(tk) { return !tk.done; });
+    var donePl   = plTasks.filter(function(tk) { return tk.done; });
 
-    var active = tasks.filter(function(tk) { return !tk.done; });
-    var done   = tasks.filter(function(tk) { return tk.done; });
-    var pendingCount = active.length;
+    var totalPending = activeOps.length + activePl.length;
+    var subCount = totalPending > 0
+      ? '<div class="a-card-sub">' + totalPending + ' pending</div>'
+      : (opsTasks.length + plTasks.length > 0 ? '<div class="a-card-sub" style="color:#059669">All done</div>' : '');
 
-    var taskRow = function(tk, isDone) {
+    // Render ops task row with Complete / Extend / Edit buttons
+    function opsRow(task) {
+      var today = _todayStr();
+      var dueLabel = '';
+      if (task.dueDate) {
+        if (task.status === 'overdue') {
+          dueLabel = '<div class="ot-task-due-overdue">Overdue · ' + _fmtOpsDate(task.dueDate) + '</div>';
+        } else if (task.dueDate === today) {
+          dueLabel = '<div class="ot-task-due-today">Due today' + (task.dueTime ? ' ' + task.dueTime : '') + '</div>';
+        } else {
+          dueLabel = '<div class="ot-task-due-future">Due ' + _fmtOpsDate(task.dueDate) + '</div>';
+        }
+      }
+      var extBadge = task.extensionHistory && task.extensionHistory.length > 0
+        ? ' <span style="font-size:9px;font-weight:500;color:var(--gray-400)">×' + task.extensionHistory.length + ' ext</span>' : '';
+      return '<div class="ot-task-item">'
+        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px">'
+          + '<div class="ot-task-title">' + _escHtml(task.title) + extBadge + '</div>'
+          + '<span class="ot-priority ' + task.priority + '">' + task.priority + '</span>'
+        + '</div>'
+        + dueLabel
+        + '<div class="ot-task-actions">'
+          + '<button class="ot-btn ok" onclick="opsCompleteTask(\'' + clientId + '\',\'' + task.id + '\')">&#10003; Complete</button>'
+          + '<button class="ot-btn ext" onclick="opsOpenExtend(\'' + clientId + '\',\'' + task.id + '\')">&#8599; Extend</button>'
+          + '<button class="ot-btn" onclick="opsOpenEdit(\'' + clientId + '\',\'' + task.id + '\')">Edit</button>'
+        + '</div>'
+      + '</div>';
+    }
+
+    // Render pipeline task row (existing behavior preserved)
+    function plRow(tk, isDone) {
       var chk = isDone
         ? '<button onclick="sidebarTogglePipelineTask(\'' + clientId + '\',\'' + tk.key + '\')" title="Mark undone" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #10b981;background:#10b981;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></button>'
         : '<button onclick="sidebarTogglePipelineTask(\'' + clientId + '\',\'' + tk.key + '\')" title="Mark done" style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--gray-300);background:white;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"></button>';
@@ -5728,30 +5803,45 @@
         : '<div class="a-na-text">' + tk.text + '</div>';
       var opacity = isDone ? 'opacity:0.55;' : '';
       return '<div style="display:flex;align-items:flex-start;gap:8px;padding:' + (isDone ? '4' : '5') + 'px 0;' + opacity + '">' + chk + '<div style="min-width:0">' + txt + '</div></div>';
-    };
+    }
 
-    var subCount = pendingCount > 0
-      ? '<div class="a-card-sub">' + pendingCount + ' pending</div>'
-      : (tasks.length > 0 ? '<div class="a-card-sub" style="color:#059669">All done</div>' : '');
-
-    var body;
-    if (tasks.length === 0) {
-      body = '<div style="font-size:12px;color:var(--gray-400);padding:2px 0;display:flex;align-items:center;gap:6px"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>No tasks yet</div>';
-    } else {
-      body = active.map(function(tk) { return taskRow(tk, false); }).join('');
-      if (done.length > 0) {
-        body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">' + done.map(function(tk) { return taskRow(tk, true); }).join('') + '</div>';
+    // Build body
+    var body = '';
+    if (activeOps.length > 0) {
+      body += activeOps.map(opsRow).join('');
+    }
+    if (activePl.length > 0 || donePl.length > 0) {
+      if (activeOps.length > 0 || doneOps.length > 0) {
+        body += '<div class="ot-divider">Pipeline Tasks</div>';
       }
+      body += activePl.map(function(tk) { return plRow(tk, false); }).join('');
+      if (donePl.length > 0) {
+        body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">'
+          + donePl.map(function(tk) { return plRow(tk, true); }).join('') + '</div>';
+      }
+    }
+    if (doneOps.length > 0) {
+      body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">'
+        + doneOps.map(function(task) {
+            return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;opacity:0.5">'
+              + '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>'
+              + '<div style="font-size:11px;color:var(--gray-400);text-decoration:line-through">' + _escHtml(task.title) + '</div>'
+            + '</div>';
+          }).join('')
+      + '</div>';
+    }
+    if (!body) {
+      body = '<div style="font-size:12px;color:var(--gray-400);padding:2px 0;display:flex;align-items:center;gap:6px"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>No tasks yet</div>';
     }
 
     card.innerHTML =
-      '<div class="a-card-hdr">' +
-        '<div class="a-card-hdrl">' +
-          '<div class="a-card-title">Next Actions</div>' + subCount +
-        '</div>' +
-        '<div class="a-card-btns"><button class="a-card-btn" onclick="openTaskModal(\'' + clientId + '\')">+ Task</button></div>' +
-      '</div>' +
-      '<div id="sp-right-tasks-body">' + body + '</div>';
+      '<div class="a-card-hdr">'
+        + '<div class="a-card-hdrl">'
+          + '<div class="a-card-title">Next Actions</div>' + subCount
+        + '</div>'
+        + '<div class="a-card-btns"><button class="a-card-btn" onclick="opsOpenCreate(\'' + clientId + '\')">+ Task</button></div>'
+      + '</div>'
+      + '<div id="sp-right-tasks-body">' + body + '</div>';
   }
 
   // Toggle a pipeline task from the sidebar without re-opening the modal
@@ -5783,6 +5873,7 @@
   // Call after any mutation to keep all visible client UI in sync instantly
   function refreshClientUI(clientId) {
     if (!clientId) return;
+    updateOverdueTaskStatuses(clientId);
     refreshFundingUI(clientId);
     refreshSidebarTasks(clientId);
     refreshFundingStrategy(clientId);
@@ -10815,6 +10906,309 @@
 
 
 
+
+
+  // ════════════════════════════════════════════════════════════════════════════
+  //  PHASE 1 — OPS TASK ENGINE
+  // ════════════════════════════════════════════════════════════════════════════
+
+  function _escHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function _fmtOpsDate(dateStr) {
+    if (!dateStr) return '';
+    try { var d = new Date(dateStr + 'T12:00:00'); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+    catch(e) { return dateStr; }
+  }
+  function _todayStr() { return new Date().toISOString().split('T')[0]; }
+
+  function getOpsTasks(clientId) {
+    try { return JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]'); } catch(e) { return []; }
+  }
+  function _saveOpsTasks(clientId, tasks) {
+    try { localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(tasks)); } catch(e) {}
+  }
+  function createOpsTask(clientId, fields) {
+    var tasks = getOpsTasks(clientId);
+    var c = getClient(clientId);
+    var names = c ? _getClientNames(c) : { fn: '', ln: '' };
+    var task = Object.assign({
+      id: 'ot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      clientId: clientId,
+      clientName: (names.fn + ' ' + names.ln).trim(),
+      title: '', description: '', type: 'admin', stage: 0,
+      status: 'pending', priority: 'medium', assignedTo: 'Sam',
+      dueDate: '', dueTime: '',
+      createdAt: Date.now(), createdBy: 'admin',
+      completedAt: null, completedBy: null,
+      extensionHistory: [], source: 'manual', fundingImpact: ''
+    }, fields);
+    tasks.push(task);
+    _saveOpsTasks(clientId, tasks);
+    return task;
+  }
+  function updateOpsTask(clientId, taskId, updates) {
+    var tasks = getOpsTasks(clientId);
+    var idx = tasks.findIndex(function(t) { return t.id === taskId; });
+    if (idx === -1) return null;
+    tasks[idx] = Object.assign({}, tasks[idx], updates);
+    _saveOpsTasks(clientId, tasks);
+    return tasks[idx];
+  }
+  function deleteOpsTask(clientId, taskId) {
+    _saveOpsTasks(clientId, getOpsTasks(clientId).filter(function(t) { return t.id !== taskId; }));
+  }
+  function completeOpsTask(clientId, taskId) {
+    return updateOpsTask(clientId, taskId, { status: 'completed', completedAt: Date.now(), completedBy: 'admin' });
+  }
+  function getAllOpsTasks() {
+    var all = [];
+    clients.forEach(function(c) { all = all.concat(getOpsTasks(c.id)); });
+    return all;
+  }
+  function _isOpsTaskOverdue(task) {
+    if (!task.dueDate || task.status === 'completed') return false;
+    return new Date(task.dueDate + 'T' + (task.dueTime || '23:59')) < new Date();
+  }
+  function getOverdueOpsTasks(clientId) {
+    return getOpsTasks(clientId).filter(function(t) {
+      return t.status === 'overdue' || (t.status !== 'completed' && _isOpsTaskOverdue(t));
+    });
+  }
+  function getTasksDueToday(clientId) {
+    var today = _todayStr();
+    return getOpsTasks(clientId).filter(function(t) {
+      return t.status !== 'completed' && t.dueDate === today;
+    });
+  }
+  function updateOverdueTaskStatuses(specificClientId) {
+    var list = specificClientId
+      ? [getClient(specificClientId)].filter(Boolean)
+      : clients.filter(function(c) { return !c.archived; });
+    list.forEach(function(c) {
+      var tasks = getOpsTasks(c.id);
+      var changed = false;
+      tasks.forEach(function(t) {
+        if (t.status !== 'completed' && t.status !== 'overdue' && _isOpsTaskOverdue(t)) {
+          t.status = 'overdue'; changed = true;
+        }
+      });
+      if (changed) _saveOpsTasks(c.id, tasks);
+    });
+  }
+  function sortOpsTasks(tasks) {
+    var today = _todayStr();
+    var pri = { critical: 0, high: 1, medium: 2, low: 3 };
+    return tasks.slice().sort(function(a, b) {
+      if (a.status === 'completed' && b.status !== 'completed') return 1;
+      if (b.status === 'completed' && a.status !== 'completed') return -1;
+      if (a.status === 'overdue' && b.status !== 'overdue') return -1;
+      if (b.status === 'overdue' && a.status !== 'overdue') return 1;
+      var at = a.dueDate === today, bt = b.dueDate === today;
+      if (at && !bt) return -1; if (bt && !at) return 1;
+      var ap = pri[a.priority] != null ? pri[a.priority] : 2;
+      var bp = pri[b.priority] != null ? pri[b.priority] : 2;
+      if (ap !== bp) return ap - bp;
+      return a.createdAt - b.createdAt;
+    });
+  }
+  function generateNextAction(clientId) {
+    var d = getDashData(clientId);
+    var ct = getClientTasks(clientId);
+    var stageIdx = ct ? (typeof ct.stage === 'number' ? ct.stage : 0) : Math.max(0, (d.currentStage || 1) - 1);
+    var overdue = getOverdueOpsTasks(clientId);
+    if (overdue.length > 0) return 'Resolve overdue task: "' + overdue[0].title + '"';
+    var todayTasks = getTasksDueToday(clientId);
+    if (todayTasks.length > 0) return 'Complete due-today task: "' + todayTasks[0].title + '"';
+    var pendingDocs = (d.adminDocs || []).filter(function(doc) { return !doc.status || doc.status === 'pending'; });
+    if (pendingDocs.length > 0) return 'Request pending document: ' + (pendingDocs[0].name || 'document');
+    var pendingApps = (d.fundingRows || []).filter(function(r) { return r.status === 'pending' || r.status === 'submitted'; });
+    if (pendingApps.length > 0) return 'Follow up on pending application at ' + (pendingApps[0].bank || 'bank');
+    var stageActions = [
+      'Complete initial credit review and onboarding documents',
+      'Work credit optimization plan before advancing to funding',
+      'Generate Funding Strategy and select target banks',
+      'Establish bank relationships for underwriting approval',
+      'Submit applications to approved target banks',
+      'Review funding decisions and confirm disbursements'
+    ];
+    return stageActions[stageIdx] || 'Review client status and assign next task';
+  }
+  function getStuckClients() {
+    var stuck = [];
+    var now = Date.now();
+    var DAY = 86400000;
+    var seen = {};
+    clients.filter(function(c) { return !c.archived; }).forEach(function(c) {
+      if (seen[c.id]) return;
+      var d = getDashData(c.id);
+      var ct = getClientTasks(c.id);
+      var stageIdx = ct ? (typeof ct.stage === 'number' ? ct.stage : 0) : 0;
+      var names = _getClientNames(c);
+      var clientName = (names.fn + ' ' + names.ln).trim();
+      var overdueCount = getOverdueOpsTasks(c.id).length;
+      if (overdueCount > 0) {
+        seen[c.id] = true;
+        stuck.push({ clientId: c.id, clientName: clientName,
+          reason: overdueCount + ' overdue task' + (overdueCount > 1 ? 's' : ''),
+          daysStuck: 0, priority: 'high', nextSuggestedAction: generateNextAction(c.id) });
+        return;
+      }
+      var lastAct = d.lastActivity || d.updatedAt || 0;
+      if (lastAct && stageIdx < 5) {
+        var daysIdle = Math.floor((now - lastAct) / DAY);
+        if (daysIdle >= 7) {
+          seen[c.id] = true;
+          stuck.push({ clientId: c.id, clientName: clientName,
+            reason: 'No activity for ' + daysIdle + ' day' + (daysIdle !== 1 ? 's' : ''),
+            daysStuck: daysIdle, priority: daysIdle > 14 ? 'critical' : 'medium',
+            nextSuggestedAction: generateNextAction(c.id) });
+          return;
+        }
+      }
+      var daysInStage = plDaysInStage(c.id, stageIdx);
+      if (daysInStage > 14) {
+        seen[c.id] = true;
+        stuck.push({ clientId: c.id, clientName: clientName,
+          reason: 'In stage ' + (stageIdx + 1) + ' for ' + daysInStage + ' days',
+          daysStuck: daysInStage, priority: daysInStage > 30 ? 'critical' : 'medium',
+          nextSuggestedAction: generateNextAction(c.id) });
+      }
+    });
+    return stuck;
+  }
+  function refreshTaskUI(clientId) {
+    if (!clientId) return;
+    updateOverdueTaskStatuses(clientId);
+    refreshSidebarTasks(clientId);
+  }
+  function opsOpenCreate(clientId) { _renderOpsTaskModal(clientId, null); }
+  function opsOpenEdit(clientId, taskId) {
+    var task = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
+    _renderOpsTaskModal(clientId, task || null);
+  }
+  function _renderOpsTaskModal(clientId, task) {
+    var old = document.getElementById('ot-modal-overlay');
+    if (old) old.remove();
+    var c = getClient(clientId);
+    var names = c ? _getClientNames(c) : { fn: '', ln: '' };
+    var clientName = (names.fn + ' ' + names.ln).trim();
+    var isEdit = !!task;
+    var ct = getClientTasks(clientId);
+    var curStage = ct ? (typeof ct.stage === 'number' ? ct.stage : 0) : 0;
+    var stageOptions = PIPELINE_STAGES.map(function(s, i) {
+      var sel = (isEdit ? task.stage : curStage) === i ? ' selected' : '';
+      return '<option value="' + i + '"' + sel + '>S' + (i + 1) + ': ' + s.name + '</option>';
+    }).join('');
+    var selType = function(v) { return (isEdit ? task.type : 'admin') === v ? ' selected' : ''; };
+    var selPri  = function(v) { return (isEdit ? task.priority : 'medium') === v ? ' selected' : ''; };
+    var el = document.createElement('div');
+    el.id = 'ot-modal-overlay';
+    el.className = 'ot-modal-overlay';
+    el.onclick = function(e) { if (e.target === el) el.remove(); };
+    el.innerHTML = '<div class="ot-modal-box">'
+      + '<div class="ot-modal-title">' + (isEdit ? 'Edit Task' : 'New Task &#8212; ' + _escHtml(clientName)) + '</div>'
+      + '<div class="ot-fg"><label>Title *</label><input id="otf-title" type="text" placeholder="Task title" value="' + _escHtml(isEdit ? task.title : '') + '" /></div>'
+      + '<div class="ot-fg"><label>Description</label><textarea id="otf-desc" placeholder="Optional details...">' + _escHtml(isEdit ? (task.description || '') : '') + '</textarea></div>'
+      + '<div class="ot-fg-row">'
+        + '<div class="ot-fg"><label>Type</label><select id="otf-type">'
+          + '<option value="admin"' + selType('admin') + '>Admin</option>'
+          + '<option value="client"' + selType('client') + '>Client</option>'
+          + '<option value="system"' + selType('system') + '>System</option>'
+        + '</select></div>'
+        + '<div class="ot-fg"><label>Priority</label><select id="otf-priority">'
+          + '<option value="low"' + selPri('low') + '>Low</option>'
+          + '<option value="medium"' + selPri('medium') + '>Medium</option>'
+          + '<option value="high"' + selPri('high') + '>High</option>'
+          + '<option value="critical"' + selPri('critical') + '>Critical</option>'
+        + '</select></div>'
+      + '</div>'
+      + '<div class="ot-fg"><label>Assigned To</label><input id="otf-assigned" type="text" placeholder="e.g. Sam" value="' + _escHtml(isEdit ? (task.assignedTo || 'Sam') : 'Sam') + '" /></div>'
+      + '<div class="ot-fg-row">'
+        + '<div class="ot-fg"><label>Due Date</label><input id="otf-duedate" type="date" value="' + _escHtml(isEdit ? (task.dueDate || '') : '') + '" /></div>'
+        + '<div class="ot-fg"><label>Due Time</label><input id="otf-duetime" type="time" value="' + _escHtml(isEdit ? (task.dueTime || '') : '') + '" /></div>'
+      + '</div>'
+      + '<div class="ot-fg"><label>Stage</label><select id="otf-stage">' + stageOptions + '</select></div>'
+      + '<div class="ot-fg"><label>Notes / Impact</label><textarea id="otf-impact" placeholder="Funding impact or notes...">' + _escHtml(isEdit ? (task.fundingImpact || '') : '') + '</textarea></div>'
+      + '<div class="ot-modal-acts">'
+        + '<button class="ot-save-btn" onclick="_saveOpsTaskModal(\'' + clientId + '\',' + (isEdit ? '\'' + task.id + '\'' : 'null') + ')">'
+          + (isEdit ? 'Save Changes' : 'Create Task') + '</button>'
+        + '<button class="ot-cancel-btn" onclick="document.getElementById(\'ot-modal-overlay\').remove()">Cancel</button>'
+      + '</div>'
+    + '</div>';
+    document.body.appendChild(el);
+    setTimeout(function() { var ti = document.getElementById('otf-title'); if (ti) ti.focus(); }, 50);
+  }
+  function _saveOpsTaskModal(clientId, taskId) {
+    var title = (document.getElementById('otf-title') || {}).value || '';
+    if (!title.trim()) { alert('Task title is required.'); return; }
+    var fields = {
+      title:         title.trim(),
+      description:   (document.getElementById('otf-desc') || {}).value || '',
+      type:          (document.getElementById('otf-type') || {}).value || 'admin',
+      priority:      (document.getElementById('otf-priority') || {}).value || 'medium',
+      assignedTo:    (document.getElementById('otf-assigned') || {}).value || 'Sam',
+      dueDate:       (document.getElementById('otf-duedate') || {}).value || '',
+      dueTime:       (document.getElementById('otf-duetime') || {}).value || '',
+      stage:         parseInt((document.getElementById('otf-stage') || {}).value || '0', 10),
+      fundingImpact: (document.getElementById('otf-impact') || {}).value || '',
+      status:        'pending'
+    };
+    taskId ? updateOpsTask(clientId, taskId, fields) : createOpsTask(clientId, fields);
+    var el = document.getElementById('ot-modal-overlay');
+    if (el) el.remove();
+    refreshTaskUI(clientId);
+  }
+  function opsCompleteTask(clientId, taskId) {
+    completeOpsTask(clientId, taskId);
+    refreshTaskUI(clientId);
+  }
+  function opsOpenExtend(clientId, taskId) {
+    var task = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
+    if (!task) return;
+    var old = document.getElementById('ot-extend-overlay');
+    if (old) old.remove();
+    var extCount = task.extensionHistory ? task.extensionHistory.length : 0;
+    var el = document.createElement('div');
+    el.id = 'ot-extend-overlay';
+    el.className = 'ot-modal-overlay';
+    el.onclick = function(e) { if (e.target === el) el.remove(); };
+    el.innerHTML = '<div class="ot-modal-box" style="max-width:380px">'
+      + '<div class="ot-modal-title">Extend Task'
+        + (extCount > 0 ? ' <span style="font-size:11px;font-weight:500;color:var(--gray-400)">(extended ' + extCount + '&times;)</span>' : '') + '</div>'
+      + '<div style="font-size:12px;color:var(--gray-600);margin-bottom:14px;line-height:1.4">' + _escHtml(task.title) + '</div>'
+      + '<div class="ot-fg"><label>New Due Date *</label><input id="otext-date" type="date" /></div>'
+      + '<div class="ot-fg"><label>New Due Time</label><input id="otext-time" type="time" /></div>'
+      + '<div class="ot-fg"><label>Reason for Extension *</label><textarea id="otext-reason" placeholder="Why is this being extended?"></textarea></div>'
+      + '<div class="ot-modal-acts">'
+        + '<button class="ot-save-btn" onclick="_saveOpsExtend(\'' + clientId + '\',\'' + taskId + '\')">Extend Task</button>'
+        + '<button class="ot-cancel-btn" onclick="document.getElementById(\'ot-extend-overlay\').remove()">Cancel</button>'
+      + '</div>'
+    + '</div>';
+    document.body.appendChild(el);
+    setTimeout(function() { var di = document.getElementById('otext-date'); if (di) di.focus(); }, 50);
+  }
+  function _saveOpsExtend(clientId, taskId) {
+    var newDate = (document.getElementById('otext-date') || {}).value || '';
+    var newTime = (document.getElementById('otext-time') || {}).value || '';
+    var reason  = ((document.getElementById('otext-reason') || {}).value || '').trim();
+    if (!newDate) { alert('New due date is required.'); return; }
+    if (!reason)  { alert('Reason for extension is required.'); return; }
+    var task = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
+    if (!task) return;
+    updateOpsTask(clientId, taskId, {
+      dueDate: newDate, dueTime: newTime, status: 'pending',
+      extensionHistory: (task.extensionHistory || []).concat([{
+        oldDueDate: task.dueDate, oldDueTime: task.dueTime,
+        newDueDate: newDate,      newDueTime: newTime,
+        reason: reason,           extendedBy: 'admin',
+        extendedAt: Date.now()
+      }])
+    });
+    var el = document.getElementById('ot-extend-overlay');
+    if (el) el.remove();
+    refreshTaskUI(clientId);
+  }
 
 </script>
 </body>
