@@ -2237,6 +2237,15 @@
       if (fsClients && fsClients.length > 0) {
         const ids = getDeletedIds();
         clients = fsClients.filter(c => !ids.includes(c.id));
+        // Prefer localStorage credit score over Firestore when local has a higher-confidence result
+        clients.forEach(c => {
+          try {
+            const localCr = JSON.parse(localStorage.getItem('cq_credit_' + c.id) || 'null');
+            if (localCr && localCr.fico && localCr.fico !== 300 && localCr.fico !== 850) {
+              c.fico = localCr.fico;
+            }
+          } catch(e) {}
+        });
         try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
         renderClientList();
         renderOverview();
@@ -2847,7 +2856,8 @@
           // Only notify meaningful changes (status, fico)
           if (prev.status && data.status && prev.status !== data.status) {
             addNotif('client', clientId, _notifClientName(clientId) + '\'s status changed to ' + (data.status || 'unknown'));
-          } else if (prev.fico !== undefined && data.fico && prev.fico !== data.fico) {
+          } else if (prev.fico !== undefined && data.fico && prev.fico !== data.fico &&
+                     Date.now() - _notifInitTs > 8000) {
             addNotif('client', clientId, _notifClientName(clientId) + '\'s FICO updated to ' + data.fico);
           }
           clientPrev[clientId] = data;
