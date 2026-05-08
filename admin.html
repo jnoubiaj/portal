@@ -7621,6 +7621,12 @@
             Cancel
           </button>
           <span id="admin-profile-save-toast" style="font-size:12px;font-weight:600;color:var(--success);opacity:0;transition:opacity 0.3s;margin-left:4px"></span>
+          <button id="ghl-import-open-btn-${clientId}" onclick="ghlImportFromForm('${clientId}', this)"
+            style="height:40px;padding:0 18px;background:transparent;border:1.5px solid #10b981;border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;color:#10b981;cursor:pointer;margin-left:auto;display:flex;align-items:center;gap:6px;transition:all 0.13s"
+            onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='transparent'">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
+            Import From GHL
+          </button>
         </div>
       </div>`;
 
@@ -7715,6 +7721,342 @@
       document.getElementById('admin-profile-edit-overlay')?.remove();
       renderClientDetail(clientId);
     }, 1200);
+  }
+
+  // ── GHL FORM DATA IMPORT ─────────────────────────────────────────────────
+
+  async function ghlImportFromForm(clientId, btn) {
+    const client = getClient(clientId);
+    if (!client) { alert('Client not found.'); return; }
+    if (!window.GHL) { alert('GHL integration is not loaded.'); return; }
+
+    const origLabel = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span style="opacity:0.7">⏳ Fetching…</span>'; }
+
+    try {
+      const result = await GHL.fetchOnboardingData(client);
+
+      if (result.error) {
+        alert('GHL Import: ' + result.error);
+        return;
+      }
+
+      const { contact, mappedFields, matchInfo, formSubmissions } = result;
+      const fieldKeys = Object.keys(mappedFields);
+
+      if (fieldKeys.length === 0) {
+        alert('No onboarding data found in GHL for this client. The contact exists but has no custom field data yet.');
+        return;
+      }
+
+      // Store pending import state in window (avoids JSON injection in onclick attributes)
+      window._ghlPendingImport = {
+        clientId,
+        fieldKeys,
+        mappedFields,
+        contact,
+        matchInfo,
+        formSubmissions,
+        metadata: {
+          ghlContactId:   contact.id,
+          ghlFormId:      matchInfo.ghlFormId  || null,
+          ghlProposalId:  matchInfo.ghlProposalId || null,
+          ghlName:        ((contact.firstName||'') + ' ' + (contact.lastName||'')).trim(),
+          ghlEmail:       contact.email || '',
+          ghlPhone:       contact.phone || '',
+          matchedBy:      matchInfo.matchedBy,
+          matchConfidence:matchInfo.confidence,
+          contactSource:  matchInfo.contactSource,
+          importedAt:     new Date().toISOString(),
+        }
+      };
+
+      _ghlShowImportPreview();
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = origLabel; }
+    }
+  }
+
+  function _ghlShowImportPreview() {
+    document.getElementById('ghl-import-preview-modal')?.remove();
+    const pending = window._ghlPendingImport;
+    if (!pending) return;
+
+    const { clientId, fieldKeys, mappedFields, contact, matchInfo, formSubmissions } = pending;
+    const client = getClient(clientId);
+    const currentOnboard = getOnboardDataForClient(clientId);
+
+    const FIELD_LABELS = {
+      firstName:'First Name', lastName:'Last Name', email:'Email', phone:'Phone',
+      dob:'Date of Birth', ssn:'SSN', maidenName:"Mother's Maiden Name",
+      annualIncome:'Annual Income', citizen:'US Citizen',
+      street:'Street Address', city:'City', state:'State', zip:'ZIP',
+      bizName:'Business Name', dba:'DBA / Trade Name', ein:'EIN',
+      dateEstablished:'Date Established', bizAddress:'Business Address',
+      bizType:'Business Type', industry:'Industry', employees:'# Employees',
+      monthlySales:'Monthly Revenue', ownership:'Ownership %',
+      loanAmount:'Funding Goal', loanReason:'Funding Purpose',
+      bizCreditCards:'Business Credit Cards', bizBanks:'Business Banks',
+      personalBanks:'Personal Banks', bizPhone:'Business Phone',
+    };
+
+    const rows = fieldKeys.map(function(key, i) {
+      const ghlVal    = mappedFields[key];
+      const curVal    = currentOnboard[key];
+      const hasValue  = curVal !== undefined && curVal !== null && curVal !== '' && !(Array.isArray(curVal) && curVal.length === 0);
+      const curStr    = hasValue ? (Array.isArray(curVal) ? curVal.join(', ') : String(curVal)) : '';
+      const ghlStr    = String(ghlVal);
+      const conflict  = hasValue && curStr !== ghlStr;
+      const isEmpty   = !hasValue;
+      const defaultCk = isEmpty ? 'checked' : '';
+      const label     = FIELD_LABELS[key] || key;
+      const badge     = conflict
+        ? '<span style="font-size:9px;font-weight:800;color:#d97706;background:#fef3c7;padding:1px 6px;border-radius:6px;margin-left:5px">CONFLICT</span>'
+        : (isEmpty ? '<span style="font-size:9px;font-weight:700;color:#16a34a;background:#f0fdf4;padding:1px 6px;border-radius:6px;margin-left:5px">NEW</span>' : '');
+
+      return '<tr style="border-bottom:1px solid #f1f5f9' + (conflict ? ';background:#fffbeb' : '') + '">' +
+        '<td style="padding:7px 10px;width:36px;text-align:center">' +
+          '<input type="checkbox" id="ghl-import-field-' + i + '" data-field="' + key + '" data-empty="' + (isEmpty ? '1' : '0') + '" ' + defaultCk +
+          ' style="width:15px;height:15px;cursor:pointer;accent-color:#0f172a" />' +
+        '</td>' +
+        '<td style="padding:7px 10px;font-size:11px;font-weight:700;color:#0f172a;white-space:nowrap">' + label + badge + '</td>' +
+        '<td style="padding:7px 10px;font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + curStr.replace(/"/g,'&quot;') + '">' +
+          (curStr ? '<span style="color:#64748b">' + curStr + '</span>' : '<span style="color:#cbd5e1;font-style:italic">empty</span>') +
+        '</td>' +
+        '<td style="padding:7px 10px;font-size:12px;font-weight:600;color:#0f172a;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + ghlStr.replace(/"/g,'&quot;') + '">' + ghlStr + '</td>' +
+      '</tr>';
+    }).join('');
+
+    const confColor = { high:'#16a34a', medium:'#d97706', low:'#dc2626' };
+    const confBg    = { high:'#f0fdf4', medium:'#fffbeb', low:'#fee2e2' };
+    const confLabel = { high:'High Confidence', medium:'Medium Confidence', low:'Low Confidence — Review Required' };
+    const isBlocked = matchInfo.confidence === 'low';
+    const ghlName   = ((contact.firstName||'') + ' ' + (contact.lastName||'')).trim();
+    const clientName= ((client && client.fname||'') + ' ' + (client && client.lname||'')).trim() || 'this client';
+    const submCount = (formSubmissions || []).length;
+
+    const modal = document.createElement('div');
+    modal.id = 'ghl-import-preview-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.72);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+    modal.innerHTML =
+      '<div style="background:#f0f4f8;border-radius:18px;width:100%;max-width:780px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 32px 100px rgba(0,0,0,0.35)">' +
+
+        // Header
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid #e2e8f0;background:#fff;border-radius:18px 18px 0 0;flex-shrink:0">' +
+          '<div style="display:flex;align-items:center;gap:10px">' +
+            '<div style="width:34px;height:34px;background:#10b981;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+              '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>' +
+            '</div>' +
+            '<div>' +
+              '<div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:#0f172a">Import From GHL</div>' +
+              '<div style="font-size:11px;color:#94a3b8">Review and confirm data from GoHighLevel onboarding form</div>' +
+            '</div>' +
+          '</div>' +
+          '<button onclick="document.getElementById(\'ghl-import-preview-modal\').remove()" style="width:34px;height:34px;border-radius:9px;border:1.5px solid #e2e8f0;background:#f8fafc;cursor:pointer;font-size:20px;color:#94a3b8;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background=\'#fee2e2\';this.style.color=\'#ef4444\'" onmouseout="this.style.background=\'#f8fafc\';this.style.color=\'#94a3b8\'">×</button>' +
+        '</div>' +
+
+        // Body
+        '<div style="flex:1;overflow-y:auto;padding:16px 20px">' +
+
+          // Match confidence card
+          '<div style="background:#fff;border-radius:12px;border:2px solid ' + confColor[matchInfo.confidence] + ';padding:14px 16px;margin-bottom:14px">' +
+            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px' + (matchInfo.warnings.length ? ';margin-bottom:10px' : '') + '">' +
+              '<div>' +
+                '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin-bottom:4px">Form Match Confidence</div>' +
+                '<div style="display:flex;align-items:center;gap:8px">' +
+                  '<span style="font-size:15px;font-weight:900;color:' + confColor[matchInfo.confidence] + '">' + confLabel[matchInfo.confidence] + '</span>' +
+                  '<span style="font-size:10px;font-weight:800;color:' + confColor[matchInfo.confidence] + ';background:' + confBg[matchInfo.confidence] + ';padding:2px 8px;border-radius:20px;border:1px solid ' + confColor[matchInfo.confidence] + '">' + matchInfo.confidence.toUpperCase() + '</span>' +
+                '</div>' +
+              '</div>' +
+              '<div style="text-align:right;flex-shrink:0">' +
+                '<div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Matched by</div>' +
+                '<div style="font-size:12px;font-weight:700;color:#0f172a">' + (matchInfo.matchedBy.length ? matchInfo.matchedBy.join(', ') : 'None') + '</div>' +
+              '</div>' +
+            '</div>' +
+            (matchInfo.warnings.length ?
+              '<div style="border-top:1px solid #fecaca;margin-top:8px;padding-top:10px">' +
+                matchInfo.warnings.map(function(w){ return '<div style="display:flex;gap:6px;margin-bottom:3px"><span style="color:#ef4444;font-size:12px;flex-shrink:0">⚠</span><span style="font-size:11px;color:#b91c1c">' + w + '</span></div>'; }).join('') +
+              '</div>' : '') +
+          '</div>' +
+
+          // Blocked banner
+          (isBlocked ?
+            '<div style="background:#fee2e2;border:2px solid #fca5a5;border-radius:10px;padding:14px 16px;margin-bottom:14px">' +
+              '<div style="font-size:13px;font-weight:800;color:#991b1b;margin-bottom:6px">⛔ Import Blocked — Low Confidence Match</div>' +
+              '<div style="font-size:12px;color:#b91c1c;line-height:1.6">This onboarding form may belong to another client. No strong match (contact ID, email, or phone) was found. To proceed, manually confirm this form belongs to <strong>' + clientName + '</strong>.</div>' +
+              '<label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer">' +
+                '<input type="checkbox" id="ghl-import-force-confirm" style="width:16px;height:16px;accent-color:#991b1b" />' +
+                '<span style="font-size:12px;font-weight:700;color:#991b1b">I confirm this form belongs to ' + clientName + ' — proceed with import</span>' +
+              '</label>' +
+            '</div>' : '') +
+
+          // GHL contact summary
+          '<div style="background:#fff;border-radius:12px;border:1px solid #e8ecf0;padding:14px 16px;margin-bottom:14px">' +
+            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin-bottom:10px">GHL Contact Details</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">' +
+              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Name</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + (ghlName||'—') + '</div></div>' +
+              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Email</div><div style="font-size:12px;color:#0f172a">' + (contact.email||'—') + '</div></div>' +
+              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Phone</div><div style="font-size:12px;color:#0f172a">' + (contact.phone||'—') + '</div></div>' +
+            '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px">' +
+              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Contact ID</div><div style="font-size:10px;font-family:monospace;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + contact.id + '</div></div>' +
+              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Form Submissions</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + submCount + ' found</div></div>' +
+              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Fields Detected</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + fieldKeys.length + ' fields</div></div>' +
+            '</div>' +
+          '</div>' +
+
+          // Field selection table
+          '<div style="background:#fff;border-radius:12px;border:1px solid #e8ecf0;overflow:hidden;margin-bottom:14px">' +
+            '<div style="background:#f8fafc;padding:10px 16px;border-bottom:1px solid #e8ecf0;display:flex;align-items:center;justify-content:space-between">' +
+              '<span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#0f172a">Select Fields to Import</span>' +
+              '<div style="display:flex;gap:6px">' +
+                '<button onclick="_ghlSelectAllFields(true)" style="font-size:10px;font-weight:700;color:#0f172a;background:#e8ecf0;border:none;border-radius:5px;padding:3px 9px;cursor:pointer">All</button>' +
+                '<button onclick="_ghlSelectAllFields(false)" style="font-size:10px;font-weight:700;color:#64748b;background:#f1f5f9;border:none;border-radius:5px;padding:3px 9px;cursor:pointer">None</button>' +
+                '<button onclick="_ghlSelectEmptyOnly()" style="font-size:10px;font-weight:700;color:#16a34a;background:#f0fdf4;border:none;border-radius:5px;padding:3px 9px;cursor:pointer">New Only</button>' +
+              '</div>' +
+            '</div>' +
+            '<table style="width:100%;border-collapse:collapse">' +
+              '<thead><tr style="background:#f8fafc">' +
+                '<th style="padding:6px 10px;width:36px"></th>' +
+                '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8">Field</th>' +
+                '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8">Current Value</th>' +
+                '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8">GHL Value</th>' +
+              '</tr></thead>' +
+              '<tbody>' + rows + '</tbody>' +
+            '</table>' +
+          '</div>' +
+
+        '</div>' +
+
+        // Footer
+        '<div style="padding:14px 22px;border-top:1px solid #e2e8f0;background:#fff;border-radius:0 0 18px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0">' +
+          '<button id="ghl-import-confirm-btn" onclick="_ghlConfirmImport()" ' + (isBlocked ? 'disabled' : '') + ' style="height:40px;padding:0 28px;background:' + (isBlocked ? '#94a3b8' : '#10b981') + ';border:none;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:700;color:white;cursor:' + (isBlocked ? 'not-allowed' : 'pointer') + ';transition:background 0.15s" onmouseover="if(!this.disabled)this.style.background=\'#059669\'" onmouseout="if(!this.disabled)this.style.background=\'' + (isBlocked ? '#94a3b8' : '#10b981') + '\'">Import Selected</button>' +
+          '<button onclick="document.getElementById(\'ghl-import-preview-modal\').remove()" style="height:40px;padding:0 20px;background:transparent;border:1.5px solid #e2e8f0;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:600;color:#64748b;cursor:pointer" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'transparent\'">Cancel</button>' +
+          '<span id="ghl-import-status" style="font-size:12px;font-weight:600;color:#10b981;margin-left:8px;opacity:0;transition:opacity 0.3s"></span>' +
+        '</div>' +
+
+      '</div>';
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+
+    // Wire force-confirm checkbox for blocked imports
+    if (isBlocked) {
+      var cb = modal.querySelector('#ghl-import-force-confirm');
+      var confirmBtn = modal.querySelector('#ghl-import-confirm-btn');
+      if (cb && confirmBtn) {
+        cb.addEventListener('change', function() {
+          confirmBtn.disabled = !this.checked;
+          confirmBtn.style.background = this.checked ? '#10b981' : '#94a3b8';
+          confirmBtn.style.cursor = this.checked ? 'pointer' : 'not-allowed';
+        });
+      }
+    }
+  }
+
+  window._ghlSelectAllFields = function(checked) {
+    document.querySelectorAll('[id^="ghl-import-field-"]').forEach(function(cb) { cb.checked = checked; });
+  };
+
+  window._ghlSelectEmptyOnly = function() {
+    document.querySelectorAll('[id^="ghl-import-field-"]').forEach(function(cb) {
+      cb.checked = cb.dataset.empty === '1';
+    });
+  };
+
+  async function _ghlConfirmImport() {
+    var pending = window._ghlPendingImport;
+    if (!pending) { alert('No pending import data found. Please reopen the import modal.'); return; }
+
+    var { clientId, fieldKeys, mappedFields, contact, matchInfo, metadata } = pending;
+
+    // Collect selected field keys
+    var selectedKeys = fieldKeys.filter(function(key, i) {
+      var cb = document.getElementById('ghl-import-field-' + i);
+      return cb && cb.checked;
+    });
+
+    if (selectedKeys.length === 0) {
+      alert('No fields selected. Check at least one field to import.');
+      return;
+    }
+
+    var btn = document.getElementById('ghl-import-confirm-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Importing…'; }
+
+    try {
+      var o = getOnboardDataForClient(clientId);
+
+      // Apply selected fields
+      selectedKeys.forEach(function(key) {
+        if (mappedFields[key] !== undefined) o[key] = mappedFields[key];
+      });
+
+      // Store import ownership metadata on onboarding record
+      o._ghlImportHistory = o._ghlImportHistory || [];
+      var importRecord = Object.assign({}, metadata, {
+        importedFields: selectedKeys,
+        importedAt: new Date().toISOString(),
+        isForceConfirmed: matchInfo.confidence === 'low',
+      });
+      o._ghlImportHistory.push(importRecord);
+      o._ghlLastImport = importRecord;
+
+      // Persist
+      try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o)); } catch(e) {}
+      try { await fsSetOnboarding(clientId, o); } catch(e) {}
+      try { await fsSetDash(clientId, { profileData: o }); } catch(e) {}
+
+      // Update client record for name / phone / email / ghlContactId
+      var allClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+      var cidx = allClients.findIndex(function(c) { return c.id === clientId; });
+      if (cidx >= 0) {
+        if (selectedKeys.includes('firstName') && o.firstName) allClients[cidx].fname = o.firstName;
+        if (selectedKeys.includes('lastName')  && o.lastName)  allClients[cidx].lname = o.lastName;
+        if (selectedKeys.includes('phone')     && o.phone)     allClients[cidx].phone = o.phone;
+        if (selectedKeys.includes('email')     && o.email)     allClients[cidx].email = o.email;
+        if (metadata.ghlContactId && !allClients[cidx].ghlContactId) allClients[cidx].ghlContactId = metadata.ghlContactId;
+        localStorage.setItem('cq_admin_clients', JSON.stringify(allClients));
+        try { await fsSaveClient(allClients[cidx]); } catch(e) {}
+      }
+
+      // Trigger BRI auto-detect if bank fields were imported
+      var bankFields = ['personalBanks','bizBanks','bizCreditCards'];
+      if (selectedKeys.some(function(k) { return bankFields.includes(k); })) {
+        setTimeout(function() { try { _briMergeAutoDetect(clientId); } catch(e) {} }, 600);
+      }
+
+      // Refresh FSG strategy
+      try { refreshFundingStrategy(clientId); } catch(e) {}
+
+      // Add GHL note with import log
+      try {
+        var noteLines = [
+          '📥 Portal Import — ' + new Date().toLocaleDateString(),
+          'Fields: ' + selectedKeys.join(', '),
+          'Match: ' + metadata.matchConfidence + ' confidence (' + (metadata.matchedBy||[]).join(', ') + ')',
+          'GHL Contact: ' + metadata.ghlName + ' [' + metadata.ghlContactId + ']',
+        ];
+        if (metadata.ghlProposalId) noteLines.push('Submission ID: ' + metadata.ghlProposalId);
+        GHL.addNote(metadata.ghlContactId, noteLines.join('\n')).catch(function(){});
+      } catch(e) {}
+
+      // Show success
+      var status = document.getElementById('ghl-import-status');
+      if (status) { status.textContent = '✓ ' + selectedKeys.length + ' fields imported'; status.style.opacity = '1'; }
+
+      // Close modals and re-render
+      setTimeout(function() {
+        document.getElementById('ghl-import-preview-modal')?.remove();
+        document.getElementById('admin-profile-edit-overlay')?.remove();
+        window._ghlPendingImport = null;
+        renderClientDetail(clientId);
+      }, 1200);
+
+    } catch(e) {
+      alert('Import failed: ' + e.message);
+      if (btn) { btn.disabled = false; btn.textContent = 'Import Selected'; }
+    }
   }
 
   // ── CREDIT ────────────────────────────────────────────────────────────
