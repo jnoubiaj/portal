@@ -1615,6 +1615,47 @@
   .fsg-nba-why { font-size: 10px; color: var(--gray-500); margin-top: 3px; line-height: 1.4; }
   .fsg-section { margin-bottom: 14px; }
   .fsg-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray-400); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  /* ─── BANK RELATIONSHIP INTELLIGENCE ──────────────────────── */
+  .bri-bank-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(265px,1fr)); gap:12px; }
+  .bri-bank-card { background:#fff; border:1.5px solid #e2e8f0; border-left:4px solid #e2e8f0; border-radius:12px; padding:15px; transition:all .15s; }
+  .bri-bank-card:hover { box-shadow:0 4px 14px rgba(15,32,68,.08); }
+  .bri-bank-card.elite { border-left-color:#f59e0b; }
+  .bri-bank-card.strong { border-left-color:#10b981; }
+  .bri-bank-card.moderate { border-left-color:#f59e0b; }
+  .bri-bank-card.weak { border-left-color:#ef4444; }
+  .bri-strength-badge { display:inline-flex; align-items:center; font-size:9px; font-weight:800; padding:2px 7px; border-radius:20px; text-transform:uppercase; letter-spacing:.05em; }
+  .bri-strength-badge.elite { background:#fef9c3; color:#78350f; border:1px solid #fbbf24; }
+  .bri-strength-badge.strong { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+  .bri-strength-badge.moderate { background:#fef3c7; color:#78350f; border:1px solid #fcd34d; }
+  .bri-strength-badge.weak { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+  .bri-progress-bar { height:5px; background:#e2e8f0; border-radius:5px; overflow:hidden; margin-top:3px; }
+  .bri-progress-fill { height:100%; border-radius:5px; transition:width .4s; }
+  .bri-detect-badge { font-size:9px; font-weight:700; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:1px 6px; border-radius:20px; vertical-align:middle; }
+  .bri-missing-card { background:#fafafa; border:1.5px dashed #e2e8f0; border-radius:10px; padding:8px 12px; display:flex; align-items:center; gap:8px; cursor:pointer; transition:all .15s; }
+  .bri-missing-card:hover { background:#f1f5f9; border-color:#94a3b8; }
+  .bri-global-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
+  .bri-stat-card { background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:16px; }
+  .bri-stat-num { font-size:26px; font-weight:800; color:#0f2044; font-family:var(--font-h); line-height:1; }
+  .bri-stat-lbl { font-size:11px; font-weight:600; color:#64748b; margin-top:4px; }
+  .bri-client-rl { display:flex; align-items:center; gap:10px; padding:11px 14px; background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; margin-bottom:7px; cursor:pointer; transition:all .15s; }
+  .bri-client-rl:hover { border-color:#cbd5e1; box-shadow:0 2px 8px rgba(15,32,68,.06); }
+  .bri-bank-pill { display:inline-flex; align-items:center; font-size:9px; font-weight:700; padding:2px 6px; border-radius:7px; margin:2px; }
+  .bri-bank-pill.elite { background:#fef9c3; color:#78350f; }
+  .bri-bank-pill.strong { background:#d1fae5; color:#065f46; }
+  .bri-bank-pill.moderate { background:#fef3c7; color:#78350f; }
+  .bri-bank-pill.weak { background:#fee2e2; color:#991b1b; }
+  .bri-bank-pill.missing { background:#f8fafc; color:#94a3b8; border:1px dashed #cbd5e1; }
+  .bri-filter-btn { height:28px; padding:0 12px; border:1.5px solid #e2e8f0; border-radius:20px; font-size:11px; font-weight:600; color:#64748b; background:#fff; cursor:pointer; transition:all .15s; font-family:var(--font-b); }
+  .bri-filter-btn.active,.bri-filter-btn:hover { background:#0f2044; color:#fff; border-color:#0f2044; }
+  .bri-modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:2100; display:flex; align-items:flex-start; justify-content:center; padding:32px 16px; overflow-y:auto; }
+  .bri-modal { background:#fff; border-radius:18px; max-width:660px; width:100%; box-shadow:0 24px 64px rgba(0,0,0,.18); }
+  .bri-form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  .bri-form-field { display:flex; flex-direction:column; gap:4px; }
+  .bri-form-label { font-size:11px; font-weight:600; color:#64748b; }
+  .bri-form-input { height:36px; padding:0 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:var(--font-b); color:#0f2044; outline:none; transition:border-color .12s; }
+  .bri-form-input:focus { border-color:#0f2044; }
+  .bri-audit-entry { display:flex; gap:8px; padding:7px 0; border-bottom:1px solid #f1f5f9; font-size:11px; }
+  .bri-audit-entry:last-child { border-bottom:none; }
   .fsg-readiness { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px; margin-bottom: 4px; }
   .fsg-readiness.ready { background: #ecfdf5; border: 1.5px solid rgba(16,185,129,0.35); }
   .fsg-readiness.optimize { background: #fffbeb; border: 1.5px solid rgba(245,158,11,0.35); }
@@ -1895,6 +1936,10 @@
           <svg class="a-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           Pipeline
         </div>
+        <div class="a-nav-item" onclick="switchAdminSection('relationships',this)">
+          <svg class="a-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M7 14h4M7 17h2"/></svg>
+          Relationships
+        </div>
         <div class="a-nav-item" onclick="switchAdminSection('settings',this)">
           <svg class="a-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
           Settings
@@ -2081,6 +2126,11 @@
         <!-- PIPELINE -->
         <div class="a-section" id="asec-pipeline">
           <div id="pipeline-board-wrap"></div>
+        </div>
+
+        <!-- BANK RELATIONSHIPS TAB -->
+        <div class="a-section" id="asec-relationships">
+          <div id="bri-global-wrap" style="max-width:1240px;margin:0 auto;padding:0 4px"></div>
         </div>
 
         <!-- SETTINGS -->
@@ -2716,7 +2766,7 @@
   });
 
   // ── SECTION SWITCHING ─────────────────────────────────────────────────
-  const sectionLabels = { overview:'Overview', clients:'Clients', messages:'Messages', analytics:'Analytics', pipeline:'Pipeline', settings:'Settings' };
+  const sectionLabels = { overview:'Overview', clients:'Clients', messages:'Messages', analytics:'Analytics', pipeline:'Pipeline', settings:'Settings', relationships:'Bank Relationships' };
   function switchAdminSection(name, el) {
     document.querySelectorAll('.a-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.a-nav-item').forEach(n => n.classList.remove('active'));
@@ -2727,6 +2777,7 @@
     if (name === 'pipeline') renderPipeline();
     if (name === 'messages') renderMsgThreads();
     if (name === 'analytics') renderAnalytics();
+    if (name === 'relationships') renderRelationshipsTab();
     // Persist so refresh returns to same section
     try { localStorage.setItem('cq_admin_section', name); } catch(e) {}
   }
@@ -4000,6 +4051,24 @@
                 </button>
                 <div id="fsg-body-${id}" style="margin-top:10px"></div>
               </div>
+            </div>
+          </div>
+
+          <!-- BANK RELATIONSHIP INTELLIGENCE (collapsible) -->
+          <div class="a-card" style="margin-bottom:14px">
+            <div class="a-card-hdr a-coll-hdr" onclick="briToggle('${id}')">
+              <div class="a-card-hdrl">
+                <div class="a-card-title" style="display:flex;align-items:center;gap:8px">
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
+                  Bank Relationship Intelligence
+                  <span id="bri-sub-pill-${id}"></span>
+                </div>
+                <div class="a-card-sub">Relationship health · Seasoning tracker · BRM management</div>
+              </div>
+              <svg id="chev-bri-${id}" class="a-coll-chev" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="transform:rotate(-90deg)"><path d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="a-coll-body" id="coll-bri-${id}" data-open="0" style="max-height:0">
+              <div id="bri-body-${id}" style="padding:16px"></div>
             </div>
           </div>
 
@@ -11700,6 +11769,491 @@
     if (!task.extensionHistory) task.extensionHistory = [];
     if (!task.notes) task.notes = [];
     return task;
+  }
+
+  // ─── BANK RELATIONSHIP INTELLIGENCE SYSTEM ────────────────────────────────
+
+  function getBankRels(clientId) {
+    try { return JSON.parse(localStorage.getItem('cq_bankrels_' + clientId) || '[]'); } catch(e) { return []; }
+  }
+  function saveBankRels(clientId, data) { localStorage.setItem('cq_bankrels_' + clientId, JSON.stringify(data)); }
+  function getBankRel(clientId, bankId) {
+    return getBankRels(clientId).filter(function(r){ return r.bankId === bankId; })[0] || null;
+  }
+  function upsertBankRel(clientId, relObj) {
+    var rels = getBankRels(clientId);
+    var found = false;
+    relObj.updatedAt = Date.now();
+    for (var i = 0; i < rels.length; i++) {
+      if (rels[i].bankId === relObj.bankId) { rels[i] = relObj; found = true; break; }
+    }
+    if (!found) { relObj.createdAt = relObj.createdAt || Date.now(); rels.push(relObj); }
+    saveBankRels(clientId, rels);
+    return relObj;
+  }
+  function removeBankRelById(clientId, bankId) {
+    saveBankRels(clientId, getBankRels(clientId).filter(function(r){ return r.bankId !== bankId; }));
+  }
+
+  function calcRelStrength(rel, bankRule) {
+    if (rel.manualOverride && rel.manualStrengthScore != null) {
+      var ms = Number(rel.manualStrengthScore); var ml = ms >= 80 ? 'elite' : ms >= 56 ? 'strong' : ms >= 31 ? 'moderate' : 'weak';
+      return { score: ms, label: ml, boost: ms >= 80 ? 35 : ms >= 56 ? 20 : ms >= 31 ? 10 : 0 };
+    }
+    var s = 0;
+    var ageDays = rel.relationshipAgeDays || 0;
+    if (ageDays >= 180) s += 20; else if (ageDays >= 90) s += 14; else if (ageDays >= 30) s += 8; else if (ageDays >= 14) s += 4;
+    var recDep = bankRule ? (bankRule.recommendedDeposit || 5000) : 5000;
+    var dep = rel.monthlyDepositAverage || 0;
+    if (dep >= recDep * 2) s += 20; else if (dep >= recDep) s += 14; else if (dep >= recDep * 0.5) s += 8;
+    if (rel.checkingAccount) s += 15;
+    var reqTxn = bankRule ? (bankRule.requiredTransactions || 0) : 0; var txn = rel.transactionCountMonthly || 0;
+    if (txn > 0) { if (reqTxn === 0) s += (txn >= 10 ? 15 : txn >= 5 ? 8 : 4); else s += txn >= reqTxn * 2 ? 15 : txn >= reqTxn ? 10 : txn >= reqTxn * 0.5 ? 5 : 0; }
+    if (rel.personalCreditCard || rel.businessCreditCard) s += 10;
+    if (rel.brmAssigned) s += 10;
+    if (rel.seasoningComplete || rel.seasoningStatus === 'complete' || rel.seasoningStatus === 'manual_override') s += 10;
+    var lbl = s >= 80 ? 'elite' : s >= 56 ? 'strong' : s >= 31 ? 'moderate' : 'weak';
+    return { score: s, label: lbl, boost: s >= 80 ? 35 : s >= 56 ? 20 : s >= 31 ? 10 : 0 };
+  }
+
+  var _BRI_DETECT_PATTERNS = [
+    {k:'jpmcb',id:'chase',n:'Chase'},{k:'chase',id:'chase',n:'Chase'},
+    {k:'bank of amer',id:'boa',n:'Bank of America'},{k:'bk of amer',id:'boa',n:'Bank of America'},{k:'bofa',id:'boa',n:'Bank of America'},
+    {k:'amex',id:'amex',n:'American Express'},{k:'american express',id:'amex',n:'American Express'},
+    {k:'wfbna',id:'wells-fargo',n:'Wells Fargo'},{k:'wells fargo',id:'wells-fargo',n:'Wells Fargo'},
+    {k:'us bank',id:'us-bank',n:'US Bank'},{k:'usbank',id:'us-bank',n:'US Bank'},{k:'us bancorp',id:'us-bank',n:'US Bank'},
+    {k:'pnc bank',id:'pnc',n:'PNC'},{k:'pnc financial',id:'pnc',n:'PNC'},
+    {k:'citibank',id:'citi',n:'Citi'},{k:'citi card',id:'citi',n:'Citi'},
+    {k:'citizens bank',id:'citizens',n:'Citizens Bank'},{k:'citizens financial',id:'citizens',n:'Citizens Bank'},
+    {k:'capital one',id:'capital-one',n:'Capital One'},
+    {k:'discover bank',id:'discover',n:'Discover'},{k:'discover card',id:'discover',n:'Discover'},
+    {k:'truist',id:'truist',n:'Truist'},{k:'suntrust',id:'truist',n:'Truist'},
+    {k:'keybank',id:'keybank',n:'KeyBank'},{k:'key bank',id:'keybank',n:'KeyBank'},
+    {k:'navy federal',id:'navy-federal',n:'Navy Federal'},
+    {k:'flagstar',id:'flagstar',n:'Flagstar'},
+    {k:'first citizens',id:'first-citizens',n:'First Citizens Bank'},
+    {k:'td bank',id:'td-bank',n:'TD Bank'}
+  ];
+
+  function _briAutoDetect(clientId) {
+    var cr = getCreditData(clientId); if (!cr || !cr.accounts) return [];
+    var out = [], seen = {};
+    cr.accounts.forEach(function(acct) {
+      var nm = (' ' + (acct.name || '') + ' ').toLowerCase();
+      _BRI_DETECT_PATTERNS.forEach(function(pat) {
+        if (seen[pat.id]) return;
+        if (nm.indexOf(pat.k) !== -1) {
+          seen[pat.id] = true;
+          var t = (acct.type || '').toLowerCase();
+          var isCC = t.indexOf('credit card') !== -1 || t.indexOf('revolving') !== -1 || t.indexOf('charge') !== -1;
+          var isMort = t.indexOf('mortgage') !== -1 || t.indexOf('real estate') !== -1;
+          var isAuto = !isMort && (t.indexOf('auto') !== -1 || (t.indexOf('install') !== -1));
+          var s = (acct.status || '').toLowerCase();
+          var isOpen = !s || s === 'open' || s.indexOf('open') !== -1 || s.indexOf('current') !== -1;
+          out.push({ bankId: pat.id, bankName: pat.n, detectedFrom: 'credit_report',
+            detectedAccountName: acct.name, detectedAccountType: acct.type, isOpen: isOpen,
+            personalCreditCard: isCC, personalRelationship: true, businessRelationship: false,
+            checkingAccount: false, savingsAccount: false, businessCreditCard: false,
+            accountOpenedDate: acct.opened || acct.dateOpened || null,
+            currentBalance: Number(acct.balance) || 0,
+            relationshipType: isCC ? 'Personal Credit Card' : isMort ? 'Mortgage' : isAuto ? 'Auto Loan' : 'Personal Account' });
+        }
+      });
+    });
+    return out;
+  }
+
+  function _briMergeAutoDetect(clientId) {
+    var existing = getBankRels(clientId); var detected = _briAutoDetect(clientId); var added = 0;
+    var existIds = {}; existing.forEach(function(r){ existIds[r.bankId] = true; });
+    detected.forEach(function(det) {
+      if (existIds[det.bankId]) return;
+      var rule = (typeof getBankRelationshipRule === 'function') ? getBankRelationshipRule(det.bankId) : null;
+      var ageDays = 0;
+      if (det.accountOpenedDate) { var om = new Date(det.accountOpenedDate).getTime(); if (!isNaN(om)) ageDays = Math.floor((Date.now() - om) / 86400000); }
+      var seasonReq = rule ? (rule.seasoningDays || 0) : 0; var seasonDone = ageDays >= seasonReq;
+      var newRel = Object.assign({ seasoningRequiredDays: seasonReq, seasoningComplete: seasonDone,
+        seasoningStatus: seasonReq === 0 ? 'complete' : seasonDone ? 'complete' : ageDays > 0 ? 'in_progress' : 'not_started',
+        relationshipAgeDays: ageDays, monthlyDepositAverage: 0, transactionCountMonthly: 0,
+        brmAssigned: false, brmName: '', brmPhone: '', brmEmail: '', brmAppointmentDate: null,
+        branchAssigned: '', notes: '', manualOverride: false, manualStrengthScore: null,
+        auditLog: [{ date: new Date().toISOString().split('T')[0], event: 'Auto-detected from credit report — ' + det.detectedAccountName, type: 'detected' }],
+        createdAt: Date.now(), updatedAt: Date.now() }, det);
+      var sr = calcRelStrength(newRel, rule); newRel.relationshipStrength = sr.label; newRel.estimatedApprovalBoost = sr.boost;
+      existing.push(newRel); added++;
+    });
+    if (added > 0) saveBankRels(clientId, existing);
+    return added;
+  }
+
+  function _briRefreshStrengths(clientId) {
+    var rels = getBankRels(clientId);
+    rels.forEach(function(rel) {
+      var rule = (typeof getBankRelationshipRule === 'function') ? getBankRelationshipRule(rel.bankId) : null;
+      var sr = calcRelStrength(rel, rule); rel.relationshipStrength = sr.label; rel.estimatedApprovalBoost = sr.boost;
+    });
+    saveBankRels(clientId, rels); return rels;
+  }
+
+  var _BRI_CORE_BANKS = [
+    {id:'chase',n:'Chase'},{id:'boa',n:'Bank of America'},{id:'us-bank',n:'US Bank'},
+    {id:'wells-fargo',n:'Wells Fargo'},{id:'pnc',n:'PNC'},{id:'citizens',n:'Citizens Bank'},
+    {id:'truist',n:'Truist'},{id:'amex',n:'American Express'},{id:'keybank',n:'KeyBank'},
+    {id:'capital-one',n:'Capital One'},{id:'citi',n:'Citi'},{id:'flagstar',n:'Flagstar'}
+  ];
+  var _BRI_CORE_IDS = _BRI_CORE_BANKS.map(function(b){ return b.id; });
+
+  function briToggle(clientId) {
+    var body = document.getElementById('coll-bri-' + clientId); var chev = document.getElementById('chev-bri-' + clientId); if (!body) return;
+    var isOpen = body.dataset.open === '1'; body.style.maxHeight = isOpen ? '0' : '9000px'; body.dataset.open = isOpen ? '0' : '1';
+    if (chev) chev.style.transform = isOpen ? 'rotate(-90deg)' : '';
+    if (!isOpen) renderBriSection(clientId);
+  }
+
+  function renderBriSection(clientId) {
+    var wrap = document.getElementById('bri-body-' + clientId); if (!wrap) return;
+    _briMergeAutoDetect(clientId);
+    var rels = _briRefreshStrengths(clientId);
+    var relMap = {}; rels.forEach(function(r){ relMap[r.bankId] = r; });
+    var pill = document.getElementById('bri-sub-pill-' + clientId);
+    if (pill) {
+      var sc = rels.filter(function(r){ return r.relationshipStrength === 'strong' || r.relationshipStrength === 'elite'; }).length;
+      pill.innerHTML = sc > 0 ? '<span style="font-size:9px;font-weight:700;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:20px">' + sc + ' strong</span>' : '';
+    }
+    var activeCore = _BRI_CORE_IDS.filter(function(id){ return relMap[id]; });
+    var extraIds = Object.keys(relMap).filter(function(id){ return _BRI_CORE_IDS.indexOf(id) === -1; });
+    var missingIds = _BRI_CORE_IDS.filter(function(id){ return !relMap[id]; });
+    var allActive = activeCore.concat(extraIds);
+    var html = '<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px">'
+      + '<button onclick="briForceSyncDetect(\'' + clientId + '\')" style="height:30px;padding:0 12px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;font-size:11px;font-weight:600;color:#1d4ed8;cursor:pointer;font-family:var(--font-b)">&#x1F504; Re-scan Report</button>'
+      + '<button onclick="openBankRelModal(\'' + clientId + '\',null)" style="height:30px;padding:0 12px;background:#0f2044;border:none;border-radius:8px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--font-b)">+ Add Relationship</button>'
+      + '</div>';
+    if (allActive.length > 0) {
+      html += '<div class="bri-bank-grid">';
+      allActive.forEach(function(bid){ html += _briRenderBankCard(clientId, relMap[bid]); });
+      html += '</div>';
+    } else {
+      html += '<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px">No relationships found yet. Run "Re-scan Report" or add manually.</div>';
+    }
+    if (missingIds.length > 0) {
+      html += '<div style="margin-top:14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:8px">Missing — Click to Add</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+      missingIds.forEach(function(bid) {
+        var rule = (window.BANK_RELATIONSHIP_RULES && window.BANK_RELATIONSHIP_RULES[bid]) || {};
+        var nm = rule.bankName || bid;
+        html += '<div class="bri-missing-card" onclick="openBankRelModal(\'' + clientId + '\',\'' + bid + '\')">'
+          + '<svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="#94a3b8" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>'
+          + '<span style="font-size:11px;font-weight:600;color:#64748b">' + nm + '</span>'
+          + (rule.requiresRelationship ? '<span style="font-size:9px;font-weight:700;color:#ef4444;margin-left:auto">REQ</span>' : '')
+          + '</div>';
+      });
+      html += '</div></div>';
+    }
+    wrap.innerHTML = html;
+  }
+
+  function _briRenderBankCard(clientId, rel) {
+    var rule = (window.BANK_RELATIONSHIP_RULES && window.BANK_RELATIONSHIP_RULES[rel.bankId]) || {};
+    var sr = calcRelStrength(rel, rule); var strength = sr.label;
+    var seasonDays = rel.seasoningRequiredDays || rule.seasoningDays || 0; var ageDays = rel.relationshipAgeDays || 0;
+    var seasonPct = seasonDays > 0 ? Math.min(100, Math.round(ageDays / seasonDays * 100)) : 100;
+    var seasonDone = rel.seasoningComplete || rel.seasoningStatus === 'complete' || rel.seasoningStatus === 'manual_override';
+    var seasonColor = seasonDone ? '#10b981' : ageDays > 0 ? '#f59e0b' : '#cbd5e1';
+    var recDep = rule.recommendedDeposit || 5000; var dep = rel.monthlyDepositAverage || 0;
+    var depPct = Math.min(100, Math.round(dep / recDep * 100)); var depColor = depPct >= 100 ? '#10b981' : depPct > 50 ? '#f59e0b' : '#cbd5e1';
+    var html = '<div class="bri-bank-card ' + strength + '">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">'
+      + '<div><div style="font-size:13px;font-weight:800;color:#0f2044;font-family:var(--font-h)">' + (rule.bankName || rel.bankName) + '</div>'
+      + '<div style="font-size:10px;color:#94a3b8;margin-top:2px">' + (rule.bureau || '') + (rel.detectedFrom === 'credit_report' ? ' <span class="bri-detect-badge">AUTO</span>' : '') + '</div></div>'
+      + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">'
+      + '<span class="bri-strength-badge ' + strength + '">' + strength.toUpperCase() + '</span>'
+      + '<span style="font-size:10px;font-weight:800;color:#64748b">' + sr.score + '/100</span></div></div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:9px">';
+    if (rel.checkingAccount) html += '<span style="font-size:9px;font-weight:700;color:#065f46;background:#d1fae5;padding:2px 6px;border-radius:6px">&#x2713; Checking</span>';
+    if (rel.savingsAccount)  html += '<span style="font-size:9px;font-weight:700;color:#065f46;background:#d1fae5;padding:2px 6px;border-radius:6px">&#x2713; Savings</span>';
+    if (rel.personalCreditCard) html += '<span style="font-size:9px;font-weight:700;color:#1e40af;background:#dbeafe;padding:2px 6px;border-radius:6px">&#x2713; Personal CC</span>';
+    if (rel.businessCreditCard) html += '<span style="font-size:9px;font-weight:700;color:#5b21b6;background:#ede9fe;padding:2px 6px;border-radius:6px">&#x2713; Biz CC</span>';
+    if (rel.brmAssigned) html += '<span style="font-size:9px;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 6px;border-radius:6px">&#x2713; BRM</span>';
+    if (!rel.checkingAccount && !rel.personalCreditCard && !rel.businessCreditCard && !rel.savingsAccount) html += '<span style="font-size:9px;color:#94a3b8;background:#f1f5f9;padding:2px 6px;border-radius:6px">' + (rel.relationshipType || 'Detected') + '</span>';
+    html += '</div>'
+      + '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:2px">'
+      + '<span style="font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Seasoning</span>'
+      + '<span style="font-size:10px;font-weight:700;color:' + seasonColor + '">';
+    if (rel.seasoningStatus === 'manual_override') html += '&#x2713; Override';
+    else if (seasonDone) html += '&#x2713; Done';
+    else if (seasonDays === 0) html += 'No req.';
+    else html += Math.min(ageDays, seasonDays) + '/' + seasonDays + 'd';
+    html += '</span></div><div class="bri-progress-bar"><div class="bri-progress-fill" style="width:' + seasonPct + '%;background:' + seasonColor + '"></div></div></div>';
+    if (rule.recommendedDeposit) {
+      html += '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:2px">'
+        + '<span style="font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Deposits</span>'
+        + '<span style="font-size:10px;font-weight:700;color:' + depColor + '">$' + (dep >= 1000 ? (dep/1000).toFixed(1) + 'k' : dep) + ' / $' + (recDep >= 1000 ? (recDep/1000).toFixed(0) + 'k' : recDep) + '</span>'
+        + '</div><div class="bri-progress-bar"><div class="bri-progress-fill" style="width:' + depPct + '%;background:' + depColor + '"></div></div></div>';
+    }
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">'
+      + '<div style="font-size:10px;color:#64748b">' + (rel.brmName ? '&#128100; ' + rel.brmName : rule.brmRecommended ? '<span style="color:#f59e0b">BRM recommended</span>' : '') + '</div>'
+      + (sr.boost > 0 ? '<div style="font-size:10px;font-weight:700;color:#059669">+' + sr.boost + '% boost</div>' : '')
+      + '</div>'
+      + '<button onclick="openBankRelModal(\'' + clientId + '\',\'' + rel.bankId + '\')" style="width:100%;height:27px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:7px;font-size:11px;font-weight:600;color:#64748b;cursor:pointer;font-family:var(--font-b);margin-top:10px" onmouseover="this.style.background=\'#f1f5f9\'" onmouseout="this.style.background=\'#f8fafc\'">Edit</button>'
+      + '</div>';
+    return html;
+  }
+
+  function briForceSyncDetect(clientId) {
+    var cr = getCreditData(clientId);
+    if (!cr || !cr.accounts || !cr.accounts.length) { alert('No credit report data found. Run the Credit Analyzer first.'); return; }
+    var added = _briMergeAutoDetect(clientId);
+    renderBriSection(clientId);
+    console.log('[BRI] Re-scan — ' + added + ' new rels detected');
+  }
+
+  var _briFilterBank = 'all', _briFilterReadiness = 'all', _briFilterStage = 'all';
+
+  function renderRelationshipsTab() {
+    var wrap = document.getElementById('bri-global-wrap'); if (!wrap) return;
+    var active = clients.filter(function(c){ return !c.archived; });
+    var allRels = [];
+    active.forEach(function(c) {
+      var rels = getBankRels(c.id);
+      rels.forEach(function(r){ allRels.push({ client: c, rel: r }); });
+    });
+    var totalRels = allRels.length;
+    var strongCount = allRels.filter(function(x){ return x.rel.relationshipStrength === 'strong' || x.rel.relationshipStrength === 'elite'; }).length;
+    var seasoningCount = allRels.filter(function(x){ return x.rel.seasoningStatus === 'in_progress'; }).length;
+    var brmCount = allRels.filter(function(x){ return x.rel.brmAssigned; }).length;
+    var MONTHS_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var html = '<div style="padding:28px 0 16px"><div style="font-family:var(--font-h);font-size:22px;font-weight:800;color:#0f2044;margin-bottom:4px">Bank Relationship Intelligence</div>'
+      + '<div style="font-size:13px;color:#64748b">Monitor relationship health, seasoning progress, and BRM assignments across all clients.</div></div>';
+    html += '<div class="bri-global-stats">'
+      + '<div class="bri-stat-card"><div class="bri-stat-num">' + totalRels + '</div><div class="bri-stat-lbl">Total Relationships</div></div>'
+      + '<div class="bri-stat-card"><div class="bri-stat-num" style="color:#10b981">' + strongCount + '</div><div class="bri-stat-lbl">Strong / Elite</div></div>'
+      + '<div class="bri-stat-card"><div class="bri-stat-num" style="color:#f59e0b">' + seasoningCount + '</div><div class="bri-stat-lbl">Seasoning In Progress</div></div>'
+      + '<div class="bri-stat-card"><div class="bri-stat-num" style="color:#1d4ed8">' + brmCount + '</div><div class="bri-stat-lbl">BRM Assigned</div></div>'
+      + '</div>';
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">'
+      + '<span style="font-size:11px;font-weight:700;color:#64748b">Filter:</span>';
+    var readFilters = [['all','All Clients'],['ready','Ready'],['seasoning','Seasoning'],['missing','Missing Key Banks']];
+    readFilters.forEach(function(f) {
+      html += '<button class="bri-filter-btn' + (_briFilterReadiness === f[0] ? ' active' : '') + '" onclick="_briSetFilter(\'readiness\',\'' + f[0] + '\')">' + f[1] + '</button>';
+    });
+    html += '<span style="font-size:11px;font-weight:700;color:#94a3b8;margin-left:8px">Bank:</span>';
+    var bankFilters = [['all','All']].concat(_BRI_CORE_BANKS.map(function(b){ return [b.id, b.n]; }));
+    bankFilters.forEach(function(f) {
+      html += '<button class="bri-filter-btn' + (_briFilterBank === f[0] ? ' active' : '') + '" onclick="_briSetFilter(\'bank\',\'' + f[0] + '\')">' + f[1] + '</button>';
+    });
+    html += '</div>';
+    var filteredClients = active.filter(function(c) {
+      if (_briFilterReadiness === 'ready') {
+        var rels = getBankRels(c.id);
+        var hasReady = rels.some(function(r){ return r.seasoningComplete || r.seasoningStatus === 'complete'; });
+        if (!hasReady) return false;
+      }
+      if (_briFilterReadiness === 'seasoning') {
+        var rels2 = getBankRels(c.id); if (!rels2.some(function(r){ return r.seasoningStatus === 'in_progress'; })) return false;
+      }
+      if (_briFilterReadiness === 'missing') {
+        var rels3 = getBankRels(c.id); var relIds = rels3.map(function(r){ return r.bankId; });
+        var requiredIds = ['chase','us-bank','citizens'];
+        if (requiredIds.every(function(bid){ return relIds.indexOf(bid) !== -1; })) return false;
+      }
+      if (_briFilterBank !== 'all') {
+        var rels4 = getBankRels(c.id); if (!rels4.some(function(r){ return r.bankId === _briFilterBank; })) return false;
+      }
+      return true;
+    });
+    if (filteredClients.length === 0) {
+      html += '<div style="text-align:center;padding:40px;color:#94a3b8;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px">No clients match the selected filters.</div>';
+    } else {
+      html += '<div>';
+      filteredClients.forEach(function(c) {
+        var rels = _briRefreshStrengths(c.id);
+        var relMap = {}; rels.forEach(function(r){ relMap[r.bankId] = r; });
+        var _n = _getClientNames(c);
+        var t = getClientTasks(c.id); var stage = t ? PIPELINE_STAGES[t.stage] : PIPELINE_STAGES[0];
+        var readyCount = rels.filter(function(r){ return r.seasoningComplete || r.seasoningStatus === 'complete'; }).length;
+        var strongCnt = rels.filter(function(r){ return r.relationshipStrength === 'strong' || r.relationshipStrength === 'elite'; }).length;
+        html += '<div class="bri-client-rl" onclick="selectClientFromOv(\'' + c.id + '\')">'
+          + '<div style="width:36px;height:36px;border-radius:10px;background:' + stage.light + ';color:' + stage.color + ';font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + plInitials(c) + '</div>'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:13px;font-weight:700;color:#0f2044">' + _n.fn + ' ' + _n.ln + '</div>'
+          + '<div style="font-size:10px;color:#94a3b8;margin-top:1px">' + (c.state || '') + (c.businessName ? ' · ' + c.businessName : '') + '</div>'
+          + '</div>'
+          + '<div style="display:flex;flex-wrap:wrap;max-width:320px;justify-content:flex-end">';
+        _BRI_CORE_IDS.forEach(function(bid) {
+          var r = relMap[bid];
+          var rule = (window.BANK_RELATIONSHIP_RULES && window.BANK_RELATIONSHIP_RULES[bid]) || {};
+          var nm = rule.bankName ? rule.bankName.split(' ')[0] : bid;
+          if (r) {
+            html += '<span class="bri-bank-pill ' + (r.relationshipStrength || 'weak') + '">' + nm + '</span>';
+          } else {
+            html += '<span class="bri-bank-pill missing">' + nm + '</span>';
+          }
+        });
+        html += '</div>'
+          + '<div style="text-align:right;flex-shrink:0;margin-left:10px">'
+          + '<div style="font-size:11px;font-weight:700;color:#10b981">' + readyCount + ' ready</div>'
+          + '<div style="font-size:10px;color:#94a3b8">' + strongCnt + ' strong</div>'
+          + '</div>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+    wrap.innerHTML = html;
+  }
+
+  function _briSetFilter(type, val) {
+    if (type === 'bank') _briFilterBank = val;
+    if (type === 'readiness') _briFilterReadiness = val;
+    renderRelationshipsTab();
+  }
+
+  function openBankRelModal(clientId, bankId) {
+    var existingRel = bankId ? (getBankRel(clientId, bankId) || {}) : {};
+    var isNew = !bankId || !getBankRel(clientId, bankId);
+    var rule = (bankId && window.BANK_RELATIONSHIP_RULES && window.BANK_RELATIONSHIP_RULES[bankId]) ? window.BANK_RELATIONSHIP_RULES[bankId] : {};
+    var bankName = rule.bankName || (bankId ? bankId : '');
+    var old = document.getElementById('bri-modal-bg'); if (old) old.remove();
+    var bg = document.createElement('div'); bg.id = 'bri-modal-bg'; bg.className = 'bri-modal-bg';
+    bg.onclick = function(e){ if (e.target === bg) bg.remove(); };
+    var bankSelectorHtml = '';
+    if (!bankId) {
+      bankSelectorHtml = '<div class="bri-form-field" style="margin-bottom:12px"><label class="bri-form-label">Bank</label>'
+        + '<select id="bri-sel-bank" class="bri-form-input" style="cursor:pointer">'
+        + '<option value="">Select a bank...</option>'
+        + _BRI_CORE_BANKS.map(function(b){ return '<option value="' + b.id + '">' + b.n + '</option>'; }).join('')
+        + '</select></div>';
+    }
+    var rel = existingRel;
+    var auditHtml = (rel.auditLog && rel.auditLog.length)
+      ? rel.auditLog.slice().reverse().map(function(e){ return '<div class="bri-audit-entry"><span style="font-size:10px;color:#94a3b8;white-space:nowrap">' + e.date + '</span><span style="color:#475569">' + e.event + '</span></div>'; }).join('')
+      : '<div style="font-size:11px;color:#94a3b8;font-style:italic">No events recorded yet.</div>';
+    bg.innerHTML = '<div class="bri-modal">'
+      + '<div style="padding:20px 24px 16px;border-bottom:1.5px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">'
+      + '<div style="font-family:var(--font-h);font-size:17px;font-weight:800;color:#0f2044">' + (isNew ? 'Add Bank Relationship' : 'Edit: ' + bankName) + '</div>'
+      + '<button onclick="document.getElementById(\'bri-modal-bg\').remove()" style="width:28px;height:28px;border-radius:7px;border:none;background:#f1f5f9;cursor:pointer;font-size:14px;color:#64748b;font-weight:700">&#x2715;</button>'
+      + '</div>'
+      + '<div style="padding:20px 24px;max-height:70vh;overflow-y:auto">'
+      + bankSelectorHtml
+      + '<div class="bri-form-row">'
+      + '<div class="bri-form-field"><label class="bri-form-label">Account Opened Date</label><input class="bri-form-input" id="bri-f-opened" type="date" value="' + (rel.accountOpenedDate || '') + '"></div>'
+      + '<div class="bri-form-field"><label class="bri-form-label">Relationship Age (days)</label><input class="bri-form-input" id="bri-f-agedaysoverride" type="number" min="0" placeholder="Auto-calc from date" value="' + (rel.relationshipAgeDays || '') + '"></div>'
+      + '</div>'
+      + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:10px;margin-top:4px">Account Types</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'
+      + _briCheckbox('bri-f-checking','Business Checking', rel.checkingAccount)
+      + _briCheckbox('bri-f-savings','Savings Account', rel.savingsAccount)
+      + _briCheckbox('bri-f-pcc','Personal Credit Card', rel.personalCreditCard)
+      + _briCheckbox('bri-f-bcc','Business Credit Card', rel.businessCreditCard)
+      + _briCheckbox('bri-f-personal','Personal Relationship', rel.personalRelationship)
+      + _briCheckbox('bri-f-business','Business Relationship', rel.businessRelationship)
+      + '</div>'
+      + '<div class="bri-form-row">'
+      + '<div class="bri-form-field"><label class="bri-form-label">Monthly Deposit Avg ($)</label><input class="bri-form-input" id="bri-f-deposit" type="number" min="0" placeholder="e.g. 8500" value="' + (rel.monthlyDepositAverage || '') + '"></div>'
+      + '<div class="bri-form-field"><label class="bri-form-label">Monthly Transactions</label><input class="bri-form-input" id="bri-f-txn" type="number" min="0" placeholder="e.g. 12" value="' + (rel.transactionCountMonthly || '') + '"></div>'
+      + '</div>'
+      + '<div class="bri-form-row">'
+      + '<div class="bri-form-field"><label class="bri-form-label">Current Balance ($)</label><input class="bri-form-input" id="bri-f-balance" type="number" min="0" placeholder="e.g. 15000" value="' + (rel.currentBalance || '') + '"></div>'
+      + '<div class="bri-form-field"><label class="bri-form-label">Seasoning Status</label>'
+      + '<select id="bri-f-season" class="bri-form-input" style="cursor:pointer">'
+      + ['not_started','in_progress','complete','manual_override'].map(function(v){ return '<option value="' + v + '"' + (rel.seasoningStatus === v ? ' selected' : '') + '>' + v.replace(/_/g,' ') + '</option>'; }).join('')
+      + '</select></div>'
+      + '</div>'
+      + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:10px;margin-top:4px">BRM Management</div>'
+      + '<div class="bri-form-row">'
+      + '<div class="bri-form-field"><label class="bri-form-label">BRM Name</label><input class="bri-form-input" id="bri-f-brmname" type="text" placeholder="Full name" value="' + (rel.brmName || '') + '"></div>'
+      + '<div class="bri-form-field"><label class="bri-form-label">BRM Phone</label><input class="bri-form-input" id="bri-f-brmphone" type="tel" placeholder="(555) 000-0000" value="' + (rel.brmPhone || '') + '"></div>'
+      + '</div>'
+      + '<div class="bri-form-row">'
+      + '<div class="bri-form-field"><label class="bri-form-label">BRM Email</label><input class="bri-form-input" id="bri-f-brmemail" type="email" placeholder="name@bank.com" value="' + (rel.brmEmail || '') + '"></div>'
+      + '<div class="bri-form-field"><label class="bri-form-label">Appointment Date</label><input class="bri-form-input" id="bri-f-brmappt" type="date" value="' + (rel.brmAppointmentDate || '') + '"></div>'
+      + '</div>'
+      + '<div class="bri-form-row">'
+      + '<div class="bri-form-field"><label class="bri-form-label">Branch</label><input class="bri-form-input" id="bri-f-branch" type="text" placeholder="Branch name or city" value="' + (rel.branchAssigned || '') + '"></div>'
+      + '<div class="bri-form-field"><label class="bri-form-label">Relationship Strength Override</label>'
+      + '<select id="bri-f-override" class="bri-form-input" style="cursor:pointer">'
+      + '<option value="">Auto-calculate</option>'
+      + [['20','Weak (20)'],['45','Moderate (45)'],['70','Strong (70)'],['90','Elite (90)']].map(function(v){ return '<option value="' + v[0] + '"' + (rel.manualStrengthScore == v[0] ? ' selected' : '') + '>' + v[1] + '</option>'; }).join('')
+      + '</select></div>'
+      + '</div>'
+      + '<div class="bri-form-field" style="margin-bottom:14px"><label class="bri-form-label">Notes</label><textarea id="bri-f-notes" style="width:100%;min-height:64px;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:var(--font-b);color:#0f2044;outline:none;resize:vertical" placeholder="Internal notes...">' + (rel.notes || '') + '</textarea></div>'
+      + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin-bottom:8px">Audit Log</div>'
+      + '<div style="background:#f8fafc;border:1.5px solid #f1f5f9;border-radius:10px;padding:10px 12px;margin-bottom:4px">' + auditHtml + '</div>'
+      + '</div>'
+      + '<div style="padding:14px 24px;border-top:1.5px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">'
+      + (!isNew ? '<button onclick="_briDeleteRel(\'' + clientId + '\',\'' + bankId + '\')" style="height:34px;padding:0 14px;border:1.5px solid #fca5a5;background:#fff;border-radius:8px;font-size:12px;font-weight:600;color:#ef4444;cursor:pointer;font-family:var(--font-b)">Remove</button>' : '<div></div>')
+      + '<div style="display:flex;gap:8px">'
+      + '<button onclick="document.getElementById(\'bri-modal-bg\').remove()" style="height:34px;padding:0 14px;border:1.5px solid #e2e8f0;background:#fff;border-radius:8px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;font-family:var(--font-b)">Cancel</button>'
+      + '<button onclick="_briSaveModal(\'' + clientId + '\',\'' + (bankId || '') + '\')" style="height:34px;padding:0 16px;background:#0f2044;border:none;border-radius:8px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--font-b)">Save Relationship</button>'
+      + '</div></div>'
+      + '</div>';
+    document.body.appendChild(bg);
+  }
+
+  function _briCheckbox(id, label, checked) {
+    return '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:7px 8px;border:1.5px solid ' + (checked ? '#10b981' : '#e2e8f0') + ';border-radius:8px;background:' + (checked ? '#f0fdf4' : '#fff') + ';font-size:11px;font-weight:600;color:#475569;transition:all .12s" onclick="this.style.borderColor=document.getElementById(\'' + id + '\').checked?\'#e2e8f0\':\'#10b981\';this.style.background=document.getElementById(\'' + id + '\').checked?\'#fff\':\'#f0fdf4\'">'
+      + '<input type="checkbox" id="' + id + '" ' + (checked ? 'checked' : '') + ' style="width:14px;height:14px;accent-color:#10b981;cursor:pointer">'
+      + label + '</label>';
+  }
+
+  function _briSaveModal(clientId, bankId) {
+    var selBank = document.getElementById('bri-sel-bank');
+    var resolvedBankId = bankId || (selBank ? selBank.value : '');
+    if (!resolvedBankId) { alert('Please select a bank.'); return; }
+    var rule = (window.BANK_RELATIONSHIP_RULES && window.BANK_RELATIONSHIP_RULES[resolvedBankId]) || {};
+    var existing = getBankRel(clientId, resolvedBankId) || {};
+    var openedDate = document.getElementById('bri-f-opened').value || null;
+    var ageDaysInput = parseInt(document.getElementById('bri-f-agedaysoverride').value || '');
+    var ageDays = !isNaN(ageDaysInput) && ageDaysInput >= 0 ? ageDaysInput
+      : (openedDate ? Math.max(0, Math.floor((Date.now() - new Date(openedDate).getTime()) / 86400000)) : existing.relationshipAgeDays || 0);
+    var seasonStatus = document.getElementById('bri-f-season').value;
+    var seasonDone = seasonStatus === 'complete' || seasonStatus === 'manual_override';
+    var brmName = document.getElementById('bri-f-brmname').value.trim();
+    var overrideScore = document.getElementById('bri-f-override').value;
+    var noteEntry = '';
+    var newRel = Object.assign({}, existing, {
+      bankId: resolvedBankId, bankName: rule.bankName || resolvedBankId,
+      bureau: rule.bureau || existing.bureau || '',
+      accountOpenedDate: openedDate, relationshipAgeDays: ageDays,
+      checkingAccount: !!document.getElementById('bri-f-checking').checked,
+      savingsAccount: !!document.getElementById('bri-f-savings').checked,
+      personalCreditCard: !!document.getElementById('bri-f-pcc').checked,
+      businessCreditCard: !!document.getElementById('bri-f-bcc').checked,
+      personalRelationship: !!document.getElementById('bri-f-personal').checked,
+      businessRelationship: !!document.getElementById('bri-f-business').checked,
+      monthlyDepositAverage: parseFloat(document.getElementById('bri-f-deposit').value) || 0,
+      transactionCountMonthly: parseInt(document.getElementById('bri-f-txn').value) || 0,
+      currentBalance: parseFloat(document.getElementById('bri-f-balance').value) || 0,
+      seasoningStatus: seasonStatus, seasoningComplete: seasonDone,
+      seasoningRequiredDays: rule.seasoningDays || existing.seasoningRequiredDays || 0,
+      brmAssigned: !!brmName, brmName: brmName,
+      brmPhone: document.getElementById('bri-f-brmphone').value.trim(),
+      brmEmail: document.getElementById('bri-f-brmemail').value.trim(),
+      brmAppointmentDate: document.getElementById('bri-f-brmappt').value || null,
+      branchAssigned: document.getElementById('bri-f-branch').value.trim(),
+      notes: document.getElementById('bri-f-notes').value.trim(),
+      manualOverride: !!overrideScore, manualStrengthScore: overrideScore ? Number(overrideScore) : null,
+      auditLog: existing.auditLog || [],
+      detectedFrom: existing.detectedFrom || 'manual',
+      createdAt: existing.createdAt || Date.now()
+    });
+    var today = new Date().toISOString().split('T')[0];
+    if (!existing.bankId) newRel.auditLog.push({ date: today, event: 'Relationship added manually', type: 'created' });
+    else newRel.auditLog.push({ date: today, event: 'Relationship details updated', type: 'updated' });
+    if (brmName && (!existing.brmName || existing.brmName !== brmName)) newRel.auditLog.push({ date: today, event: 'BRM assigned: ' + brmName, type: 'brm' });
+    if (seasonDone && !existing.seasoningComplete) newRel.auditLog.push({ date: today, event: 'Seasoning marked complete', type: 'seasoning' });
+    var sr = calcRelStrength(newRel, rule); newRel.relationshipStrength = sr.label; newRel.estimatedApprovalBoost = sr.boost;
+    upsertBankRel(clientId, newRel);
+    document.getElementById('bri-modal-bg').remove();
+    renderBriSection(clientId);
+    if (document.getElementById('bri-global-wrap') && document.getElementById('bri-global-wrap').innerHTML) renderRelationshipsTab();
+  }
+
+  function _briDeleteRel(clientId, bankId) {
+    if (!confirm('Remove this bank relationship?')) return;
+    removeBankRelById(clientId, bankId);
+    document.getElementById('bri-modal-bg').remove();
+    renderBriSection(clientId);
+    if (document.getElementById('bri-global-wrap') && document.getElementById('bri-global-wrap').innerHTML) renderRelationshipsTab();
   }
 
   function plDaysInStage(id, stageIdx) {
