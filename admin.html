@@ -3945,6 +3945,7 @@
           <span class="a-csh-pill ${_statusCls}" id="csh-status-${id}">${_statusLabel}</span>
           <span class="a-csh-pill stage" id="csh-stage-${id}">${_stageName}</span>
           <span class="a-csh-pill funded" id="csh-funded-${id}" style="${_fundingApproved ? '' : 'display:none'}">${_fundingApproved ? _fundingApproved + ' funded' : ''}</span>
+          ${ghlLinkPillHTML(c)}
         </div>
         <div class="a-csh-actions">
           ${c.status !== 'approved'     ? `<button class="a-action-btn approve" onclick="updateStatus('${id}','approved')">Approve</button>` : ''}
@@ -7621,8 +7622,14 @@
             Cancel
           </button>
           <span id="admin-profile-save-toast" style="font-size:12px;font-weight:600;color:var(--success);opacity:0;transition:opacity 0.3s;margin-left:4px"></span>
+          <button onclick="ghlLinkModal('${clientId}')"
+            style="height:40px;padding:0 18px;background:transparent;border:1.5px solid #6366f1;border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;color:#6366f1;cursor:pointer;margin-left:auto;display:flex;align-items:center;gap:6px;transition:all 0.13s"
+            onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='transparent'">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            Link GHL
+          </button>
           <button id="ghl-import-open-btn-${clientId}" onclick="ghlImportFromForm('${clientId}', this)"
-            style="height:40px;padding:0 18px;background:transparent;border:1.5px solid #10b981;border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;color:#10b981;cursor:pointer;margin-left:auto;display:flex;align-items:center;gap:6px;transition:all 0.13s"
+            style="height:40px;padding:0 18px;background:transparent;border:1.5px solid #10b981;border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;color:#10b981;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.13s"
             onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='transparent'">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
             Import From GHL
@@ -8057,6 +8064,515 @@
       alert('Import failed: ' + e.message);
       if (btn) { btn.disabled = false; btn.textContent = 'Import Selected'; }
     }
+  }
+
+  // ── GHL PERMANENT LINK SYSTEM ───────────────────────────────────────────
+
+  window._ghlLinkState = { clientId: null, autoMatch: null, matchInfo: null, searchResults: [], selectedContact: null, status: 'idle' };
+
+  // Returns the HTML for the GHL link status pill (called inside renderClientDetail template literal)
+  function ghlLinkPillHTML(client) {
+    if (!client) return '';
+    var id = client.id;
+    if (client.ghlContactId) {
+      return '<span id="csh-ghl-pill-' + id + '" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:20px;font-size:10px;font-weight:700;color:#15803d;cursor:default" title="GHL Linked: ' + client.ghlContactId + '">' +
+        '<span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0"></span>GHL Linked' +
+      '</span>';
+    }
+    return '<span id="csh-ghl-pill-' + id + '" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:20px;font-size:10px;font-weight:700;color:#94a3b8;cursor:pointer" onclick="ghlLinkModal(\'' + id + '\')" title="Click to link GHL contact">' +
+      '<span style="width:6px;height:6px;border-radius:50%;background:#94a3b8;flex-shrink:0"></span>Link GHL' +
+    '</span>';
+  }
+
+  // Update the pill in-place after linking (no full re-render)
+  function _ghlUpdateCshPill(clientId) {
+    var client = getClient(clientId);
+    var pill = document.getElementById('csh-ghl-pill-' + clientId);
+    if (!pill || !client) return;
+    pill.outerHTML = ghlLinkPillHTML(client);
+  }
+
+  // Check if ghlContactId already belongs to another portal client
+  function _ghlCheckDuplicate(ghlContactId, exceptClientId) {
+    return clients.find(function(c) { return c.id !== exceptClientId && c.ghlContactId === ghlContactId; }) || null;
+  }
+
+  // ── Main entry: open the link modal ──────────────────────────────────────
+  async function ghlLinkModal(clientId) {
+    var client = getClient(clientId);
+    if (!client) return;
+    if (!window.GHL) { alert('GHL integration not loaded.'); return; }
+    if (client.ghlContactId) {
+      if (!confirm('This client is already linked to GHL contact ' + client.ghlContactId + '.\n\nDo you want to re-link to a different contact?')) return;
+    }
+
+    window._ghlLinkState = { clientId, autoMatch: null, matchInfo: null, searchResults: [], selectedContact: null, status: 'searching' };
+    _ghlRenderLinkModal(); // show loading state immediately
+
+    var emailNorm = (client.email || '').toLowerCase().trim();
+    console.log('[GHL Link] Starting lookup for client:', clientId, '| email:', emailNorm, '| phone:', client.phone || 'none');
+
+    try {
+      // ── Priority 1: exact email match ────────────────────────────────────
+      if (emailNorm) {
+        var directMatch = null;
+        try { directMatch = await GHL.lookupContact(emailNorm, null); } catch(e) {}
+
+        var searchResults = [];
+        try {
+          var searchRes = await GHL.searchContacts(emailNorm);
+          if (Array.isArray(searchRes)) searchResults = searchRes;
+        } catch(e) {}
+
+        // Merge direct match into searchResults
+        if (directMatch && !searchResults.find(function(r){ return r.id === directMatch.id; })) {
+          searchResults.unshift(directMatch);
+        }
+
+        console.log('[GHL Link] Searching GHL by email:', emailNorm, '| contacts returned:', searchResults.length);
+
+        // Filter for exact normalized email matches
+        var exactMatches = searchResults.filter(function(r) {
+          return (r.email || '').toLowerCase().trim() === emailNorm;
+        });
+        console.log('[GHL Link] Exact email matches:', exactMatches.length);
+
+        if (exactMatches.length === 1) {
+          // Single exact match → auto-link immediately
+          var autoContact = exactMatches[0];
+          var matchInfo = GHL.validateFormOwnership(client, autoContact);
+          var dup = _ghlCheckDuplicate(autoContact.id, clientId);
+          if (dup) {
+            console.warn('[GHL Link] Duplicate — GHL contact already linked to:', dup.id, (dup.fname||'')+' '+(dup.lname||''));
+            window._ghlLinkState.autoMatch = autoContact;
+            window._ghlLinkState.matchInfo = matchInfo;
+            window._ghlLinkState.status = 'duplicate';
+            window._ghlLinkState.duplicateClient = dup;
+            _ghlRenderLinkModal();
+            return;
+          }
+          // Auto-link!
+          console.log('[GHL Link] Auto-link by exact email — contact:', autoContact.id, 'confidence:', matchInfo.confidence);
+          await _ghlSaveLink(clientId, autoContact, 'email-exact');
+          console.log('[GHL Link] Auto-link SUCCESS | clientId:', clientId, '| ghlContactId:', autoContact.id, '| linkedBy: email-exact | ts:', new Date().toISOString());
+          document.getElementById('ghl-link-modal')?.remove();
+          _ghlUpdateCshPill(clientId);
+          _ghlPostLinkSync(clientId);
+          return;
+        }
+
+        if (exactMatches.length > 1) {
+          // Multiple exact matches → show selection UI
+          console.log('[GHL Link] Multiple exact email matches — showing selection modal');
+          window._ghlLinkState.searchResults = exactMatches;
+          window._ghlLinkState.status = 'multiple-matches';
+          _ghlRenderLinkModal();
+          return;
+        }
+
+        // No exact match — use best scored result as suggestion
+        if (searchResults.length > 0) {
+          var best = null, bestScore = -999;
+          searchResults.forEach(function(r) {
+            var info = GHL.validateFormOwnership(client, r);
+            if (info.score > bestScore) { best = r; bestScore = info.score; }
+          });
+          if (best && bestScore >= 20) {
+            window._ghlLinkState.autoMatch = best;
+            window._ghlLinkState.matchInfo = GHL.validateFormOwnership(client, best);
+          }
+        }
+      }
+
+      // ── Priority 2: exact phone match ────────────────────────────────────
+      if (!window._ghlLinkState.autoMatch && client.phone) {
+        try {
+          var phoneMatch = await GHL.lookupContact(null, client.phone);
+          if (phoneMatch) {
+            console.log('[GHL Link] Phone match found:', phoneMatch.id);
+            window._ghlLinkState.autoMatch = phoneMatch;
+            window._ghlLinkState.matchInfo = GHL.validateFormOwnership(client, phoneMatch);
+          }
+        } catch(e) {}
+      }
+
+      // ── Priority 3: full name search ─────────────────────────────────────
+      if (!window._ghlLinkState.autoMatch && client.fname) {
+        var nameQuery = (client.fname + ' ' + (client.lname || '')).trim();
+        try {
+          var nameResults = await GHL.searchContacts(nameQuery);
+          console.log('[GHL Link] Name search "' + nameQuery + '" returned:', (nameResults||[]).length, 'results');
+          if (nameResults && nameResults.length > 0) {
+            var bestN = null, bestNScore = -999;
+            nameResults.forEach(function(r) {
+              var info = GHL.validateFormOwnership(client, r);
+              if (info.score > bestNScore) { bestN = r; bestNScore = info.score; }
+            });
+            if (bestN && bestNScore >= 10) {
+              window._ghlLinkState.autoMatch = bestN;
+              window._ghlLinkState.matchInfo = GHL.validateFormOwnership(client, bestN);
+              console.log('[GHL Link] Name suggestion found:', bestN.id, 'score:', bestNScore);
+            }
+          }
+        } catch(e) {}
+      }
+
+    } catch(e) {
+      console.error('[GHL Link] Lookup error:', e.message);
+    }
+
+    // No auto-link — show modal with suggestion or "not found"
+    window._ghlLinkState.status = window._ghlLinkState.autoMatch ? 'has-suggestion' : 'no-match';
+    if (!window._ghlLinkState.autoMatch) {
+      console.log('[GHL Link] No match found for:', emailNorm, '— showing manual search');
+    }
+    _ghlRenderLinkModal();
+  }
+
+  // ── Render the link modal from current _ghlLinkState ────────────────────
+  function _ghlRenderLinkModal() {
+    document.getElementById('ghl-link-modal')?.remove();
+    var state = window._ghlLinkState;
+    var client = getClient(state.clientId);
+    if (!client) return;
+
+    var clientName = ((client.fname||'') + ' ' + (client.lname||'')).trim() || client.email || 'Client';
+    var isSearching = state.status === 'searching';
+    var CC = { high:'#16a34a', medium:'#d97706', low:'#dc2626' };
+    var CB = { high:'#f0fdf4', medium:'#fffbeb', low:'#fee2e2' };
+
+    // ── Auto-match / status section ─────────────────────────────────────
+    var statusSection = '';
+    if (!isSearching) {
+      if (state.status === 'no-match') {
+        statusSection = '<div style="background:#f8fafc;border:1.5px dashed #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:14px;text-align:center">' +
+          '<div style="font-size:22px;margin-bottom:8px">🔍</div>' +
+          '<div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:4px">No GHL contact found using email</div>' +
+          '<div style="font-size:11px;color:#94a3b8">Email searched: <strong>' + (client.email||'—') + '</strong></div>' +
+          '<div style="font-size:11px;color:#94a3b8;margin-top:4px">Use the search below to find manually.</div>' +
+        '</div>';
+      } else if (state.status === 'duplicate') {
+        var dup = state.duplicateClient;
+        statusSection = '<div style="background:#fee2e2;border:2px solid #fca5a5;border-radius:10px;padding:14px 16px;margin-bottom:14px">' +
+          '<div style="font-size:13px;font-weight:800;color:#991b1b;margin-bottom:6px">⛔ Duplicate Link Blocked</div>' +
+          '<div style="font-size:12px;color:#b91c1c">GHL contact <strong>' + (state.autoMatch ? state.autoMatch.id : '') + '</strong> is already linked to portal client <strong>' + ((dup.fname||'')+' '+(dup.lname||'')).trim() + '</strong>. Unlink it from that client first, or search for a different GHL contact.</div>' +
+        '</div>';
+      } else if (state.status === 'has-suggestion' && state.autoMatch) {
+        var am = state.autoMatch, mi = state.matchInfo || {};
+        var amName = ((am.firstName||'')+' '+(am.lastName||'')).trim() || '—';
+        var conf = mi.confidence || 'low';
+        statusSection = '<div style="background:' + CB[conf] + ';border:1.5px solid ' + CC[conf] + ';border-radius:10px;padding:14px 16px;margin-bottom:14px">' +
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin-bottom:8px">Suggested Match</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">' +
+            '<div><div style="font-size:10px;color:#94a3b8">Name</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + amName + '</div></div>' +
+            '<div><div style="font-size:10px;color:#94a3b8">Email</div><div style="font-size:12px;color:#0f172a">' + (am.email||'—') + '</div></div>' +
+            '<div><div style="font-size:10px;color:#94a3b8">Phone</div><div style="font-size:12px;color:#0f172a">' + (am.phone||'—') + '</div></div>' +
+          '</div>' +
+          '<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;font-family:monospace">Contact ID: ' + am.id + '</div>' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">' +
+            '<span style="font-size:10px;font-weight:800;color:' + CC[conf] + ';background:' + CB[conf] + ';padding:2px 9px;border-radius:20px;border:1px solid ' + CC[conf] + '">' + conf.toUpperCase() + ' · Matched by: ' + ((mi.matchedBy||[]).join(', ')||'none') + '</span>' +
+            '<button onclick="_ghlSelectAndLink()" style="height:32px;padding:0 16px;background:' + CC[conf] + ';border:none;border-radius:7px;font-family:var(--font-h);font-size:11px;font-weight:700;color:white;cursor:pointer">Link This Contact</button>' +
+          '</div>' +
+        '</div>';
+      } else if (state.status === 'multiple-matches') {
+        var rows0 = state.searchResults.map(function(r, i) {
+          var rn = ((r.firstName||'')+' '+(r.lastName||'')).trim() || '—';
+          return '<tr style="border-bottom:1px solid #f1f5f9">' +
+            '<td style="padding:8px 12px"><div style="font-size:12px;font-weight:700;color:#0f172a">' + rn + '</div><div style="font-size:10px;color:#94a3b8;font-family:monospace">' + r.id + '</div></td>' +
+            '<td style="padding:8px 10px;font-size:11px;color:#64748b">' + (r.email||'—') + '</td>' +
+            '<td style="padding:8px 10px;font-size:11px;color:#64748b">' + (r.phone||'—') + '</td>' +
+            '<td style="padding:8px 10px;text-align:right"><button onclick="_ghlSelectResult(' + i + ')" style="height:28px;padding:0 12px;background:var(--navy);border:none;border-radius:6px;font-size:11px;font-weight:700;color:white;cursor:pointer">Select</button></td>' +
+          '</tr>';
+        }).join('');
+        statusSection = '<div style="margin-bottom:14px">' +
+          '<div style="font-size:11px;font-weight:700;color:#d97706;margin-bottom:8px">⚠ Multiple GHL contacts share this email — select the correct one:</div>' +
+          '<div style="background:#fff;border:1px solid #e8ecf0;border-radius:10px;overflow:hidden">' +
+          '<table style="width:100%;border-collapse:collapse">' +
+          '<thead><tr style="background:#f8fafc"><th style="padding:6px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8">Name / ID</th><th style="padding:6px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8">Email</th><th style="padding:6px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8">Phone</th><th></th></tr></thead>' +
+          '<tbody>' + rows0 + '</tbody></table></div></div>';
+      }
+    }
+
+    // ── Search results section ───────────────────────────────────────────
+    var searchResultsSection = '';
+    if (state.searchResults && state.searchResults.length > 0 && state.status !== 'multiple-matches') {
+      var rows1 = state.searchResults.map(function(r, i) {
+        var rn = ((r.firstName||'')+' '+(r.lastName||'')).trim() || '—';
+        var isSel = state.selectedContact && state.selectedContact.id === r.id;
+        return '<tr style="border-bottom:1px solid #f1f5f9' + (isSel ? ';background:#f0fdf4' : '') + '">' +
+          '<td style="padding:8px 12px"><div style="font-size:12px;font-weight:700;color:#0f172a">' + rn + '</div><div style="font-size:10px;color:#94a3b8;font-family:monospace">' + r.id + '</div></td>' +
+          '<td style="padding:8px 10px;font-size:11px;color:#64748b">' + (r.email||'—') + '</td>' +
+          '<td style="padding:8px 10px;font-size:11px;color:#64748b">' + (r.phone||'—') + '</td>' +
+          '<td style="padding:8px 10px;text-align:right"><button onclick="_ghlSelectResult(' + i + ')" style="height:28px;padding:0 12px;background:' + (isSel ? '#10b981' : 'var(--navy)') + ';border:none;border-radius:6px;font-size:11px;font-weight:700;color:white;cursor:pointer">' + (isSel ? '✓ Selected' : 'Select') + '</button></td>' +
+        '</tr>';
+      }).join('');
+      searchResultsSection = '<div style="background:#fff;border:1px solid #e8ecf0;border-radius:8px;overflow:hidden;margin-top:10px">' +
+        '<table style="width:100%;border-collapse:collapse">' +
+        '<thead><tr style="background:#f8fafc"><th style="padding:6px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8">Name / ID</th><th style="padding:6px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8">Email</th><th style="padding:6px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8">Phone</th><th></th></tr></thead>' +
+        '<tbody>' + rows1 + '</tbody></table></div>';
+    }
+
+    var confirmEnabled = !!state.selectedContact;
+    var modal = document.createElement('div');
+    modal.id = 'ghl-link-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.72);z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px';
+
+    modal.innerHTML =
+      '<div style="background:#f0f4f8;border-radius:18px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 32px 100px rgba(0,0,0,0.35)">' +
+
+      // Header
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid #e2e8f0;background:#fff;border-radius:18px 18px 0 0;flex-shrink:0">' +
+        '<div style="display:flex;align-items:center;gap:10px">' +
+          '<div style="width:34px;height:34px;background:#6366f1;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+            '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>' +
+          '</div>' +
+          '<div>' +
+            '<div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:#0f172a">Link GHL Contact</div>' +
+            '<div style="font-size:11px;color:#94a3b8">Linking: ' + clientName + ' · ' + (client.email || 'no email') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'ghl-link-modal\').remove()" style="width:34px;height:34px;border-radius:9px;border:1.5px solid #e2e8f0;background:#f8fafc;cursor:pointer;font-size:20px;color:#94a3b8;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background=\'#fee2e2\';this.style.color=\'#ef4444\'" onmouseout="this.style.background=\'#f8fafc\';this.style.color=\'#94a3b8\'">×</button>' +
+      '</div>' +
+
+      // Body
+      '<div style="flex:1;overflow-y:auto;padding:16px 20px">' +
+        (isSearching ?
+          '<div style="text-align:center;padding:40px 20px">' +
+            '<div style="width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px"></div>' +
+            '<div style="font-size:13px;font-weight:600;color:#475569">Searching GHL by email…</div>' +
+            '<div style="font-size:11px;color:#94a3b8;margin-top:4px">' + (client.email||'—') + '</div>' +
+          '</div>'
+        :
+          statusSection +
+          '<div style="background:#fff;border-radius:10px;border:1px solid #e8ecf0;padding:14px 16px">' +
+            '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin-bottom:10px">Manual Search</div>' +
+            '<div style="display:flex;gap:8px">' +
+              '<input id="ghl-link-search-input" type="text" placeholder="Name, email, or phone…" value="' + (client.email||'') + '" style="flex:1;height:36px;border:1.5px solid #e2e8f0;border-radius:8px;padding:0 12px;font-size:13px;font-family:var(--font-b);outline:none;box-sizing:border-box" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'#e2e8f0\'" onkeydown="if(event.key===\'Enter\')_ghlLinkSearch()" />' +
+              '<button onclick="_ghlLinkSearch()" style="height:36px;padding:0 16px;background:#6366f1;border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer" onmouseover="this.style.background=\'#4f46e5\'" onmouseout="this.style.background=\'#6366f1\'">Search</button>' +
+            '</div>' +
+            searchResultsSection +
+          '</div>'
+        ) +
+      '</div>' +
+
+      // Footer
+      '<div style="padding:14px 22px;border-top:1px solid #e2e8f0;background:#fff;border-radius:0 0 18px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0">' +
+        '<button id="ghl-link-confirm-btn" onclick="_ghlConfirmSelectedLink()" ' + (!confirmEnabled ? 'disabled' : '') + ' style="height:40px;padding:0 28px;background:' + (!confirmEnabled ? '#94a3b8' : '#6366f1') + ';border:none;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:700;color:white;cursor:' + (!confirmEnabled ? 'not-allowed' : 'pointer') + ';transition:background 0.15s" onmouseover="if(!this.disabled)this.style.background=\'#4f46e5\'" onmouseout="if(!this.disabled)this.style.background=\'#6366f1\'">Confirm Link</button>' +
+        '<button onclick="document.getElementById(\'ghl-link-modal\').remove()" style="height:40px;padding:0 20px;background:transparent;border:1.5px solid #e2e8f0;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:600;color:#64748b;cursor:pointer" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'transparent\'">Cancel</button>' +
+        '<span id="ghl-link-status-msg" style="font-size:12px;font-weight:600;color:#10b981;margin-left:8px;opacity:0;transition:opacity 0.3s"></span>' +
+      '</div>' +
+
+      '</div>';
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+  }
+
+  // ── Window-scope event handlers (called from onclick= attributes) ────────
+
+  window._ghlSelectAndLink = async function() {
+    var state = window._ghlLinkState;
+    if (!state.autoMatch) return;
+    var dup = _ghlCheckDuplicate(state.autoMatch.id, state.clientId);
+    if (dup) { alert('Already linked to another client: ' + ((dup.fname||'')+' '+(dup.lname||'')).trim()); return; }
+    var btn = document.getElementById('ghl-link-confirm-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Linking…'; }
+    try {
+      await _ghlSaveLink(state.clientId, state.autoMatch, (state.matchInfo||{}).contactSource || 'suggestion');
+      console.log('[GHL Link] Confirmed | clientId:', state.clientId, '| ghlContactId:', state.autoMatch.id, '| linkedBy: suggestion | ts:', new Date().toISOString());
+      var msg = document.getElementById('ghl-link-status-msg');
+      if (msg) { msg.textContent = '✓ Linked!'; msg.style.opacity = '1'; }
+      setTimeout(function() {
+        document.getElementById('ghl-link-modal')?.remove();
+        _ghlUpdateCshPill(state.clientId);
+        _ghlPostLinkSync(state.clientId);
+      }, 900);
+    } catch(e) {
+      alert('Link failed: ' + e.message);
+      if (btn) { btn.disabled = false; btn.textContent = 'Confirm Link'; }
+    }
+  };
+
+  window._ghlSelectResult = function(idx) {
+    var state = window._ghlLinkState;
+    var contact = state.searchResults[idx];
+    if (!contact) return;
+    var dup = _ghlCheckDuplicate(contact.id, state.clientId);
+    if (dup) { alert('This GHL contact is already linked to: ' + ((dup.fname||'')+' '+(dup.lname||'')).trim() + '. Choose a different contact.'); return; }
+    state.selectedContact = contact;
+    state.status = 'searched';
+    _ghlRenderLinkModal();
+    // Scroll to footer
+    setTimeout(function() {
+      var m = document.getElementById('ghl-link-modal');
+      if (m) { var b = m.querySelector('[style*="overflow-y"]'); if (b) b.scrollTop = b.scrollHeight; }
+    }, 50);
+  };
+
+  window._ghlLinkSearch = async function() {
+    var inp = document.getElementById('ghl-link-search-input');
+    var query = inp ? inp.value.trim() : '';
+    if (!query) return;
+    inp.disabled = true;
+    try {
+      console.log('[GHL Link] Manual search query:', query);
+      var results = await GHL.searchContacts(query);
+      console.log('[GHL Link] Matches found:', (results||[]).length);
+      window._ghlLinkState.searchResults = results || [];
+      window._ghlLinkState.status = 'searched';
+      _ghlRenderLinkModal();
+    } catch(e) {
+      console.error('[GHL Link] Search error:', e.message);
+      alert('Search failed: ' + e.message);
+    } finally {
+      inp.disabled = false;
+      var inp2 = document.getElementById('ghl-link-search-input');
+      if (inp2) inp2.focus();
+    }
+  };
+
+  window._ghlConfirmSelectedLink = async function() {
+    var state = window._ghlLinkState;
+    var contact = state.selectedContact;
+    if (!contact) { alert('No contact selected. Click Select on a result first.'); return; }
+    var dup = _ghlCheckDuplicate(contact.id, state.clientId);
+    if (dup) { alert('Already linked to another client: ' + ((dup.fname||'')+' '+(dup.lname||'')).trim()); return; }
+    var btn = document.getElementById('ghl-link-confirm-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Linking…'; }
+    try {
+      await _ghlSaveLink(state.clientId, contact, 'manual');
+      console.log('[GHL Link] Manual link confirmed | clientId:', state.clientId, '| ghlContactId:', contact.id, '| linkedBy: manual | ts:', new Date().toISOString());
+      var msg = document.getElementById('ghl-link-status-msg');
+      if (msg) { msg.textContent = '✓ Linked!'; msg.style.opacity = '1'; }
+      setTimeout(function() {
+        document.getElementById('ghl-link-modal')?.remove();
+        _ghlUpdateCshPill(state.clientId);
+        _ghlPostLinkSync(state.clientId);
+      }, 900);
+    } catch(e) {
+      alert('Link failed: ' + e.message);
+      if (btn) { btn.disabled = false; btn.textContent = 'Confirm Link'; }
+    }
+  };
+
+  // ── Core: save the link permanently ─────────────────────────────────────
+  async function _ghlSaveLink(clientId, ghlContact, linkedBy) {
+    var allClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+    var idx = allClients.findIndex(function(c) { return c.id === clientId; });
+    if (idx < 0) throw new Error('Client not found in list');
+
+    var settings = GHL.getSettings();
+    allClients[idx].ghlContactId  = ghlContact.id;
+    allClients[idx].ghlLocationId = ghlContact.locationId || settings.locationId || '';
+    allClients[idx]._ghlLinkedBy  = linkedBy || 'manual';
+    allClients[idx]._ghlLinkedAt  = new Date().toISOString();
+
+    // Update in-memory clients array
+    var memIdx = clients.findIndex(function(c) { return c.id === clientId; });
+    if (memIdx >= 0) {
+      clients[memIdx].ghlContactId  = allClients[idx].ghlContactId;
+      clients[memIdx].ghlLocationId = allClients[idx].ghlLocationId;
+      clients[memIdx]._ghlLinkedBy  = allClients[idx]._ghlLinkedBy;
+      clients[memIdx]._ghlLinkedAt  = allClients[idx]._ghlLinkedAt;
+    }
+    localStorage.setItem('cq_admin_clients', JSON.stringify(allClients));
+    await fsSaveClient(allClients[idx]);
+
+    // Fetch + save opportunity ID
+    try {
+      var opp = await GHL.findOpportunity(ghlContact.id);
+      if (opp) {
+        allClients[idx].ghlOpportunityId = opp.id;
+        if (memIdx >= 0) clients[memIdx].ghlOpportunityId = opp.id;
+        localStorage.setItem('cq_admin_clients', JSON.stringify(allClients));
+        await fsSaveClient(allClients[idx]);
+      }
+    } catch(e) {}
+
+    // Fetch + save conversation ID
+    try {
+      var conv = await GHL.getConversation(ghlContact.id);
+      if (conv) {
+        allClients[idx].ghlConversationId = conv.id;
+        if (memIdx >= 0) clients[memIdx].ghlConversationId = conv.id;
+        localStorage.setItem('cq_admin_clients', JSON.stringify(allClients));
+        await fsSaveClient(allClients[idx]);
+      }
+    } catch(e) {}
+  }
+
+  // ── Post-link: auto-sync GHL data into profile ──────────────────────────
+  async function _ghlPostLinkSync(clientId) {
+    var client = getClient(clientId);
+    if (!client || !client.ghlContactId) return;
+    console.log('[GHL Link] Post-link sync starting | clientId:', clientId, '| ghlContactId:', client.ghlContactId);
+
+    try {
+      var result = await GHL.fetchOnboardingData(client);
+      if (!result.error && Object.keys(result.mappedFields || {}).length > 0) {
+        var o = getOnboardDataForClient(clientId);
+        var autoFilled = [];
+        Object.keys(result.mappedFields).forEach(function(key) {
+          var existing = o[key];
+          var hasVal = existing !== undefined && existing !== null && existing !== '' && !(Array.isArray(existing) && existing.length === 0);
+          if (!hasVal) { o[key] = result.mappedFields[key]; autoFilled.push(key); }
+        });
+        if (autoFilled.length > 0) {
+          o._ghlAutoFillAt = new Date().toISOString();
+          try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o)); } catch(e) {}
+          try { await fsSetOnboarding(clientId, o); } catch(e) {}
+          try { await fsSetDash(clientId, { profileData: o }); } catch(e) {}
+          console.log('[GHL Link] Auto-filled', autoFilled.length, 'empty profile fields:', autoFilled.join(', '));
+          // Trigger BRI if bank fields filled
+          var bankFields = ['personalBanks','bizBanks','bizCreditCards'];
+          if (autoFilled.some(function(k){ return bankFields.includes(k); })) {
+            setTimeout(function(){ try { _briMergeAutoDetect(clientId); } catch(e){} }, 500);
+          }
+        }
+      }
+    } catch(e) { console.warn('[GHL Link] Post-link form sync failed:', e.message); }
+
+    // Refresh UI
+    try { renderClientDetail(clientId); } catch(e) {}
+    try { renderClientList(); } catch(e) {}
+  }
+
+  // ── Silent auto-link (runs on client creation) ───────────────────────────
+  async function ghlAutoLinkSilent(clientId) {
+    var client = getClient(clientId);
+    if (!client || client.ghlContactId || !window.GHL) return;
+    var emailNorm = (client.email || '').toLowerCase().trim();
+    if (!emailNorm) return;
+
+    console.log('[GHL Auto-Link] Silent attempt | clientId:', clientId, '| email:', emailNorm);
+    try {
+      // Try direct lookup
+      var found = null;
+      try { found = await GHL.lookupContact(emailNorm, null); } catch(e) {}
+      if (!found && client.phone) { try { found = await GHL.lookupContact(null, client.phone); } catch(e) {} }
+
+      // Also try search for exact email match
+      if (!found) {
+        try {
+          var sr = await GHL.searchContacts(emailNorm);
+          if (sr && sr.length > 0) {
+            found = sr.find(function(r){ return (r.email||'').toLowerCase().trim() === emailNorm; }) || null;
+          }
+        } catch(e) {}
+      }
+
+      if (!found) { console.log('[GHL Auto-Link] No match for email:', emailNorm); return; }
+
+      var dup = _ghlCheckDuplicate(found.id, clientId);
+      if (dup) { console.warn('[GHL Auto-Link] Duplicate — contact', found.id, 'already linked to', dup.id); return; }
+
+      var matchInfo = GHL.validateFormOwnership(client, found);
+      if (matchInfo.confidence === 'low') { console.log('[GHL Auto-Link] Low confidence (' + matchInfo.score + '), skipping.'); return; }
+
+      await _ghlSaveLink(clientId, found, 'auto-email');
+      console.log('[GHL Auto-Link] SUCCESS | clientId:', clientId, '| ghlContactId:', found.id, '| linkedBy: auto-email | ts:', new Date().toISOString());
+      _ghlPostLinkSync(clientId);
+    } catch(e) { console.warn('[GHL Auto-Link] Error:', e.message); }
   }
 
   // ── CREDIT ────────────────────────────────────────────────────────────
@@ -9621,6 +10137,9 @@
     renderOverview();
     document.getElementById('sb-client-count').textContent = clients.length;
     selectClient(clientId);
+
+    // Try to auto-link to GHL contact in background using client email
+    setTimeout(function() { ghlAutoLinkSilent(clientId).catch(function(){}); }, 1500);
   }
 
   // ── DASHBOARD EDITOR ──────────────────────────────────────────────────
