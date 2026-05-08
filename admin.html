@@ -3069,9 +3069,34 @@
                 }
               }
             }
-            // Seed pipelineTasks into localStorage so getClientTasks() finds them immediately
-            if (data.pipelineTasks && !localStorage.getItem('cq_tasks_' + clientId)) {
+            // Seed pipelineTasks — always apply Firestore as source of truth on initial load
+            if (data.pipelineTasks) {
               try { localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(data.pipelineTasks)); } catch(e) {}
+            }
+            // Seed dashboard data fields from Firestore
+            if (data.currentStage !== undefined || data.fundingRows || data.applyingBanks || data.fundingApproved) {
+              try {
+                var _exD = JSON.parse(localStorage.getItem('cq_dash_' + clientId) || '{}');
+                if (data.currentStage !== undefined) _exD.currentStage = data.currentStage;
+                if (data.fundingRows)    _exD.fundingRows    = data.fundingRows;
+                if (data.applyingBanks)  _exD.applyingBanks  = data.applyingBanks;
+                if (data.fundingApproved !== undefined) _exD.fundingApproved = data.fundingApproved;
+                if (data.fundingSecured  !== undefined) _exD.fundingSecured  = data.fundingSecured;
+                if (data.creditScore     !== undefined) _exD.creditScore     = data.creditScore;
+                localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exD));
+              } catch(e) {}
+            }
+            // Seed credit data
+            if (data.creditData && !localStorage.getItem('cq_credit_' + clientId)) {
+              try { localStorage.setItem('cq_credit_' + clientId, JSON.stringify(data.creditData)); } catch(e) {}
+            }
+            // Seed bank relationships
+            if (data.bankRelationships && !localStorage.getItem('cq_bankrels_' + clientId)) {
+              try { localStorage.setItem('cq_bankrels_' + clientId, JSON.stringify(data.bankRelationships)); } catch(e) {}
+            }
+            // Seed FSG overrides
+            if (data.fsgOverrides && !localStorage.getItem('cq_fsg_overrides_' + clientId)) {
+              try { localStorage.setItem('cq_fsg_overrides_' + clientId, JSON.stringify(data.fsgOverrides)); } catch(e) {}
             }
             return;
           }
@@ -3114,10 +3139,32 @@
             addNotif('task', clientId, _notifClientName(clientId) + ' completed ' + newlyChecked.length + ' task' + (newlyChecked.length > 1 ? 's' : ''));
           }
 
-          // Keep local task cache in sync with Firestore (client may have completed tasks)
+          // Keep local caches in sync with Firestore — Firestore is source of truth
           if (data.pipelineTasks) {
             try { localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(data.pipelineTasks)); } catch(e) {}
           }
+          if (data.currentStage !== undefined || data.fundingRows || data.applyingBanks || data.fundingApproved) {
+            try {
+              var _exDm = JSON.parse(localStorage.getItem('cq_dash_' + clientId) || '{}');
+              if (data.currentStage !== undefined)    _exDm.currentStage   = data.currentStage;
+              if (data.fundingRows)                   _exDm.fundingRows    = data.fundingRows;
+              if (data.applyingBanks)                 _exDm.applyingBanks  = data.applyingBanks;
+              if (data.fundingApproved !== undefined)  _exDm.fundingApproved = data.fundingApproved;
+              if (data.fundingSecured  !== undefined)  _exDm.fundingSecured  = data.fundingSecured;
+              if (data.creditScore     !== undefined)  _exDm.creditScore     = data.creditScore;
+              localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exDm));
+            } catch(e) {}
+          }
+          if (data.bankRelationships) {
+            try { localStorage.setItem('cq_bankrels_' + clientId, JSON.stringify(data.bankRelationships)); } catch(e) {}
+          }
+          if (data.fsgOverrides) {
+            try { localStorage.setItem('cq_fsg_overrides_' + clientId, JSON.stringify(data.fsgOverrides)); } catch(e) {}
+          }
+          // Re-render affected UI panels so all admins see updates immediately
+          try { renderPipeline(); } catch(e) {}
+          try { renderOvClientTasks(); } catch(e) {}
+          try { if (typeof renderOverview === 'function') renderOverview(); } catch(e) {}
 
           dashPrev[clientId] = data;
         });
@@ -3141,6 +3188,15 @@
           } else if (prev.fico !== undefined && data.fico && prev.fico !== data.fico &&
                      Date.now() - _notifInitTs > 8000) {
             addNotif('client', clientId, _notifClientName(clientId) + '\'s FICO updated to ' + data.fico);
+          }
+          // Apply updated client data to local array so all admins see it
+          var _cci = clients.findIndex(function(cl){ return cl.id === clientId; });
+          if (_cci >= 0) {
+            // Merge: keep local-only fields, overlay Firestore fields
+            clients[_cci] = Object.assign({}, clients[_cci], data);
+            try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+            try { renderClientList(); } catch(e) {}
+            try { renderPipeline(); } catch(e) {}
           }
           clientPrev[clientId] = data;
         });
@@ -6796,6 +6852,7 @@
   }
   function saveFsgOverrides(clientId, data) {
     localStorage.setItem('cq_fsg_overrides_' + clientId, JSON.stringify(data));
+    if (typeof fsSetDash === 'function') fsSetDash(clientId, { fsgOverrides: data }).catch(function(){});
   }
 
   // Per-bank reconsideration phone line and guidance
@@ -11776,7 +11833,10 @@
   function getBankRels(clientId) {
     try { return JSON.parse(localStorage.getItem('cq_bankrels_' + clientId) || '[]'); } catch(e) { return []; }
   }
-  function saveBankRels(clientId, data) { localStorage.setItem('cq_bankrels_' + clientId, JSON.stringify(data)); }
+  function saveBankRels(clientId, data) {
+    localStorage.setItem('cq_bankrels_' + clientId, JSON.stringify(data));
+    if (typeof fsSetDash === 'function') fsSetDash(clientId, { bankRelationships: data }).catch(function(){});
+  }
   function getBankRel(clientId, bankId) {
     return getBankRels(clientId).filter(function(r){ return r.bankId === bankId; })[0] || null;
   }
