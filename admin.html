@@ -1710,6 +1710,21 @@
   .ot-cancel-btn { height: 38px; padding: 0 16px; background: white; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: var(--font-h); font-size: 13px; font-weight: 600; color: var(--gray-600); cursor: pointer; transition: background 0.12s; }
   .ot-cancel-btn:hover { background: var(--gray-50); }
 
+  /* ── Activity Timeline ──────────────────────────────────────────────── */
+  .act-timeline { display: flex; flex-direction: column; }
+  .act-item { display: flex; gap: 10px; padding: 7px 0; position: relative; }
+  .act-item:not(:last-child)::after { content: ''; position: absolute; left: 7px; top: 22px; bottom: -7px; width: 1.5px; background: var(--gray-100); }
+  .act-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; }
+  .act-body { flex: 1; min-width: 0; }
+  .act-msg { font-size: 12px; font-weight: 600; color: var(--navy); line-height: 1.4; }
+  .act-meta { font-size: 10px; color: var(--gray-400); margin-top: 2px; line-height: 1.4; }
+  .act-note-row { margin-bottom: 12px; }
+  .act-note-input { width: 100%; padding: 8px 10px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: var(--font-b); font-size: 12px; color: var(--navy); outline: none; resize: none; min-height: 52px; box-sizing: border-box; background: var(--gray-50); transition: border-color 0.15s; }
+  .act-note-input:focus { border-color: var(--blue); background: white; }
+  .act-note-btn { margin-top: 6px; height: 28px; padding: 0 14px; background: var(--navy); border: none; border-radius: 7px; font-family: var(--font-h); font-size: 11px; font-weight: 700; color: white; cursor: pointer; transition: background 0.12s; }
+  .act-note-btn:hover { background: var(--navy-light, #1e3a5f); }
+  .act-empty { font-size: 12px; color: var(--gray-400); padding: 2px 0; }
+
 </style>
 </head>
 <body>
@@ -3858,6 +3873,23 @@
               <div id="dtab-dashboard">${renderDashboardEditor(id)}</div>
             </div>
           </div>
+
+          <!-- NOTES & ACTIVITY TIMELINE -->
+          ${(function(){
+            var _actCount = getActivityLog(id).length;
+            return '<div class="a-card" id="sp-dtab-activity" style="margin-bottom:14px">'
+              + '<div class="a-card-hdr a-coll-hdr" onclick="aToggle(\'coll-act-' + id + '\',\'chev-act-' + id + '\')">'
+              + '<div class="a-card-hdrl">'
+              + '<div class="a-card-title">Notes &amp; Activity</div>'
+              + '<div class="a-card-sub" id="act-header-sub-' + id + '">' + (_actCount > 0 ? _actCount + (_actCount === 1 ? ' entry' : ' entries') : 'No entries yet') + '</div>'
+              + '</div>'
+              + '<svg id="chev-act-' + id + '" class="a-coll-chev" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="transform:rotate(-90deg)"><path d="M19 9l-7 7-7-7"/></svg>'
+              + '</div>'
+              + '<div class="a-coll-body" id="coll-act-' + id + '" data-open="0" style="max-height:0">'
+              + '<div id="act-timeline-body-' + id + '">' + renderActivityTimeline(id) + '</div>'
+              + '</div>'
+              + '</div>';
+          })()}
 
           <!-- Hidden: Firestore sync + Full Profile modal -->
           <div id="dtab-overview" style="display:none">${renderOverviewTab(id, c)}</div>
@@ -11289,6 +11321,7 @@
     }, fields);
     tasks.push(task);
     _saveOpsTasks(clientId, tasks);
+    _logActivity(clientId, 'task_created', task.title + (task.dueDate ? ' · due ' + task.dueDate : ''));
     return task;
   }
   function updateOpsTask(clientId, taskId, updates) {
@@ -11300,10 +11333,15 @@
     return tasks[idx];
   }
   function deleteOpsTask(clientId, taskId) {
+    var _t = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
     _saveOpsTasks(clientId, getOpsTasks(clientId).filter(function(t) { return t.id !== taskId; }));
+    if (_t) _logActivity(clientId, 'task_deleted', _t.title);
   }
   function completeOpsTask(clientId, taskId) {
-    return updateOpsTask(clientId, taskId, { status: 'completed', completedAt: Date.now(), completedBy: 'admin' });
+    var _t = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
+    var result = updateOpsTask(clientId, taskId, { status: 'completed', completedAt: Date.now(), completedBy: 'admin' });
+    if (_t) _logActivity(clientId, 'task_completed', _t.title);
+    return result;
   }
   function getAllOpsTasks() {
     var all = [];
@@ -11335,6 +11373,7 @@
       tasks.forEach(function(t) {
         if (t.status !== 'completed' && t.status !== 'overdue' && _isOpsTaskOverdue(t)) {
           t.status = 'overdue'; changed = true;
+          _logActivity(c.id, 'task_overdue', t.title + (t.dueDate ? ' · was due ' + t.dueDate : ''));
         }
       });
       if (changed) _saveOpsTasks(c.id, tasks);
@@ -11425,6 +11464,7 @@
     if (!clientId) return;
     updateOverdueTaskStatuses(clientId);
     refreshSidebarTasks(clientId);
+    refreshActivityTimeline(clientId);
   }
   function opsOpenCreate(clientId) { _renderOpsTaskModal(clientId, null); }
   function opsOpenEdit(clientId, taskId) {
@@ -11532,6 +11572,100 @@
     document.body.appendChild(el);
     setTimeout(function() { var di = document.getElementById('otext-date'); if (di) di.focus(); }, 50);
   }
+  // ── Activity Log ─────────────────────────────────────────────────────────
+  function getActivityLog(clientId) {
+    try { return JSON.parse(localStorage.getItem('cq_activity_' + clientId) || '[]'); } catch(e) { return []; }
+  }
+  function _logActivity(clientId, eventType, message, opts) {
+    if (!clientId) return;
+    var log = getActivityLog(clientId);
+    var now = new Date();
+    var entry = {
+      id: 'act_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      clientId: clientId,
+      date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      admin: (currentAdmin && currentAdmin.name) ? currentAdmin.name : 'Admin',
+      eventType: eventType,
+      message: message,
+      source: (opts && opts.source) ? opts.source : 'system',
+      ts: Date.now()
+    };
+    log.unshift(entry);
+    if (log.length > 500) log = log.slice(0, 500);
+    try { localStorage.setItem('cq_activity_' + clientId, JSON.stringify(log)); } catch(e) {}
+    return entry;
+  }
+  function addManualNote(clientId) {
+    var inp = document.getElementById('act-note-input-' + clientId);
+    if (!inp) return;
+    var text = inp.value.trim();
+    if (!text) { inp.focus(); return; }
+    _logActivity(clientId, 'note', text, { source: 'admin' });
+    inp.value = '';
+    refreshActivityTimeline(clientId);
+  }
+  function _actDotColor(eventType) {
+    var m = { task_created: '#3b82f6', task_completed: '#10b981', task_extended: '#f59e0b', task_deleted: '#ef4444', task_overdue: '#f97316', note: '#8b5cf6' };
+    return m[eventType] || '#94a3b8';
+  }
+  function _actIcon(eventType) {
+    if (eventType === 'task_created')   return '<svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>';
+    if (eventType === 'task_completed') return '<svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>';
+    if (eventType === 'task_extended')  return '<svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>';
+    if (eventType === 'task_deleted')   return '<svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M6 18L18 6M6 6l12 12"/></svg>';
+    if (eventType === 'task_overdue')   return '<svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+    if (eventType === 'note')           return '<svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>';
+    return '';
+  }
+  function _actTypeLabel(eventType) {
+    var m = { task_created: 'Task Created', task_completed: 'Task Completed', task_extended: 'Task Extended', task_deleted: 'Task Deleted', task_overdue: 'Task Overdue', note: 'Note' };
+    return m[eventType] || eventType;
+  }
+  function renderActivityTimeline(clientId) {
+    var log = getActivityLog(clientId);
+    var html = '<div class="act-note-row">'
+      + '<textarea class="act-note-input" id="act-note-input-' + clientId + '" placeholder="Add a note… (Ctrl+Enter to save)"'
+      + ' onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey)){addManualNote(\'' + clientId + '\');event.preventDefault()}"></textarea>'
+      + '<button class="act-note-btn" onclick="addManualNote(\'' + clientId + '\')">Add Note</button>'
+      + '</div>';
+    if (log.length === 0) {
+      html += '<div class="act-empty">No activity yet. Task events and notes will appear here.</div>';
+      return html;
+    }
+    html += '<div class="act-timeline">';
+    log.slice(0, 60).forEach(function(e) {
+      var color = _actDotColor(e.eventType);
+      var icon  = _actIcon(e.eventType);
+      var label = _actTypeLabel(e.eventType);
+      html += '<div class="act-item">'
+        + '<div class="act-dot" style="background:' + color + '">' + icon + '</div>'
+        + '<div class="act-body">'
+        + '<div class="act-msg">' + _escHtml(e.message) + '</div>'
+        + '<div class="act-meta">'
+        + '<span style="font-weight:600;color:' + color + '">' + label + '</span>'
+        + ' · ' + e.date + ' at ' + e.time + ' · ' + _escHtml(e.admin)
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+    if (log.length > 60) {
+      html += '<div style="font-size:11px;color:var(--gray-400);text-align:center;padding-top:8px;border-top:1px solid var(--gray-100);margin-top:4px">'
+        + (log.length - 60) + ' older entries not shown</div>';
+    }
+    return html;
+  }
+  function refreshActivityTimeline(clientId) {
+    var body = document.getElementById('act-timeline-body-' + clientId);
+    if (body) body.innerHTML = renderActivityTimeline(clientId);
+    var sub = document.getElementById('act-header-sub-' + clientId);
+    if (sub) {
+      var n = getActivityLog(clientId).length;
+      sub.textContent = n > 0 ? n + (n === 1 ? ' entry' : ' entries') : 'No entries yet';
+    }
+  }
+
   function _saveOpsExtend(clientId, taskId) {
     var newDate = (document.getElementById('otext-date') || {}).value || '';
     var newTime = (document.getElementById('otext-time') || {}).value || '';
@@ -11549,6 +11683,7 @@
         extendedAt: Date.now()
       }])
     });
+    _logActivity(clientId, 'task_extended', task.title + ' → extended to ' + newDate + ' · "' + reason + '"');
     var el = document.getElementById('ot-extend-overlay');
     if (el) el.remove();
     refreshTaskUI(clientId);
