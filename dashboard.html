@@ -2687,6 +2687,166 @@
       .ws-hero-progress { width: 100%; min-width: unset; }
       .ws-hero-progress-bar { width: 100%; }
     }
+
+    /* ═══════════════════════════════════════════════════
+       FUNDING SEQUENCE ENGINE  (fse-*)
+       Dynamic, client-specific, admin-driven
+    ═══════════════════════════════════════════════════ */
+
+    /* Empty state */
+    .fse-empty {
+      text-align: center; padding: 56px 24px;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 16px; margin-top: 8px;
+    }
+    .fse-empty-icon { font-size: 36px; margin-bottom: 12px; }
+    .fse-empty-title { font-family: var(--font-head); font-size: 17px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+    .fse-empty-sub { font-size: 13px; color: var(--gray-400); line-height: 1.6; max-width: 320px; margin: 0 auto; }
+
+    /* Section (category group) */
+    .fse-section { margin-bottom: 16px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(10,22,40,0.06); }
+    .fse-section-hdr {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 20px; cursor: pointer;
+      user-select: none; position: relative; overflow: hidden;
+    }
+    .fse-section-hdr::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to right, rgba(0,0,0,0.15) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .fse-section-icon { font-size: 20px; flex-shrink: 0; position: relative; z-index: 1; }
+    .fse-section-meta { flex: 1; min-width: 0; position: relative; z-index: 1; }
+    .fse-section-name { font-family: var(--font-head); font-size: 15px; font-weight: 800; color: #fff; letter-spacing: -.02em; }
+    .fse-section-sub  { font-size: 11px; color: rgba(255,255,255,.6); margin-top: 2px; }
+    .fse-section-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; position: relative; z-index: 1; }
+    .fse-section-approved { font-family: var(--font-head); font-size: 15px; font-weight: 800; color: #6ee7b7; }
+    .fse-section-range { font-size: 12px; color: rgba(255,255,255,.7); font-weight: 600; }
+    .fse-section-count {
+      min-width: 22px; height: 22px; background: rgba(255,255,255,.2);
+      border-radius: 99px; font-size: 11px; font-weight: 700; color: #fff;
+      display: flex; align-items: center; justify-content: center; padding: 0 7px;
+    }
+    .fse-chevron { transition: transform .25s ease; flex-shrink: 0; }
+    .fse-section:not(.fse-open) .fse-chevron { transform: rotate(-90deg); }
+
+    /* Bank card list */
+    .fse-card-list {
+      background: var(--white); border: 1px solid var(--border);
+      border-top: none; border-radius: 0 0 14px 14px;
+      overflow: hidden;
+    }
+    .fse-section:not(.fse-open) .fse-card-list { display: none; }
+
+    /* Individual bank card */
+    .fse-card {
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    .fse-card:last-child { border-bottom: none; }
+    .fse-card:hover { background: var(--gray-50); }
+
+    /* Left accent bar by status */
+    .fse-card { border-left: 3px solid transparent; }
+    .fse-card-approved { border-left-color: #10b981; }
+    .fse-card-denied   { border-left-color: #ef4444; }
+    .fse-card-applied  { border-left-color: #3b82f6; }
+    .fse-card-queued   { border-left-color: #8b5cf6; }
+    .fse-card-excluded { border-left-color: #9ca3af; }
+    .fse-card-pending  { border-left-color: #f59e0b; }
+
+    /* Card main row */
+    .fse-card-main {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px; cursor: pointer;
+    }
+
+    /* Logo */
+    .fse-card-logo {
+      width: 36px; height: 36px; border-radius: 8px;
+      overflow: hidden; flex-shrink: 0;
+      background: var(--gray-100);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fse-card-logo img { width: 100%; height: 100%; object-fit: cover; }
+    .fse-logo-fallback {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--navy); color: #fff;
+      font-family: var(--font-head); font-size: 16px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+
+    /* Card info column */
+    .fse-card-info { flex: 1; min-width: 0; }
+    .fse-card-bank { font-size: 13px; font-weight: 700; color: var(--navy); line-height: 1.2; display: flex; align-items: center; gap: 5px; }
+    .fse-rel-badge { font-size: 11px; color: #f59e0b; }
+    .fse-card-product { font-size: 12px; color: var(--gray-500); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fse-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+
+    /* Bureau badges */
+    .fse-bureau { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; letter-spacing: .04em; }
+    .fse-bur-ex  { background: #fef3c7; color: #92400e; }
+    .fse-bur-eq  { background: #dbeafe; color: #1e40af; }
+    .fse-bur-tu  { background: #f3e8ff; color: #6b21a8; }
+    .fse-bur-sp  { background: #d1fae5; color: #065f46; }
+    .fse-bur-all { background: #fce7f3; color: #9d174d; }
+    .fse-bur-call{ background: #fee2e2; color: #991b1b; }
+
+    /* Risk badges */
+    .fse-risk { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; }
+    .fse-risk-low    { background: #d1fae5; color: #065f46; }
+    .fse-risk-medium { background: #fef3c7; color: #92400e; }
+    .fse-risk-high   { background: #fee2e2; color: #991b1b; }
+
+    /* Relationship tag */
+    .fse-rel-tag { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: #fef3c7; color: #92400e; }
+
+    /* Card right column */
+    .fse-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+    .fse-est-range { font-size: 11px; color: var(--gray-400); font-weight: 600; white-space: nowrap; }
+
+    /* Status badges */
+    .fse-status-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+    .fse-st-approved { background: #d1fae5; color: #065f46; }
+    .fse-st-applied  { background: #dbeafe; color: #1e40af; }
+    .fse-st-pending  { background: #fef3c7; color: #92400e; }
+    .fse-st-queued   { background: #f5f3ff; color: #6d28d9; }
+    .fse-st-denied   { background: #fee2e2; color: #991b1b; }
+    .fse-st-excluded { background: #f3f4f6; color: #6b7280; }
+
+    /* Details expand hint */
+    .fse-details-hint { font-size: 10px; color: var(--blue); font-weight: 600; cursor: pointer; }
+
+    /* Expandable card details */
+    .fse-card-details {
+      padding: 0 18px 14px 68px;
+      border-top: 1px solid var(--border);
+      background: var(--gray-50);
+    }
+    .fse-detail-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 12px; color: var(--gray-600); line-height: 1.5;
+      padding: 6px 0; border-bottom: 1px solid var(--border);
+    }
+    .fse-detail-item:last-child { border-bottom: none; }
+    .fse-detail-icon { flex-shrink: 0; font-size: 13px; }
+    .fse-detail-note { background: #fffbeb; border-radius: 8px; padding: 8px 10px; margin: 4px 0; border: 1px solid #fde68a; }
+    .fse-detail-note .fse-detail-icon { color: #92400e; }
+
+    /* Prerequisites banner */
+    .fse-prereq-banner {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: 0; padding: 10px 18px;
+      font-size: 12px; color: #92400e; line-height: 1.5;
+    }
+
+    @media (max-width: 768px) {
+      .fse-card-main { padding: 12px 14px; gap: 10px; }
+      .fse-card-details { padding-left: 14px; }
+      .fse-card-right { align-items: flex-start; }
+      .fse-section-hdr { padding: 14px 16px; }
+    }
   </style>
 </head>
 <body>
@@ -3536,6 +3696,78 @@
     </div>`;
   }
 
+  // ── FUNDING SEQUENCE ENGINE ───────────────────────────────────────────────────
+  // Renders from admin-managed fundingRows — one unique sequence per client.
+  // SEQUENCE_ROUNDS kept above as legacy reference; no longer drives the UI.
+
+  const FSE_CATEGORY_CFG = {
+    soft_pull:    { name: 'Soft Pull Options',       sub: 'No hard inquiry — qualify anytime',       icon: '🔍', order: 1, bg: 'linear-gradient(135deg,#059669,#047857)' },
+    primary:      { name: 'Primary Banks',           sub: 'Highest approval odds for your profile',  icon: '🏛', order: 2, bg: 'linear-gradient(135deg,#0A1628,#1a3a6b)' },
+    secondary:    { name: 'Secondary Banks',         sub: 'Tier 1 national lenders',                 icon: '🏦', order: 3, bg: 'linear-gradient(135deg,#003B8E,#1e40af)' },
+    credit_union: { name: 'Credit Unions',           sub: 'Member-based · favorable terms',          icon: '🤝', order: 4, bg: 'linear-gradient(135deg,#0369a1,#0284c7)' },
+    regional:     { name: 'Regional Banks',          sub: 'State-specific opportunities',            icon: '📍', order: 5, bg: 'linear-gradient(135deg,#0A1628,#112240)' },
+    relationship: { name: 'Relationship Expansion',  sub: 'Leverage existing bank relationships',    icon: '🌐', order: 6, bg: 'linear-gradient(135deg,#1e40af,#2563eb)' },
+    no_pg:        { name: 'No PG / Fintech',         sub: 'No personal guarantee required',          icon: '🛡', order: 7, bg: 'linear-gradient(135deg,#7c3aed,#6d28d9)' },
+    expansion:    { name: 'Business Line Expansion', sub: 'Scale existing credit relationships',     icon: '📊', order: 8, bg: 'linear-gradient(135deg,#b45309,#d97706)' },
+    uncategorized:{ name: 'Funding Applications',   sub: 'Your personalized funding plan',           icon: '🏦', order: 9, bg: 'linear-gradient(135deg,#374151,#1f2937)' },
+  };
+
+  const FSE_STATUS_CFG = {
+    approved: { label: '✓ Approved', cls: 'fse-st-approved' },
+    applied:  { label: '→ Applied',  cls: 'fse-st-applied'  },
+    pending:  { label: '⏳ Pending', cls: 'fse-st-pending'  },
+    queued:   { label: 'Queued',     cls: 'fse-st-queued'   },
+    denied:   { label: '✕ Denied',  cls: 'fse-st-denied'   },
+    excluded: { label: 'Excluded',   cls: 'fse-st-excluded' },
+  };
+
+  const FSE_BUREAU_CLS = {
+    'EX':'fse-bur-ex','Experian':'fse-bur-ex',
+    'EQ':'fse-bur-eq','Equifax':'fse-bur-eq',
+    'TU':'fse-bur-tu','TransUnion':'fse-bur-tu',
+    'EX/EQ':'fse-bur-ex','EX / EQ':'fse-bur-ex','EX/TU':'fse-bur-ex',
+    'Soft Pull':'fse-bur-sp','Soft':'fse-bur-sp','EX Soft':'fse-bur-sp',
+    'All 3':'fse-bur-all',
+    'Call':'fse-bur-call','Call/Branch':'fse-bur-call',
+  };
+
+  function _bankDomain(name) {
+    if (!name) return '';
+    const n = name.toLowerCase();
+    const MAP = {
+      'chase':'chase.com','american express':'americanexpress.com','amex':'americanexpress.com',
+      'bank of america':'bankofamerica.com','wells fargo':'wellsfargo.com',
+      'us bank':'usbank.com','u.s. bank':'usbank.com','truist':'truist.com',
+      'pnc':'pnc.com','capital one':'capitalone.com','citibank':'citi.com','citi':'citi.com',
+      'discover':'discover.com','td bank':'td.com','navy federal':'navyfederal.org',
+      'usaa':'usaa.com','fifth third':'53.com','bmo':'bmo.com','bmo harris':'bmo.com',
+      'citizens':'citizensbank.com','citizens bank':'citizensbank.com',
+      'regions':'regions.com','huntington':'huntington.com','comerica':'comerica.com',
+      'flagstar':'flagstar.com','first citizens':'firstcitizens.com',
+      'capital on tap':'capitalontap.com','bhg':'bhgmoney.com',
+      'elan':'elanfinancialservices.com','elan financial':'elanfinancialservices.com',
+      'first merchants':'firstmerchants.com','isabella':'isabellabank.com',
+      'independent bank':'independentbank.com','horizon bank':'horizonbank.com',
+      'west shore':'westshorebank.com','county national':'countybank.com',
+      'southern michigan':'southernmichiganbank.com','alma bank':'almabank.com',
+    };
+    for (const [k, v] of Object.entries(MAP)) { if (n.includes(k)) return v; }
+    return n.replace(/\s+(bank|financial|credit union|federal|savings)/g,'').replace(/\s+/g,'') + '.com';
+  }
+
+  function fseToggleDetails(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const isOpen = el.style.display !== 'none';
+    el.style.display = isOpen ? 'none' : 'block';
+    const card = el.previousElementSibling;
+    if (card) {
+      const hint = card.querySelector('.fse-details-hint');
+      if (hint) hint.textContent = isOpen ? 'Details ↓' : 'Details ↑';
+    }
+  }
+  window.fseToggleDetails = fseToggleDetails;
+
   function renderFundingSequence() {
     const d = getDashData();
     const rel = new Set(CLIENT_RELATIONSHIPS.map(r => r.toLowerCase()));
@@ -3546,93 +3778,124 @@
 
     _renderFsStrategySummary(d, document.getElementById('fs-summary'), rel);
 
+    // ── Dynamic state bar ──────────────────────────────────────
+    const clientState = (d.profileData && d.profileData.state) || (d.onboardData && d.onboardData.state) || '';
+    const stateNameEl = document.querySelector('.fs-state-name');
+    if (stateNameEl) stateNameEl.textContent = clientState || 'National';
+
     const root = document.getElementById('fs-root');
     if (!root) return;
     root.innerHTML = '';
 
-    const PHASE_CFG = {
-      'soft':  { name: 'Pre-Application Pulls',        sub: 'No hard inquiry — apply anytime',               icon: '🔍', bg: 'linear-gradient(135deg,#059669,#047857)' },
-      'r1':    { name: 'Phase 1 — Relationship Banks',  sub: 'Highest approval odds from existing accounts',  icon: '🤝', bg: 'linear-gradient(135deg,#0A1628,#1a3a6b)' },
-      'r2':    { name: 'Phase 2 — Tier 1 National',     sub: 'Open checking · apply same or next day',        icon: '🏛', bg: 'linear-gradient(135deg,#003B8E,#1e40af)' },
-      'r3':    { name: 'Phase 3 — RM Introduction',     sub: 'Relationship manager required for best limits', icon: '🤵', bg: 'linear-gradient(135deg,#1e40af,#2563eb)' },
-      'r4':    { name: 'Phase 4 — Regional Layer',      sub: 'Business must be 6+ months old',               icon: '🗺', bg: 'linear-gradient(135deg,#7c3aed,#6d28d9)' },
-      'r5':    { name: 'Phase 5 — Statement Round',     sub: 'Provide 3 months bank statements',             icon: '📊', bg: 'linear-gradient(135deg,#0369a1,#0284c7)' },
-      'local': { name: 'Regional Expansion',            sub: 'State-specific bank opportunities',            icon: '📍', bg: 'linear-gradient(135deg,#0A1628,#112240)' },
-      'call':  { name: 'Branch & Phone Only',           sub: 'Must call or visit in person to apply',        icon: '📞', bg: 'linear-gradient(135deg,#b91c1c,#dc2626)' },
-    };
-    const STATUS_CFG = {
-      approved: { bg:'#d1fae5', color:'#065f46', label:'✓ Approved' },
-      pending:  { bg:'#fef3c7', color:'#92400e', label:'⏳ Pending' },
-      sent:     { bg:'#dbeafe', color:'#1e40af', label:'→ Sent' },
-      queued:   { bg:'#f5f3ff', color:'#6d28d9', label:'Queued' },
-      denied:   { bg:'#fee2e2', color:'#991b1b', label:'✕ Denied' },
-    };
+    const rows = (d.fundingRows || []);
+    const _fmt = n => n >= 1000000 ? '$' + (n/1000000).toFixed(1)+'M' : n >= 1000 ? '$' + Math.round(n/1000)+'K' : n ? '$'+n : '$0';
 
-    let seqNum = 1, totalBanks = 0, firstOpenDone = false;
+    // ── Update stats bar ──────────────────────────────────────
+    const approvedRows = rows.filter(r => r.status === 'approved');
+    const approvedTotal = approvedRows.reduce((s, r) => s + (+r.amount || 0), 0);
+    const securedEl  = document.getElementById('fs-stat-secured');
+    const approvedEl = document.getElementById('fs-stat-approved');
+    const totalEl    = document.getElementById('fs-stat-total');
+    if (securedEl)  securedEl.textContent  = _fmt(approvedTotal);
+    if (approvedEl) approvedEl.textContent = approvedRows.length;
+    if (totalEl)    totalEl.textContent    = rows.length;
 
-    SEQUENCE_ROUNDS.forEach(round => {
-      const cfg = PHASE_CFG[round.id] || { name: round.label, sub: round.sublabel, icon: '🏦', bg: 'var(--navy)' };
-      const banks = [...round.banks].sort((a, b) => {
-        const ar = rel.has(a.key), br_ = rel.has(b.key);
-        return ar && !br_ ? -1 : !ar && br_ ? 1 : 0;
-      });
-      totalBanks += banks.length;
-      const hasApproval = banks.some(b => b.status === 'approved');
-      const approvedAmt = banks.filter(b => b.status === 'approved' && b.amount).map(b => b.amount).join(' + ');
-      const isOpen = (!firstOpenDone || hasApproval);
+    // ── Empty state ────────────────────────────────────────────
+    if (!rows.length) {
+      root.innerHTML = `<div class="fse-empty">
+        <div class="fse-empty-icon">🏦</div>
+        <div class="fse-empty-title">Your Funding Strategy Is Being Built</div>
+        <div class="fse-empty-sub">Your CapitalQuest advisor is tailoring your personalized funding sequence. Each bank and product will be matched to your specific credit profile, state, and goals. Check back soon.</div>
+      </div>`;
+      return;
+    }
+
+    // ── Group by category ──────────────────────────────────────
+    const groups = {};
+    rows.forEach(r => {
+      const cat = r.category || 'uncategorized';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(r);
+    });
+
+    const sortedCats = Object.keys(groups).sort((a, b) => {
+      const aO = (FSE_CATEGORY_CFG[a] || FSE_CATEGORY_CFG.uncategorized).order;
+      const bO = (FSE_CATEGORY_CFG[b] || FSE_CATEGORY_CFG.uncategorized).order;
+      return aO - bO;
+    });
+
+    let firstOpenDone = false;
+
+    sortedCats.forEach(cat => {
+      const cfg = FSE_CATEGORY_CFG[cat] || FSE_CATEGORY_CFG.uncategorized;
+      const catRows = groups[cat];
+      const approvedInCat = catRows.filter(r => r.status === 'approved');
+      const catApprovedAmt = approvedInCat.reduce((s, r) => s + (+r.amount || 0), 0);
+      const hasApproval = approvedInCat.length > 0;
+      const isOpen = !firstOpenDone || hasApproval;
       if (isOpen) firstOpenDone = true;
 
-      const banksHtml = banks.map(bank => {
-        const isRel = rel.has(bank.key);
-        const sCfg = STATUS_CFG[bank.status] || STATUS_CFG.queued;
-        const num = (round.id === 'soft' || round.id === 'call') ? '—' : seqNum++;
-        const why = bank.note || (isRel ? 'Existing ' + bank.name + ' relationship — prioritized for higher limits' : '');
-        return `<div class="fsp-bank-card${isRel ? ' fsp-rel' : ''}">
-          <div class="fsp-bank-top">
-            <div class="fsp-seq">${num}</div>
-            <div class="fsp-logo"><img src="https://www.google.com/s2/favicons?domain=${bank.domain}&sz=64" alt="${bank.name}" onerror="this.style.display='none'"></div>
-            <div class="fsp-bank-info">
-              <div class="fsp-bank-name">${bank.name}${bank.rm ? ' <span class="fsp-rm">RM</span>' : ''}</div>
-              <div class="fsp-bank-product">${bank.card}</div>
-              ${why ? `<div class="fsp-why">${why}</div>` : ''}
+      const cardsHtml = catRows.map(r => {
+        const sCfg = FSE_STATUS_CFG[r.status] || FSE_STATUS_CFG.queued;
+        const isRel = r.relationship || rel.has((r.bank || '').toLowerCase());
+        const bureauCls = FSE_BUREAU_CLS[r.bureau] || '';
+        const domain = r.domain || _bankDomain(r.bank);
+        const fallbackInitial = (r.bank || '?')[0].toUpperCase();
+        const approvedLabel = (r.status === 'approved' && r.amount)
+          ? '✓ $' + Number(r.amount).toLocaleString() : null;
+        const detailId = 'fse-det-' + r.id;
+        const hasDetails = !!(r.clientNote || r.waitPeriod || r.prerequisites);
+
+        const detailsHtml = hasDetails ? `<div class="fse-card-details" id="${detailId}" style="display:none">
+          ${r.prerequisites ? `<div class="fse-detail-item"><span class="fse-detail-icon">⚠️</span><span><strong>Before applying:</strong> ${r.prerequisites}</span></div>` : ''}
+          ${r.waitPeriod   ? `<div class="fse-detail-item"><span class="fse-detail-icon">⏱</span><span><strong>Wait period:</strong> ${r.waitPeriod}</span></div>` : ''}
+          ${r.clientNote   ? `<div class="fse-detail-item fse-detail-note"><span class="fse-detail-icon">💬</span><span>${r.clientNote}</span></div>` : ''}
+        </div>` : '';
+
+        return `<div class="fse-card fse-card-${r.status || 'pending'}">
+          <div class="fse-card-main" onclick="fseToggleDetails('${detailId}')">
+            <div class="fse-card-logo">
+              <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="${r.bank || ''}"
+                onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+              <div class="fse-logo-fallback" style="display:none">${fallbackInitial}</div>
             </div>
-            <div class="fsp-bank-right">
-              ${bank.amount ? `<div class="fsp-amount">${bank.amount}</div>` : ''}
-              <span class="fsp-status" style="background:${sCfg.bg};color:${sCfg.color}">${sCfg.label}</span>
-              <div class="fsp-tags-row">
-                <span class="fsp-bureau ${bank.bureauClass}">${bank.bureau}</span>
-                ${isRel ? '<span class="fsp-rel-badge">★ Relationship</span>' : ''}
-                ${bank.geo ? '<span class="fsp-tag-geo">Geo</span>' : ''}
-                ${bank.callOnly ? '<span class="fsp-tag-call">Branch</span>' : ''}
+            <div class="fse-card-info">
+              <div class="fse-card-bank">${r.bank || ''}${isRel ? ' <span class="fse-rel-badge">★</span>' : ''}</div>
+              <div class="fse-card-product">${r.cardName || ''}${r.introPeriod && r.introPeriod !== 'N/A' ? ' \xb7 <span style="color:var(--blue);font-size:11px">' + r.introPeriod + '</span>' : ''}</div>
+              <div class="fse-card-tags">
+                ${r.bureau ? `<span class="fse-bureau ${bureauCls}">${r.bureau}</span>` : ''}
+                ${r.riskLevel ? `<span class="fse-risk fse-risk-${r.riskLevel}">${r.riskLevel.charAt(0).toUpperCase() + r.riskLevel.slice(1)} Risk</span>` : ''}
+                ${isRel ? '<span class="fse-rel-tag">Relationship</span>' : ''}
               </div>
             </div>
+            <div class="fse-card-right">
+              ${r.estRange ? `<div class="fse-est-range">${r.estRange}</div>` : ''}
+              <div class="fse-status-badge ${sCfg.cls}">${approvedLabel || sCfg.label}</div>
+              ${hasDetails ? `<div class="fse-details-hint">Details ↓</div>` : ''}
+            </div>
           </div>
+          ${detailsHtml}
         </div>`;
       }).join('');
 
       root.insertAdjacentHTML('beforeend', `
-        <div class="fsp-phase${isOpen ? ' fsp-open' : ''}">
-          <div class="fsp-phase-hdr" style="background:${cfg.bg}" onclick="this.parentElement.classList.toggle('fsp-open')">
-            <span class="fsp-phase-icon">${cfg.icon}</span>
-            <div class="fsp-phase-meta">
-              <div class="fsp-phase-name">${cfg.name}</div>
-              <div class="fsp-phase-sub">${cfg.sub}</div>
+        <div class="fse-section${isOpen ? ' fse-open' : ''}">
+          <div class="fse-section-hdr" style="background:${cfg.bg}" onclick="this.parentElement.classList.toggle('fse-open')">
+            <span class="fse-section-icon">${cfg.icon}</span>
+            <div class="fse-section-meta">
+              <div class="fse-section-name">${cfg.name}</div>
+              <div class="fse-section-sub">${cfg.sub}</div>
             </div>
-            <div class="fsp-phase-right">
-              ${approvedAmt ? `<span class="fsp-phase-approved">${approvedAmt}</span>` : hasApproval ? `<span class="fsp-phase-approved">${banks.filter(b=>b.status==='approved').length} approved</span>` : ''}
-              <span class="fsp-phase-count">${banks.length}</span>
-              <svg class="fsp-chevron" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
+            <div class="fse-section-right">
+              ${catApprovedAmt ? `<span class="fse-section-approved">${_fmt(catApprovedAmt)}</span>` : ''}
+              <span class="fse-section-count">${catRows.length}</span>
+              <svg class="fse-chevron" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
             </div>
           </div>
-          ${round.prereq ? `<div class="fsp-prereq"><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> <strong>Before applying:</strong> ${round.prereq}</div>` : ''}
-          <div class="fsp-bank-list">${banksHtml}</div>
+          <div class="fse-card-list">${cardsHtml}</div>
         </div>
-        ${round.wipe ? '<div class="fsp-wipe"><div></div><span>Wipe Inquiries · Wait for Score Refresh</span><div></div></div>' : ''}
       `);
     });
-
-    const totalEl = document.getElementById('fs-stat-total');
-    if (totalEl) totalEl.textContent = totalBanks;
   }
 
   // ── DASHBOARD DATA (admin-controlled) ────────────────────────────────
