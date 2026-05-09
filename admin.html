@@ -813,7 +813,161 @@
       font-family: var(--font-h); font-size: 12px; font-weight: 700;
       color: var(--white); transition: background 0.15s;
     }
+
+    /* ── GHL COMMUNICATION CENTER ─────────────────── */
+    .ghl-inbox-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr 270px;
+      gap: 0;
+      height: calc(100vh - 130px);
+      min-height: 560px;
+      background: var(--white);
+      border-radius: 16px;
+      border: 1px solid var(--gray-100);
+      overflow: hidden;
+    }
+    .ghl-inbox-left {
+      border-right: 1px solid var(--gray-100);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .ghl-inbox-top-bar {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--gray-100);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .ghl-inbox-title { font-family: var(--font-h); font-size: 13px; font-weight: 800; color: var(--navy); letter-spacing: 0.02em; }
+    .ghl-inbox-refresh { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--gray-100); background: var(--gray-50); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--gray-400); font-size: 14px; transition: background 0.12s; }
+    .ghl-inbox-refresh:hover { background: var(--blue-light); color: var(--blue); }
+    .ghl-inbox-search-wrap { padding: 8px 12px; border-bottom: 1px solid var(--gray-50); }
+    .ghl-inbox-search { width: 100%; height: 32px; border: 1.5px solid var(--gray-100); border-radius: 8px; padding: 0 10px; font-size: 12px; font-family: var(--font-b); color: var(--navy); background: var(--gray-50); box-sizing: border-box; outline: none; transition: border-color 0.15s; }
+    .ghl-inbox-search:focus { border-color: var(--blue); background: white; }
+    .ghl-inbox-filters { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--gray-50); flex-wrap: wrap; }
+    .ghl-filter-btn { height: 24px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--gray-100); background: var(--gray-50); font-family: var(--font-b); font-size: 11px; font-weight: 600; color: var(--gray-400); cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+    .ghl-filter-btn:hover, .ghl-filter-btn.active { background: var(--navy); border-color: var(--navy); color: white; }
+    .ghl-conv-list { flex: 1; overflow-y: auto; }
+    .ghl-conv-item {
+      padding: 12px 14px; border-bottom: 1px solid var(--gray-50);
+      cursor: pointer; transition: background 0.12s;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .ghl-conv-item:hover { background: var(--gray-50); }
+    .ghl-conv-item.active { background: #f0f9ff; border-left: 3px solid var(--blue); padding-left: 11px; }
+    .ghl-conv-item.unread .ghl-conv-name { font-weight: 700; color: var(--navy); }
+    .ghl-conv-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-h); font-weight: 700; font-size: 12px; color: white; flex-shrink: 0; overflow: hidden; }
+    .ghl-conv-body { flex: 1; min-width: 0; }
+    .ghl-conv-name { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ghl-conv-preview { font-size: 11px; color: var(--gray-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
+    .ghl-conv-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+    .ghl-conv-time { font-size: 10px; color: var(--gray-300); font-weight: 500; }
+    .ghl-conv-badge { width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .ghl-conv-type-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+    /* Center panel */
+    .ghl-inbox-center {
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .ghl-thread-header {
+      padding: 14px 20px; border-bottom: 1px solid var(--gray-100);
+      display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+      background: white;
+    }
+    .ghl-thread-name { font-family: var(--font-h); font-size: 15px; font-weight: 800; color: var(--navy); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ghl-thread-stage-badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(34,167,240,0.1); color: var(--blue); border: 1px solid rgba(34,167,240,0.2); white-space: nowrap; }
+    .ghl-open-app-btn { height: 28px; padding: 0 12px; border-radius: 7px; border: 1.5px solid var(--blue); background: transparent; color: var(--blue); font-family: var(--font-h); font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.12s; }
+    .ghl-open-app-btn:hover { background: var(--blue); color: white; }
+    .ghl-send-context-bar {
+      padding: 7px 20px; background: #f8fafc; border-bottom: 1px solid var(--gray-100);
+      display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+      font-size: 11px; color: var(--gray-400);
+    }
+    .ghl-send-context-item { display: flex; align-items: center; gap: 5px; }
+    .ghl-send-context-label { font-weight: 600; color: var(--navy); }
+    .ghl-timeline {
+      flex: 1; overflow-y: auto; padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    /* Timeline items */
+    .ghl-tl-item { display: flex; flex-direction: column; max-width: 75%; }
+    .ghl-tl-item.outbound { align-self: flex-end; align-items: flex-end; }
+    .ghl-tl-item.inbound  { align-self: flex-start; align-items: flex-start; }
+    .ghl-tl-item.centered { align-self: center; align-items: center; max-width: 90%; }
+    .ghl-tl-bubble {
+      padding: 9px 13px; border-radius: 12px; font-size: 13px; line-height: 1.5;
+      max-width: 100%; word-break: break-word;
+    }
+    .ghl-tl-item.outbound .ghl-tl-bubble { background: var(--navy); color: white; border-bottom-right-radius: 4px; }
+    .ghl-tl-item.inbound  .ghl-tl-bubble { background: var(--gray-50); color: var(--navy); border: 1px solid var(--gray-100); border-bottom-left-radius: 4px; }
+    .ghl-tl-item.centered .ghl-tl-bubble { background: #fefce8; color: #854d0e; border: 1px solid #fde68a; border-radius: 8px; font-size: 12px; text-align: center; }
+    .ghl-tl-note-bubble { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; color: #78350f; font-size: 12px; line-height: 1.5; }
+    .ghl-tl-call-bubble { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; color: #166534; font-size: 12px; }
+    .ghl-tl-email-bubble { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 14px; color: #0c4a6e; font-size: 12px; }
+    .ghl-tl-meta { font-size: 10px; color: var(--gray-300); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+    .ghl-tl-type-tag { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; }
+    /* Compose area */
+    .ghl-compose { flex-shrink: 0; border-top: 1px solid var(--gray-100); }
+    .ghl-compose-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--gray-100); }
+    .ghl-compose-tab { padding: 8px 14px; font-size: 11px; font-weight: 600; color: var(--gray-400); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.12s; }
+    .ghl-compose-tab:hover { color: var(--navy); }
+    .ghl-compose-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .ghl-compose-subject { width: 100%; height: 34px; border: none; border-bottom: 1px solid var(--gray-100); padding: 0 16px; font-size: 13px; font-family: var(--font-b); color: var(--navy); outline: none; box-sizing: border-box; display: none; }
+    .ghl-tl-status-delivered { color: #10b981; }
+    .ghl-tl-status-failed { color: #ef4444; }
+    .ghl-tl-sender { font-size: 10px; color: var(--gray-400); font-weight: 600; margin-bottom: 3px; }
+    .ghl-compose-body { display: flex; align-items: flex-end; gap: 8px; padding: 10px 14px; }
+    .ghl-compose-type-sel { height: 34px; border: 1.5px solid var(--gray-100); border-radius: 7px; padding: 0 8px; font-size: 12px; font-family: var(--font-b); color: var(--navy); background: var(--gray-50); outline: none; flex-shrink: 0; }
+    .ghl-compose-textarea { flex: 1; min-height: 40px; max-height: 100px; border: 1.5px solid var(--gray-100); border-radius: 9px; padding: 8px 12px; font-size: 13px; font-family: var(--font-b); color: var(--navy); resize: none; outline: none; transition: border-color 0.15s; line-height: 1.5; }
+    .ghl-compose-textarea:focus { border-color: var(--blue); }
+    .ghl-compose-send-btn { height: 38px; padding: 0 16px; border-radius: 9px; border: none; background: var(--navy); color: white; font-family: var(--font-h); font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.13s; flex-shrink: 0; }
+    .ghl-compose-send-btn:hover { background: var(--blue); }
+    .ghl-compose-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* Right contact panel */
+    .ghl-inbox-right {
+      border-left: 1px solid var(--gray-100);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .ghl-cp-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--gray-300); gap: 8px; font-size: 12px; padding: 20px; text-align: center; }
+    .ghl-cp-header { padding: 18px 16px 14px; border-bottom: 1px solid var(--gray-100); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+    .ghl-cp-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-h); font-weight: 700; font-size: 15px; color: white; }
+    .ghl-cp-name { font-family: var(--font-h); font-size: 14px; font-weight: 800; color: var(--navy); }
+    .ghl-cp-link-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    .ghl-cp-body { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .ghl-cp-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; font-size: 12px; }
+    .ghl-cp-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-400); flex-shrink: 0; min-width: 52px; margin-top: 1px; }
+    .ghl-cp-val { color: var(--navy); font-weight: 500; text-align: right; word-break: break-word; }
+    .ghl-cp-section { margin-top: 4px; }
+    .ghl-cp-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); padding-bottom: 6px; border-bottom: 1px solid var(--gray-50); margin-bottom: 8px; }
+    .ghl-cp-actions { padding: 10px 14px; border-top: 1px solid var(--gray-100); display: flex; flex-direction: column; gap: 6px; }
+    .ghl-cp-action-btn { height: 32px; border-radius: 7px; border: 1.5px solid var(--gray-100); background: white; font-family: var(--font-b); font-size: 11px; font-weight: 600; color: var(--navy); cursor: pointer; transition: all 0.12s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .ghl-cp-action-btn:hover { background: var(--navy); border-color: var(--navy); color: white; }
+    .ghl-cp-action-btn.primary { background: var(--navy); border-color: var(--navy); color: white; }
+    .ghl-cp-action-btn.primary:hover { background: var(--blue); border-color: var(--blue); }
     .a-mcp-profile-btn:hover { background: var(--blue); }
+
+    /* ── GHL CONNECTION BAR ───────────────────────────── */
+    .ghl-conn-bar {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      padding: 10px 18px; margin-bottom: 10px;
+      background: #fff; border: 1px solid var(--gray-100);
+      border-radius: 12px; font-size: 12px;
+    }
+    .ghl-conn-bar.disconnected { background: #fef2f2; border-color: #fecaca; }
+    .ghl-conn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .ghl-conn-dot.ok  { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.15); }
+    .ghl-conn-dot.err { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.15); }
+    .ghl-conn-dot.warn { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
+    .ghl-conn-field { display: flex; align-items: center; gap: 5px; color: var(--gray-500); }
+    .ghl-conn-field strong { color: var(--navy); font-weight: 600; }
+    .ghl-conn-sep { width: 1px; height: 16px; background: var(--gray-100); flex-shrink: 0; }
+    .ghl-conn-btn { height: 26px; padding: 0 10px; border-radius: 6px; border: 1.5px solid var(--gray-200); background: white; font-family: var(--font-b); font-size: 11px; font-weight: 600; color: var(--navy); cursor: pointer; transition: all .12s; white-space: nowrap; margin-left: auto; }
+    .ghl-conn-btn:hover { background: var(--navy); border-color: var(--navy); color: white; }
+    .ghl-sync-badge-wrap { display: flex; align-items: center; gap: 5px; margin-left: auto; }
+    .ghl-last-sync { font-size: 10px; color: var(--gray-400); white-space: nowrap; }
+    /* Channel selector in compose */
+    .ghl-from-bar { display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-top: 1px solid var(--gray-100); background: #f8fafc; font-size: 11px; }
+    .ghl-from-label { color: var(--gray-400); font-weight: 600; flex-shrink: 0; }
+    .ghl-from-sel { flex: 1; min-width: 0; height: 28px; border: 1.5px solid var(--gray-100); border-radius: 6px; padding: 0 8px; font-size: 11px; font-family: var(--font-b); color: var(--navy); background: white; outline: none; }
+    .ghl-from-sel:focus { border-color: var(--blue); }
+    /* No-channel warning */
+    .ghl-no-channel { display: none; align-items: center; gap: 6px; padding: 8px 14px; background: #fef2f2; border-top: 1px solid #fecaca; font-size: 11px; color: #991b1b; font-weight: 600; }
 
     /* ── ACTIVITY FEED ─────────────────────────── */
     .a-activity-card {
@@ -1924,8 +2078,8 @@
           <span class="a-nav-badge" id="sb-client-count">0</span>
         </div>
         <div class="a-nav-item" onclick="switchAdminSection('messages',this)">
-          <svg class="a-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-          Messages
+          <svg class="a-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          GHL
           <span class="a-nav-badge red" id="sb-msg-badge" style="display:none">3</span>
         </div>
         <div class="a-nav-item" onclick="switchAdminSection('analytics',this)">
@@ -2079,36 +2233,139 @@
 
         <!-- MESSAGES -->
         <div class="a-section" id="asec-messages">
-          <div class="a-msgs-layout">
-            <div class="a-msg-thread-list" id="a-msg-thread-list"></div>
-            <div class="a-msg-full">
-              <div class="a-msg-full-header" id="a-msg-full-header">Select a conversation</div>
-              <div class="a-chat-msgs" id="a-msg-chat-msgs" style="flex:1"></div>
-              <div class="a-chat-input-row">
-                <input class="a-chat-input" id="a-msg-input" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendMsgFromSection()" />
-                <button class="a-chat-send" onclick="sendMsgFromSection()">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
-                </button>
+
+          <!-- ══ GHL Connection Status Bar ══ -->
+          <div id="ghl-conn-bar" class="ghl-conn-bar disconnected">
+            <div class="ghl-conn-dot err" id="ghl-conn-dot"></div>
+            <span id="ghl-conn-status" style="font-weight:700;color:#991b1b">GHL Not Connected</span>
+            <div class="ghl-conn-sep"></div>
+            <span style="font-size:11px;color:var(--gray-400)">Configure API key in Settings → GHL to enable live conversations</span>
+            <button class="ghl-conn-btn" onclick="switchAdminSection('settings');setTimeout(function(){document.getElementById('ghl-set-apikey')&&document.getElementById('ghl-set-apikey').focus()},300)">Configure →</button>
+          </div>
+
+          <div class="ghl-inbox-layout">
+
+            <!-- ══ LEFT: Conversation Inbox ══ -->
+            <div class="ghl-inbox-left">
+              <div class="ghl-inbox-top-bar">
+                <span class="ghl-inbox-title">GHL Conversations</span>
+                <button class="ghl-inbox-refresh" id="ghl-inbox-refresh-btn" title="Refresh" onclick="ghlInboxRefresh()">↻</button>
+              </div>
+              <div class="ghl-inbox-search-wrap">
+                <input class="ghl-inbox-search" id="ghl-inbox-search" placeholder="Search by name, phone, email…" oninput="ghlInboxSearch(this.value)" />
+              </div>
+              <div class="ghl-inbox-filters" id="ghl-inbox-filters">
+                <button class="ghl-filter-btn active" onclick="ghlSetFilter('all',this)">All</button>
+                <button class="ghl-filter-btn" onclick="ghlSetFilter('unread',this)">Unread</button>
+                <button class="ghl-filter-btn" onclick="ghlSetFilter('linked',this)">Linked</button>
+                <button class="ghl-filter-btn" onclick="ghlSetFilter('sms',this)">SMS</button>
+                <button class="ghl-filter-btn" onclick="ghlSetFilter('email',this)">Email</button>
+                <button class="ghl-filter-btn" onclick="ghlSetFilter('unmatched',this)">No Match</button>
+              </div>
+              <div class="ghl-conv-list" id="ghl-conv-list">
+                <div style="padding:32px 16px;text-align:center;color:var(--gray-400);font-size:12px">
+                  <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin-bottom:8px;opacity:0.4"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                  <div>Open GHL section to load conversations</div>
+                </div>
               </div>
             </div>
-            <!-- Client info sidebar -->
-            <div class="a-msg-client-panel" id="a-msg-client-panel">
-              <div class="a-mcp-empty" id="a-mcp-empty">
-                <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="#D4DCE8" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
-                <p>Select a conversation</p>
+
+            <!-- ══ CENTER: Thread ══ -->
+            <div class="ghl-inbox-center">
+              <!-- Empty state -->
+              <div id="ghl-thread-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;color:var(--gray-400)">
+                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="opacity:0.3"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                <span style="font-size:14px;font-weight:600;color:var(--gray-300)">Select a conversation</span>
+                <span style="font-size:12px;color:var(--gray-300)">Choose a contact from the left to view their GHL conversation</span>
               </div>
-              <div id="a-mcp-content" style="display:none;flex-direction:column;flex:1;overflow:hidden">
-                <div class="a-mcp-header">
-                  <div class="a-mcp-avatar" id="a-mcp-avatar"></div>
-                  <div class="a-mcp-name" id="a-mcp-name"></div>
-                  <div class="a-mcp-contact" id="a-mcp-contact"></div>
+              <!-- Thread content -->
+              <div id="ghl-thread-content" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+                <!-- Thread header -->
+                <div class="ghl-thread-header" id="ghl-thread-header">
+                  <div style="flex:1;min-width:0">
+                    <div class="ghl-thread-name" id="ghl-thread-name">—</div>
+                    <div style="font-size:11px;color:var(--gray-400);margin-top:2px" id="ghl-thread-sub"></div>
+                  </div>
+                  <span class="ghl-thread-stage-badge" id="ghl-thread-stage" style="display:none"></span>
+                  <button class="ghl-open-app-btn" id="ghl-open-app-btn" onclick="ghlOpenInApp()">Open in GHL ↗</button>
                 </div>
-                <div class="a-mcp-body" id="a-mcp-body"></div>
-                <div class="a-mcp-footer">
-                  <button class="a-mcp-profile-btn" id="a-mcp-profile-btn">View Full Profile →</button>
+                <!-- Sending context bar -->
+                <div class="ghl-send-context-bar" id="ghl-send-context"></div>
+                <!-- Timeline -->
+                <div class="ghl-timeline" id="ghl-timeline">
+                  <div style="text-align:center;padding:32px;font-size:12px;color:var(--gray-400)">Loading conversation…</div>
+                </div>
+                <!-- Compose -->
+                <div class="ghl-compose">
+                  <!-- No-channel warning -->
+                  <div class="ghl-no-channel" id="ghl-no-channel">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    No outbound channel configured. Add API key &amp; phone in Settings → GHL before sending.
+                  </div>
+                  <!-- From (channel) selector bar -->
+                  <div class="ghl-from-bar" id="ghl-from-bar">
+                    <span class="ghl-from-label" id="ghl-from-label">SMS from:</span>
+                    <select class="ghl-from-sel" id="ghl-from-sel" onchange="ghlChannelChange(this)">
+                      <option value="">Loading…</option>
+                    </select>
+                    <span id="ghl-from-user" style="font-size:10px;color:var(--gray-400);white-space:nowrap"></span>
+                  </div>
+                  <div class="ghl-compose-tabs">
+                    <div class="ghl-compose-tab active" onclick="ghlSetComposeType('SMS',this)">💬 SMS</div>
+                    <div class="ghl-compose-tab" onclick="ghlSetComposeType('Email',this)">📧 Email</div>
+                    <div class="ghl-compose-tab" onclick="ghlSetComposeType('Note',this)">📝 Note</div>
+                    <div class="ghl-compose-tab" onclick="ghlSetComposeType('Call',this)">📞 Call</div>
+                  </div>
+                  <!-- Email subject line -->
+                  <input class="ghl-compose-subject" id="ghl-compose-subject" placeholder="Subject…" style="display:none" />
+                  <!-- Call disposition row -->
+                  <div id="ghl-call-disposition-row" style="display:none;padding:6px 14px;border-bottom:1px solid var(--gray-100);display:none;gap:8px;align-items:center">
+                    <span style="font-size:11px;font-weight:600;color:var(--gray-400);flex-shrink:0">Outcome:</span>
+                    <select id="ghl-call-disposition" style="flex:1;height:30px;border:1.5px solid var(--gray-100);border-radius:7px;padding:0 8px;font-size:12px;font-family:var(--font-b);color:var(--navy);background:var(--gray-50);outline:none">
+                      <option value="No Answer">No Answer</option>
+                      <option value="Left Voicemail">Left Voicemail</option>
+                      <option value="Connected - Interested">Connected – Interested</option>
+                      <option value="Connected - Docs Needed">Connected – Docs Needed</option>
+                      <option value="Connected - Not Interested">Connected – Not Interested</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Follow Up Needed">Follow Up Needed</option>
+                      <option value="Inbound Call">Inbound Call</option>
+                    </select>
+                  </div>
+                  <div class="ghl-compose-body">
+                    <select class="ghl-compose-type-sel" id="ghl-note-type" style="display:none">
+                      <option value="Internal">Internal Note</option>
+                      <option value="Call">Call Note</option>
+                      <option value="Funding">Funding Note</option>
+                      <option value="Credit">Credit Note</option>
+                      <option value="Alert">Important Alert</option>
+                      <option value="Underwriting">Underwriting Note</option>
+                    </select>
+                    <div style="flex:1;min-width:0;position:relative">
+                      <textarea class="ghl-compose-textarea" id="ghl-compose-input" placeholder="Type an SMS…" rows="2"
+                        oninput="ghlComposeCount(this)"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey&&_ghlIx.composeType==='SMS'){event.preventDefault();ghlComposeSend();}"></textarea>
+                      <div id="ghl-sms-count" style="position:absolute;bottom:6px;right:8px;font-size:9px;font-weight:600;color:var(--gray-300);pointer-events:none"></div>
+                    </div>
+                    <button class="ghl-compose-send-btn" id="ghl-compose-send" onclick="ghlComposeSend()">Send SMS</button>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <!-- ══ RIGHT: Contact Snapshot ══ -->
+            <div class="ghl-inbox-right">
+              <div class="ghl-cp-empty" id="ghl-cp-empty">
+                <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="opacity:0.3"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
+                Select a conversation
+              </div>
+              <div id="ghl-cp-content" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+                <div class="ghl-cp-header" id="ghl-cp-header"></div>
+                <div class="ghl-cp-body" id="ghl-cp-body"></div>
+                <div class="ghl-cp-actions" id="ghl-cp-actions"></div>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -2165,7 +2422,17 @@
                     <input class="ghl-settings-input" id="ghl-set-pipeline" placeholder="Portal Pipeline">
                   </div>
                   <div>
-                    <div class="ghl-settings-label">From Phone Number</div>
+                    <div class="ghl-settings-label">Default Outbound SMS Number</div>
+                    <input class="ghl-settings-input" id="ghl-set-sms-number" placeholder="+17137241821" autocomplete="off">
+                    <div style="font-size:10px;color:var(--gray-400);margin-top:3px">The LC Phone number used to send outbound SMS (e.g. +17137241821)</div>
+                  </div>
+                  <div>
+                    <div class="ghl-settings-label">Default Outbound Email</div>
+                    <input class="ghl-settings-input" id="ghl-set-email-addr" placeholder="sam@capitalquestconsulting.com" autocomplete="off">
+                    <div style="font-size:10px;color:var(--gray-400);margin-top:3px">The mailbox address used to send outbound emails</div>
+                  </div>
+                  <div>
+                    <div class="ghl-settings-label">From Phone (legacy)</div>
                     <input class="ghl-settings-input" id="ghl-set-phone" placeholder="+1 (555) 000-0000">
                   </div>
                   <div>
@@ -2177,6 +2444,12 @@
                     <input class="ghl-settings-input" id="ghl-set-interval" type="number" min="15" max="300" placeholder="30">
                   </div>
                 </div>
+                <!-- Proxy Status -->
+                <div id="ghl-proxy-status-bar" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;margin-bottom:14px;font-size:11px">
+                  <span id="ghl-proxy-dot" style="width:8px;height:8px;border-radius:50%;background:#6b7280;flex-shrink:0"></span>
+                  <span id="ghl-proxy-label" style="flex:1;color:#374151">Checking proxy server…</span>
+                  <button onclick="_ghlCheckProxy()" style="font-size:10px;padding:2px 8px;background:#fff;border:1px solid #d1d5db;border-radius:4px;cursor:pointer;color:#374151">Recheck</button>
+                </div>
                 <!-- Sync Toggles -->
                 <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Sync Options</div>
                 <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Sync Pipeline Stages</div><div class="ghl-toggle-sub">Push portal stage changes to GHL opportunities</div></div><input type="checkbox" id="ghl-tog-stages" checked></div>
@@ -2184,7 +2457,53 @@
                 <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Sync Tasks to GHL</div><div class="ghl-toggle-sub">Tasks with "Sync to GHL" toggle saved as GHL tasks</div></div><input type="checkbox" id="ghl-tog-tasks" checked></div>
                 <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Load GHL Messages</div><div class="ghl-toggle-sub">Show GHL SMS/email history in client workspace</div></div><input type="checkbox" id="ghl-tog-msgs" checked></div>
                 <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">SMS on Overdue Tasks</div><div class="ghl-toggle-sub">Send GHL SMS when a task becomes overdue</div></div><input type="checkbox" id="ghl-tog-overdue-sms" checked></div>
-                <div class="ghl-toggle-row" style="border-bottom:none"><div><div class="ghl-toggle-label">Email on Overdue Tasks</div><div class="ghl-toggle-sub">Send GHL email when a task becomes overdue</div></div><input type="checkbox" id="ghl-tog-overdue-email" checked></div>
+                <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Email on Overdue Tasks</div><div class="ghl-toggle-sub">Send GHL email when a task becomes overdue</div></div><input type="checkbox" id="ghl-tog-overdue-email" checked></div>
+                <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Use Backend Proxy (Recommended)</div><div class="ghl-toggle-sub">Route API calls through ghl-server.mjs on localhost:3001 — eliminates CORS errors</div></div><input type="checkbox" id="ghl-tog-proxy" checked></div>
+                <div class="ghl-toggle-row" style="border-bottom:none"><div><div class="ghl-toggle-label" style="color:#b45309">Test Mode — Simulate Sends</div><div class="ghl-toggle-sub" style="color:#92400e">Messages are NOT sent to GHL. Use to test UI without sending real SMS/email.</div></div><input type="checkbox" id="ghl-tog-testmode"></div>
+              </div>
+            </div>
+
+            <!-- Required GHL Scopes Card -->
+            <div class="a-card" style="margin-bottom:18px">
+              <div class="a-card-hdr">
+                <div class="a-card-hdrl">
+                  <div class="a-card-title">Required GHL API Scopes</div>
+                  <div class="a-card-sub">Your Private Integration Token must have these scopes enabled</div>
+                </div>
+              </div>
+              <div style="padding:0 16px 16px">
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:12px;margin-bottom:12px;font-size:11px;color:#92400e">
+                  <strong>How to add scopes:</strong> GoHighLevel → Settings → Integrations → Private Integrations → Edit your integration → check all scopes below → Save (your token may regenerate — update it above).
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">
+                  <div style="display:flex;gap:6px;align-items:center;padding:6px 8px;background:#f0fdf4;border-radius:4px;border:1px solid #d1fae5">
+                    <span style="color:#10b981;font-weight:700">Required</span>
+                    <span style="color:#374151">conversations.readonly</span>
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;padding:6px 8px;background:#f0fdf4;border-radius:4px;border:1px solid #d1fae5">
+                    <span style="color:#10b981;font-weight:700">Required</span>
+                    <span style="color:#374151">conversations/message.readonly</span>
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;padding:6px 8px;background:#f0fdf4;border-radius:4px;border:1px solid #d1fae5">
+                    <span style="color:#10b981;font-weight:700">Required</span>
+                    <span style="color:#374151">conversations/message.write</span>
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;padding:6px 8px;background:#f0fdf4;border-radius:4px;border:1px solid #d1fae5">
+                    <span style="color:#10b981;font-weight:700">Required</span>
+                    <span style="color:#374151">contacts.readonly</span>
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;padding:6px 8px;background:#eff6ff;border-radius:4px;border:1px solid #bfdbfe">
+                    <span style="color:#3b82f6;font-weight:700">Recommended</span>
+                    <span style="color:#374151">locations.readonly</span>
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;padding:6px 8px;background:#eff6ff;border-radius:4px;border:1px solid #bfdbfe">
+                    <span style="color:#3b82f6;font-weight:700">Recommended</span>
+                    <span style="color:#374151">users.readonly</span>
+                  </div>
+                </div>
+                <div style="margin-top:10px;font-size:10px;color:var(--gray-400)">
+                  After adding scopes, click <strong>Test</strong> above. If token regenerated, paste the new token into API Key field and Save.
+                </div>
               </div>
             </div>
 
@@ -2511,25 +2830,42 @@
       // Never fall back to DEFAULT_CLIENTS — start empty if nothing saved
       clients = parsed ? parsed.filter(c => !deletedIds.includes(c.id)) : [];
     } catch(e) { clients = []; }
-    // Background sync from Firestore — only update if no local changes made yet
+    // Background sync from Firestore — smart merge: Firestore wins for shared fields,
+    // local-only fields (credit scores) are preserved
     fsGetClients().then(fsClients => {
-      if (_adminLocalChanged) return; // user already made changes, don't overwrite
       if (fsClients && fsClients.length > 0) {
         const ids = getDeletedIds();
-        clients = fsClients.filter(c => !ids.includes(c.id));
-        // Prefer localStorage credit score over Firestore when local has a higher-confidence result
-        clients.forEach(c => {
+        const fsFiltered = fsClients.filter(c => !ids.includes(c.id));
+        // Smart merge: for each Firestore client, merge over any existing local client
+        // so locally-cached credit data isn't lost, but Firestore fields win
+        const localMap = {};
+        clients.forEach(c => { localMap[c.id] = c; });
+        clients = fsFiltered.map(fc => {
+          const lc = localMap[fc.id] || {};
+          // Firestore version wins unless local is newer (has updatedAt after Firestore)
+          const fsNewer = !lc.updatedAt || !fc.updatedAt || fc.updatedAt >= lc.updatedAt;
+          const merged = fsNewer ? Object.assign({}, lc, fc) : Object.assign({}, fc, lc);
+          // Always prefer localStorage credit score when it's a real value
           try {
-            const localCr = JSON.parse(localStorage.getItem('cq_credit_' + c.id) || 'null');
+            const localCr = JSON.parse(localStorage.getItem('cq_credit_' + fc.id) || 'null');
             if (localCr && localCr.fico && localCr.fico !== 300 && localCr.fico !== 850) {
-              c.fico = localCr.fico;
+              merged.fico = localCr.fico;
             }
           } catch(e) {}
+          return merged;
+        });
+        // Add any local-only clients not yet in Firestore
+        Object.keys(localMap).forEach(id => {
+          if (!fsFiltered.find(fc => fc.id === id) && !ids.includes(id)) {
+            clients.push(localMap[id]);
+            fsSaveClient(localMap[id]).catch(() => {});
+          }
         });
         try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
         renderClientList();
         renderOverview();
         if (selectedClientId) renderClientDetail(selectedClientId);
+        console.log('[Sync] loadClients merged', clients.length, 'clients from Firestore');
       } else if (clients.length > 0) {
         clients.forEach(c => fsSaveClient(c));
       }
@@ -2538,6 +2874,9 @@
   let _adminLocalChanged = false;
   function saveClients() {
     _adminLocalChanged = true;
+    const now = Date.now();
+    const by = (currentAdmin && currentAdmin.email) || 'admin';
+    clients.forEach(c => { if (c && !c.updatedAt) { c.updatedAt = now; c.updatedBy = by; } });
     try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
     clients.forEach(c => fsSaveClient(c).catch(() => {}));
   }
@@ -2762,11 +3101,29 @@
       // Ops task overdue detection — run once on load, then every 60 seconds
       try { updateOverdueTaskStatuses(); } catch(e) {}
       setInterval(function() { try { updateOverdueTaskStatuses(); } catch(e) {} }, 60000);
+      // Polling fallback — re-fetch open client dashboard every 15s in case Firestore listener misses an update
+      // Uses targeted update only — never does a full re-render
+      setInterval(function() {
+        if (!selectedClientId) return;
+        try {
+          fsGetDash(selectedClientId).then(function(fsD) {
+            if (!fsD) return;
+            var localD = getDashData(selectedClientId);
+            var fsTs = fsD._updatedAt || 0;
+            var localTs = localD._updatedAt || 0;
+            if (fsTs > localTs) {
+              saveDashData(selectedClientId, fsD, true); // update localStorage only, no re-write to Firestore
+              _syncUpdateOpenClient(selectedClientId, 'poll-fallback');
+              console.log('[Sync] poll caught update for', selectedClientId, '| by:', fsD._updatedBy||'?');
+            }
+          }).catch(function(){});
+        } catch(e) {}
+      }, 15000);
     }
   });
 
   // ── SECTION SWITCHING ─────────────────────────────────────────────────
-  const sectionLabels = { overview:'Overview', clients:'Clients', messages:'Messages', analytics:'Analytics', pipeline:'Pipeline', settings:'Settings', relationships:'Bank Relationships' };
+  const sectionLabels = { overview:'Overview', clients:'Clients', messages:'GHL', analytics:'Analytics', pipeline:'Pipeline', settings:'Settings', relationships:'Bank Relationships' };
   function switchAdminSection(name, el) {
     document.querySelectorAll('.a-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.a-nav-item').forEach(n => n.classList.remove('active'));
@@ -2775,7 +3132,7 @@
     document.getElementById('a-page-title').textContent = sectionLabels[name] || name;
     if (name === 'overview') renderOverview();
     if (name === 'pipeline') renderPipeline();
-    if (name === 'messages') renderMsgThreads();
+    if (name === 'messages') { try { ghlInboxInit(); } catch(e) {} }
     if (name === 'analytics') renderAnalytics();
     if (name === 'relationships') renderRelationshipsTab();
     // Persist so refresh returns to same section
@@ -3161,10 +3518,11 @@
           if (data.fsgOverrides) {
             try { localStorage.setItem('cq_fsg_overrides_' + clientId, JSON.stringify(data.fsgOverrides)); } catch(e) {}
           }
-          // Re-render affected UI panels so all admins see updates immediately
-          try { renderPipeline(); } catch(e) {}
-          try { renderOvClientTasks(); } catch(e) {}
+          // Targeted sidebar update — avoids full re-render and Firestore write loop
+          _syncUpdateOpenClient(clientId, 'dashboard-snapshot');
+          // Overview pipeline list
           try { if (typeof renderOverview === 'function') renderOverview(); } catch(e) {}
+          console.log('[Sync] dashboard modified | clientId:', clientId, '| stage:', data.currentStage, '| by:', data._updatedBy||'?', '| at:', data._updatedAt ? new Date(data._updatedAt).toLocaleTimeString() : '?');
 
           dashPrev[clientId] = data;
         });
@@ -3197,6 +3555,8 @@
             try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
             try { renderClientList(); } catch(e) {}
             try { renderPipeline(); } catch(e) {}
+            _syncUpdateOpenClient(clientId, 'client-record');
+            console.log('[Sync] client modified | clientId:', clientId, '| by:', data.updatedBy||'?', '| at:', data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString() : '?');
           }
           clientPrev[clientId] = data;
         });
@@ -3830,6 +4190,9 @@
   }
 
   // ── CLIENT DETAIL ─────────────────────────────────────────────────────
+  // Track which clients we've already backfilled to Firestore this session
+  var _profileBackfillDone = {};
+
   function selectClient(id) {
     selectedClientId = id;
     activeDetailTab = 'overview';
@@ -3838,6 +4201,27 @@
     loadClients(); // re-read from localStorage to pick up any client-side updates
     renderClientList();
     renderClientDetail(id);
+    // Backfill profileData to Firestore once per session (avoids loop in renderClientDetail)
+    if (!_profileBackfillDone[id]) {
+      _profileBackfillDone[id] = true;
+      try {
+        const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
+        const _lsOd = JSON.parse(localStorage.getItem('cq_onboard_data_' + id) || 'null');
+        if (_lsOd && (_lsOd.firstName || _lsOd.ssn)) {
+          const updates = { profileData: _lsOd };
+          if (_lsOd.firstName) updates.clientName = cap(_lsOd.firstName);
+          fsSetDash(id, updates).catch(() => {});
+        } else {
+          fsGetOnboarding(id).then(od => {
+            if (od && (od.firstName || od.ssn)) {
+              const updates = { profileData: od };
+              if (od.firstName) updates.clientName = cap(od.firstName);
+              fsSetDash(id, updates).catch(() => {});
+            }
+          }).catch(() => {});
+        }
+      } catch(e) {}
+    }
     // Scroll just enough to trigger sticky sidebar (makes messages input always visible)
     setTimeout(function() {
       var right = document.querySelector('.a-sp-right');
@@ -3865,24 +4249,6 @@
   function renderClientDetail(id) {
     const c = getClient(id);
     if (!c) return;
-    // Backfill profileData + real name to dashboards collection so client can read it
-    try {
-      const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
-      const _lsOd = JSON.parse(localStorage.getItem('cq_onboard_data_' + id) || 'null');
-      if (_lsOd && (_lsOd.firstName || _lsOd.ssn)) {
-        const updates = { profileData: _lsOd };
-        if (_lsOd.firstName) updates.clientName = cap(_lsOd.firstName);
-        fsSetDash(id, updates).catch(() => {});
-      } else {
-        fsGetOnboarding(id).then(od => {
-          if (od && (od.firstName || od.ssn)) {
-            const updates = { profileData: od };
-            if (od.firstName) updates.clientName = cap(od.firstName);
-            fsSetDash(id, updates).catch(() => {});
-          }
-        }).catch(() => {});
-      }
-    } catch(e) {}
     const reqs    = getDocRequests(id);
     const adminDocs = getAdminDocs(id);
     const clientDocs = getClientDocs(id);
@@ -4296,12 +4662,15 @@
             <button onclick="showClientFullProfile('${id}')" style="width:100%;margin-top:10px;height:30px;border-radius:7px;border:1.5px solid var(--navy);background:transparent;font-family:var(--font-h);font-size:11px;font-weight:700;color:var(--navy);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--navy)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">View Full Profile</button>
           </div>
 
-          <!-- MESSAGES (bottom — tall for full chat history) -->
+          <!-- MESSAGES (portal chat only — GHL communication lives in the GHL section) -->
           <div class="a-card" id="sp-dtab-messages">
             <div class="a-card-hdr">
               <div class="a-card-hdrl">
                 <div class="a-card-title">Messages</div>
                 ${msgs.length > 0 ? `<div class="a-card-sub">${msgs.length} total</div>` : '<div class="a-card-sub">No messages yet</div>'}
+              </div>
+              <div class="a-card-btns">
+                <button class="a-card-btn" onclick="openGHLPage('${id}')" title="Open full GHL conversation">GHL ↗</button>
               </div>
             </div>
             <div id="dtab-messages" style="display:flex;flex-direction:column">
@@ -4314,21 +4683,6 @@
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
                 </button>
               </div>
-              <!-- GHL Conversation -->
-              <div class="ghl-msg-wrap" id="ghl-conv-wrap-${id}" style="display:none">
-                <div class="ghl-msg-tabs">
-                  <div class="ghl-msg-tab active" id="ghl-tab-portal-${id}" onclick="_ghlTabSwitch('${id}','portal')">Portal Chat</div>
-                  <div class="ghl-msg-tab" id="ghl-tab-ghl-${id}" onclick="_ghlTabSwitch('${id}','ghl')">GHL Conversation</div>
-                </div>
-                <div id="ghl-conv-msgs-${id}" style="max-height:180px;overflow-y:auto">
-                  <div style="font-size:11px;color:var(--gray-400);padding:8px 0">Loading GHL messages…</div>
-                </div>
-                <div class="ghl-send-row">
-                  <select class="ghl-send-sel" id="ghl-send-type-${id}"><option value="SMS">SMS</option><option value="Email">Email</option></select>
-                  <input class="a-chat-input" style="flex:1" id="ghl-send-input-${id}" placeholder="Send via GHL…" onkeydown="if(event.key==='Enter')_ghlSendFromPanel('${id}')">
-                  <button class="a-chat-send" onclick="_ghlSendFromPanel('${id}')"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg></button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -4338,8 +4692,6 @@
 
     // Start real-time message listener for this client
     _listenMsgs(id);
-    // Load GHL conversation if contact ID exists
-    _ghlLoadClientMessages(id);
     // Load latest messages from Firestore and scroll to bottom
     fsGetMessages(id).then(fsMsgs => {
       if (fsMsgs.length) {
@@ -7331,6 +7683,68 @@
       + '<div id="sp-right-tasks-body">' + body + '</div>';
   }
 
+  // ── TARGETED SIDEBAR SYNC ──────────────────────────────────────────────
+  // Called by Firestore listeners and polling. Updates only the specific DOM
+  // sections that changed — never rebuilds the whole sidebar or touches the
+  // messages input. This prevents the glitch/flicker loop.
+
+  var _syncDebounceTimers = {};
+
+  function _syncUpdateOpenClient(clientId, reason) {
+    if (!selectedClientId || selectedClientId !== clientId) return;
+    // Debounce: collapse multiple rapid updates into one 400ms batch
+    if (_syncDebounceTimers[clientId]) clearTimeout(_syncDebounceTimers[clientId]);
+    _syncDebounceTimers[clientId] = setTimeout(function() {
+      delete _syncDebounceTimers[clientId];
+      _doSyncUpdateOpenClient(clientId, reason || 'sync');
+    }, 400);
+  }
+
+  function _doSyncUpdateOpenClient(clientId, reason) {
+    console.log('[Sync] targeted update | clientId:', clientId, '| reason:', reason);
+    var c = getClient(clientId);
+    if (!c) return;
+    var _d = getDashData(clientId);
+
+    // 1. Update sticky header pills (stage, status, FICO, funded)
+    var stageEl   = document.getElementById('csh-stage-'  + clientId);
+    var statusEl  = document.getElementById('csh-status-' + clientId);
+    var ficoEl    = document.getElementById('csh-fico-'   + clientId);
+    var fundedEl  = document.getElementById('csh-funded-' + clientId);
+    if (stageEl) {
+      var _stageName = (_d.stageNames || [])[Math.max(0, (_d.currentStage || 1) - 1)] || 'Setup';
+      stageEl.textContent = _stageName;
+    }
+    if (statusEl) {
+      var _statusLabel = { new:'New', pending:'Pending', progress:'In Progress', approved:'Approved', disqualified:'Disqualified' }[c.status] || 'New';
+      var _statusCls   = { new:'s-new', pending:'s-pending', progress:'s-progress', approved:'s-approved', disqualified:'s-disqualified' }[c.status] || 's-new';
+      statusEl.textContent = _statusLabel;
+      statusEl.className = 'a-csh-pill ' + _statusCls;
+    }
+    if (ficoEl) {
+      var _creditData = getCreditData(clientId);
+      var _fico = _d.creditScore || (_creditData && _creditData.fico) || '';
+      if (_fico) { ficoEl.textContent = _fico + ' FICO'; ficoEl.style.display = ''; }
+    }
+    if (fundedEl) {
+      var _apps = (_d.fundingRows || []);
+      var _totalFunded = _apps.filter(function(a){ return a.status === 'approved'; }).reduce(function(s,a){ return s + (Number(a.amount)||0); }, 0);
+      if (_totalFunded > 0) {
+        fundedEl.textContent = '$' + Number(_totalFunded).toLocaleString() + ' funded';
+        fundedEl.style.display = '';
+      } else {
+        fundedEl.style.display = 'none';
+      }
+    }
+
+    // 2. Update Next Actions / Tasks card (targeted — never touches messages)
+    try { refreshSidebarTasks(clientId); } catch(e) {}
+
+    // 3. Update pipeline + overview list (not the sidebar)
+    try { renderPipeline(); } catch(e) {}
+    try { renderOvClientTasks(); } catch(e) {}
+  }
+
   // Toggle a pipeline task from the sidebar without re-opening the modal
   function sidebarTogglePipelineTask(clientId, key) {
     var t = initClientTasks(clientId);
@@ -7421,7 +7835,15 @@
   }
 
   function showAdminProfileEdit(clientId) {
+    const _c = getClient(clientId) || {};
     const o = getOnboardDataForClient(clientId);
+    // Pre-fill any blank onboarding fields with the canonical client record values
+    if (!o.firstName  && _c.fname) o.firstName  = _c.fname;
+    if (!o.lastName   && _c.lname) o.lastName   = _c.lname;
+    if (!o.email      && _c.email) o.email      = _c.email;
+    if (!o.phone      && _c.phone) o.phone      = _c.phone;
+    if (!o.bizName    && _c.biz)   o.bizName    = _c.biz;
+    console.log('[ProfileEdit] clientId:', clientId, '| email:', _c.email||'(none)', '| phone:', _c.phone||'(none)', '| ghlContactId:', _c.ghlContactId||'(none)');
     const personalBanks = Array.isArray(o.personalBanks) ? o.personalBanks.join(', ') : (o.personalBanks || '');
     const bizBanksVal   = Array.isArray(o.bizBanks)       ? o.bizBanks.join(', ')       : (o.bizBanks || '');
     const bizCardsVal   = Array.isArray(o.bizCreditCards)  ? o.bizCreditCards.join(', ') : (o.bizCreditCards || '');
@@ -7737,6 +8159,13 @@
     if (!client) { alert('Client not found.'); return; }
     if (!window.GHL) { alert('GHL integration is not loaded.'); return; }
 
+    // Debug: log what data we're actually using for the GHL lookup
+    console.log('[GHL Import] clientId:', clientId,
+      '| email:', client.email || '(none)',
+      '| phone:', client.phone || '(none)',
+      '| ghlContactId:', client.ghlContactId || '(none)',
+      '| onboardEmail:', (getOnboardDataForClient(clientId)||{}).email || '(none)');
+
     const origLabel = btn ? btn.innerHTML : '';
     if (btn) { btn.disabled = true; btn.innerHTML = '<span style="opacity:0.7">⏳ Fetching…</span>'; }
 
@@ -7744,7 +8173,16 @@
       const result = await GHL.fetchOnboardingData(client);
 
       if (result.error) {
-        alert('GHL Import: ' + result.error);
+        // If no GHL contact found, offer to link rather than just alerting
+        if (result.error.indexOf('No GHL contact found') !== -1) {
+          if (typeof ghlLinkModal === 'function') {
+            ghlLinkModal(clientId);
+          } else {
+            alert('GHL Import: ' + result.error);
+          }
+        } else {
+          alert('GHL Import: ' + result.error);
+        }
         return;
       }
 
@@ -7797,14 +8235,17 @@
       firstName:'First Name', lastName:'Last Name', email:'Email', phone:'Phone',
       dob:'Date of Birth', ssn:'SSN', maidenName:"Mother's Maiden Name",
       annualIncome:'Annual Income', citizen:'US Citizen',
-      street:'Street Address', city:'City', state:'State', zip:'ZIP',
+      street:'Street (Home)', city:'City (Home)', state:'State (Home)', zip:'ZIP (Home)',
+      homeCity:'Home City', homeState:'Home State', homeZip:'Home ZIP',
       bizName:'Business Name', dba:'DBA / Trade Name', ein:'EIN',
-      dateEstablished:'Date Established', bizAddress:'Business Address',
+      dateEstablished:'Date Established', bizAddress:'Business Street',
+      bizCity:'Business City', bizState:'Business State', bizZip:'Business ZIP',
       bizType:'Business Type', industry:'Industry', employees:'# Employees',
       monthlySales:'Monthly Revenue', ownership:'Ownership %',
       loanAmount:'Funding Goal', loanReason:'Funding Purpose',
       bizCreditCards:'Business Credit Cards', bizBanks:'Business Banks',
       personalBanks:'Personal Banks', bizPhone:'Business Phone',
+      signatureName:'Signature Name', signedDate:'Date Signed',
     };
 
     const rows = fieldKeys.map(function(key, i) {
@@ -8014,15 +8455,23 @@
       try { await fsSetOnboarding(clientId, o); } catch(e) {}
       try { await fsSetDash(clientId, { profileData: o }); } catch(e) {}
 
-      // Update client record for name / phone / email / ghlContactId
+      // Update client record for name / phone / email / biz / ghlContactId
       var allClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
       var cidx = allClients.findIndex(function(c) { return c.id === clientId; });
       if (cidx >= 0) {
-        if (selectedKeys.includes('firstName') && o.firstName) allClients[cidx].fname = o.firstName;
-        if (selectedKeys.includes('lastName')  && o.lastName)  allClients[cidx].lname = o.lastName;
-        if (selectedKeys.includes('phone')     && o.phone)     allClients[cidx].phone = o.phone;
-        if (selectedKeys.includes('email')     && o.email)     allClients[cidx].email = o.email;
-        if (metadata.ghlContactId && !allClients[cidx].ghlContactId) allClients[cidx].ghlContactId = metadata.ghlContactId;
+        if (selectedKeys.includes('firstName')     && o.firstName)     allClients[cidx].fname   = o.firstName;
+        if (selectedKeys.includes('lastName')      && o.lastName)      allClients[cidx].lname   = o.lastName;
+        if (selectedKeys.includes('phone')         && o.phone)         allClients[cidx].phone   = o.phone;
+        if (selectedKeys.includes('email')         && o.email)         allClients[cidx].email   = o.email;
+        if (selectedKeys.includes('bizName')       && o.bizName)       allClients[cidx].biz     = o.bizName;
+        if (selectedKeys.includes('street')        && o.street)        allClients[cidx].address = o.street;
+        if (selectedKeys.includes('homeCity')      && o.homeCity)      allClients[cidx].city    = o.homeCity;
+        else if (selectedKeys.includes('city')     && o.city)          allClients[cidx].city    = o.city;
+        if (selectedKeys.includes('homeState')     && o.homeState)     allClients[cidx].state   = o.homeState;
+        else if (selectedKeys.includes('state')    && o.state)         allClients[cidx].state   = o.state;
+        if (selectedKeys.includes('homeZip')       && o.homeZip)       allClients[cidx].zip     = o.homeZip;
+        else if (selectedKeys.includes('zip')      && o.zip)           allClients[cidx].zip     = o.zip;
+        if (metadata.ghlContactId && !allClients[cidx].ghlContactId)   allClients[cidx].ghlContactId = metadata.ghlContactId;
         localStorage.setItem('cq_admin_clients', JSON.stringify(allClients));
         try { await fsSaveClient(allClients[cidx]); } catch(e) {}
       }
@@ -9625,20 +10074,27 @@
   function renderMsgThreads() {
     const list = document.getElementById('a-msg-thread-list');
     if (!list) return;
-    list.innerHTML = `<div style="padding:14px 16px;border-bottom:1px solid var(--gray-100);font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy)">Conversations</div>` +
+    list.innerHTML = `<div style="padding:14px 16px;border-bottom:1px solid var(--gray-100);font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;justify-content:space-between">GHL Conversations<span style="font-size:10px;font-weight:600;color:var(--gray-400);background:var(--gray-50);border:1px solid var(--gray-100);border-radius:5px;padding:2px 8px">${clients.length} clients</span></div>` +
       clients.map(c => {
         const msgs = getMsgs(c.id);
         const last = msgs[msgs.length-1];
         const unread = _countUnread(c.id, msgs);
         const _cn = _getClientNames(c);
+        const ghlLinked = !!c.ghlContactId;
+        const ghlBadge = ghlLinked
+          ? `<span style="font-size:9px;font-weight:700;background:#dcfce7;color:#15803d;border-radius:4px;padding:1px 5px;flex-shrink:0">GHL</span>`
+          : `<span style="font-size:9px;font-weight:700;background:var(--gray-50);color:var(--gray-400);border-radius:4px;padding:1px 5px;flex-shrink:0;border:1px dashed #e2e8f0">No GHL</span>`;
         return `<div class="a-msg-thread ${activeMsgClientId===c.id?'active':''}" onclick="openMsgThread('${c.id}')">
           <div style="display:flex;align-items:center;gap:8px">
             <div style="width:28px;height:28px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:700;font-size:11px;color:white;flex-shrink:0;overflow:hidden">${c.photo?`<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`:`${(_cn.fn||'?')[0]}${(_cn.ln||'')[0]}`}</div>
             <div style="min-width:0;flex:1">
               <div class="a-msg-thread-name" style="${unread>0?'color:var(--navy);font-weight:700':''}">${_cn.fn} ${_cn.ln}</div>
-              <div class="a-msg-thread-preview" style="${unread>0?'color:var(--navy);font-weight:600':''}${last&&!last.from_admin&&unread>0?'':''}">${last ? last.text : 'No messages yet'}</div>
+              <div class="a-msg-thread-preview" style="${unread>0?'color:var(--navy);font-weight:600':''}">${last ? last.text : 'No messages yet'}</div>
             </div>
-            ${unread > 0 ? `<div class="a-msg-unread-dot"></div>` : ''}
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+              ${unread > 0 ? `<div class="a-msg-unread-dot"></div>` : ''}
+              ${ghlBadge}
+            </div>
           </div>
         </div>`;
       }).join('');
@@ -9662,6 +10118,13 @@
     const inp = document.getElementById('a-msg-input');
     inp.placeholder = `Message ${c.fname}…`;
     inp.onkeydown = e => { if(e.key==='Enter') sendMsgFromSection(); };
+    // Show GHL tab bar only if client is linked to GHL
+    const tabBar = document.getElementById('a-msg-tabs');
+    if (tabBar) tabBar.style.display = c.ghlContactId ? 'flex' : 'none';
+    // Always start on Portal tab
+    _msgTabSwitch('portal');
+    // If linked, preload GHL conversation in background
+    if (c.ghlContactId) _msgLoadGhl(clientId, c.ghlContactId);
     // Load latest from Firestore once on open
     fsGetMessages(clientId).then(fsMsgs => {
       if (fsMsgs.length) {
@@ -9676,10 +10139,1213 @@
     _renderMsgClientPanel(c, _localDash, null);
     Promise.all([fsGetDash(clientId), fsGetOnboarding(clientId)])
       .then(([dash, onboard]) => {
-        // Merge: Firestore fills gaps, but local values win for non-empty fields
         const merged = Object.assign({}, dash || {}, _localDash);
         _renderMsgClientPanel(c, merged, onboard);
       });
+  }
+
+  // Switch tabs in the GHL section center panel
+  function _msgTabSwitch(tab) {
+    const portalPanel = document.getElementById('a-msg-portal-panel');
+    const ghlPanel    = document.getElementById('a-msg-ghl-panel');
+    const portalTab   = document.getElementById('a-msg-tab-portal');
+    const ghlTab      = document.getElementById('a-msg-tab-ghl');
+    if (tab === 'portal') {
+      if (portalPanel) portalPanel.style.display = 'flex';
+      if (ghlPanel)    ghlPanel.style.display    = 'none';
+      if (portalTab)   { portalTab.classList.add('active');    }
+      if (ghlTab)      { ghlTab.classList.remove('active');    }
+    } else {
+      if (portalPanel) portalPanel.style.display = 'none';
+      if (ghlPanel)    ghlPanel.style.display    = 'flex';
+      if (portalTab)   { portalTab.classList.remove('active'); }
+      if (ghlTab)      { ghlTab.classList.add('active');       }
+      // Load GHL msgs if not loaded yet
+      const el = document.getElementById('a-msg-ghl-msgs');
+      if (el && el.dataset.loaded !== '1' && activeMsgClientId) {
+        const _c = getClient(activeMsgClientId);
+        if (_c && _c.ghlContactId) _msgLoadGhl(activeMsgClientId, _c.ghlContactId);
+      }
+    }
+  }
+
+  // Load GHL conversation into the GHL section center panel
+  async function _msgLoadGhl(clientId, ghlContactId) {
+    const el = document.getElementById('a-msg-ghl-msgs');
+    if (!el) return;
+    el.dataset.loaded = '0';
+    el.innerHTML = '<div style="text-align:center;padding:24px;font-size:12px;color:var(--gray-400)">Loading GHL messages…</div>';
+    try {
+      if (typeof GHL === 'undefined' || !GHL.loadMessages) return;
+      const msgs = await GHL.loadMessages(ghlContactId);
+      el.dataset.loaded = '1';
+      if (!msgs || !msgs.length) {
+        el.innerHTML = '<div style="text-align:center;padding:24px;font-size:12px;color:var(--gray-400)">No GHL messages yet.</div>';
+        return;
+      }
+      const sorted = msgs.slice().sort((a,b) => new Date(a.dateAdded||a.createdAt||0) - new Date(b.dateAdded||b.createdAt||0));
+      el.innerHTML = sorted.map(function(m) {
+        const isOut = m.direction === 'outbound' || m.fromUser;
+        const body  = m.body || m.message || m.text || '';
+        const t     = m.dateAdded || m.createdAt || '';
+        const tStr  = t ? new Date(t).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true }) : '';
+        const typeIcon = m.type === 'Email' ? '📧' : m.type === 'Call' ? '📞' : '💬';
+        return '<div class="ghl-conv-msg' + (isOut ? ' outbound' : '') + '">'
+          + '<div class="ghl-conv-msg-body">' + typeIcon + ' ' + _escHtml(body) + '</div>'
+          + '<div class="ghl-conv-msg-meta">' + tStr + (m.status ? ' · ' + m.status : '') + '</div>'
+          + '</div>';
+      }).join('');
+      el.scrollTop = el.scrollHeight;
+    } catch(e) {
+      el.innerHTML = '<div style="text-align:center;padding:24px;font-size:12px;color:#ef4444">Failed to load GHL messages.</div>';
+    }
+  }
+
+  // Send a message via GHL from the GHL section center panel
+  async function _msgGhlSend() {
+    if (!activeMsgClientId || typeof GHL === 'undefined') return;
+    const inp  = document.getElementById('a-msg-ghl-input');
+    const sel  = document.getElementById('a-msg-ghl-type');
+    const text = inp ? inp.value.trim() : '';
+    const type = sel ? sel.value : 'SMS';
+    if (!text) { if (inp) inp.focus(); return; }
+    const c = getClient(activeMsgClientId);
+    if (!c || !c.ghlContactId) { alert('Client not linked to GHL. Link them first via Edit Profile.'); return; }
+    if (inp) { inp.disabled = true; inp.value = ''; }
+    try {
+      await GHL.sendMessage(c.ghlContactId, text, type);
+      _msgLoadGhl(activeMsgClientId, c.ghlContactId);
+    } catch(e) { alert('Failed to send GHL message.'); }
+    finally { if (inp) inp.disabled = false; }
+  }
+
+  // Open the GHL section and load a specific client's conversation
+  function openGHLPage(clientId) {
+    const navEl = document.querySelector('[onclick="switchAdminSection(\'messages\',this)"]');
+    switchAdminSection('messages', navEl);
+    if (clientId) {
+      const c = getClient(clientId);
+      if (c && c.ghlContactId) {
+        setTimeout(function() { ghlOpenByContactId(c.ghlContactId, clientId); }, 300);
+      } else {
+        // Fall back to portal thread list
+        renderMsgThreads();
+        openMsgThread(clientId);
+      }
+    }
+  }
+
+  // ── GHL COMMUNICATION CENTER ──────────────────────────────────────────────
+  // Full GHL inbox state
+  // ── GHL COMMUNICATION CENTER STATE ─────────────────────────────────────────
+  var _ghlIx = {
+    convs: [],              // conversations from GHL API
+    activeConvId: null,
+    activeContactId: null,
+    activeClientId: null,
+    activeGhlContact: null, // full GHL contact object for the open thread
+    filter: 'all',
+    query: '',
+    composeType: 'SMS',
+    locationInfo: null,
+    pollTimer: null,
+    loading: false,
+    lastMsgCount: 0,        // detect new inbound messages
+    _msgCache: {},          // convId → [messages]
+    _noteCache: {},         // contactId → [notes]
+  };
+
+  // ── INIT ────────────────────────────────────────────────────────────────────
+  async function ghlInboxInit() {
+    if (_ghlIx.loading) return;
+    _ghlIx.loading = true;
+    var listEl = document.getElementById('ghl-conv-list');
+    if (listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:12px">Loading conversations…</div>';
+
+    if (!window.GHL || !GHL.getSettings().apiKey) {
+      if (listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444;font-size:12px;line-height:1.6">GHL not configured.<br>Add API key in <strong>Settings → GHL</strong> to load conversations.</div>';
+      ghlRenderConnectionBar('disconnected');
+      _ghlIx.loading = false;
+      return;
+    }
+
+    ghlRenderConnectionBar('loading');
+    try {
+      var [convs, locInfo] = await Promise.all([
+        GHL.getConversationsInbox({ limit: 50 }),
+        GHL.getLocationInfo()
+      ]);
+      _ghlIx.locationInfo = locInfo;
+      var contactMap = {};
+      clients.forEach(function(c) { if (c.ghlContactId) contactMap[c.ghlContactId] = c; });
+      _ghlIx.convs = (convs || []).map(function(cv) {
+        return Object.assign({}, cv, { _portalClient: contactMap[cv.contactId] || null });
+      });
+      ghlRenderInbox();
+      _ghlConnected = true;
+      _ghlLastSyncTs = Date.now();
+      // Load channel identities if not already loaded
+      if (!_ghlChannels.loaded) _ghlLoadChannels().catch(function(){});
+      else ghlRenderConnectionBar('connected');
+      // Start global sync engine
+      _ghlStartSyncEngine();
+    } catch(e) {
+      console.error('[GHL Inbox] init error:', e);
+      if (listEl) listEl.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444;font-size:12px">Failed to load conversations. Check API key in Settings.</div>';
+      ghlRenderConnectionBar('error');
+    }
+    _ghlIx.loading = false;
+  }
+
+  async function ghlInboxRefresh() {
+    _ghlIx.loading = false;
+    await ghlInboxInit();
+  }
+
+  // ── SEARCH & FILTER ─────────────────────────────────────────────────────────
+  function ghlInboxSearch(query) {
+    _ghlIx.query = (query || '').toLowerCase().trim();
+    ghlRenderInbox();
+  }
+
+  function ghlSetFilter(filter, el) {
+    _ghlIx.filter = filter;
+    document.querySelectorAll('#ghl-inbox-filters .ghl-filter-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (el) el.classList.add('active');
+    ghlRenderInbox();
+  }
+
+  // ── COLORS ──────────────────────────────────────────────────────────────────
+  var _GHL_COLORS = ['#22A7F0','#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#14b8a6'];
+  function _ghlColor(str) {
+    var h = 0;
+    for (var i = 0; i < (str||'').length; i++) h = (h*31 + str.charCodeAt(i)) & 0xffffffff;
+    return _GHL_COLORS[Math.abs(h) % _GHL_COLORS.length];
+  }
+
+  // ── RENDER INBOX LIST ───────────────────────────────────────────────────────
+  function ghlRenderInbox() {
+    var listEl = document.getElementById('ghl-conv-list');
+    if (!listEl) return;
+    var convs = _ghlIx.convs;
+    var ghlConvContactIds = new Set(convs.map(function(cv) { return cv.contactId; }));
+    // Portal clients with ghlContactId but no GHL conv
+    var extraClients = (_ghlIx.filter === 'all' || _ghlIx.filter === 'linked')
+      ? clients.filter(function(c) { return c.ghlContactId && !ghlConvContactIds.has(c.ghlContactId); })
+      : [];
+
+    // Apply filter
+    var filtered = convs.filter(function(cv) {
+      var t = (cv.lastMessageType || cv.type || '').toUpperCase();
+      if (_ghlIx.filter === 'unread')     return (cv.unreadCount || 0) > 0;
+      if (_ghlIx.filter === 'linked')     return !!cv._portalClient;
+      if (_ghlIx.filter === 'sms')        return t === 'TYPE_SMS' || t === 'SMS';
+      if (_ghlIx.filter === 'email')      return t === 'TYPE_EMAIL' || t === 'EMAIL';
+      if (_ghlIx.filter === 'unmatched')  return !cv._portalClient;
+      return true;
+    });
+
+    // Apply search
+    if (_ghlIx.query) {
+      filtered = filtered.filter(function(cv) {
+        var haystack = ((cv.contactName||'') + ' ' + (cv.fullName||'') + ' ' + (cv.email||'') + ' ' + (cv.phone||'')).toLowerCase();
+        return haystack.indexOf(_ghlIx.query) !== -1;
+      });
+      if (_ghlIx.filter === 'all') {
+        extraClients = extraClients.filter(function(c) {
+          var hay = ((c.fname||'') + ' ' + (c.lname||'') + ' ' + (c.email||'') + ' ' + (c.phone||'')).toLowerCase();
+          return hay.indexOf(_ghlIx.query) !== -1;
+        });
+      }
+    }
+
+    if (!filtered.length && !extraClients.length) {
+      listEl.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--gray-400);font-size:12px">No conversations match this filter.</div>';
+      return;
+    }
+
+    // Type → color/icon mapping
+    function _typeColor(cv) {
+      var t = (cv.lastMessageType || cv.type || '').toUpperCase();
+      if (t === 'TYPE_EMAIL' || t === 'EMAIL') return '#3b82f6';
+      if (t === 'TYPE_CALL'  || t === 'CALL')  return '#10b981';
+      if (t === 'TYPE_VOICE_MAIL' || t === 'VOICEMAIL') return '#8b5cf6';
+      return '#6366f1';
+    }
+
+    listEl.innerHTML = filtered.map(function(cv) {
+      var isActive = _ghlIx.activeConvId === cv.id;
+      var pc       = cv._portalClient;
+      var name     = cv.contactName || cv.fullName || (pc ? ((pc.fname||'') + ' ' + (pc.lname||'')).trim() : 'Unknown Contact');
+      var preview  = cv.lastMessage || cv.lastMessageBody || (cv.lastMessageType ? cv.lastMessageType.replace('TYPE_','').replace(/_/g,' ') : '—');
+      if (preview.length > 55) preview = preview.slice(0, 55) + '…';
+      var ts       = cv.dateUpdated || cv.lastMessageDate || cv.dateAdded || '';
+      var unread   = cv.unreadCount || 0;
+      var initials = (((name.split(' ')[0]||'')[0]||'') + ((name.split(' ')[1]||'')[0]||'')).toUpperCase();
+      var color    = pc ? (pc.color || _ghlColor(name)) : _ghlColor(cv.contactId || name);
+      return '<div class="ghl-conv-item' + (isActive?' active':'') + (unread?' unread':'') + '" onclick="ghlOpenConversation(\'' + _escAttr(cv.id) + '\',\'' + _escAttr(cv.contactId||'') + '\')">'
+        + '<div class="ghl-conv-type-dot" style="background:' + _typeColor(cv) + '"></div>'
+        + '<div class="ghl-conv-avatar" style="background:' + color + '">' + initials + '</div>'
+        + '<div class="ghl-conv-body">'
+          + '<div class="ghl-conv-name">' + _escHtml(name) + (pc ? ' <span style="font-size:9px;font-weight:700;background:#dcfce7;color:#15803d;border-radius:3px;padding:1px 4px;vertical-align:middle">P</span>' : '') + '</div>'
+          + '<div class="ghl-conv-preview">' + _escHtml(preview) + '</div>'
+        + '</div>'
+        + '<div class="ghl-conv-meta">'
+          + '<span class="ghl-conv-time">' + (ts ? _ghlFmtRelTime(new Date(ts)) : '') + '</span>'
+          + (unread > 0 ? '<div class="ghl-conv-badge">' + (unread > 9 ? '9+' : unread) + '</div>' : '')
+        + '</div>'
+      + '</div>';
+    }).join('')
+    + (extraClients.length
+      ? '<div style="padding:8px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);border-top:1px solid var(--gray-100);margin-top:4px">Portal Clients — No GHL Conv Yet</div>'
+        + extraClients.map(function(c) {
+            var n  = ((c.fname||'') + ' ' + (c.lname||'')).trim() || 'Client';
+            var ii = (((c.fname||'')[0]||'') + ((c.lname||'')[0]||'')).toUpperCase();
+            var isAct = _ghlIx.activeContactId === c.ghlContactId;
+            return '<div class="ghl-conv-item' + (isAct?' active':'') + '" onclick="ghlOpenByContactId(\'' + _escAttr(c.ghlContactId) + '\',\'' + _escAttr(c.id) + '\')">'
+              + '<div class="ghl-conv-type-dot" style="background:var(--gray-200)"></div>'
+              + '<div class="ghl-conv-avatar" style="background:' + (c.color||'#94a3b8') + '">' + ii + '</div>'
+              + '<div class="ghl-conv-body"><div class="ghl-conv-name">' + _escHtml(n) + ' <span style="font-size:9px;font-weight:700;background:#dcfce7;color:#15803d;border-radius:3px;padding:1px 4px;vertical-align:middle">P</span></div><div class="ghl-conv-preview">No conversation yet</div></div>'
+              + '<div class="ghl-conv-meta"></div>'
+            + '</div>';
+          }).join('')
+      : '');
+  }
+
+  // Escape for use in HTML attributes (onclick values)
+  function _escAttr(s) { return (s||'').replace(/'/g, "\\'"); }
+
+  // ── OPEN CONVERSATION ───────────────────────────────────────────────────────
+  async function ghlOpenConversation(convId, contactId) {
+    _ghlIx.activeConvId     = convId;
+    _ghlIx.activeContactId  = contactId;
+    _ghlIx.activeGhlContact = null;
+    var portalClient = clients.find(function(c) { return c.ghlContactId === contactId; }) || null;
+    _ghlIx.activeClientId = portalClient ? portalClient.id : null;
+    ghlRenderInbox();
+    _ghlShowThread();
+    await ghlLoadThread(convId, contactId, portalClient);
+    ghlRenderContactPanel(contactId, portalClient);
+    // Mark as read
+    try { GHL.updateConversation(convId, { unread: false }); } catch(e) {}
+    // Update unread badge in list
+    var cv = _ghlIx.convs.find(function(c) { return c.id === convId; });
+    if (cv) cv.unreadCount = 0;
+  }
+
+  // Open by portal client's ghlContactId (no existing convId)
+  async function ghlOpenByContactId(ghlContactId, portalClientId) {
+    _ghlIx.activeContactId  = ghlContactId;
+    _ghlIx.activeClientId   = portalClientId || null;
+    _ghlIx.activeConvId     = null;
+    _ghlIx.activeGhlContact = null;
+    _ghlShowThread();
+    var portalClient = portalClientId ? getClient(portalClientId) : (clients.find(function(c){ return c.ghlContactId === ghlContactId; }) || null);
+    // Update header immediately
+    _ghlUpdateThreadHeader(portalClient, null);
+    _ghlRenderSendContext();
+    var tl = document.getElementById('ghl-timeline');
+    if (tl) tl.innerHTML = '<div style="padding:32px;text-align:center;font-size:12px;color:var(--gray-400)">Looking up conversation…</div>';
+    try {
+      var conv = await GHL.getConversation(ghlContactId);
+      if (conv) {
+        _ghlIx.activeConvId = conv.id;
+        ghlRenderInbox();
+        await ghlLoadThread(conv.id, ghlContactId, portalClient);
+      } else {
+        if (tl) tl.innerHTML = '<div style="padding:48px 24px;text-align:center;font-size:12px;color:var(--gray-400)">'
+          + '<div style="font-size:28px;margin-bottom:8px">💬</div>'
+          + '<div style="font-weight:600;font-size:13px;color:var(--gray-300);margin-bottom:4px">No conversation history yet</div>'
+          + '<div>Send an SMS or Email below to start a conversation.</div>'
+          + '</div>';
+      }
+    } catch(e) { console.error('[GHL] openByContactId error:', e); }
+    ghlRenderContactPanel(ghlContactId, portalClient);
+  }
+
+  function _ghlShowThread() {
+    var empty   = document.getElementById('ghl-thread-empty');
+    var content = document.getElementById('ghl-thread-content');
+    if (empty)   empty.style.display   = 'none';
+    if (content) content.style.display = 'flex';
+  }
+
+  // ── LOAD THREAD ─────────────────────────────────────────────────────────────
+  async function ghlLoadThread(convId, contactId, portalClient) {
+    var tl = document.getElementById('ghl-timeline');
+    if (tl) tl.innerHTML = '<div style="padding:32px;text-align:center;font-size:12px;color:var(--gray-400)">Loading…</div>';
+    _ghlUpdateThreadHeader(portalClient, null);
+    _ghlRenderSendContext();
+    try {
+      var [messages, notes] = await Promise.all([
+        convId    ? GHL.getConversationMessages(convId, { limit: 50 }) : Promise.resolve([]),
+        contactId ? GHL.getContactNotes(contactId)                     : Promise.resolve([])
+      ]);
+      // Cache for smart polling
+      if (convId)    _ghlIx._msgCache[convId]     = messages;
+      if (contactId) _ghlIx._noteCache[contactId] = notes;
+      _ghlIx.lastMsgCount = (messages||[]).length;
+      ghlRenderTimeline(messages, notes);
+      _ghlStartPoll(convId, contactId);
+    } catch(e) {
+      console.error('[GHL] loadThread error:', e);
+      if (tl) tl.innerHTML = '<div style="padding:32px;text-align:center;font-size:12px;color:#ef4444">Failed to load messages. Check your GHL API key in Settings.</div>';
+    }
+  }
+
+  function _ghlUpdateThreadHeader(portalClient, ghlContact) {
+    var nameEl  = document.getElementById('ghl-thread-name');
+    var subEl   = document.getElementById('ghl-thread-sub');
+    var stageEl = document.getElementById('ghl-thread-stage');
+    var c = portalClient;
+    var g = ghlContact;
+    var name  = c ? ((c.fname||'') + ' ' + (c.lname||'')).trim()
+               : (g ? ((g.firstName||'') + ' ' + (g.lastName||'')).trim() : ('Contact…'));
+    var email = (c && c.email) || (g && g.email) || '';
+    var phone = (c && c.phone) || (g && g.phone) || '';
+    if (nameEl)  nameEl.textContent = name || '—';
+    if (subEl)   subEl.textContent  = [email, phone].filter(Boolean).join(' · ');
+    if (stageEl) {
+      var dash  = c ? getDashData(c.id) : null;
+      var stage = dash ? (((dash.stageNames||[])[Math.max(0,(dash.currentStage||1)-1)])||'') : '';
+      if (stage) { stageEl.textContent = stage; stageEl.style.display = ''; }
+      else stageEl.style.display = 'none';
+    }
+  }
+
+  // ── SENDING CONTEXT BAR ─────────────────────────────────────────────────────
+  function _ghlRenderSendContext() {
+    var el = document.getElementById('ghl-send-context');
+    if (!el) return;
+    var s   = GHL.getSettings();
+    var loc = _ghlIx.locationInfo;
+    var items = [];
+    var fromNum   = s.fromNumber || (loc && (loc.phone || loc.phoneNumber)) || '';
+    var fromEmail = (loc && (loc.email || (loc.settings && loc.settings.email))) || '';
+    if (fromNum)   items.push('📱 SMS from: <strong>' + _escHtml(GHL.fmtPhone(fromNum)) + '</strong>');
+    if (fromEmail) items.push('📧 Email from: <strong>' + _escHtml(fromEmail) + '</strong>');
+    el.innerHTML = items.length
+      ? '<span style="font-size:11px;color:var(--gray-400)">' + items.join(' &nbsp;|&nbsp; ') + '</span>'
+      : '<span style="font-size:11px;color:var(--gray-300)">Configure sending number/email in Settings → GHL</span>';
+  }
+
+  // ── TIMELINE RENDERING ──────────────────────────────────────────────────────
+  function ghlRenderTimeline(messages, notes) {
+    var tl = document.getElementById('ghl-timeline');
+    if (!tl) return;
+    var items = [];
+    (messages || []).forEach(function(m) {
+      items.push({ ts: _ghlTs(m.dateAdded || m.createdAt), type: 'msg', data: m });
+    });
+    (notes || []).forEach(function(n) {
+      items.push({ ts: _ghlTs(n.dateAdded || n.createdAt), type: 'note', data: n });
+    });
+    items.sort(function(a, b) { return a.ts - b.ts; });
+    if (!items.length) {
+      tl.innerHTML = '<div style="padding:48px 24px;text-align:center;font-size:12px;color:var(--gray-400)">'
+        + '<div style="font-size:28px;margin-bottom:8px">💬</div>'
+        + '<div style="font-weight:600;font-size:13px;color:var(--gray-300);margin-bottom:4px">No conversation history yet</div>'
+        + '<div>Send an SMS or Email below to start.</div>'
+        + '</div>';
+      return;
+    }
+    // Date separators
+    var html = '';
+    var lastDate = '';
+    items.forEach(function(item) {
+      var d = new Date(item.ts);
+      var dateKey = isNaN(d) ? '' : d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+      if (dateKey && dateKey !== lastDate) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin:8px 0"><div style="flex:1;height:1px;background:var(--gray-100)"></div><span style="font-size:10px;font-weight:600;color:var(--gray-300);white-space:nowrap">' + dateKey + '</span><div style="flex:1;height:1px;background:var(--gray-100)"></div></div>';
+        lastDate = dateKey;
+      }
+      html += (item.type === 'note') ? _ghlNoteHTML(item.data) : _ghlMsgHTML(item.data);
+    });
+    tl.innerHTML = html;
+    tl.scrollTop = tl.scrollHeight;
+  }
+
+  function _ghlTs(v) { return v ? new Date(v).getTime() : 0; }
+
+  function _ghlFmtTime(ts) {
+    if (!ts) return '';
+    var d = new Date(ts);
+    return isNaN(d) ? '' : d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true });
+  }
+
+  function _ghlMsgHTML(m) {
+    var raw   = (m.type || m.messageType || 'TYPE_SMS').toUpperCase();
+    var isOut = m.direction === 'outbound' || m.direction === 'OUTBOUND' || raw === 'ACTIVITY';
+    var body  = m.body || m.message || m.text || '';
+    var tStr  = _ghlFmtTime(_ghlTs(m.dateAdded || m.createdAt));
+    // Status badge
+    var statusColor = { delivered:'#10b981', sent:'#94a3b8', read:'#10b981', failed:'#ef4444', pending:'#f59e0b' };
+    var st    = (m.status||'').toLowerCase();
+    var stBadge = st ? '<span style="color:' + (statusColor[st]||'#94a3b8') + ';font-size:10px"> · ' + st.charAt(0).toUpperCase() + st.slice(1) + '</span>' : '';
+
+    // CALL
+    if (raw === 'CALL' || raw === 'TYPE_CALL') {
+      var dur = m.callDuration ? Math.round(m.callDuration/60) + 'm ' + (m.callDuration%60) + 's' : '';
+      return '<div class="ghl-tl-item centered">'
+        + '<div class="ghl-tl-call-bubble">📞 '
+          + _escHtml(body || (isOut ? 'Outbound call' : 'Inbound call'))
+          + (dur ? ' <span style="opacity:0.65">(' + dur + ')</span>' : '')
+        + '</div>'
+        + '<div class="ghl-tl-meta" style="justify-content:center">' + tStr + stBadge + '</div>'
+        + '</div>';
+    }
+    // VOICEMAIL
+    if (raw === 'VOICEMAIL' || raw === 'TYPE_VOICE_MAIL') {
+      var playLink = (m.attachments && m.attachments[0]) ? ' <a href="' + _escHtml(m.attachments[0]) + '" target="_blank" style="color:var(--blue);font-weight:600;text-decoration:none">▶ Play</a>' : '';
+      return '<div class="ghl-tl-item centered">'
+        + '<div class="ghl-tl-call-bubble" style="background:#f0f4ff;border-color:#c7d7fc;color:#1e3a8a">🎙 Voicemail'
+          + (body ? ': ' + _escHtml(body) : '') + playLink
+        + '</div>'
+        + '<div class="ghl-tl-meta" style="justify-content:center">' + tStr + '</div>'
+        + '</div>';
+    }
+    // EMAIL
+    if (raw === 'EMAIL' || raw === 'TYPE_EMAIL') {
+      var subj = m.subject ? '<div style="font-weight:700;margin-bottom:5px;font-size:12px">' + _escHtml(m.subject) + '</div>' : '';
+      var dir  = isOut ? 'outbound' : 'inbound';
+      return '<div class="ghl-tl-item ' + dir + '">'
+        + '<div class="ghl-tl-email-bubble">'
+          + '<div style="font-size:10px;font-weight:700;color:#0369a1;margin-bottom:5px">📧 EMAIL ' + (isOut ? '↑' : '↓') + '</div>'
+          + subj + _escHtml(body || '(no body)')
+        + '</div>'
+        + '<div class="ghl-tl-meta">' + tStr + stBadge + '</div>'
+        + '</div>';
+    }
+    // APPOINTMENT / WORKFLOW / ACTIVITY events
+    if (raw === 'APPOINTMENT' || raw === 'TYPE_APPOINTMENT' || raw === 'ACTIVITY' || raw === 'WORKFLOW') {
+      return '<div class="ghl-tl-item centered">'
+        + '<div style="font-size:11px;padding:6px 14px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:999px;color:var(--gray-400)">'
+          + '📅 ' + _escHtml(body || raw)
+        + '</div>'
+        + '<div class="ghl-tl-meta" style="justify-content:center">' + tStr + '</div>'
+        + '</div>';
+    }
+    // SMS (default)
+    var dir = isOut ? 'outbound' : 'inbound';
+    var senderName = isOut ? (currentAdmin && currentAdmin.name ? currentAdmin.name : 'You') : '';
+    return '<div class="ghl-tl-item ' + dir + '">'
+      + (senderName && !isOut ? '<div class="ghl-tl-sender">' + _escHtml(senderName) + '</div>' : '')
+      + '<div class="ghl-tl-bubble">' + _escHtml(body) + '</div>'
+      + '<div class="ghl-tl-meta">' + tStr + stBadge + '</div>'
+    + '</div>';
+  }
+
+  function _ghlNoteHTML(n) {
+    var body = n.body || n.text || '';
+    var tStr = _ghlFmtTime(_ghlTs(n.dateAdded || n.createdAt));
+    var user = n.createdBy || n.user || '';
+    // Extract note type prefix: "[Internal] note text"
+    var noteType = 'Note';
+    var cleanBody = body;
+    var prefixMatch = body.match(/^\[([^\]]+)\]\s*/);
+    if (prefixMatch) { noteType = prefixMatch[1]; cleanBody = body.slice(prefixMatch[0].length); }
+    var typeColors = {
+      'Alert':       { bg:'#fef2f2', border:'#fecaca', color:'#991b1b' },
+      'Funding':     { bg:'#f0fdf4', border:'#bbf7d0', color:'#166534' },
+      'Credit':      { bg:'#f0f9ff', border:'#bae6fd', color:'#0c4a6e' },
+      'Underwriting':{ bg:'#faf5ff', border:'#e9d5ff', color:'#6b21a8' },
+      'Call':        { bg:'#f0fdf4', border:'#86efac', color:'#15803d' },
+    };
+    var tc = typeColors[noteType] || { bg:'#fffbeb', border:'#fde68a', color:'#78350f' };
+    return '<div class="ghl-tl-item centered" style="max-width:90%;width:100%">'
+      + '<div style="background:' + tc.bg + ';border:1px solid ' + tc.border + ';border-radius:10px;padding:10px 14px;color:' + tc.color + ';font-size:12px;line-height:1.5;width:100%;box-sizing:border-box">'
+        + '<div style="font-weight:800;font-size:10px;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">'
+          + '<span>📝 ' + _escHtml(noteType) + (user ? ' · ' + _escHtml(user) : '') + '</span>'
+          + '<span style="font-weight:500;opacity:0.7">' + tStr + '</span>'
+        + '</div>'
+        + _escHtml(cleanBody)
+      + '</div>'
+    + '</div>';
+  }
+
+  // ── COMPOSE: TYPE SWITCHING ─────────────────────────────────────────────────
+  function ghlSetComposeType(type, el) {
+    _ghlIx.composeType = type;
+    document.querySelectorAll('.ghl-compose-tabs .ghl-compose-tab').forEach(function(t) { t.classList.remove('active'); });
+    if (el) el.classList.add('active');
+    // Toggle element visibility
+    var subj  = document.getElementById('ghl-compose-subject');
+    var ntype = document.getElementById('ghl-note-type');
+    var disp  = document.getElementById('ghl-call-disposition-row');
+    var cnt   = document.getElementById('ghl-sms-count');
+    var inp   = document.getElementById('ghl-compose-input');
+    var btn   = document.getElementById('ghl-compose-send');
+    var placeholders = { SMS:'Type an SMS…', Email:'Email body…', Note:'Add a note…', Call:'Call outcome or additional notes…' };
+    var labels       = { SMS:'Send SMS', Email:'Send Email', Note:'Add Note', Call:'Log Call' };
+    if (subj)  subj.style.display  = type === 'Email' ? 'block' : 'none';
+    if (ntype) ntype.style.display = type === 'Note'  ? 'block' : 'none';
+    if (disp)  disp.style.display  = type === 'Call'  ? 'flex'  : 'none';
+    if (cnt)   cnt.style.display   = type === 'SMS'   ? 'block' : 'none';
+    if (inp)   inp.placeholder = placeholders[type] || 'Type…';
+    if (btn)   btn.textContent = labels[type] || 'Send';
+    if (type === 'SMS' && inp) ghlComposeCount(inp);
+    // Update the From/channel selector bar
+    _ghlUpdateFromBar(type);
+  }
+
+  // SMS char counter
+  function ghlComposeCount(ta) {
+    var cnt = document.getElementById('ghl-sms-count');
+    if (!cnt || _ghlIx.composeType !== 'SMS') return;
+    var len = (ta.value || '').length;
+    var segs = len <= 160 ? 1 : Math.ceil(len / 153);
+    cnt.textContent = len + (segs > 1 ? ' · ' + segs + ' msgs' : '');
+    cnt.style.color = len > 160 ? '#f59e0b' : 'var(--gray-300)';
+  }
+
+  // ── COMPOSE: SEND ────────────────────────────────────────────────────────────
+  async function ghlComposeSend() {
+    var inp    = document.getElementById('ghl-compose-input');
+    var subj   = document.getElementById('ghl-compose-subject');
+    var ntype  = document.getElementById('ghl-note-type');
+    var disp   = document.getElementById('ghl-call-disposition');
+    var btn    = document.getElementById('ghl-compose-send');
+    var text   = inp ? inp.value.trim() : '';
+    var type   = _ghlIx.composeType;
+    var contactId = _ghlIx.activeContactId;
+    if (!contactId) { alert('No contact selected.'); return; }
+    // For Call logs the text can be empty (just a disposition)
+    if (!text && type !== 'Call') { if (inp) inp.focus(); return; }
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+    // Hard block: GHL must be connected before sending SMS or Email
+    if ((type === 'SMS' || type === 'Email') && !_ghlConnected) {
+      alert('GHL is not connected. Configure API key + Location ID in Settings → GHL, then click Test.');
+      if (btn) { btn.disabled = false; btn.textContent = type === 'SMS' ? 'Send SMS' : 'Send Email'; }
+      return;
+    }
+    // Hard block: must have a configured outbound channel
+    var smsFrom   = _ghlChannels.selectedSms   || GHL.getSettings().defaultSmsNumber   || GHL.getSettings().fromNumber || '';
+    var emailFrom = _ghlChannels.selectedEmail || GHL.getSettings().defaultEmailAddress || '';
+    if (type === 'SMS' && !smsFrom) {
+      alert('No outbound SMS number configured.\n\nGo to Settings → GHL → "Default Outbound SMS Number" and enter your LC Phone number.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Send SMS'; }
+      return;
+    }
+    if (type === 'Email' && !emailFrom) {
+      alert('No outbound email address configured.\n\nGo to Settings → GHL → "Default Outbound Email" and enter your sending email address.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Send Email'; }
+      return;
+    }
+    var testMode = GHL.getSettings().testMode;
+    console.log('[GHL Send]', type,
+      '| from:', type === 'SMS' ? smsFrom : emailFrom,
+      '| contactId:', contactId,
+      '| textLen:', text.length,
+      '| testMode:', testMode,
+      '| proxy:', GHL.isProxyReady ? GHL.isProxyReady() : 'unknown');
+
+    try {
+      if (type === 'SMS') {
+        await GHL.sendMessage(contactId, text, 'SMS', smsFrom);
+        _ghlOptimisticAppend('SMS', text, true, null, smsFrom + (testMode ? ' [TEST]' : ''));
+      } else if (type === 'Email') {
+        var subject = subj ? subj.value.trim() : '';
+        var emailBody = subject ? '[Subject: ' + subject + ']\n\n' + text : text;
+        await GHL.sendMessage(contactId, emailBody, 'Email', emailFrom, subject);
+        _ghlOptimisticAppend('Email', text, true, null, emailFrom + (testMode ? ' [TEST]' : ''), subject);
+        if (subj) subj.value = '';
+      } else if (type === 'Note') {
+        var noteTypeSel = ntype ? ntype.value : 'Internal';
+        var noteBody    = text || '(note)';
+        await GHL.addTypedNote(contactId, noteBody, noteTypeSel);
+        _ghlOptimisticAppend('Note', noteBody, false, noteTypeSel);
+      } else if (type === 'Call') {
+        var disposition = disp ? disp.value : 'Completed';
+        var callBody    = text ? disposition + ' — ' + text : disposition;
+        await GHL.logCall(contactId, disposition, '', text);
+        _ghlOptimisticAppend('Call', callBody, false);
+      }
+      if (inp) { inp.value = ''; ghlComposeCount(inp); }
+    } catch(e) { alert('Send failed: ' + e.message); }
+    finally {
+      if (btn) { btn.disabled = false; ghlSetComposeType(type, document.querySelector('.ghl-compose-tab.active')); }
+    }
+  }
+
+  // Optimistic append to timeline before API poll confirms
+  function _ghlOptimisticAppend(type, text, isOut, noteType, channel, emailSubject) {
+    var tl = document.getElementById('ghl-timeline');
+    if (!tl) return;
+    // Remove empty state if present
+    if (tl.children.length === 1 && tl.children[0].textContent.indexOf('No conversation') !== -1) tl.innerHTML = '';
+    var tStr    = _ghlFmtTime(Date.now());
+    var sender  = (currentAdmin && currentAdmin.name) ? currentAdmin.name : 'You';
+    var chanLbl = channel ? ' · ' + GHL.fmtPhone(channel) : '';
+    var html;
+    if (type === 'Note') {
+      var tc = { Alert:{bg:'#fef2f2',border:'#fecaca',color:'#991b1b'}, Funding:{bg:'#f0fdf4',border:'#bbf7d0',color:'#166534'}, Credit:{bg:'#f0f9ff',border:'#bae6fd',color:'#0c4a6e'}, Underwriting:{bg:'#faf5ff',border:'#e9d5ff',color:'#6b21a8'}, Call:{bg:'#f0fdf4',border:'#86efac',color:'#15803d'} }[noteType] || {bg:'#fffbeb',border:'#fde68a',color:'#78350f'};
+      html = '<div class="ghl-tl-item centered" style="max-width:90%;width:100%">'
+        + '<div style="background:' + tc.bg + ';border:1px solid ' + tc.border + ';border-radius:10px;padding:10px 14px;color:' + tc.color + ';font-size:12px;line-height:1.5;width:100%;box-sizing:border-box">'
+          + '<div style="font-weight:800;font-size:10px;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">'
+            + '<span>📝 ' + _escHtml(noteType||'Note') + ' · ' + _escHtml(sender) + '</span>'
+            + '<span style="font-weight:500;opacity:0.7">' + tStr + '</span>'
+          + '</div>'
+          + _escHtml(text)
+        + '</div>'
+        + '</div>';
+    } else if (type === 'Call') {
+      html = '<div class="ghl-tl-item centered">'
+        + '<div class="ghl-tl-call-bubble">📞 ' + _escHtml(text) + '</div>'
+        + '<div class="ghl-tl-meta" style="justify-content:center">' + _escHtml(sender) + ' · ' + tStr + '</div>'
+        + '</div>';
+    } else if (type === 'Email') {
+      var subjLine = emailSubject ? '<div style="font-weight:700;margin-bottom:4px;font-size:12px">' + _escHtml(emailSubject) + '</div>' : '';
+      var chanInfo = channel ? _escHtml(channel) : '';
+      html = '<div class="ghl-tl-item outbound">'
+        + '<div class="ghl-tl-sender">' + _escHtml(sender) + (chanInfo ? ' · 📧 ' + chanInfo : '') + '</div>'
+        + '<div class="ghl-tl-email-bubble"><div style="font-size:10px;font-weight:700;color:#0369a1;margin-bottom:5px">📧 EMAIL ↑</div>' + subjLine + _escHtml(text) + '</div>'
+        + '<div class="ghl-tl-meta">' + tStr + ' <span style="color:#f59e0b;font-size:10px"> · Sending…</span></div>'
+        + '</div>';
+    } else {
+      // SMS
+      html = '<div class="ghl-tl-item outbound">'
+        + '<div class="ghl-tl-sender">' + _escHtml(sender) + ' · 💬 SMS' + _escHtml(chanLbl) + '</div>'
+        + '<div class="ghl-tl-bubble">' + _escHtml(text) + '</div>'
+        + '<div class="ghl-tl-meta">' + tStr + ' <span style="color:#f59e0b;font-size:10px"> · Sending…</span></div>'
+        + '</div>';
+    }
+    tl.insertAdjacentHTML('beforeend', html);
+    tl.scrollTop = tl.scrollHeight;
+  }
+
+  // ── OPEN IN GHL APP ─────────────────────────────────────────────────────────
+  function ghlOpenInApp() {
+    if (!window.GHL) return;
+    window.open(GHL.openInGHLUrl(_ghlIx.activeContactId, _ghlIx.activeConvId), '_blank');
+  }
+
+  // ── CONTACT PANEL ───────────────────────────────────────────────────────────
+  async function ghlRenderContactPanel(contactId, portalClient) {
+    var empty   = document.getElementById('ghl-cp-empty');
+    var content = document.getElementById('ghl-cp-content');
+    var header  = document.getElementById('ghl-cp-header');
+    var body    = document.getElementById('ghl-cp-body');
+    var actions = document.getElementById('ghl-cp-actions');
+    if (!empty || !content) return;
+    empty.style.display   = 'none';
+    content.style.display = 'flex';
+    var c    = portalClient;
+    var name = c ? ((c.fname||'') + ' ' + (c.lname||'')).trim() : 'GHL Contact';
+    var init = (name.split(' ').map(function(p){ return p[0]||''; }).slice(0,2).join('')).toUpperCase();
+    var col  = c ? (c.color || _ghlColor(name)) : _ghlColor(contactId||'');
+    var linked = !!c;
+
+    if (header) header.innerHTML =
+      '<div class="ghl-cp-avatar" style="background:' + col + '">' + init + '</div>'
+      + '<div class="ghl-cp-name">' + _escHtml(name) + '</div>'
+      + '<span class="ghl-cp-link-badge" style="background:' + (linked?'#dcfce7':'#f1f5f9') + ';color:' + (linked?'#15803d':'#94a3b8') + '">'
+        + (linked ? '✓ Portal Linked' : 'GHL Only')
+      + '</span>';
+
+    var dash   = c ? getDashData(c.id) : null;
+    var ob     = c ? getOnboardDataForClient(c.id) : {};
+    var stage  = dash ? (((dash.stageNames||[])[Math.max(0,(dash.currentStage||1)-1)])||'') : '';
+    var fico   = dash ? (dash.creditScore || '') : '';
+    var funded = dash ? ((dash.fundingRows||[]).filter(function(r){return r.status==='approved';}).reduce(function(s,r){return s+(+r.amount||0);},0)) : 0;
+
+    if (body) {
+      var rows = [];
+      var phone = (c && c.phone) || '';
+      var email = (c && c.email) || '';
+      var biz   = ob.bizName || (c && c.biz) || '';
+      var ein   = ob.ein || '';
+      if (phone) rows.push('<div class="ghl-cp-row"><span class="ghl-cp-label">Phone</span><span class="ghl-cp-val"><a href="tel:' + _escHtml(phone) + '" style="color:var(--navy);text-decoration:none">' + _escHtml(phone) + '</a></span></div>');
+      if (email) rows.push('<div class="ghl-cp-row"><span class="ghl-cp-label">Email</span><span class="ghl-cp-val" style="font-size:10px;word-break:break-all">' + _escHtml(email) + '</span></div>');
+      if (biz)   rows.push('<div class="ghl-cp-row"><span class="ghl-cp-label">Business</span><span class="ghl-cp-val">' + _escHtml(biz) + '</span></div>');
+      if (ein)   rows.push('<div class="ghl-cp-row"><span class="ghl-cp-label">EIN</span><span class="ghl-cp-val">' + _escHtml(ein) + '</span></div>');
+      var portalRows = [];
+      if (stage)  portalRows.push('<div class="ghl-cp-row"><span class="ghl-cp-label">Stage</span><span class="ghl-cp-val">' + _escHtml(stage) + '</span></div>');
+      if (fico)   portalRows.push('<div class="ghl-cp-row"><span class="ghl-cp-label">FICO</span><span class="ghl-cp-val" style="color:#059669;font-weight:700">' + fico + '</span></div>');
+      if (funded) portalRows.push('<div class="ghl-cp-row"><span class="ghl-cp-label">Funded</span><span class="ghl-cp-val" style="color:#059669;font-weight:700">$' + Number(funded).toLocaleString() + '</span></div>');
+      body.innerHTML = (rows.length ? '<div class="ghl-cp-section"><div class="ghl-cp-section-title">Contact</div>' + rows.join('') + '</div>' : '')
+        + (portalRows.length ? '<div class="ghl-cp-section"><div class="ghl-cp-section-title">Portal Status</div>' + portalRows.join('') + '</div>' : '');
+    }
+
+    if (actions) actions.innerHTML = [
+      c ? '<button class="ghl-cp-action-btn primary" onclick="selectClient(\'' + _escAttr(c.id) + '\')"><svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>View Profile</button>' : '',
+      '<button class="ghl-cp-action-btn" onclick="ghlOpenInApp()"><svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>Open in GHL</button>',
+    ].filter(Boolean).join('');
+  }
+
+  // ── SMART POLLING ────────────────────────────────────────────────────────────
+  function _ghlStartPoll(convId, contactId) {
+    if (_ghlIx.pollTimer) clearInterval(_ghlIx.pollTimer);
+    _ghlIx.pollTimer = setInterval(async function() {
+      if (!_ghlIx.activeConvId || _ghlIx.activeConvId !== convId) { clearInterval(_ghlIx.pollTimer); return; }
+      try {
+        var [msgs, notes] = await Promise.all([
+          convId    ? GHL.getConversationMessages(convId, { limit: 50 }) : Promise.resolve([]),
+          contactId ? GHL.getContactNotes(contactId) : Promise.resolve([])
+        ]);
+        // Only re-render if message count changed (avoids flicker)
+        var newCount = (msgs||[]).length + (notes||[]).length;
+        var oldCount = ((_ghlIx._msgCache[convId]||[]).length) + ((_ghlIx._noteCache[contactId]||[]).length);
+        if (newCount !== oldCount) {
+          _ghlIx._msgCache[convId]     = msgs;
+          _ghlIx._noteCache[contactId] = notes;
+          ghlRenderTimeline(msgs, notes);
+          // Also refresh unread counts in inbox
+          ghlInboxInit().catch(function(){});
+        }
+      } catch(e) {}
+    }, 20000); // every 20s
+  }
+
+  // ── RELATIVE TIME ────────────────────────────────────────────────────────────
+  function _ghlFmtRelTime(d) {
+    if (!(d instanceof Date) || isNaN(d)) return '';
+    var diff = Date.now() - d.getTime();
+    if (diff < 60000)     return 'Now';
+    if (diff < 3600000)   return Math.floor(diff/60000) + 'm';
+    if (diff < 86400000)  return Math.floor(diff/3600000) + 'h';
+    if (diff < 604800000) return d.toLocaleDateString('en-US', { weekday:'short' });
+    return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── GHL CHANNEL IDENTITY & CONNECTION SYSTEM ──────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  var _ghlChannels = {
+    smsNumbers:    [],  // [{ label, value, userId }]
+    emails:        [],  // [{ label, value, userId }]
+    users:         [],  // [{ id, name, phone, email }]
+    selectedSms:   '',
+    selectedEmail: '',
+    loaded:        false,
+  };
+  var _ghlConnected   = false;
+  var _ghlLastSyncTs  = null;
+  var _ghlSyncTimer   = null;
+  var _ghlSyncTickTimer = null;
+
+  // ── CONNECTION STATUS BAR ────────────────────────────────────────────────────
+  function ghlRenderConnectionBar(state) {
+    var bar = document.getElementById('ghl-conn-bar');
+    if (!bar) return;
+    var s   = (window.GHL && GHL.getSettings()) || {};
+    var loc = _ghlIx.locationInfo;
+
+    if (!s.apiKey || !s.enabled) {
+      bar.className = 'ghl-conn-bar disconnected';
+      bar.innerHTML = '<div class="ghl-conn-dot err"></div>'
+        + '<span style="font-weight:700;color:#991b1b">GHL Not Connected</span>'
+        + '<div class="ghl-conn-sep"></div>'
+        + '<span style="font-size:11px;color:var(--gray-400)">Add API key + Location ID in Settings → GHL</span>'
+        + '<button class="ghl-conn-btn" onclick="switchAdminSection(\'settings\')">Configure →</button>';
+      _ghlSetComposeEnabled(false, 'GHL not configured. Add API key in Settings → GHL.');
+      return;
+    }
+
+    if (state === 'loading') {
+      bar.className = 'ghl-conn-bar';
+      bar.innerHTML = '<div class="ghl-conn-dot warn"></div>'
+        + '<span style="font-weight:600;color:var(--gray-500)">Connecting to GHL…</span>';
+      return;
+    }
+
+    if (state === 'error') {
+      bar.className = 'ghl-conn-bar disconnected';
+      bar.innerHTML = '<div class="ghl-conn-dot err"></div>'
+        + '<span style="font-weight:700;color:#991b1b">GHL Connection Error</span>'
+        + '<div class="ghl-conn-sep"></div>'
+        + '<span style="font-size:11px;color:var(--gray-400)">Check API key validity in Settings</span>'
+        + '<button class="ghl-conn-btn" onclick="switchAdminSection(\'settings\')">Fix in Settings</button>';
+      _ghlSetComposeEnabled(false, 'GHL connection failed. Check API key in Settings → GHL.');
+      return;
+    }
+
+    // Connected
+    _ghlConnected = true;
+    var locName  = (loc && (loc.name || loc.businessName || loc.companyName)) || s.locationId || 'GHL Location';
+    var smsNum   = _ghlChannels.selectedSms || s.fromNumber || (loc && (loc.phone || loc.phoneNumber)) || '';
+    var fromEmail = _ghlChannels.selectedEmail || (loc && (loc.email || (loc.settings && loc.settings.email))) || '';
+    bar.className = 'ghl-conn-bar';
+    var html = '<div class="ghl-conn-dot ok"></div>'
+      + '<span style="font-weight:700;color:#15803d">Connected</span>'
+      + '<div class="ghl-conn-sep"></div>'
+      + '<div class="ghl-conn-field">📍 <strong>' + _escHtml(locName) + '</strong></div>';
+    if (smsNum)    html += '<div class="ghl-conn-sep"></div><div class="ghl-conn-field">📱 SMS: <strong>' + _escHtml(GHL.fmtPhone(smsNum)) + '</strong></div>';
+    if (fromEmail) html += '<div class="ghl-conn-sep"></div><div class="ghl-conn-field">📧 Email: <strong>' + _escHtml(fromEmail) + '</strong></div>';
+    html += '<div class="ghl-sync-badge-wrap"><span id="ghl-last-sync" class="ghl-last-sync">' + (_ghlLastSyncTs ? 'Synced just now' : '') + '</span>'
+      + '<button class="ghl-conn-btn" onclick="ghlInboxRefresh()">↻ Refresh</button></div>';
+    bar.innerHTML = html;
+    _ghlSetComposeEnabled(true);
+  }
+
+  function _ghlSetComposeEnabled(enabled, warningMsg) {
+    var noChEl  = document.getElementById('ghl-no-channel');
+    var sendBtn = document.getElementById('ghl-compose-send');
+    var inp     = document.getElementById('ghl-compose-input');
+    if (noChEl)  { noChEl.style.display = enabled ? 'none' : 'flex'; noChEl.lastChild && (noChEl.lastChild.textContent = warningMsg || noChEl.lastChild.textContent); }
+    if (sendBtn) { sendBtn.disabled = !enabled; sendBtn.style.opacity = enabled ? '1' : '0.4'; }
+    if (inp)     inp.disabled = !enabled;
+  }
+
+  // ── CHANNEL LOADER ────────────────────────────────────────────────────────────
+  // Phase 1: immediate — populate from saved settings (no API required)
+  // Phase 2: async — augment with API data (location info, user phones/emails)
+  async function _ghlLoadChannels() {
+    if (!window.GHL || !GHL.getSettings().apiKey) return;
+    var s = GHL.getSettings();
+    console.log('[GHL Channel] Loading channels. Settings:', {
+      apiKey:             s.apiKey ? s.apiKey.substring(0,12) + '…' : '(none)',
+      locationId:         s.locationId,
+      defaultSmsNumber:   s.defaultSmsNumber,
+      defaultEmailAddress:s.defaultEmailAddress,
+      fromNumber:         s.fromNumber,
+    });
+
+    // ── Phase 1: populate from settings immediately ──────────────────────────
+    var seen = new Set();
+    var smsOpts = [];
+    function _addSms(label, value, userId) {
+      var v = (value || '').replace(/\D/g,'');
+      if (!v || seen.has(v)) return;
+      seen.add(v);
+      smsOpts.push({ label: label, value: value, userId: userId || '' });
+    }
+    if (s.defaultSmsNumber) _addSms('Default · ' + GHL.fmtPhone(s.defaultSmsNumber), s.defaultSmsNumber);
+    else if (s.fromNumber)  _addSms('Main · '    + GHL.fmtPhone(s.fromNumber),        s.fromNumber);
+
+    var emailSeen = new Set();
+    var emailOpts = [];
+    function _addEmail(label, value, userId) {
+      var v = (value || '').toLowerCase().trim();
+      if (!v || emailSeen.has(v)) return;
+      emailSeen.add(v);
+      emailOpts.push({ label: label, value: value, userId: userId || '' });
+    }
+    if (s.defaultEmailAddress) _addEmail('Default · ' + s.defaultEmailAddress, s.defaultEmailAddress);
+
+    // Only if we don't already have values, show placeholder
+    if (!smsOpts.length)   smsOpts.push({ label: 'No SMS number — add in Settings → GHL', value: '' });
+    if (!emailOpts.length) emailOpts.push({ label: 'No email — add in Settings → GHL', value: '' });
+
+    _ghlChannels.smsNumbers    = smsOpts;
+    _ghlChannels.emails        = emailOpts;
+    _ghlChannels.selectedSms   = smsOpts[0].value;
+    _ghlChannels.selectedEmail = emailOpts[0].value;
+    _ghlChannels.loaded        = true;  // settings-loaded is enough to enable UI
+
+    console.log('[GHL Channel] Phase 1 complete. SMS:', smsOpts, '| Email:', emailOpts);
+    _ghlUpdateFromBar(_ghlIx.composeType || 'SMS');
+
+    // ── Phase 2: augment with API data ───────────────────────────────────────
+    try {
+      var [loc, users] = await Promise.allSettled([
+        GHL.getLocationInfo().catch(function(e){ console.warn('[GHL Channel] getLocationInfo failed:', e.message); return null; }),
+        GHL.getLocationUsers().catch(function(e){ console.warn('[GHL Channel] getLocationUsers failed:', e.message); return null; }),
+      ]);
+      loc   = loc.value   || null;
+      users = users.value || [];
+
+      if (loc) _ghlIx.locationInfo = loc;
+      _ghlChannels.users = (users || []).map(function(u) {
+        return {
+          id:    u.id,
+          name:  ((u.firstName || '') + ' ' + (u.lastName || '')).trim() || u.name || u.email || 'User',
+          phone: u.phone || '',
+          email: u.email || '',
+        };
+      });
+
+      // Augment SMS from location + users
+      if (loc && loc.phone)       _addSms('Location · '   + GHL.fmtPhone(loc.phone),       loc.phone);
+      if (loc && loc.phoneNumber) _addSms('Location · '   + GHL.fmtPhone(loc.phoneNumber), loc.phoneNumber);
+      _ghlChannels.users.forEach(function(u) {
+        if (u.phone) _addSms(u.name + ' · ' + GHL.fmtPhone(u.phone), u.phone, u.id);
+      });
+
+      // Augment email from location + users
+      if (loc && loc.email)                            _addEmail((loc.name || 'Location') + ' · ' + loc.email, loc.email);
+      if (loc && loc.settings && loc.settings.email)   _addEmail('Location · ' + loc.settings.email, loc.settings.email);
+      _ghlChannels.users.forEach(function(u) {
+        if (u.email) _addEmail(u.name + ' · ' + u.email, u.email, u.id);
+      });
+
+      // Replace placeholder entries with real data if we found any
+      var hasSmsData   = smsOpts.some(function(o) { return !!o.value; });
+      var hasEmailData = emailOpts.some(function(o) { return !!o.value; });
+      if (!hasSmsData)   smsOpts[0]   = { label: 'No SMS number — add in Settings → GHL', value: '' };
+      if (!hasEmailData) emailOpts[0] = { label: 'No email — add in Settings → GHL', value: '' };
+
+      _ghlChannels.smsNumbers    = smsOpts;
+      _ghlChannels.emails        = emailOpts;
+      if (!_ghlChannels.selectedSms   && smsOpts[0].value)   _ghlChannels.selectedSms   = smsOpts[0].value;
+      if (!_ghlChannels.selectedEmail && emailOpts[0].value) _ghlChannels.selectedEmail = emailOpts[0].value;
+
+      console.log('[GHL Channel] Phase 2 complete. SMS:', smsOpts, '| Email:', emailOpts,
+        '| Location:', loc ? (loc.name || loc.id || 'ok') : 'null',
+        '| Users:', _ghlChannels.users.length);
+
+      _ghlUpdateFromBar(_ghlIx.composeType || 'SMS');
+      ghlRenderConnectionBar('connected');
+    } catch(e) {
+      console.warn('[GHL Channel] Phase 2 API augment failed:', e.message);
+      // Phase 1 data is still valid — connection bar may already be set by test connection
+    }
+  }
+
+  // Update the From bar in the compose area based on compose type
+  function _ghlUpdateFromBar(type) {
+    var fromBar = document.getElementById('ghl-from-bar');
+    var label   = document.getElementById('ghl-from-label');
+    var sel     = document.getElementById('ghl-from-sel');
+    var userEl  = document.getElementById('ghl-from-user');
+    var noChEl  = document.getElementById('ghl-no-channel');
+    if (!sel) return;
+
+    // Notes and Call logs have no "From" channel
+    if (type === 'Note' || type === 'Call') {
+      if (fromBar) fromBar.style.display = 'none';
+      if (noChEl)  noChEl.style.display  = 'none';
+      return;
+    }
+    if (fromBar) fromBar.style.display = 'flex';
+
+    var isSms = type === 'SMS';
+    if (label) label.textContent = isSms ? 'SMS from:' : 'Email from:';
+
+    // If channels not loaded yet, synthesize options from settings as immediate fallback
+    var opts;
+    var selected;
+    if (_ghlChannels.loaded && (isSms ? _ghlChannels.smsNumbers : _ghlChannels.emails).length) {
+      opts     = isSms ? _ghlChannels.smsNumbers : _ghlChannels.emails;
+      selected = isSms ? _ghlChannels.selectedSms : _ghlChannels.selectedEmail;
+    } else {
+      var s = window.GHL ? GHL.getSettings() : {};
+      if (isSms) {
+        var num = s.defaultSmsNumber || s.fromNumber || '';
+        opts     = num ? [{ label: 'Default · ' + GHL.fmtPhone(num), value: num }] : [];
+        selected = num;
+      } else {
+        var em = s.defaultEmailAddress || '';
+        opts     = em ? [{ label: 'Default · ' + em, value: em }] : [];
+        selected = em;
+      }
+    }
+
+    if (!opts || !opts.length) {
+      sel.innerHTML = '<option value="">' + (isSms ? 'No SMS number — add in Settings → GHL' : 'No email — add in Settings → GHL') + '</option>';
+      if (noChEl) { noChEl.style.display = 'flex'; noChEl.querySelector && (noChEl.lastElementChild) && (noChEl.lastElementChild.textContent = isSms ? 'No outbound SMS number configured. Add one in Settings → GHL.' : 'No outbound email configured. Add one in Settings → GHL.'); }
+      return;
+    }
+
+    sel.innerHTML = opts.map(function(o) {
+      return '<option value="' + _escHtml(o.value||'') + '"' + (o.value === selected ? ' selected' : '') + '>' + _escHtml(o.label) + '</option>';
+    }).join('');
+    var hasActive = opts.some(function(o) { return !!o.value; });
+    if (noChEl) noChEl.style.display = hasActive ? 'none' : 'flex';
+
+    // Show assigned user if available
+    if (userEl && _ghlChannels.loaded) {
+      var selOpt = opts.find(function(o) { return o.value === selected; });
+      var uId    = selOpt && selOpt.userId;
+      var u      = uId && _ghlChannels.users.find(function(x) { return x.id === uId; });
+      userEl.textContent = u ? 'Assigned: ' + u.name : '';
+    }
+
+    console.log('[GHL FromBar]', type, '| selected:', selected, '| opts count:', opts.length, '| hasActive:', hasActive);
+  }
+
+  // Handle channel dropdown change
+  function ghlChannelChange(sel) {
+    var type = _ghlIx.composeType;
+    if (type === 'SMS')   _ghlChannels.selectedSms   = sel.value;
+    if (type === 'Email') _ghlChannels.selectedEmail = sel.value;
+    // Update connection bar to reflect new channel
+    ghlRenderConnectionBar('connected');
+  }
+
+  // ── GLOBAL BACKGROUND SYNC ENGINE ────────────────────────────────────────────
+  function _ghlStartSyncEngine() {
+    if (_ghlSyncTimer) clearInterval(_ghlSyncTimer);
+    if (!window.GHL || !GHL.getSettings().apiKey) return;
+    var sec = Math.max(15, (GHL.getSettings().autoSyncSec || 20)) * 1000;
+    _ghlSyncTimer = setInterval(async function() {
+      if (!_ghlConnected) return;
+      try {
+        // Only refresh inbox list (not the open thread — that has its own poll)
+        var convs = await GHL.getConversationsInbox({ limit: 50 });
+        if (!convs) return;
+        var contactMap = {};
+        clients.forEach(function(c) { if (c.ghlContactId) contactMap[c.ghlContactId] = c; });
+        var prev = _ghlIx.convs;
+        _ghlIx.convs = convs.map(function(cv) {
+          return Object.assign({}, cv, { _portalClient: contactMap[cv.contactId] || null });
+        });
+        // Re-render inbox list only if visible
+        var sec = document.getElementById('asec-messages');
+        if (sec && sec.classList.contains('active') && sec.style.display !== 'none') {
+          ghlRenderInbox();
+        }
+        _ghlLastSyncTs = Date.now();
+        _ghlUpdateSyncTime();
+      } catch(e) {}
+    }, sec);
+    // Tick every 10s to update "Synced Xs ago" label
+    if (_ghlSyncTickTimer) clearInterval(_ghlSyncTickTimer);
+    _ghlSyncTickTimer = setInterval(_ghlUpdateSyncTime, 10000);
+  }
+
+  function _ghlUpdateSyncTime() {
+    var el = document.getElementById('ghl-last-sync');
+    if (!el || !_ghlLastSyncTs) return;
+    var diff = Date.now() - _ghlLastSyncTs;
+    el.textContent = diff < 5000 ? 'Synced just now'
+      : diff < 60000  ? 'Synced ' + Math.floor(diff/1000) + 's ago'
+      : diff < 3600000 ? 'Synced ' + Math.floor(diff/60000) + 'm ago'
+      : 'Last sync: ' + new Date(_ghlLastSyncTs).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+  }
+
+  // ── ENHANCED TEST CONNECTION ─────────────────────────────────────────────────
+  async function _ghlTestConnection() {
+    if (typeof GHL === 'undefined') return;
+    var sub = document.getElementById('ghl-settings-status');
+    var btn = document.querySelector('[onclick="_ghlTestConnection()"]');
+    if (sub) sub.textContent = 'Testing connection…';
+    if (btn) { btn.disabled = true; btn.textContent = 'Testing…'; }
+
+    var s = GHL.getSettings();
+    console.log('[GHL Test] Starting connection test. apiKey:', s.apiKey ? s.apiKey.substring(0,12)+'…' : '(none)', '| locationId:', s.locationId);
+
+    if (!s.apiKey) {
+      if (sub) sub.textContent = '✗ No API key set — enter your GHL Private Integration Token above';
+      if (btn) { btn.disabled = false; btn.textContent = 'Test'; }
+      ghlRenderConnectionBar('error');
+      return;
+    }
+    if (!s.locationId) {
+      if (sub) sub.textContent = '✗ No Location ID set — enter your GHL Location ID above';
+      if (btn) { btn.disabled = false; btn.textContent = 'Test'; }
+      ghlRenderConnectionBar('error');
+      return;
+    }
+
+    // Test each API endpoint independently — track pass/fail per service
+    var results = {};
+
+    // Test 1: Conversations (most critical — this is what the inbox uses)
+    try {
+      if (sub) sub.textContent = 'Testing conversations API…';
+      var convs = await GHL.getConversationsInbox({ limit: 1 });
+      results.conversations = convs !== null ? '✓ Conversations' : '✗ Conversations (null)';
+      console.log('[GHL Test] Conversations API:', results.conversations, '| result:', convs);
+    } catch(e) {
+      results.conversations = '✗ Conversations: ' + e.message;
+      console.error('[GHL Test] Conversations API error:', e);
+    }
+
+    // Test 2: Location info (optional — may fail if token has no location read scope)
+    try {
+      if (sub) sub.textContent = 'Testing location API…';
+      var loc = await GHL.getLocationInfo();
+      if (loc) {
+        _ghlIx.locationInfo = loc;
+        results.location = '✓ Location: ' + (loc.name || loc.businessName || s.locationId);
+      } else {
+        results.location = '⚠ Location: no data returned (check Location ID)';
+      }
+      console.log('[GHL Test] Location API:', results.location, '| loc:', loc);
+    } catch(e) {
+      results.location = '⚠ Location: ' + e.message + ' (non-critical)';
+      console.warn('[GHL Test] Location API (non-critical):', e.message);
+    }
+
+    // Test 3: Contacts API
+    try {
+      if (sub) sub.textContent = 'Testing contacts API…';
+      var contacts = await GHL.searchContacts('test');
+      results.contacts = '✓ Contacts';
+      console.log('[GHL Test] Contacts API: ok, returned', (contacts||[]).length, 'results');
+    } catch(e) {
+      results.contacts = '✗ Contacts: ' + e.message;
+      console.error('[GHL Test] Contacts API error:', e);
+    }
+
+    // Test 4: Users API (optional)
+    try {
+      var users = await GHL.getLocationUsers();
+      results.users = '✓ Users: ' + (users||[]).length + ' loaded';
+      console.log('[GHL Test] Users API: ok,', (users||[]).length, 'users');
+    } catch(e) {
+      results.users = '⚠ Users: ' + e.message;
+      console.warn('[GHL Test] Users API (non-critical):', e.message);
+    }
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Test'; }
+
+    // ── Scope analysis: determine exactly what works ─────────────────────────
+    var scopeOk = {
+      contacts:      results.contacts      && results.contacts.startsWith('✓'),
+      conversations: results.conversations && results.conversations.startsWith('✓'),
+      location:      results.location      && results.location.startsWith('✓'),
+      users:         results.users         && results.users.startsWith('✓'),
+    };
+
+    console.log('[GHL Test] Final results:', results, '| scopes:', scopeOk);
+
+    // Detect "missing scope" 401 vs "bad key" 401
+    var scopeMissing = Object.values(results).some(function(r) {
+      return r && r.includes('not authorized for this scope');
+    });
+    var keyInvalid = Object.values(results).some(function(r) {
+      return r && (r.includes('Unauthorized') && !r.includes('scope'));
+    });
+
+    // Build scope status message for the settings panel
+    var scopeLines = [
+      (scopeOk.contacts      ? '✓' : '✗') + ' Contacts Read      — ' + (scopeOk.contacts ? 'OK' : 'MISSING'),
+      (scopeOk.conversations ? '✓' : '✗') + ' Conversations Read — ' + (scopeOk.conversations ? 'OK' : 'MISSING (needed for inbox)'),
+      (scopeOk.conversations ? '✓' : '✗') + ' Conversations Write— ' + (scopeOk.conversations ? 'OK' : 'MISSING (needed for SMS/Email send)'),
+      (scopeOk.location      ? '✓' : '✗') + ' Locations Read     — ' + (scopeOk.location ? 'OK' : 'MISSING (needed for channel info)'),
+      (scopeOk.users         ? '✓' : '✗') + ' Users Read         — ' + (scopeOk.users ? 'OK' : 'MISSING (needed for user list)'),
+    ].join('\n');
+    console.log('[GHL Scopes]\n' + scopeLines);
+
+    // "Connected" = at minimum, conversations work (needed to send)
+    var coreOk = scopeOk.conversations;
+
+    if (coreOk) {
+      var locName = (_ghlIx.locationInfo && (_ghlIx.locationInfo.name || _ghlIx.locationInfo.businessName)) || s.locationId;
+      if (sub) sub.textContent = '✓ Connected · ' + locName + (scopeOk.contacts ? ' · contacts' : '') + ' · conversations';
+      _ghlConnected = true;
+      await _ghlLoadChannels();
+      ghlRenderConnectionBar('connected');
+      _ghlLastSyncTs = Date.now();
+      _ghlStartSyncEngine();
+      setTimeout(function() { ghlInboxInit().catch(function(){}); }, 200);
+      addNotif('admin', null, '✓ GHL connected: ' + locName);
+    } else if (keyInvalid) {
+      if (sub) sub.textContent = '✗ Invalid API key — verify your Private Integration Token in GHL';
+      _ghlConnected = false;
+      ghlRenderConnectionBar('error');
+    } else if (scopeMissing) {
+      // Partial connection: key works but missing scopes
+      _ghlConnected = scopeOk.contacts; // at least contacts work
+      var missingScopes = [];
+      if (!scopeOk.conversations) missingScopes.push('conversations/readonly + conversations/write');
+      if (!scopeOk.location)      missingScopes.push('locations/readonly');
+      if (!scopeOk.users)         missingScopes.push('users/readonly');
+
+      if (sub) sub.innerHTML = '⚠ API key missing scopes: <strong>' + missingScopes.join(', ') + '</strong>'
+        + '<br>Fix: GHL → Settings → Integrations → Private Integrations → Edit your integration → add scopes → regenerate token';
+
+      ghlRenderConnectionBar('error');
+      _ghlLoadChannels().catch(function(){});  // load what we can from settings
+      addNotif('admin', null, '⚠ GHL: missing API scopes — ' + missingScopes.join(', '));
+    } else {
+      if (sub) sub.textContent = '✗ All API endpoints failed — check API key and Location ID';
+      _ghlConnected = false;
+      ghlRenderConnectionBar('error');
+    }
   }
 
   const _MCP_COLORS = ['#22A7F0','#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#14b8a6'];
@@ -9818,6 +11484,9 @@
   const TEMP_PASSWORD = 'cqconsulting123!';
   const GHL_API_KEY     = 'pit-035014d8-96ec-42ff-b890-f7e326fb3811';
   const GHL_LOCATION_ID = 'OZdxGQElUHjEk0lGL0VP';
+  // Expose on window so ghl.js getSettings() can use them as fallbacks
+  window.GHL_API_KEY     = GHL_API_KEY;
+  window.GHL_LOCATION_ID = GHL_LOCATION_ID;
 
   async function sendGHLWelcomeSMS(fname, phone, email, smsText) {
     if (!phone) { console.warn('GHL SMS: no phone number, skipping'); return; }
@@ -10244,7 +11913,10 @@
     } catch(e) {}
     if (localOnly) return;
     // Firestore write: keep Storage URLs (https://...), strip base64, delete field if empty
-    const fsData = Object.assign({}, data);
+    const fsData = Object.assign({}, data, {
+      _updatedAt: Date.now(),
+      _updatedBy: (currentAdmin && currentAdmin.email) || 'admin'
+    });
     if (fsData.adminDocs && fsData.adminDocs.length) {
       fsData.adminDocs = fsData.adminDocs.map(d => ({
         ...d, url: (d.url && !d.url.startsWith('data:')) ? d.url : null
@@ -10294,7 +11966,10 @@
       <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-100);border-radius:10px;margin-bottom:8px" id="dash-task-row-${clientId}-${t.id}">
         <div style="flex:1;min-width:0">
           <input style="width:100%;height:30px;padding:0 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:13px;color:var(--navy);outline:none;margin-bottom:5px" value="${t.text}" id="task-text-${clientId}-${t.id}" placeholder="Task name" />
-          <input style="width:100%;height:28px;padding:0 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:12px;color:var(--gray-500);outline:none" value="${t.desc||''}" id="task-desc-${clientId}-${t.id}" placeholder="Description (optional)" />
+          <div style="display:flex;gap:6px;margin-top:2px">
+            <input style="flex:1;height:28px;padding:0 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:12px;color:var(--gray-500);outline:none" value="${t.desc||''}" id="task-desc-${clientId}-${t.id}" placeholder="Description (optional)" />
+            <input type="date" value="${t.dueDate||''}" id="task-due-${clientId}-${t.id}" onchange="debouncedPublish('${clientId}')" title="Due date" style="height:28px;padding:0 7px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:12px;color:var(--gray-500);outline:none;flex-shrink:0;width:130px" />
+          </div>
         </div>
         <select id="task-status-${clientId}-${t.id}" onchange="debouncedPublish('${clientId}')" style="height:30px;padding:0 8px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:12px;font-weight:600;color:var(--navy);outline:none;background:white;flex-shrink:0">
           <option value="todo" ${t.status==='todo'?'selected':''}>To-Do</option>
@@ -10702,9 +12377,10 @@
     // Collect tasks
     d.tasks = d.tasks.map(t => ({
       ...t,
-      text:   g('task-text-'+clientId+'-'+t.id)?.value.trim() || t.text,
-      desc:   g('task-desc-'+clientId+'-'+t.id)?.value.trim() || '',
-      status: g('task-status-'+clientId+'-'+t.id)?.value || t.status
+      text:    g('task-text-'+clientId+'-'+t.id)?.value.trim() || t.text,
+      desc:    g('task-desc-'+clientId+'-'+t.id)?.value.trim() || '',
+      status:  g('task-status-'+clientId+'-'+t.id)?.value || t.status,
+      dueDate: g('task-due-'+clientId+'-'+t.id)?.value || t.dueDate || ''
     }));
     // Auto-generate subtitle from pending task count
     recalcSubtitle(d);
@@ -12600,7 +14276,13 @@
   function saveClientTasks(id, data) {
     localStorage.setItem('cq_tasks_' + id, JSON.stringify(data));
     // Sync to Firebase so clients can read their tasks on the dashboard
-    if (typeof fsSetDash === 'function') fsSetDash(id, { pipelineTasks: data }).catch(function(){});
+    if (typeof fsSetDash === 'function') {
+      fsSetDash(id, {
+        pipelineTasks: data,
+        _updatedAt: Date.now(),
+        _updatedBy: (currentAdmin && currentAdmin.email) || 'admin'
+      }).catch(function(){});
+    }
   }
   function initClientTasks(id) {
     var t = getClientTasks(id);
@@ -14543,11 +16225,20 @@
     try { return JSON.parse(localStorage.getItem('cq_notes_' + clientId) || '[]'); } catch(e) { return []; }
   }
 
+  function _syncNotesToFirestore(clientId) {
+    if (typeof fsSetDash !== 'function') return;
+    var visible = _getAllClientNotes(clientId).filter(function(n) {
+      return !n.deleted && n.visibility === 'client_visible';
+    });
+    fsSetDash(clientId, { notes: visible }).catch(function(){});
+  }
+
   function saveClientNote(clientId, noteObj) {
     var notes = _getAllClientNotes(clientId);
     notes.unshift(noteObj);
     if (notes.length > 1000) notes = notes.slice(0, 1000);
     try { localStorage.setItem('cq_notes_' + clientId, JSON.stringify(notes)); } catch(e) {}
+    _syncNotesToFirestore(clientId);
     return noteObj;
   }
 
@@ -14591,6 +16282,7 @@
     notes[idx] = Object.assign({}, notes[idx], updates);
     try { localStorage.setItem('cq_notes_' + clientId, JSON.stringify(notes)); } catch(e) {}
     refreshClientTimeline(clientId);
+    _syncNotesToFirestore(clientId);
   }
 
   function deleteClientNote(clientId, noteId) {
@@ -14798,18 +16490,23 @@
     var s = GHL.getSettings();
     var setVal = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
     var setChk = function(id, val) { var el = document.getElementById(id); if (el) el.checked = val !== false; };
-    setVal('ghl-set-apikey',   s.apiKey);
-    setVal('ghl-set-locid',    s.locationId);
-    setVal('ghl-set-pipeline', s.pipelineName);
-    setVal('ghl-set-phone',    s.fromNumber);
-    setVal('ghl-set-user',     s.defaultUser);
-    setVal('ghl-set-interval', s.autoSyncSec);
+    setVal('ghl-set-apikey',      s.apiKey);
+    setVal('ghl-set-locid',       s.locationId);
+    setVal('ghl-set-pipeline',    s.pipelineName);
+    setVal('ghl-set-sms-number',  s.defaultSmsNumber);
+    setVal('ghl-set-email-addr',  s.defaultEmailAddress);
+    setVal('ghl-set-phone',       s.fromNumber);
+    setVal('ghl-set-user',        s.defaultUser);
+    setVal('ghl-set-interval',    s.autoSyncSec);
     setChk('ghl-tog-stages',       s.syncStages);
     setChk('ghl-tog-notes',        s.syncNotes);
     setChk('ghl-tog-tasks',        s.syncTasks);
     setChk('ghl-tog-msgs',         s.syncMessages);
     setChk('ghl-tog-overdue-sms',  s.overdueTaskSMS);
     setChk('ghl-tog-overdue-email',s.overdueTaskEmail);
+    setChk('ghl-tog-proxy',        s.useProxy !== false);
+    setChk('ghl-tog-testmode',     s.testMode === true);
+    _ghlCheckProxy();
     var pill = document.getElementById('ghl-enabled-pill');
     var sub  = document.getElementById('ghl-settings-status');
     if (pill) {
@@ -14834,11 +16531,13 @@
     var g = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
     var c = function(id) { var el = document.getElementById(id); return el ? el.checked : false; };
     var s = GHL.getSettings();
-    if (g('ghl-set-apikey'))   s.apiKey          = g('ghl-set-apikey');
-    if (g('ghl-set-locid'))    s.locationId      = g('ghl-set-locid');
-    if (g('ghl-set-pipeline')) s.pipelineName    = g('ghl-set-pipeline');
-    s.fromNumber    = g('ghl-set-phone');
-    s.defaultUser   = g('ghl-set-user');
+    if (g('ghl-set-apikey'))   s.apiKey             = g('ghl-set-apikey');
+    if (g('ghl-set-locid'))    s.locationId         = g('ghl-set-locid');
+    if (g('ghl-set-pipeline')) s.pipelineName       = g('ghl-set-pipeline');
+    s.defaultSmsNumber    = g('ghl-set-sms-number');
+    s.defaultEmailAddress = g('ghl-set-email-addr');
+    s.fromNumber          = g('ghl-set-phone') || g('ghl-set-sms-number');
+    s.defaultUser         = g('ghl-set-user');
     s.autoSyncSec   = parseInt(g('ghl-set-interval') || '30', 10) || 30;
     s.syncStages        = c('ghl-tog-stages');
     s.syncNotes         = c('ghl-tog-notes');
@@ -14846,21 +16545,62 @@
     s.syncMessages      = c('ghl-tog-msgs');
     s.overdueTaskSMS    = c('ghl-tog-overdue-sms');
     s.overdueTaskEmail  = c('ghl-tog-overdue-email');
+    s.useProxy          = c('ghl-tog-proxy');
+    s.testMode          = c('ghl-tog-testmode');
+    if (s.testMode) { addNotif('admin', null, '⚠ Test Mode ON — messages will NOT be sent to GHL'); }
     GHL.saveSettings(s);
     _ghlLoadSettingsUI();
     addNotif('admin', null, 'GHL settings saved');
+    // Auto-test connection after save if API key is set
+    if (s.apiKey && s.enabled) {
+      setTimeout(function() { _ghlTestConnection(); }, 400);
+    }
   }
 
-  async function _ghlTestConnection() {
-    if (typeof GHL === 'undefined') return;
-    var sub = document.getElementById('ghl-settings-status');
-    if (sub) sub.textContent = 'Testing…';
-    try {
-      var pl = await GHL.getPipeline();
-      if (sub) sub.textContent = pl ? '✓ Connected · Pipeline: ' + pl.name + ' (' + (pl.stages||[]).length + ' stages)' : '✗ No pipeline found — check settings';
-    } catch(e) {
-      if (sub) sub.textContent = '✗ Connection failed: ' + e.message;
+  // ── PROXY STATUS CHECK ──────────────────────────────────────────────────────
+  async function _ghlCheckProxy() {
+    var dot   = document.getElementById('ghl-proxy-dot');
+    var label = document.getElementById('ghl-proxy-label');
+    var bar   = document.getElementById('ghl-proxy-status-bar');
+    if (!dot || !label) return;
+
+    dot.style.background   = '#f59e0b'; // amber = checking
+    label.textContent      = 'Checking proxy server (localhost:3001)…';
+
+    if (typeof GHL === 'undefined') {
+      dot.style.background = '#ef4444';
+      label.textContent    = 'GHL module not loaded';
+      return;
     }
+
+    GHL.resetProxyCheck();
+    var ready = GHL.isProxyReady ? GHL.isProxyReady() : false;
+
+    // Do a live check via fetch
+    try {
+      var timer;
+      var done = fetch('http://localhost:3001/health').then(function(r) { return r.ok; });
+      ready = await Promise.race([
+        done,
+        new Promise(function(_, rej) { timer = setTimeout(function() { rej(new Error('timeout')); }, 2000); }),
+      ]);
+      clearTimeout(timer);
+    } catch(e) { ready = false; }
+
+    if (ready) {
+      dot.style.background  = '#10b981'; // green
+      if (bar) bar.style.background = '#f0fdf4';
+      if (bar) bar.style.borderColor = '#bbf7d0';
+      label.innerHTML = '<strong>Proxy server running</strong> · localhost:3001 · SMS/Email will send through proxy';
+    } else {
+      dot.style.background  = '#ef4444'; // red
+      if (bar) bar.style.background = '#fef2f2';
+      if (bar) bar.style.borderColor = '#fecaca';
+      label.innerHTML = '<strong>Proxy not running</strong> — '
+        + '<code style="font-size:10px;background:#fee2e2;padding:1px 4px;border-radius:3px">node ghl-server.mjs</code>'
+        + ' · Direct API calls only (may have CORS issues)';
+    }
+    console.log('[Admin] Proxy check result:', ready);
   }
 
   function _ghlRefreshLog() {
@@ -15155,13 +16895,28 @@
   };
 
   // ── GHL Init on Admin Login ─────────────────────────────────────────────
-  // Called after admin login is confirmed (hooked via existing adminLoginSuccess)
   function _ghlInit() {
     if (typeof GHL === 'undefined') return;
     GHL.startRetryProcessor();
-    // Initialize badge visibility
     var badge = document.getElementById('ghl-sync-badge');
     if (badge && GHL.getSettings().enabled) badge.style.display = 'inline-flex';
+    _ghlLoadSettingsUI();
+    var s = GHL.getSettings();
+    console.log('[GHL Init] apiKey:', s.apiKey ? s.apiKey.substring(0,12)+'…' : '(none)',
+      '| locationId:', s.locationId,
+      '| defaultSmsNumber:', s.defaultSmsNumber,
+      '| defaultEmailAddress:', s.defaultEmailAddress,
+      '| enabled:', s.enabled);
+    if (s.apiKey && s.enabled) {
+      // Phase 1 channels from settings immediately (no API needed)
+      _ghlLoadChannels().catch(function(e){ console.warn('[GHL Init] loadChannels error:', e); });
+      // Kick off test in background to verify connection + load real channel data
+      setTimeout(function() { _ghlTestConnection(); }, 800);
+    } else if (s.apiKey && !s.enabled) {
+      ghlRenderConnectionBar('disconnected');
+    }
+    // Proxy status check (async, updates UI)
+    setTimeout(function() { _ghlCheckProxy(); }, 300);
   }
 
 </script>
