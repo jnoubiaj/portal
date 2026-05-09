@@ -2608,6 +2608,85 @@
       .tw-progress-card { padding: 16px; }
       .tw-progress-title { font-size: 14px; }
     }
+
+    /* ═══════════════════════════════════════════════════
+       FUNDING WORKSPACE
+    ═══════════════════════════════════════════════════ */
+
+    /* Hero status bar */
+    .ws-hero-bar {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      border-radius: 16px; padding: 22px 26px;
+      display: flex; align-items: center; gap: 24px;
+      margin-bottom: 20px; position: relative; overflow: hidden;
+    }
+    .ws-hero-bar::before {
+      content: ''; position: absolute;
+      width: 300px; height: 300px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(34,167,240,0.15) 0%, transparent 70%);
+      right: -60px; top: -100px; pointer-events: none;
+    }
+    .ws-hero-stage { flex: 1; min-width: 0; position: relative; z-index: 1; }
+    .ws-hero-stage-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.45); margin-bottom: 4px; }
+    .ws-hero-stage-name { font-family: var(--font-head); font-size: 19px; font-weight: 800; color: #fff; letter-spacing: -.02em; line-height: 1.2; }
+    .ws-hero-stage-num { font-size: 12px; color: rgba(255,255,255,.45); margin-top: 3px; }
+    .ws-hero-stats { display: flex; gap: 20px; position: relative; z-index: 1; }
+    .ws-hero-stat { text-align: center; }
+    .ws-hero-stat-val { font-family: var(--font-head); font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.02em; line-height: 1; }
+    .ws-hero-stat-lbl { font-size: 10px; color: rgba(255,255,255,.45); margin-top: 3px; white-space: nowrap; }
+    .ws-hero-stat.urgent .ws-hero-stat-val { color: #FF6B6B; }
+    .ws-hero-stat.good .ws-hero-stat-val { color: #4FD89A; }
+    .ws-hero-progress { min-width: 120px; position: relative; z-index: 1; }
+    .ws-hero-progress-bar { height: 5px; background: rgba(255,255,255,.18); border-radius: 99px; overflow: hidden; }
+    .ws-hero-progress-fill { height: 100%; background: var(--blue); border-radius: 99px; transition: width .6s ease; }
+    .ws-hero-progress-label { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 5px; }
+
+    /* Workspace panels */
+    .ws-panel {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 14px; margin-bottom: 18px; overflow: hidden;
+    }
+    .ws-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .ws-panel-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 700; color: var(--navy); letter-spacing: -.01em;
+    }
+    .ws-panel-title svg { color: var(--blue); flex-shrink: 0; }
+    .ws-panel-meta { font-size: 12px; color: var(--gray-400); }
+
+    /* Tasks panel — progress card flush inside the panel */
+    .ws-tasks-panel #tasks-workspace { }
+    .ws-tasks-panel .tw-progress-card { border-radius: 0; margin: 0; border-bottom: 1px solid var(--border); }
+    .ws-tasks-panel .tw-section:first-of-type { margin-top: 12px; }
+    .ws-tasks-panel .tw-section { padding: 0 6px; }
+
+    /* Updates panel */
+    .ws-updates-panel #updates-timeline { padding: 4px 18px 16px; }
+
+    /* Roadmap panel */
+    .ws-rm-hero {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 18px 14px; gap: 16px;
+    }
+    .ws-rm-hero-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); margin-bottom: 3px; }
+    .ws-rm-hero-name { font-family: var(--font-head); font-size: 17px; font-weight: 800; color: var(--navy); letter-spacing: -.02em; }
+    .ws-rm-hero-pct { text-align: right; flex-shrink: 0; }
+    .ws-rm-pct-num { font-family: var(--font-head); font-size: 28px; font-weight: 800; color: var(--blue); letter-spacing: -.03em; line-height: 1; }
+    .ws-rm-pct-lbl { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+    .ws-roadmap-panel #rm-stages-list { padding: 0 18px 16px; }
+    .ws-roadmap-panel #rm-bankrel-block { padding: 0 18px 16px; }
+    .ws-bankrel-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); margin: 0 0 10px; }
+
+    @media (max-width: 768px) {
+      .ws-hero-bar { flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px 16px; }
+      .ws-hero-stats { gap: 16px; }
+      .ws-hero-progress { width: 100%; min-width: unset; }
+      .ws-hero-progress-bar { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -2636,11 +2715,11 @@
         </span>
         Dashboard
       </div>
-      <div class="nav-item" onclick="switchSection('tasks', this)">
+      <div class="nav-item" onclick="switchSection('workspace', this)">
         <span class="nav-icon">
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10-2a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z"/></svg>
         </span>
-        Action Center
+        Funding Workspace
         <span class="nav-badge red" id="nb-tasks" style="display:none"></span>
       </div>
 
@@ -2658,19 +2737,8 @@
         Credit Analyzer
       </div>
 
-      <div class="nav-item" onclick="switchSection('roadmap', this)">
-        <span class="nav-icon">
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-        </span>
-        Funding Roadmap
-      </div>
-      <div class="nav-item" onclick="switchSection('updates', this)">
-        <span class="nav-icon">
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-        </span>
-        My Updates
-        <span class="nav-badge" id="nb-updates" style="display:none"></span>
-      </div>
+      <!-- hidden badge kept for update count wiring -->
+      <span id="nb-updates" style="display:none"></span>
 
       <div class="nav-section-label">Account</div>
       <div class="nav-item" onclick="switchSection('documents', this)">
@@ -2847,46 +2915,68 @@
       </div><!-- /section-dashboard -->
 
 
-      <!-- ── TASKS SECTION ────────────────────────────── -->
-      <div class="section" id="section-tasks">
-        <!-- Workspace renders here -->
-        <div id="tasks-workspace"></div>
-        <!-- Legacy container kept for renderTaskListV2 compatibility (hidden) -->
-        <div style="display:none"><div id="task-list-full"></div></div>
-      </div>
+      <!-- ── FUNDING WORKSPACE ───────────────────────── -->
+      <div class="section" id="section-workspace">
 
-      <!-- ── FUNDING ROADMAP SECTION ─────────────────── -->
-      <div class="section" id="section-roadmap">
-        <div class="rm-hero">
-          <div class="rm-hero-text">
-            <div class="rm-hero-label">Your Funding Journey</div>
-            <div class="rm-hero-title" id="rm-stage-name">—</div>
-            <div class="rm-hero-sub" id="rm-stage-sub">Loading your progress…</div>
-          </div>
-          <div class="rm-hero-right">
-            <div class="rm-big-pct" id="rm-pct">—</div>
-            <div class="rm-big-label">Complete</div>
-          </div>
-        </div>
-        <div id="rm-stages-list"></div>
-        <div id="rm-bankrel-block" style="display:none">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gray-400);margin:28px 0 12px">Bank Relationship Setup</div>
-          <div id="rm-bankrel-list"></div>
-        </div>
-      </div>
+        <!-- Hero status bar -->
+        <div id="ws-hero"></div>
 
-      <!-- ── CLIENT UPDATES SECTION ──────────────────── -->
-      <div class="section" id="section-updates">
-        <div class="section-card">
-          <div class="card-header">
-            <div class="card-title">My Updates</div>
-            <div class="card-meta" id="updates-meta">From your CapitalQuest team</div>
+        <!-- Active Tasks -->
+        <div class="ws-panel ws-tasks-panel">
+          <div class="ws-panel-header">
+            <div class="ws-panel-title">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+              My Tasks
+            </div>
           </div>
-          <div class="card-body" style="padding-top:8px">
-            <div id="updates-timeline"></div>
+          <div id="tasks-workspace"></div>
+          <div style="display:none"><div id="task-list-full"></div></div>
+        </div>
+
+        <!-- Live Team Updates -->
+        <div class="ws-panel ws-updates-panel">
+          <div class="ws-panel-header">
+            <div class="ws-panel-title">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+              Team Updates
+            </div>
+            <div class="ws-panel-meta" id="updates-meta">From your CapitalQuest team</div>
+          </div>
+          <div id="updates-timeline"></div>
+        </div>
+
+        <!-- Funding Journey (Roadmap) -->
+        <div class="ws-panel ws-roadmap-panel">
+          <div class="ws-panel-header">
+            <div class="ws-panel-title">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+              Funding Journey
+            </div>
+            <div class="ws-panel-meta" id="rm-stage-sub">Loading progress…</div>
+          </div>
+          <div class="ws-rm-hero">
+            <div class="ws-rm-hero-info">
+              <div class="ws-rm-hero-label">Current Stage</div>
+              <div class="ws-rm-hero-name" id="rm-stage-name">—</div>
+            </div>
+            <div class="ws-rm-hero-pct">
+              <div class="ws-rm-pct-num" id="rm-pct">—</div>
+              <div class="ws-rm-pct-lbl">Complete</div>
+            </div>
+          </div>
+          <div id="rm-stages-list"></div>
+          <div id="rm-bankrel-block" style="display:none">
+            <div class="ws-bankrel-label">Bank Relationship Setup</div>
+            <div id="rm-bankrel-list"></div>
           </div>
         </div>
-      </div>
+
+      </div><!-- /section-workspace -->
+
+      <!-- Legacy section shells (kept for backward compat, no content) -->
+      <div class="section" id="section-tasks"></div>
+      <div class="section" id="section-roadmap"></div>
+      <div class="section" id="section-updates"></div>
 
       <!-- ── FUNDING TABLE ─────────────────────────────── -->
 
@@ -4109,6 +4199,61 @@
     card.classList.toggle('open');
   }
 
+  // ── FUNDING WORKSPACE ────────────────────────────────────────────────────────
+  function renderWorkspaceHero(d) {
+    const el = document.getElementById('ws-hero');
+    if (!el) return;
+    const cs = d.currentStage || 1;
+    const stages = d.stageNames && d.stageNames.length ? d.stageNames : PORTAL_STAGES.map(s => s.label);
+    const pct = Math.round((cs / stages.length) * 100);
+    const stageName = stages[cs - 1] || 'Getting Started';
+    const allTasks = (window._dashActiveTasks || d.tasks || []).filter(t => t.clientVisible !== false);
+    const doneTasks = allTasks.filter(t => t.status === 'done');
+    const openTasks = allTasks.filter(t => t.status !== 'done');
+    const overdueTasks = openTasks.filter(t => {
+      if (!t.dueDate) return false;
+      const due = new Date(t.dueDate + 'T23:59:59').getTime();
+      return due < Date.now();
+    });
+    const urgentCount = overdueTasks.length;
+
+    el.innerHTML = `<div class="ws-hero-bar">
+      <div class="ws-hero-stage">
+        <div class="ws-hero-stage-label">Current Stage</div>
+        <div class="ws-hero-stage-name">${stageName}</div>
+        <div class="ws-hero-stage-num">Stage ${cs} of ${stages.length}</div>
+      </div>
+      <div class="ws-hero-stats">
+        <div class="ws-hero-stat">
+          <div class="ws-hero-stat-val">${pct}%</div>
+          <div class="ws-hero-stat-lbl">Journey Complete</div>
+        </div>
+        <div class="ws-hero-stat">
+          <div class="ws-hero-stat-val">${doneTasks.length}/${allTasks.length}</div>
+          <div class="ws-hero-stat-lbl">Tasks Done</div>
+        </div>
+        ${urgentCount > 0 ? `<div class="ws-hero-stat urgent">
+          <div class="ws-hero-stat-val">${urgentCount}</div>
+          <div class="ws-hero-stat-lbl">Need Attention</div>
+        </div>` : `<div class="ws-hero-stat good">
+          <div class="ws-hero-stat-val">&#10003;</div>
+          <div class="ws-hero-stat-lbl">On Track</div>
+        </div>`}
+      </div>
+      <div class="ws-hero-progress">
+        <div class="ws-hero-progress-bar"><div class="ws-hero-progress-fill" style="width:${pct}%"></div></div>
+        <div class="ws-hero-progress-label">${pct}% complete</div>
+      </div>
+    </div>`;
+  }
+
+  function renderWorkspace(d, overrideTasks) {
+    renderWorkspaceHero(d);
+    renderTasksWorkspace(d, overrideTasks);
+    renderClientUpdates(d);
+    renderRoadmap(d);
+  }
+
   function renderRoadmap(d) {
     const stages    = d.stageNames && d.stageNames.length ? d.stageNames : PORTAL_STAGES.map(s => s.label);
     const cs        = d.currentStage || 1;
@@ -4469,7 +4614,7 @@
       <div class="stp-progress-bar"><div class="stp-progress-fill" style="width:${pct}%"></div></div>
       <div>${rowsHtml || '<div class="stp-empty">No tasks assigned yet — check back soon.</div>'}</div>
       <div class="stp-footer">
-        <a href="#" class="stp-view-link" onclick="switchSection('tasks',document.querySelector('[onclick*=tasks]'));return false">Open task workspace →</a>
+        <a href="#" class="stp-view-link" onclick="switchSection('workspace',document.querySelector('[onclick*=workspace]'));return false">Open Funding Workspace →</a>
       </div>`;
   }
 
@@ -4731,13 +4876,11 @@
       renderDocRequests(_docRequests.length ? _docRequests : (d.docRequests || []));
     }
 
-    // Funding Roadmap & Client Updates (new sections — render whenever data reloads)
-    renderRoadmap(d);
-    renderClientUpdates(d);
+    // Unified Funding Workspace (tasks + updates + roadmap in one place)
+    renderWorkspace(d, _activeTasks);
 
-    // Unified workflow system — stage panel + task workspace (NBA removed to reduce duplication)
+    // Stage tasks panel on dashboard
     renderStageTasksPanel(d, _activeTasks);
-    renderTasksWorkspace(d, _activeTasks);
   }
 
   async function viewSignedContract() {
@@ -5175,9 +5318,11 @@
 
   const sectionTitles = {
     dashboard: 'Dashboard',
+    workspace: 'Funding Workspace',
     sequence: 'Funding Sequence',
     tasks: 'Action Center',
-
+    roadmap: 'Funding Journey',
+    updates: 'My Updates',
     credit: 'Credit Analyzer',
     documents: 'Documents',
     chat: 'Messages',
@@ -6418,6 +6563,8 @@
   }
 
   function switchSection(name, el, skipHistory) {
+    // Redirect legacy section names to unified workspace
+    if (name === 'tasks' || name === 'roadmap' || name === 'updates') name = 'workspace';
     // hide all
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -6470,6 +6617,8 @@
     if (name === 'tasks')    renderTasksWorkspace(getDashData(), window._dashActiveTasks);
     // Re-render funding sequence when navigating to it
     if (name === 'sequence') renderFundingSequence();
+    // Render unified Funding Workspace
+    if (name === 'workspace') renderWorkspace(getDashData(), window._dashActiveTasks);
   }
 
   // Handle browser back/forward within the portal
