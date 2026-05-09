@@ -2206,6 +2206,217 @@
       .score-ring svg { width: 72px; height: 72px; }
       .score-num strong { font-size: 18px; }
     }
+
+    /* ══════════════════════════════════════════════════════
+       FUNDING ROADMAP
+    ══════════════════════════════════════════════════════ */
+    .rm-hero {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      border-radius: 16px; padding: 26px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; gap: 16px; position: relative; overflow: hidden;
+    }
+    .rm-hero::before {
+      content: ''; position: absolute;
+      width: 280px; height: 280px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(34,167,240,0.18) 0%, transparent 70%);
+      right: -50px; top: -80px;
+    }
+    .rm-hero-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.45); margin-bottom: 6px; }
+    .rm-hero-title { font-family: var(--font-head); font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -.02em; line-height: 1.2; }
+    .rm-hero-sub   { font-size: 13px; color: rgba(255,255,255,.55); margin-top: 5px; max-width: 320px; line-height: 1.5; }
+    .rm-hero-right { text-align: right; position: relative; z-index: 1; flex-shrink: 0; }
+    .rm-big-pct    { font-family: var(--font-head); font-size: 40px; font-weight: 800; color: #fff; line-height: 1; letter-spacing: -.03em; }
+    .rm-big-label  { font-size: 12px; color: rgba(255,255,255,.45); margin-top: 3px; }
+
+    /* Stage cards */
+    .rm-stage-card {
+      background: var(--white); border: 1px solid var(--gray-100);
+      border-radius: 14px; margin-bottom: 12px; overflow: hidden;
+      transition: box-shadow .15s;
+    }
+    .rm-stage-card:hover { box-shadow: 0 4px 16px rgba(10,22,40,.07); }
+    .rm-stage-header {
+      display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+      cursor: pointer;
+    }
+    .rm-stage-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      font-size: 18px;
+    }
+    .rm-stage-icon.done    { background: #d1fae5; }
+    .rm-stage-icon.active  { background: #dbeafe; }
+    .rm-stage-icon.locked  { background: var(--gray-100); }
+    .rm-stage-meta { flex: 1; min-width: 0; }
+    .rm-stage-num  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); margin-bottom: 2px; }
+    .rm-stage-name { font-family: var(--font-head); font-size: 15px; font-weight: 700; color: var(--navy); }
+    .rm-stage-timeline { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+    .rm-stage-status {
+      flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 4px 10px;
+      border-radius: 999px; text-transform: uppercase; letter-spacing: .05em;
+    }
+    .rm-status-done    { background: #d1fae5; color: #065f46; }
+    .rm-status-active  { background: #dbeafe; color: #1e40af; }
+    .rm-status-locked  { background: var(--gray-100); color: var(--gray-400); }
+    .rm-stage-chevron  { color: var(--gray-300); flex-shrink: 0; transition: transform .2s; }
+    .rm-stage-card.open .rm-stage-chevron { transform: rotate(180deg); }
+
+    .rm-stage-body { display: none; padding: 0 20px 18px; border-top: 1px solid var(--gray-100); }
+    .rm-stage-card.open .rm-stage-body { display: block; }
+
+    .rm-stage-desc { font-size: 13px; color: var(--gray-500); line-height: 1.6; margin-bottom: 14px; padding-top: 14px; }
+
+    /* Stage tasks checklist */
+    .rm-task-list { display: flex; flex-direction: column; gap: 6px; }
+    .rm-task-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px; border-radius: 10px; background: var(--gray-50);
+      border: 1px solid var(--gray-100);
+    }
+    .rm-task-row.done-row  { background: #f0fdf4; border-color: #d1fae5; }
+    .rm-task-row.prog-row  { background: #eff6ff; border-color: #bfdbfe; }
+    .rm-task-check {
+      width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; margin-top: 1px;
+    }
+    .rm-task-check.done { background: #10b981; color: #fff; }
+    .rm-task-check.prog { background: #3b82f6; color: #fff; }
+    .rm-task-check.todo { background: var(--gray-200); color: var(--gray-400); }
+    .rm-task-check.locked { background: var(--gray-100); color: var(--gray-300); }
+    .rm-task-body  { flex: 1; min-width: 0; }
+    .rm-task-title { font-size: 13px; font-weight: 600; color: var(--navy); line-height: 1.3; }
+    .rm-task-title.done-text { color: var(--gray-400); text-decoration: line-through; }
+    .rm-task-desc  { font-size: 11px; color: var(--gray-500); margin-top: 3px; line-height: 1.5; }
+    .rm-task-due   { font-size: 10px; font-weight: 600; margin-top: 4px; }
+    .rm-task-due.overdue { color: var(--danger); }
+    .rm-task-due.soon    { color: var(--warning); }
+    .rm-task-due.ok      { color: var(--success); }
+    .rm-task-upload {
+      margin-top: 8px; font-size: 11px; font-weight: 700;
+      padding: 5px 12px; border-radius: 7px;
+      border: 1.5px solid var(--blue); color: var(--blue);
+      background: transparent; cursor: pointer; display: inline-flex;
+      align-items: center; gap: 5px; transition: background .15s, color .15s;
+    }
+    .rm-task-upload:hover { background: var(--blue); color: #fff; }
+    .rm-task-pill {
+      flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 3px 8px;
+      border-radius: 999px; margin-top: 1px;
+    }
+    .rm-pill-done { background: #d1fae5; color: #065f46; }
+    .rm-pill-prog { background: #dbeafe; color: #1e40af; }
+    .rm-pill-todo { background: var(--gray-100); color: var(--gray-500); }
+
+    /* Bank relationship steps */
+    .rm-bank-card {
+      background: var(--white); border: 1px solid var(--gray-100);
+      border-radius: 14px; margin-bottom: 12px; overflow: hidden;
+    }
+    .rm-bank-card-header {
+      display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+      border-bottom: 1px solid var(--gray-100); background: var(--gray-50);
+    }
+    .rm-bank-logo {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: #fff; border: 1px solid var(--gray-200);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .rm-bank-logo img { width: 24px; height: 24px; object-fit: contain; }
+    .rm-bank-name  { font-family: var(--font-head); font-size: 14px; font-weight: 700; color: var(--navy); }
+    .rm-bank-meta  { font-size: 11px; color: var(--gray-400); margin-top: 1px; }
+    .rm-bank-badge { margin-left: auto; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+    .rm-bank-steps { padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; }
+    .rm-bank-step  { display: flex; gap: 10px; align-items: flex-start; }
+    .rm-bank-step-num {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      background: var(--navy); color: #fff; font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; margin-top: 1px;
+    }
+    .rm-bank-step-num.done-step { background: var(--success); }
+    .rm-bank-step-text { font-size: 13px; color: var(--gray-600); line-height: 1.5; }
+    .rm-bank-step-text strong { color: var(--navy); }
+    .rm-deposit-note {
+      margin: 0 18px 14px; padding: 10px 14px;
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+      font-size: 12px; color: #92400e; line-height: 1.5;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CLIENT UPDATES TIMELINE
+    ══════════════════════════════════════════════════════ */
+    .update-item {
+      display: flex; gap: 14px; padding: 14px 0;
+      border-bottom: 1px solid var(--gray-100);
+      align-items: flex-start;
+    }
+    .update-item:last-child { border-bottom: none; }
+    .update-icon {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+    }
+    .update-icon.stage  { background: #f0fdf4; }
+    .update-icon.task   { background: #fefce8; }
+    .update-icon.doc    { background: #fff7ed; }
+    .update-icon.msg    { background: #f0f9ff; }
+    .update-icon.credit { background: #fdf4ff; }
+    .update-icon.bank   { background: #eff6ff; }
+    .update-icon.info   { background: var(--gray-50); }
+    .update-body  { flex: 1; min-width: 0; }
+    .update-title { font-size: 13.5px; font-weight: 600; color: var(--navy); line-height: 1.4; }
+    .update-sub   { font-size: 12px; color: var(--gray-500); margin-top: 3px; line-height: 1.5; }
+    .update-time  { font-size: 11px; color: var(--gray-300); margin-top: 5px; }
+    .updates-empty {
+      text-align: center; padding: 48px 24px;
+      font-size: 13px; color: var(--gray-400); line-height: 1.7;
+    }
+    .updates-empty svg { margin-bottom: 12px; }
+
+    /* Enhanced task list (existing renderTaskList) */
+    .task-item-v2 {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 0; border-bottom: 1px solid var(--gray-100);
+    }
+    .task-item-v2:last-child { border-bottom: none; }
+    .tv2-check {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; margin-top: 2px;
+    }
+    .tv2-check.done { background: var(--success); color: #fff; }
+    .tv2-check.prog { background: var(--blue); color: #fff; }
+    .tv2-check.todo { background: var(--gray-200); color: transparent; border: 2px solid var(--gray-300); }
+    .tv2-body  { flex: 1; min-width: 0; }
+    .tv2-title { font-size: 13.5px; font-weight: 600; color: var(--navy); line-height: 1.35; }
+    .tv2-title.done-text { text-decoration: line-through; color: var(--gray-400); }
+    .tv2-desc  { font-size: 12px; color: var(--gray-500); margin-top: 3px; line-height: 1.55; }
+    .tv2-meta  { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+    .tv2-due   { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+    .tv2-due.overdue { background: var(--danger-bg); color: var(--danger); }
+    .tv2-due.soon    { background: var(--warning-bg); color: var(--warning); }
+    .tv2-due.ok      { background: var(--success-bg); color: var(--success); }
+    .tv2-upload {
+      font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 7px;
+      border: 1.5px solid var(--blue); color: var(--blue); background: transparent;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+      transition: background .15s, color .15s;
+    }
+    .tv2-upload:hover { background: var(--blue); color: #fff; }
+    .tv2-pill {
+      font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: auto; flex-shrink: 0;
+    }
+    .tv2-pill-done { background: #d1fae5; color: #065f46; }
+    .tv2-pill-prog { background: #dbeafe; color: #1e40af; }
+    .tv2-pill-todo { background: var(--gray-100); color: var(--gray-500); }
+
+    @media (max-width: 768px) {
+      .rm-hero { padding: 18px 16px; flex-direction: column; align-items: flex-start; gap: 12px; }
+      .rm-hero-right { text-align: left; }
+      .rm-big-pct { font-size: 32px; }
+      .rm-stage-header { padding: 13px 14px; }
+      .rm-stage-body { padding: 0 14px 14px; }
+    }
   </style>
 </head>
 <body>
@@ -2254,6 +2465,20 @@
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         </span>
         Credit Analyzer
+      </div>
+
+      <div class="nav-item" onclick="switchSection('roadmap', this)">
+        <span class="nav-icon">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+        </span>
+        Funding Roadmap
+      </div>
+      <div class="nav-item" onclick="switchSection('updates', this)">
+        <span class="nav-icon">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        </span>
+        My Updates
+        <span class="nav-badge" id="nb-updates" style="display:none"></span>
       </div>
 
       <div class="nav-section-label">Account</div>
@@ -2441,6 +2666,39 @@
           </div>
           <div class="card-body">
             <div class="task-list" id="task-list-full"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── FUNDING ROADMAP SECTION ─────────────────── -->
+      <div class="section" id="section-roadmap">
+        <div class="rm-hero">
+          <div class="rm-hero-text">
+            <div class="rm-hero-label">Your Funding Journey</div>
+            <div class="rm-hero-title" id="rm-stage-name">—</div>
+            <div class="rm-hero-sub" id="rm-stage-sub">Loading your progress…</div>
+          </div>
+          <div class="rm-hero-right">
+            <div class="rm-big-pct" id="rm-pct">—</div>
+            <div class="rm-big-label">Complete</div>
+          </div>
+        </div>
+        <div id="rm-stages-list"></div>
+        <div id="rm-bankrel-block" style="display:none">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gray-400);margin:28px 0 12px">Bank Relationship Setup</div>
+          <div id="rm-bankrel-list"></div>
+        </div>
+      </div>
+
+      <!-- ── CLIENT UPDATES SECTION ──────────────────── -->
+      <div class="section" id="section-updates">
+        <div class="section-card">
+          <div class="card-header">
+            <div class="card-title">My Updates</div>
+            <div class="card-meta" id="updates-meta">From your CapitalQuest team</div>
+          </div>
+          <div class="card-body" style="padding-top:8px">
+            <div id="updates-timeline"></div>
           </div>
         </div>
       </div>
@@ -3597,6 +3855,317 @@
     }).join('') || '<div style="padding:12px 0;font-size:13px;color:var(--gray-400)">No tasks assigned.</div>';
   }
 
+  // ── ROADMAP HELPERS ──────────────────────────────────────────────────────────
+
+  const STAGE_META = [
+    { emoji:'📋', desc:'Getting your profile set up, reviewing your credit report, and identifying what needs to be addressed before funding.', timeline:'1–2 weeks' },
+    { emoji:'📈', desc:'Removing negative items, reducing inquiries, and optimizing your credit profile to maximize approval odds and limits.', timeline:'30–90 days' },
+    { emoji:'🎯', desc:'Building your personalized bank application strategy based on your credit profile and state.', timeline:'3–7 days' },
+    { emoji:'🏦', desc:'Opening the right bank accounts, making required deposits, and establishing the relationships needed for large approvals.', timeline:'2–4 weeks' },
+    { emoji:'🚀', desc:'Submitting credit applications in the optimal order to maximize total approved funding.', timeline:'3–7 days' },
+    { emoji:'🏆', desc:'Reviewing approvals, accepting offers, and securing your total funded amount.', timeline:'1–2 weeks' },
+  ];
+
+  const STAGE_TASKS_TEMPLATE = [
+    ['Upload Experian login credentials','Confirm personal information','Upload ID + proof of address','Complete onboarding form'],
+    ['Remove inquiries','Turn off fraud alerts','Add authorized user','Pay down utilization'],
+    ['Confirm business information','Provide business details','Approve funding plan'],
+    ['Open required bank accounts','Fund accounts to minimum deposit','Complete required transactions','Schedule bank appointment'],
+    ['Attend bank appointment','Confirm application submissions','Upload requested documents','Handle reconsideration calls'],
+    ['Accept offer','Upload approval letters','Confirm card received'],
+  ];
+
+  function _rmDueLabel(dueDateStr) {
+    if (!dueDateStr) return null;
+    const now = Date.now();
+    const due = new Date(dueDateStr.includes('T') ? dueDateStr : dueDateStr + 'T23:59:59').getTime();
+    const daysLeft = Math.ceil((due - now) / 86400000);
+    if (daysLeft < 0)  return { cls: 'overdue', text: 'Overdue by ' + Math.abs(daysLeft) + 'd' };
+    if (daysLeft === 0) return { cls: 'soon', text: 'Due today' };
+    if (daysLeft <= 3) return { cls: 'soon', text: 'Due in ' + daysLeft + 'd' };
+    return { cls: 'ok',  text: 'Due ' + new Date(due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+  }
+
+  function _rmToggleStage(card) {
+    card.classList.toggle('open');
+  }
+
+  function renderRoadmap(d) {
+    const stages    = d.stageNames && d.stageNames.length ? d.stageNames : PORTAL_STAGES.map(s => s.label);
+    const cs        = d.currentStage || 1;
+    const pct       = Math.round((cs / stages.length) * 100);
+    const stageName = stages[cs - 1] || stages[0];
+    const meta      = STAGE_META[cs - 1] || STAGE_META[0];
+
+    // Hero
+    const rmTitle = document.getElementById('rm-stage-name');
+    const rmSub   = document.getElementById('rm-stage-sub');
+    const rmPct   = document.getElementById('rm-pct');
+    if (rmTitle) rmTitle.textContent = stageName;
+    if (rmSub) {
+      const openTasks = (d.tasks || []).filter(t => t.status !== 'done' && t.clientVisible !== false).length;
+      rmSub.textContent = openTasks > 0
+        ? openTasks + ' task' + (openTasks !== 1 ? 's' : '') + ' need your attention'
+        : 'Stage ' + cs + ' of ' + stages.length + ' · ' + meta.timeline;
+    }
+    if (rmPct) rmPct.textContent = pct + '%';
+
+    // Build stage cards
+    const container = document.getElementById('rm-stages-list');
+    if (!container) return;
+
+    // Collect admin-assigned tasks per stage (from pipelineTasks or dashboard tasks)
+    const clientTasks = (d.tasks || []).filter(t => t.clientVisible !== false);
+
+    container.innerHTML = stages.map((stageName, i) => {
+      const stageNum = i + 1;
+      const isDone   = stageNum < cs;
+      const isActive = stageNum === cs;
+      const isLocked = stageNum > cs;
+      const m        = STAGE_META[i] || {};
+      const iconCls  = isDone ? 'done' : isActive ? 'active' : 'locked';
+      const statusCls= isDone ? 'rm-status-done' : isActive ? 'rm-status-active' : 'rm-status-locked';
+      const statusTxt= isDone ? 'Complete' : isActive ? 'In Progress' : 'Locked';
+
+      // Tasks for this stage: from admin-assigned tasks filtered by stageIndex, or template
+      const stageTasks = clientTasks.filter(t => t.stageIndex === i || t.stageIndex === stageNum);
+      const templateTasks = (STAGE_TASKS_TEMPLATE[i] || []).map(text => ({ text, status: isLocked ? 'locked' : (isDone ? 'done' : 'todo') }));
+      const taskList = stageTasks.length ? stageTasks : (isActive || isDone ? templateTasks : templateTasks.slice(0, 2));
+
+      const tasksHtml = taskList.map(t => {
+        const done = t.status === 'done';
+        const prog = t.status === 'progress' || t.status === 'inprogress';
+        const locked = t.status === 'locked' || isLocked;
+        const checkCls = done ? 'done' : prog ? 'prog' : locked ? 'locked' : 'todo';
+        const rowCls   = done ? 'done-row' : prog ? 'prog-row' : '';
+        const due      = _rmDueLabel(t.dueDate);
+        const dueHtml  = due && !done ? `<div class="rm-task-due ${due.cls}">${due.text}</div>` : '';
+        const descHtml = (t.desc || t.notes || t.instructions) && !locked
+          ? `<div class="rm-task-desc">${t.desc || t.notes || t.instructions}</div>` : '';
+        const uploadHtml = t.uploadRequired && !done && !locked
+          ? `<button class="rm-task-upload" onclick="rmUploadForTask('${t.id||''}')">
+               <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+               Upload
+             </button>` : '';
+        const pillCls  = done ? 'rm-pill-done' : prog ? 'rm-pill-prog' : 'rm-pill-todo';
+        const pillTxt  = done ? 'Done' : prog ? 'In Progress' : locked ? 'Locked' : 'To-Do';
+        return `<div class="rm-task-row ${rowCls}">
+          <div class="rm-task-check ${checkCls}">${done ? '✓' : prog ? '→' : ''}</div>
+          <div class="rm-task-body">
+            <div class="rm-task-title ${done ? 'done-text' : ''}">${t.text || t.title || ''}</div>
+            ${descHtml}${dueHtml}${uploadHtml}
+          </div>
+          <span class="rm-task-pill ${pillCls}">${pillTxt}</span>
+        </div>`;
+      }).join('');
+
+      // Auto-open the active stage
+      const isOpen = isActive ? 'open' : '';
+
+      return `<div class="rm-stage-card ${isOpen}" onclick="_rmToggleStage(this)">
+        <div class="rm-stage-header">
+          <div class="rm-stage-icon ${iconCls}">${isDone ? '✅' : isActive ? m.emoji || '📌' : '🔒'}</div>
+          <div class="rm-stage-meta">
+            <div class="rm-stage-num">Stage ${stageNum} of ${stages.length}</div>
+            <div class="rm-stage-name">${stageName}</div>
+            <div class="rm-stage-timeline">${m.timeline || ''}</div>
+          </div>
+          <span class="rm-stage-status ${statusCls}">${statusTxt}</span>
+          <svg class="rm-stage-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
+        </div>
+        <div class="rm-stage-body">
+          <div class="rm-stage-desc">${m.desc || ''}</div>
+          <div class="rm-task-list">${tasksHtml}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Bank relationship block — show in stage 4+ if bankRelSteps provided
+    _renderBankRelBlock(d, cs);
+  }
+
+  function _renderBankRelBlock(d, cs) {
+    const block = document.getElementById('rm-bankrel-block');
+    const list  = document.getElementById('rm-bankrel-list');
+    if (!block || !list) return;
+    const steps = d.bankRelSteps || [];
+    if (!steps.length || cs < 4) { block.style.display = 'none'; return; }
+    block.style.display = '';
+    list.innerHTML = steps.map(bank => {
+      const bSteps = bank.steps || [];
+      const statusBg  = bank.status === 'complete' ? '#d1fae5' : bank.status === 'active' ? '#dbeafe' : '#f3f4f6';
+      const statusClr = bank.status === 'complete' ? '#065f46' : bank.status === 'active' ? '#1e40af' : '#6b7280';
+      const statusTxt = bank.status === 'complete' ? '✓ Complete' : bank.status === 'active' ? 'In Progress' : 'Pending';
+      const domain    = (BANK_BRANDS[(bank.name||'').toLowerCase()] || {}).domain;
+      const logoHtml  = domain
+        ? `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="${bank.name}" onerror="this.parentElement.textContent='${(bank.name||'?')[0].toUpperCase()}'">`
+        : (bank.name||'?')[0].toUpperCase();
+      const depositNote = bank.depositRequired
+        ? `<div class="rm-deposit-note">💰 Minimum deposit: <strong>$${Number(bank.depositRequired).toLocaleString()}</strong>${bank.seasonDays ? ` · Season for ${bank.seasonDays} days` : ''}</div>` : '';
+      return `<div class="rm-bank-card">
+        <div class="rm-bank-card-header">
+          <div class="rm-bank-logo">${logoHtml}</div>
+          <div><div class="rm-bank-name">${bank.name||'Bank'}</div><div class="rm-bank-meta">${bank.bureau ? 'Pulls ' + bank.bureau : ''}</div></div>
+          <span class="rm-bank-badge" style="background:${statusBg};color:${statusClr}">${statusTxt}</span>
+        </div>
+        ${depositNote}
+        <div class="rm-bank-steps">
+          ${bSteps.map((step, si) => `<div class="rm-bank-step">
+            <div class="rm-bank-step-num ${step.done ? 'done-step' : ''}">${step.done ? '✓' : si+1}</div>
+            <div class="rm-bank-step-text">${step.text || step}</div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function rmUploadForTask(taskId) {
+    // Route to documents section for upload
+    const docsNav = document.querySelector('[onclick*="documents"]');
+    if (docsNav) switchSection('documents', docsNav);
+    setTimeout(function() {
+      const up = document.getElementById('upload-trigger-btn');
+      if (up) up.click();
+    }, 400);
+  }
+
+  // ── CLIENT UPDATES TIMELINE ───────────────────────────────────────────────────
+
+  const UPDATE_ICONS = {
+    stage:   { emoji: '🎯', cls: 'stage' },
+    task:    { emoji: '✅', cls: 'task' },
+    doc:     { emoji: '📄', cls: 'doc' },
+    message: { emoji: '💬', cls: 'msg' },
+    credit:  { emoji: '📊', cls: 'credit' },
+    bank:    { emoji: '🏦', cls: 'bank' },
+    info:    { emoji: '📋', cls: 'info' },
+    funding: { emoji: '💰', cls: 'bank' },
+    approval:{ emoji: '🏆', cls: 'stage' },
+  };
+
+  function _fmtRelTime(ts) {
+    if (!ts) return '';
+    const d = new Date(typeof ts === 'number' ? ts : ts);
+    if (isNaN(d)) return '';
+    const diff = Date.now() - d.getTime();
+    if (diff < 60000)     return 'Just now';
+    if (diff < 3600000)   return Math.floor(diff / 60000) + ' min ago';
+    if (diff < 86400000)  return Math.floor(diff / 3600000) + 'h ago';
+    if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function renderClientUpdates(d) {
+    const container = document.getElementById('updates-timeline');
+    const meta      = document.getElementById('updates-meta');
+    if (!container) return;
+
+    // Collect client-visible updates from multiple sources
+    const rawUpdates = [];
+
+    // 1. d.clientUpdates — admin-pushed updates
+    (d.clientUpdates || []).forEach(u => {
+      if (u && !u.deleted) rawUpdates.push({ ...u, _src: 'admin' });
+    });
+
+    // 2. d.notes — notes with visibility: 'client_visible'
+    (d.notes || []).forEach(n => {
+      if (n && (n.visibility === 'client_visible' || n.visibility === 'client') && !n.deleted) {
+        rawUpdates.push({
+          id: n.id, type: n.category || 'info',
+          title: n.title || n.body || '',
+          body: n.title && n.body ? n.body : null,
+          createdAt: n.createdAt || n.ts,
+          _src: 'note',
+        });
+      }
+    });
+
+    // 3. Stage transitions — auto-generate from currentStage
+    if (d.stageChanges && Array.isArray(d.stageChanges)) {
+      d.stageChanges.forEach(sc => {
+        rawUpdates.push({
+          id: 'sc_' + sc.stage,
+          type: 'stage',
+          title: 'Moved to: ' + (sc.label || 'Stage ' + sc.stage),
+          createdAt: sc.changedAt,
+          _src: 'system',
+        });
+      });
+    }
+
+    // Sort newest first
+    rawUpdates.sort((a, b) => {
+      const ta = new Date(a.createdAt || 0).getTime();
+      const tb = new Date(b.createdAt || 0).getTime();
+      return tb - ta;
+    });
+
+    // Update badge
+    const nb = document.getElementById('nb-updates');
+    if (nb) { nb.textContent = rawUpdates.length; nb.style.display = rawUpdates.length ? '' : 'none'; }
+    if (meta) meta.textContent = 'From your CapitalQuest team · ' + rawUpdates.length + ' update' + (rawUpdates.length !== 1 ? 's' : '');
+
+    if (!rawUpdates.length) {
+      container.innerHTML = `<div class="updates-empty">
+        <svg width="44" height="44" fill="none" viewBox="0 0 24 24" stroke="var(--gray-200)" stroke-width="1.5"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        <div style="font-weight:600;color:var(--navy);margin-bottom:6px">No updates yet</div>
+        Your advisor will post progress updates here as your funding journey advances.
+      </div>`;
+      return;
+    }
+
+    container.innerHTML = rawUpdates.map(u => {
+      const iconDef = UPDATE_ICONS[u.type] || UPDATE_ICONS.info;
+      const bodyHtml = u.body ? `<div class="update-sub">${u.body}</div>` : '';
+      return `<div class="update-item">
+        <div class="update-icon ${iconDef.cls}">${iconDef.emoji}</div>
+        <div class="update-body">
+          <div class="update-title">${u.title || u.text || ''}</div>
+          ${bodyHtml}
+          <div class="update-time">${_fmtRelTime(u.createdAt)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── ENHANCED TASK LIST (replaces renderTaskList for full-page task view) ──────
+  function renderTaskListV2(containerId, tasks, preview) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const filtered = tasks.filter(t => t.clientVisible !== false);
+    const list = preview ? filtered.slice(0, 3) : filtered;
+    if (!list.length) {
+      el.innerHTML = '<div style="padding:12px 0;font-size:13px;color:var(--gray-400)">No tasks assigned yet.</div>';
+      return;
+    }
+    el.innerHTML = list.map(t => {
+      const done = t.status === 'done';
+      const prog = t.status === 'progress' || t.status === 'inprogress';
+      const due  = _rmDueLabel(t.dueDate);
+      const dueHtml = due && !done
+        ? `<span class="tv2-due ${due.cls}">${due.text}</span>` : '';
+      const descHtml = (t.desc || t.notes || t.instructions)
+        ? `<div class="tv2-desc">${t.desc || t.notes || t.instructions}</div>` : '';
+      const uploadHtml = t.uploadRequired && !done
+        ? `<button class="tv2-upload" onclick="event.stopPropagation();rmUploadForTask('${t.id||''}')">
+             <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+             Upload
+           </button>` : '';
+      const pillCls = done ? 'tv2-pill-done' : prog ? 'tv2-pill-prog' : 'tv2-pill-todo';
+      const pillTxt = done ? 'Done' : prog ? 'In Progress' : 'To-Do';
+      return `<div class="task-item-v2">
+        <div class="tv2-check ${done?'done':prog?'prog':'todo'}">${done ? '✓' : prog ? '→' : ''}</div>
+        <div class="tv2-body">
+          <div class="tv2-title ${done ? 'done-text' : ''}">${t.text || t.title || ''}</div>
+          ${descHtml}
+          <div class="tv2-meta">${dueHtml}${uploadHtml}</div>
+        </div>
+        <span class="tv2-pill ${pillCls}">${pillTxt}</span>
+      </div>`;
+    }).join('');
+  }
+
   function loadDashboardData() {
     const d = getDashData();
 
@@ -3710,7 +4279,7 @@
 
     // Tasks
     renderTaskList('task-list-mini', _activeTasks, true);
-    renderTaskList('task-list-full', _activeTasks, false);
+    renderTaskListV2('task-list-full', _activeTasks, false);
     const tm = document.getElementById('tasks-meta');
     if(tm) tm.textContent = 'Pipeline tasks · ' + openTasks + ' open task' + (openTasks!==1?'s':'');
     const nb = document.getElementById('nb-tasks');
@@ -3746,6 +4315,10 @@
       renderAllDocs();
       renderDocRequests(_docRequests.length ? _docRequests : (d.docRequests || []));
     }
+
+    // Funding Roadmap & Client Updates (new sections — render whenever data reloads)
+    renderRoadmap(d);
+    renderClientUpdates(d);
   }
 
   async function viewSignedContract() {
@@ -5471,6 +6044,9 @@
       renderAllDocs();
       renderDocRequests(_docRequests.length ? _docRequests : (getDashData().docRequests || []));
     }
+    // Render roadmap / updates on first navigation (also re-rendered by loadDashboardData on data sync)
+    if (name === 'roadmap')  renderRoadmap(getDashData());
+    if (name === 'updates')  renderClientUpdates(getDashData());
   }
 
   // Handle browser back/forward within the portal
