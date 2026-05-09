@@ -2418,6 +2418,81 @@
       .rm-stage-body { padding: 0 14px 14px; }
     }
 
+    /* ── FUNDING STRATEGY PAGE ──────────────────────── */
+    .fsp-summary {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      border-radius: 16px; padding: 22px 24px; margin-bottom: 20px;
+    }
+    .fsp-summary-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+    .fsp-summary-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.45); margin-bottom: 5px; }
+    .fsp-summary-title { font-family: var(--font-head); font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -.02em; }
+    .fsp-readiness { text-align: right; flex-shrink: 0; }
+    .fsp-readiness-score { font-family: var(--font-head); font-size: 32px; font-weight: 800; line-height: 1; }
+    .fsp-readiness-label { font-size: 11px; font-weight: 700; margin-top: 3px; }
+    .fsp-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .fsp-stat { background: rgba(255,255,255,.07); border-radius: 10px; padding: 10px 12px; }
+    .fsp-stat-val { font-family: var(--font-head); font-size: 15px; font-weight: 800; color: #fff; }
+    .fsp-stat-lbl { font-size: 10px; color: rgba(255,255,255,.45); margin-top: 2px; }
+    .fsp-insights { display: flex; flex-direction: column; gap: 6px; }
+    .fsp-insight { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.5; padding: 7px 10px; border-radius: 8px; }
+    .fsp-ins-good { background: rgba(16,185,129,.15); color: rgba(255,255,255,.85); }
+    .fsp-ins-warn { background: rgba(245,158,11,.15); color: rgba(255,255,255,.85); }
+    .fsp-ins-info { background: rgba(34,167,240,.15); color: rgba(255,255,255,.8); }
+    /* Phase accordions */
+    .fsp-phase { margin-bottom: 10px; border-radius: 14px; overflow: hidden; border: 1px solid var(--gray-100); }
+    .fsp-phase-hdr {
+      display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+      cursor: pointer; user-select: none;
+    }
+    .fsp-phase-icon { font-size: 18px; flex-shrink: 0; }
+    .fsp-phase-meta { flex: 1; min-width: 0; }
+    .fsp-phase-name { font-family: var(--font-head); font-size: 13px; font-weight: 800; color: #fff; letter-spacing: -.01em; }
+    .fsp-phase-sub  { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 2px; }
+    .fsp-phase-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .fsp-phase-approved { font-size: 11px; font-weight: 700; background: rgba(16,185,129,.3); color: #6ee7b7; padding: 3px 9px; border-radius: 99px; }
+    .fsp-phase-count { font-size: 11px; font-weight: 700; background: rgba(255,255,255,.15); color: rgba(255,255,255,.8); padding: 3px 9px; border-radius: 99px; }
+    .fsp-chevron { transition: transform .2s; flex-shrink: 0; }
+    .fsp-phase.fsp-open .fsp-chevron { transform: rotate(180deg); }
+    .fsp-prereq {
+      display: flex; align-items: flex-start; gap: 7px; padding: 10px 16px;
+      background: #fffbeb; border-bottom: 1px solid #fde68a;
+      font-size: 12px; color: #92400e; line-height: 1.5;
+    }
+    .fsp-bank-list { display: none; }
+    .fsp-phase.fsp-open .fsp-bank-list { display: block; }
+    /* Bank cards */
+    .fsp-bank-card {
+      padding: 14px 18px; border-bottom: 1px solid var(--gray-100);
+      background: var(--white); transition: background .12s;
+    }
+    .fsp-bank-card:last-child { border-bottom: none; }
+    .fsp-bank-card:hover { background: var(--gray-50); }
+    .fsp-bank-card.fsp-rel { background: linear-gradient(to right, rgba(34,167,240,.04), transparent); }
+    .fsp-bank-top { display: flex; align-items: flex-start; gap: 12px; }
+    .fsp-seq { width: 22px; height: 22px; border-radius: 50%; background: var(--gray-100); color: var(--gray-500); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 3px; }
+    .fsp-logo { width: 30px; height: 30px; border-radius: 8px; background: var(--gray-50); border: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .fsp-logo img { width: 20px; height: 20px; object-fit: contain; }
+    .fsp-bank-info { flex: 1; min-width: 0; }
+    .fsp-bank-name { font-family: var(--font-head); font-size: 13px; font-weight: 700; color: var(--navy); }
+    .fsp-bank-product { font-size: 12px; color: var(--gray-500); margin-top: 1px; }
+    .fsp-why { font-size: 11px; color: var(--blue-dark); margin-top: 4px; font-style: italic; }
+    .fsp-rm { font-size: 9px; font-weight: 800; background: #fef3c7; color: #92400e; padding: 1px 5px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
+    .fsp-bank-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; min-width: 80px; }
+    .fsp-amount { font-family: var(--font-head); font-size: 14px; font-weight: 800; color: var(--navy); }
+    .fsp-status { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+    .fsp-tags-row { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+    .fsp-bureau { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+    .fsp-rel-badge { font-size: 9px; font-weight: 700; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; }
+    .fsp-tag-geo  { font-size: 9px; font-weight: 700; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; }
+    .fsp-tag-call { font-size: 9px; font-weight: 700; background: #ede9fe; color: #6d28d9; padding: 2px 6px; border-radius: 4px; }
+    .fsp-wipe { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: var(--gray-400); font-size: 11px; font-weight: 600; }
+    .fsp-wipe div { flex: 1; height: 1px; background: var(--gray-200); }
+    @media (max-width: 768px) {
+      .fsp-stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .fsp-bank-right { min-width: 60px; }
+      .fsp-amount { font-size: 12px; }
+    }
+
     /* ── NEXT BEST ACTION BANNER ─────────────────────── */
     .nba-wrap {
       display: flex; align-items: center; gap: 14px;
@@ -2565,7 +2640,7 @@
         <span class="nav-icon">
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
         </span>
-        My Tasks
+        Action Center
         <span class="nav-badge red" id="nb-tasks" style="display:none"></span>
       </div>
 
@@ -2675,8 +2750,6 @@
           </div>
         </div>
 
-        <!-- Next Best Action -->
-        <div id="nba-banner" style="display:none"></div>
 
         <div class="stats-row">
           <div class="stat-card">
@@ -2756,31 +2829,20 @@
           </div>
         </div>
 
-        <div class="two-col">
-          <!-- Tasks preview -->
-          <div class="section-card">
-            <div class="card-header">
-              <div class="card-title">Urgent Tasks</div>
-              <div class="card-meta" style="color: var(--blue); cursor:pointer" onclick="switchSection('tasks', document.querySelector('[onclick*=tasks]'))">View all →</div>
-            </div>
-            <div class="card-body">
-              <div class="task-list" id="task-list-mini"></div>
-            </div>
+        <!-- Documents preview (full width) -->
+        <div class="section-card">
+          <div class="card-header">
+            <div class="card-title">Latest Documents</div>
+            <div class="card-meta" style="color: var(--blue); cursor:pointer" onclick="switchSection('documents', document.querySelector('[onclick*=documents]'))">View all →</div>
           </div>
-
-          <!-- Documents preview -->
-          <div class="section-card">
-            <div class="card-header">
-              <div class="card-title">Latest Documents</div>
-              <div class="card-meta" style="color: var(--blue); cursor:pointer" onclick="switchSection('documents', document.querySelector('[onclick*=documents]'))">View all →</div>
-            </div>
-            <div class="card-body">
-              <div class="doc-list" id="latest-docs-list">
-                <div style="font-size:13px;color:var(--muted);padding:8px 0">Loading documents…</div>
-              </div>
+          <div class="card-body">
+            <div class="doc-list" id="latest-docs-list">
+              <div style="font-size:13px;color:var(--muted);padding:8px 0">Loading documents…</div>
             </div>
           </div>
         </div>
+        <!-- Hidden task-list-mini kept for renderTaskList compat -->
+        <div style="display:none"><div id="task-list-mini"></div></div>
 
       </div><!-- /section-dashboard -->
 
@@ -2856,7 +2918,10 @@
           </div>
         </div>
 
-        <!-- Dynamically rendered rounds -->
+        <!-- Strategy summary (rendered by _renderFsStrategySummary) -->
+        <div id="fs-summary"></div>
+
+        <!-- Dynamically rendered phases -->
         <div id="fs-root"></div>
 
       </div><!-- /section-sequence -->
@@ -3340,111 +3405,142 @@
     },
   ];
 
+  function _renderFsStrategySummary(d, el, relSet) {
+    if (!el) return;
+    const fico = +(d.creditScore || (d.creditData && (d.creditData.fico8 || d.creditData.fico)) || 0);
+    const goal = +(d.fundingGoal || 0);
+    const state = (d.profileData && d.profileData.state) || (d.onboardData && d.onboardData.state) || null;
+    const approved = (d.fundingRows || []).filter(r => r.status === 'approved').reduce((s, r) => s + (+r.amount || 0), 0);
+    const utilization = d.creditData && typeof d.creditData.utilization === 'number' ? d.creditData.utilization : null;
+    const rels = [...relSet].slice(0, 3);
+    let readiness = 40;
+    if (fico >= 720) readiness += 25; else if (fico >= 680) readiness += 15; else if (fico >= 640) readiness += 5;
+    if (utilization !== null) { if (utilization <= 10) readiness += 20; else if (utilization <= 30) readiness += 10; }
+    if (rels.length >= 2) readiness += 15; else if (rels.length === 1) readiness += 8;
+    readiness = Math.min(readiness, 100);
+    const rColor = readiness >= 75 ? '#6ee7b7' : readiness >= 50 ? '#fcd34d' : '#fca5a5';
+    const rLabel = readiness >= 75 ? 'Ready' : readiness >= 50 ? 'Nearly Ready' : 'Needs Work';
+    const insights = [];
+    if (rels.length) insights.push({ icon: '🤝', text: rels.map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(' + ') + ' relationship — prioritized in sequence', type: 'good' });
+    if (state) insights.push({ icon: '📍', text: state + ' funding strategy active', type: 'info' });
+    if (fico >= 700) insights.push({ icon: '✅', text: 'FICO ' + fico + ' qualifies for Tier 1 national banks', type: 'good' });
+    else if (fico) insights.push({ icon: '⚠️', text: 'FICO ' + fico + ' — optimize to 700+ before Phase 2', type: 'warn' });
+    if (utilization !== null && utilization > 30) insights.push({ icon: '🔴', text: utilization + '% utilization — reduce to under 9% before applying', type: 'warn' });
+    else if (utilization !== null && utilization <= 10) insights.push({ icon: '✅', text: utilization + '% utilization — excellent position for high-limit approvals', type: 'good' });
+    const _fmt = n => n >= 1000000 ? '$' + (n/1000000).toFixed(1)+'M' : n >= 1000 ? '$' + Math.round(n/1000)+'K' : n ? '$'+n : '—';
+    const estRange = goal ? _fmt(Math.round(goal * 0.7)) + '–' + _fmt(goal) : '—';
+    el.innerHTML = `<div class="fsp-summary">
+      <div class="fsp-summary-top">
+        <div><div class="fsp-summary-label">Personalized Funding Strategy</div>
+          <div class="fsp-summary-title">${state ? state + ' · ' : ''}${fico ? 'FICO ' + fico : 'Profile Active'}</div></div>
+        <div class="fsp-readiness"><div class="fsp-readiness-score" style="color:${rColor}">${readiness}%</div>
+          <div class="fsp-readiness-label" style="color:${rColor}">${rLabel}</div></div>
+      </div>
+      <div class="fsp-stat-grid">
+        <div class="fsp-stat"><div class="fsp-stat-val">${_fmt(goal)}</div><div class="fsp-stat-lbl">Target Goal</div></div>
+        <div class="fsp-stat"><div class="fsp-stat-val">${estRange}</div><div class="fsp-stat-lbl">Est. Approval</div></div>
+        <div class="fsp-stat"><div class="fsp-stat-val">${_fmt(approved)}</div><div class="fsp-stat-lbl">Approved</div></div>
+        <div class="fsp-stat"><div class="fsp-stat-val">${rels.length || '—'}</div><div class="fsp-stat-lbl">Relationships</div></div>
+      </div>
+      ${insights.length ? `<div class="fsp-insights">${insights.slice(0,3).map(i => `<div class="fsp-insight fsp-ins-${i.type}"><span>${i.icon}</span><span>${i.text}</span></div>`).join('')}</div>` : ''}
+    </div>`;
+  }
+
   function renderFundingSequence() {
+    const d = getDashData();
     const rel = new Set(CLIENT_RELATIONSHIPS.map(r => r.toLowerCase()));
+    if (d.bankRelationships) d.bankRelationships.forEach(br => {
+      const n = (typeof br === 'string' ? br : br.name || '').toLowerCase();
+      if (n) rel.add(n);
+    });
+
+    _renderFsStrategySummary(d, document.getElementById('fs-summary'), rel);
+
     const root = document.getElementById('fs-root');
     if (!root) return;
     root.innerHTML = '';
 
-    let seqNum = 1;
-    let totalBanks = 0;
+    const PHASE_CFG = {
+      'soft':  { name: 'Pre-Application Pulls',        sub: 'No hard inquiry — apply anytime',               icon: '🔍', bg: 'linear-gradient(135deg,#059669,#047857)' },
+      'r1':    { name: 'Phase 1 — Relationship Banks',  sub: 'Highest approval odds from existing accounts',  icon: '🤝', bg: 'linear-gradient(135deg,#0A1628,#1a3a6b)' },
+      'r2':    { name: 'Phase 2 — Tier 1 National',     sub: 'Open checking · apply same or next day',        icon: '🏛', bg: 'linear-gradient(135deg,#003B8E,#1e40af)' },
+      'r3':    { name: 'Phase 3 — RM Introduction',     sub: 'Relationship manager required for best limits', icon: '🤵', bg: 'linear-gradient(135deg,#1e40af,#2563eb)' },
+      'r4':    { name: 'Phase 4 — Regional Layer',      sub: 'Business must be 6+ months old',               icon: '🗺', bg: 'linear-gradient(135deg,#7c3aed,#6d28d9)' },
+      'r5':    { name: 'Phase 5 — Statement Round',     sub: 'Provide 3 months bank statements',             icon: '📊', bg: 'linear-gradient(135deg,#0369a1,#0284c7)' },
+      'local': { name: 'Regional Expansion',            sub: 'State-specific bank opportunities',            icon: '📍', bg: 'linear-gradient(135deg,#0A1628,#112240)' },
+      'call':  { name: 'Branch & Phone Only',           sub: 'Must call or visit in person to apply',        icon: '📞', bg: 'linear-gradient(135deg,#b91c1c,#dc2626)' },
+    };
+    const STATUS_CFG = {
+      approved: { bg:'#d1fae5', color:'#065f46', label:'✓ Approved' },
+      pending:  { bg:'#fef3c7', color:'#92400e', label:'⏳ Pending' },
+      sent:     { bg:'#dbeafe', color:'#1e40af', label:'→ Sent' },
+      queued:   { bg:'#f5f3ff', color:'#6d28d9', label:'Queued' },
+      denied:   { bg:'#fee2e2', color:'#991b1b', label:'✕ Denied' },
+    };
 
-    for (let ri = 0; ri < SEQUENCE_ROUNDS.length; ri++) {
-      const round = SEQUENCE_ROUNDS[ri];
+    let seqNum = 1, totalBanks = 0, firstOpenDone = false;
 
-      // Sort: relationship banks first, then original PDF order
+    SEQUENCE_ROUNDS.forEach(round => {
+      const cfg = PHASE_CFG[round.id] || { name: round.label, sub: round.sublabel, icon: '🏦', bg: 'var(--navy)' };
       const banks = [...round.banks].sort((a, b) => {
-        const aRel = rel.has(a.key);
-        const bRel = rel.has(b.key);
-        if (aRel && !bRel) return -1;
-        if (!aRel && bRel) return 1;
-        return 0;
+        const ar = rel.has(a.key), br_ = rel.has(b.key);
+        return ar && !br_ ? -1 : !ar && br_ ? 1 : 0;
       });
-
       totalBanks += banks.length;
-      const phase = document.createElement('div');
-      phase.className = 'fs-phase';
+      const hasApproval = banks.some(b => b.status === 'approved');
+      const approvedAmt = banks.filter(b => b.status === 'approved' && b.amount).map(b => b.amount).join(' + ');
+      const isOpen = (!firstOpenDone || hasApproval);
+      if (isOpen) firstOpenDone = true;
 
-      // Header icon
-      let iconSvg = round.id === 'soft'
-        ? '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
-        : round.id === 'call'
-        ? '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>'
-        : '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>';
-
-      const header = document.createElement('div');
-      header.className = 'fs-phase-header ' + round.headerClass;
-      header.innerHTML = iconSvg + ' <strong>' + round.label + '</strong><span style="opacity:0.75;font-weight:400;font-size:11px;"> — ' + round.sublabel + '</span><span class="ph-count">' + banks.length + '</span>';
-      phase.appendChild(header);
-
-      // Prereq box
-      if (round.prereq) {
-        const prereq = document.createElement('div');
-        prereq.className = 'fs-prereq';
-        prereq.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg><span><strong>Prereq:</strong> ' + round.prereq + '</span>';
-        phase.appendChild(prereq);
-      }
-
-      // Bank list
-      const list = document.createElement('div');
-      list.className = 'fs-bank-list';
-
-      for (const bank of banks) {
+      const banksHtml = banks.map(bank => {
         const isRel = rel.has(bank.key);
-        const row = document.createElement('div');
-        row.className = 'fs-bank-row' + (isRel ? ' fs-rel' : '');
+        const sCfg = STATUS_CFG[bank.status] || STATUS_CFG.queued;
+        const num = (round.id === 'soft' || round.id === 'call') ? '—' : seqNum++;
+        const why = bank.note || (isRel ? 'Existing ' + bank.name + ' relationship — prioritized for higher limits' : '');
+        return `<div class="fsp-bank-card${isRel ? ' fsp-rel' : ''}">
+          <div class="fsp-bank-top">
+            <div class="fsp-seq">${num}</div>
+            <div class="fsp-logo"><img src="https://www.google.com/s2/favicons?domain=${bank.domain}&sz=64" alt="${bank.name}" onerror="this.style.display='none'"></div>
+            <div class="fsp-bank-info">
+              <div class="fsp-bank-name">${bank.name}${bank.rm ? ' <span class="fsp-rm">RM</span>' : ''}</div>
+              <div class="fsp-bank-product">${bank.card}</div>
+              ${why ? `<div class="fsp-why">${why}</div>` : ''}
+            </div>
+            <div class="fsp-bank-right">
+              ${bank.amount ? `<div class="fsp-amount">${bank.amount}</div>` : ''}
+              <span class="fsp-status" style="background:${sCfg.bg};color:${sCfg.color}">${sCfg.label}</span>
+              <div class="fsp-tags-row">
+                <span class="fsp-bureau ${bank.bureauClass}">${bank.bureau}</span>
+                ${isRel ? '<span class="fsp-rel-badge">★ Relationship</span>' : ''}
+                ${bank.geo ? '<span class="fsp-tag-geo">Geo</span>' : ''}
+                ${bank.callOnly ? '<span class="fsp-tag-call">Branch</span>' : ''}
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
 
-        // Seq number
-        const num = document.createElement('div');
-        num.className = 'fs-seq-num';
-        num.textContent = (round.id === 'soft' || round.id === 'call') ? '—' : seqNum++;
-        row.appendChild(num);
+      root.insertAdjacentHTML('beforeend', `
+        <div class="fsp-phase${isOpen ? ' fsp-open' : ''}">
+          <div class="fsp-phase-hdr" style="background:${cfg.bg}" onclick="this.parentElement.classList.toggle('fsp-open')">
+            <span class="fsp-phase-icon">${cfg.icon}</span>
+            <div class="fsp-phase-meta">
+              <div class="fsp-phase-name">${cfg.name}</div>
+              <div class="fsp-phase-sub">${cfg.sub}</div>
+            </div>
+            <div class="fsp-phase-right">
+              ${approvedAmt ? `<span class="fsp-phase-approved">${approvedAmt}</span>` : hasApproval ? `<span class="fsp-phase-approved">${banks.filter(b=>b.status==='approved').length} approved</span>` : ''}
+              <span class="fsp-phase-count">${banks.length}</span>
+              <svg class="fsp-chevron" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
+            </div>
+          </div>
+          ${round.prereq ? `<div class="fsp-prereq"><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> <strong>Before applying:</strong> ${round.prereq}</div>` : ''}
+          <div class="fsp-bank-list">${banksHtml}</div>
+        </div>
+        ${round.wipe ? '<div class="fsp-wipe"><div></div><span>Wipe Inquiries · Wait for Score Refresh</span><div></div></div>' : ''}
+      `);
+    });
 
-        // Favicon
-        const fav = document.createElement('div');
-        fav.className = 'fs-favicon';
-        const img = document.createElement('img');
-        img.src = 'https://www.google.com/s2/favicons?domain=' + bank.domain + '&sz=64';
-        img.alt = bank.name;
-        img.onerror = function() { this.style.display = 'none'; };
-        fav.appendChild(img);
-        row.appendChild(fav);
-
-        // Info
-        const info = document.createElement('div');
-        info.className = 'fs-bank-info';
-        const rmBadge = bank.rm ? '<span class="fs-rm-badge">RM</span>' : '';
-        const noteHtml = bank.note ? '<div class="fs-bank-note">⚡ ' + bank.note + '</div>' : '';
-        info.innerHTML = '<div class="fs-bank-name">' + bank.name + rmBadge + '</div><div class="fs-card-name">' + bank.card + '</div>' + noteHtml;
-        row.appendChild(info);
-
-        // Tags
-        const tags = document.createElement('div');
-        tags.className = 'fs-tags';
-        if (isRel) tags.innerHTML += '<span class="fs-rel-badge">★ Relationship</span>';
-        tags.innerHTML += '<span class="fs-tag ' + bank.bureauClass + '">' + bank.bureau + '</span>';
-        if (bank.geo) tags.innerHTML += '<span class="fs-tag fs-tag-geo">Geo-Locked</span>';
-        if (bank.callOnly) tags.innerHTML += '<span class="fs-tag fs-tag-call">Branch Only</span>';
-        if (bank.mi) tags.innerHTML += '<span class="fs-tag" style="background:#f0f9ff;color:#0369a1;font-size:9px;">MI</span>';
-        row.appendChild(tags);
-
-
-        list.appendChild(row);
-      }
-
-      phase.appendChild(list);
-      root.appendChild(phase);
-
-      // WIPE divider
-      if (round.wipe) {
-        const wipe = document.createElement('div');
-        wipe.className = 'fs-wipe-divider';
-        wipe.innerHTML = '<div class="fs-wipe-line"></div><div class="fs-wipe-text">Wipe Inquiries Before Next Round</div><div class="fs-wipe-line"></div>';
-        root.appendChild(wipe);
-      }
-    }
-
-    // Update total count in state bar
     const totalEl = document.getElementById('fs-stat-total');
     if (totalEl) totalEl.textContent = totalBanks;
   }
@@ -4340,7 +4436,7 @@
   }
 
   // ── STAGE TASKS PANEL (dashboard inline) ─────────────────────────────────────
-  function renderStageTasksPanel(d) {
+  function renderStageTasksPanel(d, overrideTasks) {
     const el = document.getElementById('stage-tasks-panel');
     const titleEl = document.getElementById('stage-tasks-card-title');
     if (!el) return;
@@ -4348,7 +4444,7 @@
     const stages = d.stageNames || DEFAULT_DASH.stageNames;
     const stageName = stages[cs - 1] || 'Current Stage';
     if (titleEl) titleEl.textContent = 'Stage ' + cs + ' — ' + stageName;
-    const clientTasks = (d.tasks || []).filter(t => t.clientVisible !== false);
+    const clientTasks = (overrideTasks || window._dashActiveTasks || d.tasks || []).filter(t => t.clientVisible !== false);
     // Tasks for active stage: by stageIndex if set, otherwise all admin tasks for current stage
     let stageTasks = clientTasks.filter(t => t.stageIndex === cs - 1 || t.stageIndex === cs);
     if (!stageTasks.length) stageTasks = clientTasks.length ? clientTasks : (STAGE_TASKS_TEMPLATE[cs-1]||[]).map(text => ({ text, status: 'todo' }));
@@ -4378,12 +4474,13 @@
   }
 
   // ── TASK WORKSPACE (tasks section) ───────────────────────────────────────────
-  function renderTasksWorkspace(d) {
+  function renderTasksWorkspace(d, overrideTasks) {
     const el = document.getElementById('tasks-workspace');
     if (!el) return;
     const cs = d.currentStage || 1;
     const stages = d.stageNames || DEFAULT_DASH.stageNames;
-    const allTasks = (d.tasks || []).filter(t => t.clientVisible !== false);
+    // Use overrideTasks → cached _dashActiveTasks → d.tasks (same source as dashboard)
+    const allTasks = (overrideTasks || window._dashActiveTasks || d.tasks || []).filter(t => t.clientVisible !== false);
     const now = Date.now();
     const in7 = now + 7 * 86400000;
     const openTasks = allTasks.filter(t => t.status !== 'done');
@@ -4573,6 +4670,7 @@
       }
     } catch(e) {}
     var _activeTasks = _pipelineTasks.length ? _pipelineTasks : (d.tasks || []);
+    window._dashActiveTasks = _activeTasks; // shared with Action Center + stage panel
     const openTasks = _activeTasks.filter(t => t.status !== 'done').length;
     const st = document.getElementById('s-tasks'); if(st) st.textContent = _activeTasks.length ? openTasks : '—';
 
@@ -4637,10 +4735,9 @@
     renderRoadmap(d);
     renderClientUpdates(d);
 
-    // Unified workflow system — dashboard NBA + stage panel + task workspace
-    renderNbaBanner(d);
-    renderStageTasksPanel(d);
-    renderTasksWorkspace(d);
+    // Unified workflow system — stage panel + task workspace (NBA removed to reduce duplication)
+    renderStageTasksPanel(d, _activeTasks);
+    renderTasksWorkspace(d, _activeTasks);
   }
 
   async function viewSignedContract() {
@@ -5079,7 +5176,7 @@
   const sectionTitles = {
     dashboard: 'Dashboard',
     sequence: 'Funding Sequence',
-    tasks: 'My Tasks',
+    tasks: 'Action Center',
 
     credit: 'Credit Analyzer',
     documents: 'Documents',
@@ -6369,8 +6466,10 @@
     // Render roadmap / updates on first navigation (also re-rendered by loadDashboardData on data sync)
     if (name === 'roadmap')  renderRoadmap(getDashData());
     if (name === 'updates')  renderClientUpdates(getDashData());
-    // Re-render task workspace when navigating to tasks tab
-    if (name === 'tasks')    renderTasksWorkspace(getDashData());
+    // Re-render task workspace when navigating to tasks tab (pass cached tasks for sync parity with dashboard)
+    if (name === 'tasks')    renderTasksWorkspace(getDashData(), window._dashActiveTasks);
+    // Re-render funding sequence when navigating to it
+    if (name === 'sequence') renderFundingSequence();
   }
 
   // Handle browser back/forward within the portal
