@@ -1046,8 +1046,12 @@
     .fa-status.applied::before  { background:#3B82F6; }
     .fa-status.approved { background:#F0FDF4; color:#15803D; }
     .fa-status.approved::before { background:#22C55E; }
-    .fa-status.denied   { background:#FEF2F2; color:#B91C1C; }
-    .fa-status.denied::before   { background:#EF4444; }
+    .fa-status.denied    { background:#FEF2F2; color:#B91C1C; }
+    .fa-status.denied::before    { background:#EF4444; }
+    .fa-status.queued    { background:#F5F3FF; color:#6D28D9; }
+    .fa-status.queued::before    { background:#8B5CF6; }
+    .fa-status.excluded  { background:#F3F4F6; color:#6B7280; }
+    .fa-status.excluded::before  { background:#9CA3AF; }
     @media (max-width: 600px) {
       .fa-table thead { display: none; }
       .fa-table, .fa-table tbody, .fa-table tr, .fa-table td { display: block; width: 100%; box-sizing: border-box; }
@@ -3046,10 +3050,10 @@
                 <tr>
                   <th>Bank</th>
                   <th>Product</th>
-                  <th>0% Intro Period</th>
+                  <th>Est. Range</th>
                   <th>Status</th>
-                  <th>Amount</th>
-                  <th>Notes</th>
+                  <th>Approved</th>
+                  <th>Team Note</th>
                 </tr>
               </thead>
               <tbody id="fa-tbody"></tbody>
@@ -3511,10 +3515,8 @@
   }
 
   // ← Edit this list to update which cards are being applied to
-  const APPLYING_TO = [
-    { name: 'Chase Ink Cash' },
-    { name: 'Amex Blue Cash Business' },
-  ];
+  // Populated dynamically from d.fundingRows in loadDashboardData — never hardcode here
+  const APPLYING_TO = [];
 
   let applyIdx = 0;
   function renderApplyingCard() {
@@ -3555,105 +3557,14 @@
   }
 
   // ── FUNDING SEQUENCE ─────────────────────────────────
-  // Banks the client has a relationship with (bank with / credit card with).
-  // These automatically bubble to the TOP of their round.
-  // Populate from client's onboarding form selections.
-  const CLIENT_RELATIONSHIPS = [
-    'chase',        // Chase personal card + banks with Chase
-    'amex',         // American Express card on credit report
-    'wells fargo',  // Wells Fargo personal account
-  ];
+  // Client bank relationships — populated from admin-set d.bankRelationships only.
+  // Do NOT hardcode banks here; admin controls the relationship list per client.
+  const CLIENT_RELATIONSHIPS = [];
 
-  const SEQUENCE_ROUNDS = [
-    {
-      id: 'soft', label: 'Soft Pull', sublabel: 'Apply Any Time — No Hard Inquiry',
-      headerClass: 'fs-ph-sp', prereq: null, wipe: false,
-      banks: [
-        { key: 'capital on tap', name: 'Capital on Tap', card: 'Business Credit Card', domain: 'capitalontap.com', bureau: 'Soft Pull', bureauClass: 'fs-tag-sp', status: 'approved', statusLabel: 'Approved' },
-        { key: 'gm marcus', name: 'GM Marcus', card: 'GM Business Card', domain: 'marcus.com', bureau: 'Soft Pull', bureauClass: 'fs-tag-sp', status: 'approved', statusLabel: 'Approved' },
-        { key: 'bhg', name: 'BHG Financial', card: 'BHG More Business Mastercard', domain: 'bhgmoney.com', bureau: 'Soft Pull', bureauClass: 'fs-tag-sp', status: 'queued', statusLabel: 'Queued' },
-      ]
-    },
-    {
-      id: 'r1', label: 'Round 1', sublabel: 'Big Wins',
-      headerClass: 'fs-ph-exp',
-      prereq: 'Open Chase business checking — 5k+ deposit, season 5 business days',
-      wipe: true,
-      banks: [
-        { key: 'chase', name: 'Chase', card: 'Ink Unlimited (30–40K) → Ink Preferred (50K)', domain: 'chase.com', bureau: 'EX', bureauClass: 'fs-tag-exp', amount: '$80K', note: 'If ≥$30K on Ink Unlimited, apply for Ink Preferred immediately', status: 'approved', statusLabel: 'Approved $25K' },
-        { key: 'amex', name: 'American Express', card: 'Biz Gold (charge) / Biz Platinum', domain: 'americanexpress.com', bureau: 'EX', bureauClass: 'fs-tag-exp', amount: '$15K', status: 'approved', statusLabel: 'Approved $20K' },
-      ]
-    },
-    {
-      id: 'r2', label: 'Round 2', sublabel: 'Fast Checking',
-      headerClass: 'fs-ph-exp',
-      prereq: 'Open Truist + PNC + Wells Fargo checking (Truist same day, PNC & Wells next day)',
-      wipe: true,
-      banks: [
-        { key: 'amex', name: 'American Express', card: 'Business Card (1 card only)', domain: 'americanexpress.com', bureau: 'EX Soft', bureauClass: 'fs-tag-sp', amount: '$20K', status: 'sent', statusLabel: 'Sent' },
-        { key: 'elan', name: 'ELAN Financial', card: 'Business Card × 2 (via local bank partner)', domain: 'elanfinancialservices.com', bureau: 'TU', bureauClass: 'fs-tag-tu', amount: '$40K', status: 'queued', statusLabel: 'Queued' },
-        { key: 'truist', name: 'Truist', card: 'Business Cash Rewards', domain: 'truist.com', bureau: 'EQ', bureauClass: 'fs-tag-eq', amount: '$25K', note: 'Only after "offer" while opening checking', status: 'queued', statusLabel: 'Queued' },
-        { key: 'pnc', name: 'PNC Bank', card: 'Visa Business Credit Card', domain: 'pnc.com', bureau: 'EX / EQ', bureauClass: 'fs-tag-exp', amount: '$15K', note: 'Call # on back to request extra $10K', status: 'pending', statusLabel: 'Pending' },
-        { key: 'wells fargo', name: 'Wells Fargo', card: 'Signify Business Cash', domain: 'wellsfargo.com', bureau: 'EX', bureauClass: 'fs-tag-exp', amount: '$30K', status: 'queued', statusLabel: 'Queued' },
-      ]
-    },
-    {
-      id: 'r3', label: 'Round 3', sublabel: 'Checking Required',
-      headerClass: 'fs-ph-exp',
-      prereq: 'Checking accounts must be open and seasoned',
-      wipe: true,
-      banks: [
-        { key: 'wells fargo', name: 'Wells Fargo', card: 'Business Line of Credit (BLOC)', domain: 'wellsfargo.com', bureau: 'EX', bureauClass: 'fs-tag-exp', amount: '$15K', rm: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'first citizens', name: 'First Citizens Bank', card: 'Cash Rewards Business Card', domain: 'firstcitizens.com', bureau: 'EX', bureauClass: 'fs-tag-exp', amount: '$30K', rm: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'fifth third', name: 'Fifth Third Bank', card: 'Business Credit Card', domain: '53.com', bureau: 'EX', bureauClass: 'fs-tag-exp', amount: '$10K', status: 'queued', statusLabel: 'Queued' },
-      ]
-    },
-    {
-      id: 'r4', label: 'Round 4', sublabel: 'Checking Required',
-      headerClass: 'fs-ph-tu',
-      prereq: 'Business must be 6+ months old — build history before applying',
-      wipe: true,
-      banks: [
-        { key: 'citizens', name: 'Citizens Bank', card: 'Business Credit Card', domain: 'citizensbank.com', bureau: 'Soft EQ', bureauClass: 'fs-tag-sp', amount: '$30K', note: 'Call # after 24 hrs to push application through', status: 'queued', statusLabel: 'Queued' },
-      ]
-    },
-    {
-      id: 'r5', label: 'Round 5', sublabel: 'Checking + Bank Statements',
-      headerClass: 'fs-ph-eq',
-      prereq: 'Provide 3 months bank statements from Round 1 (required for US Bank)',
-      wipe: false,
-      banks: [
-        { key: 'bank of america', name: 'Bank of America', card: 'Advantage Unlimited / Customized Cash × 3 cards', domain: 'bankofamerica.com', bureau: 'EX / TU', bureauClass: 'fs-tag-exp', amount: '$30K', status: 'queued', statusLabel: 'Queued' },
-        { key: 'us bank', name: 'US Bank', card: 'Triple Cash / Business Platinum × 2 cards', domain: 'usbank.com', bureau: 'EX', bureauClass: 'fs-tag-exp', amount: '$50K', rm: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'amex', name: 'American Express', card: '2nd Business Card (90 days after 1st)', domain: 'americanexpress.com', bureau: 'EX', bureauClass: 'fs-tag-exp', amount: '$20K', status: 'queued', statusLabel: 'Queued' },
-      ]
-    },
-    {
-      id: 'local', label: 'Michigan Local Banks', sublabel: 'Continue After Round 5',
-      headerClass: 'fs-ph-mi', prereq: null, wipe: false,
-      banks: [
-        { key: 'navy federal', name: 'Navy Federal', card: 'Business Credit Card', domain: 'navyfederal.org', bureau: 'EX', bureauClass: 'fs-tag-exp', status: 'queued', statusLabel: 'Queued' },
-        { key: 'bmo harris', name: 'BMO Harris', card: 'Business Platinum / Platinum Rewards', domain: 'bmo.com', bureau: 'TU', bureauClass: 'fs-tag-tu', geo: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'county national', name: 'County National Bank', card: 'Business Card (Elan Financial)', domain: 'countybank.com', bureau: 'TU', bureauClass: 'fs-tag-tu', mi: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'independent bank', name: 'Independent Bank', card: 'Business Card (Elan Financial)', domain: 'independentbank.com', bureau: 'TU', bureauClass: 'fs-tag-tu', mi: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'first merchants', name: 'First Merchants Bank', card: 'Business Card (Elan Financial)', domain: 'firstmerchants.com', bureau: 'TU', bureauClass: 'fs-tag-tu', mi: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'horizon bank', name: 'Horizon Bank', card: 'Business Card (Elan Financial)', domain: 'horizonbank.com', bureau: 'TU', bureauClass: 'fs-tag-tu', mi: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'west shore', name: 'West Shore Bank', card: 'Business Card (TCM)', domain: 'westshorebank.com', bureau: 'EX', bureauClass: 'fs-tag-exp', mi: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'isabella', name: 'Isabella Bank', card: 'Business Credit Card', domain: 'isabellabank.com', bureau: 'EQ', bureauClass: 'fs-tag-eq', mi: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'southern michigan', name: 'Southern Michigan Bank & Trust', card: 'Business Card (Card Assets)', domain: 'southernmichiganbank.com', bureau: 'EQ', bureauClass: 'fs-tag-eq', mi: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'alma bank', name: 'Alma Bank', card: 'Business Credit Card', domain: 'almabank.com', bureau: 'EQ', bureauClass: 'fs-tag-eq', status: 'queued', statusLabel: 'Queued' },
-      ]
-    },
-    {
-      id: 'call', label: 'Call Banks Only', sublabel: 'Michigan — Must Call or Visit Branch',
-      headerClass: 'fs-ph-mi', prereq: null, wipe: false,
-      banks: [
-        { key: 'huntington', name: 'Huntington Bank', card: 'Business Credit Card', domain: 'huntington.com', bureau: 'Call', bureauClass: 'fs-tag-call', mi: true, callOnly: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'comerica', name: 'Comerica Bank', card: 'Business Credit Card', domain: 'comerica.com', bureau: 'Call', bureauClass: 'fs-tag-call', mi: true, callOnly: true, status: 'queued', statusLabel: 'Queued' },
-        { key: 'flagstar', name: 'Flagstar Bank', card: 'Business Credit Card', domain: 'flagstar.com', bureau: 'Call', bureauClass: 'fs-tag-call', mi: true, callOnly: true, status: 'queued', statusLabel: 'Queued' },
-      ]
-    },
-  ];
+  // SEQUENCE_ROUNDS — legacy reference data, NOT used for client rendering.
+  // renderFundingSequence() reads exclusively from d.fundingRows (admin source of truth).
+  // Kept here only as a bank catalog reference for future tooling.
+  const SEQUENCE_ROUNDS = [];
 
   function _renderFsStrategySummary(d, el, relSet) {
     if (!el) return;
@@ -5296,40 +5207,45 @@
     }
     card.style.display = '';
 
-    const statusLabel = { pending: 'Pending', applied: 'Applied', approved: 'Approved', denied: 'Denied' };
+    const statusLabel = { pending:'Pending', queued:'Queued', applied:'Applied', approved:'Approved', denied:'Denied', excluded:'Excluded' };
     const totalApproved = rows.filter(r => r.status === 'approved').reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-    const totalFunding  = rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const activeCount   = rows.filter(r => r.status === 'applied' || r.status === 'pending' || r.status === 'queued').length;
     if (meta) {
       let metaStr = rows.length + ' application' + (rows.length !== 1 ? 's' : '');
       if (totalApproved) metaStr += ' · $' + totalApproved.toLocaleString() + ' approved';
-      else if (totalFunding) metaStr += ' · $' + totalFunding.toLocaleString() + ' in funding';
+      if (activeCount) metaStr += ' · ' + activeCount + ' active';
       meta.textContent = metaStr;
     }
 
     // Only rebuild rows when data actually changed — prevents image flash on every poll tick
-    const newHash = JSON.stringify(rows.map(r => [r.id, r.bank, r.cardName, r.status, r.amount, r.instructions, r.introPeriod]));
+    const newHash = JSON.stringify(rows.map(r => [r.id, r.bank, r.cardName, r.status, r.amount, r.clientNote, r.introPeriod, r.bureau, r.estRange]));
     if (newHash === _ftHash) return;
     _ftHash = newHash;
 
     tbody.innerHTML = rows.map((r) => {
       const statusClass = r.status || 'pending';
-      const label = statusLabel[statusClass] || 'Pending';
+      const label = statusLabel[statusClass] || r.status || 'Pending';
       const brand = getBankBrand(r.bank);
+      const domain = r.domain || _bankDomain(r.bank) || brand.domain;
+      const bureauHtml = r.bureau ? ` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;background:#f3f4f6;color:#374151;margin-left:4px">${r.bureau}</span>` : '';
+      const noteHtml = r.clientNote
+        ? `<div class="fa-notes">${r.clientNote}</div>`
+        : `<span style="color:var(--gray-300)">—</span>`;
       return `<tr>
         <td data-label="Bank">
           <div class="fa-bank-cell">
             <div class="fa-logo">
-              <img src="https://www.google.com/s2/favicons?domain=${brand.domain}&sz=64" alt="${r.bank}"
+              <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="${r.bank}"
                 onerror="this.style.display='none';this.parentElement.style.background='${brand.bg}';this.parentElement.style.border='none';this.parentElement.innerHTML='<span style=\\'font-size:10px;font-weight:700;color:white\\'>${brand.initials}</span>'" />
             </div>
-            <span class="fa-bank-name">${r.bank}</span>
+            <span class="fa-bank-name">${r.bank}${bureauHtml}</span>
           </div>
         </td>
         <td data-label="Product"><span class="fa-product">${r.cardName || '—'}</span></td>
-        <td data-label="0% Intro Period"><span class="fa-period">${r.introPeriod || '—'}</span></td>
+        <td data-label="Est. Range"><span class="fa-period">${r.estRange || (r.introPeriod && r.introPeriod !== 'N/A' ? r.introPeriod : '—')}</span></td>
         <td data-label="Status"><span class="fa-status ${statusClass}">${label}</span></td>
         <td data-label="Amount"><span class="fa-amount">${r.amount ? '$' + Number(r.amount).toLocaleString() : '—'}</span></td>
-        <td data-label="Notes"><div class="fa-notes">${r.instructions || '<span style="color:var(--gray-300)">—</span>'}</div></td>
+        <td data-label="Notes">${noteHtml}</td>
       </tr>`;
     }).join('');
   }
