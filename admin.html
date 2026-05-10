@@ -4422,41 +4422,6 @@
             <div id="dtab-funding">${renderFundingTab(id)}</div>
           </div>
 
-          <!-- Funding Summary (full-width, below Funding Applications) -->
-          <div class="a-card" style="margin-bottom:14px">
-            <div class="a-card-hdr">
-              <div class="a-card-hdrl">
-                <div class="a-card-title">Funding Summary</div>
-              </div>
-            </div>
-            <div class="a-fund-sum-bar">
-              <div class="a-fund-sum-tile green">
-                <div class="a-fund-sum-tile-lbl">Approved</div>
-                <div class="a-fund-sum-tile-val" id="fsum-approved-${id}">${_fmtMoney(_totalFunded)}</div>
-              </div>
-              <div class="a-fund-sum-tile">
-                <div class="a-fund-sum-tile-lbl">Goal</div>
-                <div class="a-fund-sum-tile-val">${_fmtMoney(_fundGoal)}</div>
-              </div>
-              <div class="a-fund-sum-tile ${_fundGap > 0 ? 'red' : 'green'}" id="fsum-rem-tile-${id}">
-                <div class="a-fund-sum-tile-lbl">Remaining</div>
-                <div class="a-fund-sum-tile-val" id="fsum-remaining-${id}">${_fundGoal > 0 ? _fmtMoney(_fundGap) : '—'}</div>
-              </div>
-            </div>
-            <div id="fsum-prog-wrap-${id}" style="${_fundGoal > 0 || _totalFunded > 0 ? '' : 'display:none'}">
-              <div class="a-fund-prog-bar" style="margin-bottom:6px">
-                <div class="a-fund-prog-fill" id="fsum-prog-fill-${id}" style="width:${_fundPct}%"></div>
-              </div>
-              <div style="font-size:10px;font-weight:600;color:var(--gray-400);margin-bottom:12px" id="fsum-prog-pct-${id}">${_fundPct}% of goal funded</div>
-            </div>
-            <div class="a-fund-outcome-pills" id="fsum-pills-${id}">
-              ${_appApproved > 0 ? `<span class="a-fund-op approved">${_appApproved} Approved</span>` : ''}
-              ${_appPending > 0 ? `<span class="a-fund-op pending">${_appPending} Pending</span>` : ''}
-              ${_appDenied > 0 ? `<span class="a-fund-op denied">${_appDenied} Denied</span>` : ''}
-              ${_apps.length === 0 ? `<span style="font-size:11px;color:var(--gray-400)">No applications yet</span>` : ''}
-            </div>
-          </div>
-
           <!-- FUNDING STRATEGY GENERATOR (collapsible, default CLOSED) -->
           <div class="a-card" id="sp-dtab-fsg-${id}" style="margin-bottom:14px">
             <div class="a-card-hdr a-coll-hdr" onclick="fsgToggle('${id}')">
@@ -12317,94 +12282,141 @@
 
   function renderFundingRowsAdmin(clientId, rows) {
     if (!rows.length) return '<div style="font-size:12px;color:var(--gray-400);padding:6px 0;font-style:italic">No strategy entries yet. Type a bank name above to add one.</div>';
-    const statusColor = { pending:'#d97706', queued:'#7c3aed', applied:'#2563eb', approved:'#059669', denied:'#dc2626', excluded:'#6b7280' };
-    const statusBg    = { pending:'rgba(245,158,11,0.08)', queued:'rgba(124,58,237,0.08)', applied:'rgba(37,99,235,0.08)', approved:'rgba(16,185,129,0.08)', denied:'rgba(239,68,68,0.06)', excluded:'rgba(107,114,128,0.08)' };
-    const ALL_STATUSES = ['pending','queued','applied','approved','denied','excluded'];
-    const CATEGORIES   = [['','Category…'],['soft_pull','Soft Pull'],['primary','Primary Bank'],['secondary','Secondary Bank'],['credit_union','Credit Union'],['regional','Regional Bank'],['relationship','Relationship'],['no_pg','No PG / Fintech'],['expansion','Expansion']];
-    const BUREAUS      = [['','Bureau…'],['EX','Experian (EX)'],['EQ','Equifax (EQ)'],['TU','TransUnion (TU)'],['EX/EQ','EX + EQ'],['EX/TU','EX + TU'],['All 3','All 3 Bureaus'],['Soft Pull','Soft Pull'],['Call','Call / Branch']];
-    const RISKS        = [['','Risk…'],['low','Low Risk'],['medium','Medium Risk'],['high','High Risk']];
 
-    // Quick-action button definitions (most-used status transitions)
+    const STATUS_CFG = {
+      pending:  { color:'#d97706', bg:'rgba(245,158,11,0.10)',  label:'Pending'  },
+      queued:   { color:'#7c3aed', bg:'rgba(124,58,237,0.10)', label:'Queued'   },
+      applied:  { color:'#2563eb', bg:'rgba(37,99,235,0.10)',  label:'Applied'  },
+      approved: { color:'#059669', bg:'rgba(16,185,129,0.10)', label:'Approved' },
+      denied:   { color:'#dc2626', bg:'rgba(239,68,68,0.08)',  label:'Denied'   },
+      excluded: { color:'#6b7280', bg:'rgba(107,114,128,0.08)',label:'Excluded' },
+    };
+    const NEXT_ACTION = {
+      queued:   '⏳ Ready to apply when credit profile meets requirements.',
+      applied:  '📬 Submitted — awaiting decision. Follow up in 5–7 business days.',
+      approved: '✅ Approved! Record the credit limit and any sign-up bonus details.',
+      denied:   '🔁 Review denial reason. Consider a reconsideration call or alternate card.',
+      excluded: '⛔ Excluded this round. Revisit in 60–90 days.',
+      pending:  '🔄 Pending — follow up with the bank if no response in 7 days.',
+    };
     const ACT_BTNS = [
-      { val:'queued',   label:'Queue',    clr:'#7c3aed' },
-      { val:'applied',  label:'Applied',  clr:'#2563eb' },
-      { val:'approved', label:'Approved', clr:'#059669' },
-      { val:'denied',   label:'Denied',   clr:'#dc2626' },
-      { val:'excluded', label:'Exclude',  clr:'#6b7280' },
+      { val:'queued',   label:'Queue'   },
+      { val:'applied',  label:'Applied' },
+      { val:'approved', label:'Approved'},
+      { val:'denied',   label:'Denied'  },
+      { val:'excluded', label:'Exclude' },
     ];
+    const CATEGORIES = [['','Category…'],['soft_pull','Soft Pull'],['primary','Primary'],['secondary','Secondary'],['credit_union','Credit Union'],['regional','Regional'],['relationship','Relationship'],['no_pg','No PG / Fintech'],['expansion','Expansion']];
+    const BUREAUS    = [['','Bureau…'],['EX','Experian'],['EQ','Equifax'],['TU','TransUnion'],['EX/EQ','EX+EQ'],['EX/TU','EX+TU'],['All 3','All 3'],['Soft Pull','Soft Pull'],['Call','Call/Branch']];
+    const RISKS      = [['','Risk…'],['low','Low'],['medium','Medium'],['high','High']];
 
-    return rows.map((r, i) => {
-      const sc = statusColor[r.status] || '#6b7280';
-      const sb = statusBg[r.status]   || 'var(--gray-50)';
-      const hasNotes = !!(r.instructions||r.clientNote||r.category||r.bureau||r.riskLevel||r.estRange||r.waitPeriod||r.prerequisites);
+    return rows.map((r) => {
+      const cfg    = STATUS_CFG[r.status] || STATUS_CFG.queued;
+      const sc     = cfg.color;
+      const sb     = cfg.bg;
       const noteId = 'fr-notes-' + r.id;
-      const _opt = (pairs, val) => pairs.map(([v,l]) => `<option value="${v}"${val===v?' selected':''}>${l}</option>`).join('');
-      const _inp = (ph, field, val, extra='') => `<input placeholder="${ph}" value="${(val||'').replace(/"/g,'&quot;')}" oninput="faUpdateRow('${clientId}','${r.id}','${field}',this.value)" style="height:26px;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;padding:0 7px;background:white;color:var(--navy);width:100%;box-sizing:border-box${extra}" />`;
+      const hasDetails = !!(r.instructions||r.clientNote||r.category||r.bureau||r.riskLevel||r.estRange||r.waitPeriod||r.prerequisites);
 
-      // Bank logo (favicon)
-      const domain = (r.domain || r.bank || '').toLowerCase().replace(/\s+(bank|financial|credit union|federal|savings)$/,'').replace(/\s+/g,'')+'.com';
-      const logoHtml = `<div style="width:30px;height:30px;border-radius:6px;background:#f3f4f6;border:1px solid #e5e7eb;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+      const _opt = (pairs, val) => pairs.map(([v,l]) => `<option value="${v}"${val===v?' selected':''}>${l}</option>`).join('');
+      const _inp = (ph, field, val) => `<input placeholder="${ph}" value="${(val||'').replace(/"/g,'&quot;')}" oninput="faUpdateRow('${clientId}','${r.id}','${field}',this.value)" style="height:26px;border:1px solid #e5e7eb;border-radius:5px;font-size:10.5px;padding:0 7px;background:white;color:var(--navy);width:100%;box-sizing:border-box" />`;
+
+      // Bank logo via favicon
+      const domain = (r.domain||r.bank||'').toLowerCase().replace(/\s+(bank|financial|credit union|federal|savings)$/,'').replace(/\s+/g,'')+'.com';
+      const logoHtml = `<div style="width:32px;height:32px;border-radius:7px;background:#f3f4f6;border:1px solid #e5e7eb;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center">
         <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="" style="width:20px;height:20px;object-fit:contain"
-          onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:11px;font-weight:800;color:var(--navy)\\'>${(r.bank||'?')[0].toUpperCase()}</span>'" />
+          onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:12px;font-weight:800;color:var(--navy)\\'>${(r.bank||'?')[0].toUpperCase()}</span>'" />
       </div>`;
 
-      // Quick-action buttons row
-      const actBtnsHtml = ACT_BTNS.map(btn => {
+      // Metadata tags
+      const TAG = (bg, col, txt) => `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;background:${bg};color:${col}">${txt}</span>`;
+      const riskBg  = {low:'#f0fdf4',medium:'#fff7ed',high:'#fef2f2'};
+      const riskCol = {low:'#166534',medium:'#9a3412',high:'#991b1b'};
+      const catLabel = r.category ? r.category.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) : '';
+      const tags = [
+        catLabel            ? TAG('#eef2ff','#3730a3', catLabel) : '',
+        r.bureau            ? TAG('#fef9c3','#854d0e', r.bureau) : '',
+        r.riskLevel         ? TAG(riskBg[r.riskLevel]||'#f3f4f6', riskCol[r.riskLevel]||'#374151', r.riskLevel+' risk') : '',
+        (r.hasRelationship||r.relationship) ? TAG('#f0fdf4','#15803d','✓ relationship') : '',
+        r.round             ? TAG('#faf5ff','#7c3aed','Round '+r.round) : '',
+      ].filter(Boolean).join(' ');
+
+      // Status action pills
+      const actBtns = ACT_BTNS.map(btn => {
         const isActive = r.status === btn.val;
+        const c = (STATUS_CFG[btn.val]||{}).color||'#6b7280';
         return `<button onclick="faQuickStatus('${clientId}','${r.id}','${btn.val}')"
-          style="height:22px;padding:0 9px;border:1px solid ${isActive ? btn.clr : '#e5e7eb'};border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:${isActive ? btn.clr+'1a' : 'white'};color:${isActive ? btn.clr : '#9ca3af'};flex-shrink:0;white-space:nowrap;transition:color .12s,background .12s,border-color .12s"
+          style="height:23px;padding:0 10px;border:1px solid ${isActive?c:'#e5e7eb'};border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;background:${isActive?c+'18':'white'};color:${isActive?c:'#9ca3af'};flex-shrink:0;white-space:nowrap;transition:color .12s,background .12s,border-color .12s"
           >${btn.label}</button>`;
       }).join('');
 
+      // Amount input — green-tinted when approved
+      const isApproved = r.status === 'approved';
+      const amountHtml = `<input type="text" inputmode="numeric" id="fr-amount-${r.id}" placeholder="$0"
+        value="${r.amount ? '$'+Number(r.amount).toLocaleString() : ''}"
+        oninput="(function(el){var raw=(el.value||'').replace(/[^0-9]/g,'');var num=raw?parseInt(raw,10):0;el.value=num>0?'$'+num.toLocaleString():'';faUpdateRow('${clientId}','${r.id}','amount',num);})(this)"
+        style="height:28px;width:86px;border:1px solid ${isApproved?'#86efac':'#e5e7eb'};border-radius:6px;font-size:12px;font-weight:700;padding:0 8px;flex-shrink:0;background:${isApproved?'#f0fdf4':'white'};color:${isApproved?'#059669':'var(--navy)'};text-align:right" />`;
+
       return `
-      <div style="border:1px solid ${sc}30;border-left:3px solid ${sc};border-radius:9px;padding:8px 10px;background:white;margin-bottom:6px">
-        <!-- TOP ROW: logo · info · amount · details · delete -->
-        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+      <div style="border:1px solid ${sc}22;border-left:3px solid ${sc};border-radius:10px;background:white;margin-bottom:8px;overflow:hidden">
+
+        <!-- HEADER: logo · name/card · tags · amount · visibility · expand · delete -->
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 10px 9px">
           ${logoHtml}
           <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:12px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.bank}${r.cardName ? ' <span style="font-weight:400;color:var(--gray-500)">· '+r.cardName+'</span>' : ''}</div>
-            <div style="font-size:10px;color:var(--gray-400);margin-top:1px">${r.category ? r.category.replace(/_/g,' ') : ''}${r.bureau ? (r.category ? ' · ' : '') + r.bureau : ''}${r.estRange ? ' · ' + r.estRange : ''}</div>
+            <div style="font-weight:700;font-size:12.5px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${r.bank}${r.cardName?`<span style="font-weight:400;color:var(--gray-500);font-size:11.5px"> · ${r.cardName}</span>`:''}
+            </div>
+            <div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px;line-height:1">
+              ${tags||`<span style="font-size:9px;color:var(--gray-400)">No metadata — expand to set category, bureau &amp; risk</span>`}
+            </div>
           </div>
-          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:${sb};color:${sc};flex-shrink:0;white-space:nowrap">${(r.status||'queued').charAt(0).toUpperCase()+(r.status||'queued').slice(1)}</span>
-          <input type="text" inputmode="numeric" id="fr-amount-${r.id}" placeholder="$0" value="${r.amount ? '$'+Number(r.amount).toLocaleString() : ''}" oninput="(function(el){var raw=(el.value||'').replace(/[^0-9]/g,'');var num=raw?parseInt(raw,10):0;el.value=num>0?'$'+num.toLocaleString():'';faUpdateRow('${clientId}','${r.id}','amount',num);})(this)"
-            style="height:26px;width:78px;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;font-weight:600;padding:0 6px;flex-shrink:0;background:white;color:var(--navy);text-align:right" />
-          <button onclick="(function(){var n=document.getElementById('${noteId}');n.style.display=n.style.display==='none'?'block':'none';})()" title="Strategy details" style="width:24px;height:24px;border:1px solid #e5e7eb;border-radius:5px;background:white;cursor:pointer;font-size:12px;color:${hasNotes?'#7c3aed':'var(--gray-400)'};flex-shrink:0;display:flex;align-items:center;justify-content:center">${hasNotes ? '📝' : '···'}</button>
-          <button onclick="faRemove('${clientId}','${r.id}')" title="Delete" style="width:24px;height:24px;border:none;border-radius:5px;background:rgba(239,68,68,0.07);cursor:pointer;color:#dc2626;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">×</button>
-        </div>
-        <!-- ACTION BUTTONS ROW: quick status transitions + visibility toggle -->
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px solid #f3f4f6">
-          ${actBtnsHtml}
-          <!-- Status dropdown as fallback for fine control -->
-          <select id="fr-status-${r.id}" onchange="faQuickStatus('${clientId}','${r.id}',this.value)" style="height:22px;border:1px solid #e5e7eb;border-radius:4px;font-size:10px;font-weight:600;padding:0 4px;cursor:pointer;background:white;color:var(--gray-500)">
-            ${ALL_STATUSES.map(s => `<option value="${s}"${r.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
-          </select>
-          <!-- Client visibility toggle -->
+          ${amountHtml}
           <button onclick="faToggleVisible('${clientId}','${r.id}')" title="Toggle client visibility"
-            style="margin-left:auto;height:22px;padding:0 8px;border:1px solid ${r.visible===false?'#e5e7eb':'#86efac'};border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:${r.visible===false?'#f9fafb':'#f0fdf4'};color:${r.visible===false?'#9ca3af':'#15803d'};flex-shrink:0;white-space:nowrap">
+            style="height:24px;padding:0 8px;border:1px solid ${r.visible===false?'#e5e7eb':'#86efac'};border-radius:5px;font-size:9px;font-weight:700;cursor:pointer;background:${r.visible===false?'#f9fafb':'#f0fdf4'};color:${r.visible===false?'#9ca3af':'#15803d'};flex-shrink:0;white-space:nowrap">
             ${r.visible===false?'⊘ Hidden':'👁 Visible'}
           </button>
+          <button onclick="(function(btn){var n=document.getElementById('${noteId}');var opening=n.style.display==='none'||n.style.display==='';n.style.display=opening?'block':'none';btn.textContent=opening?'↑':'↓';})(this)"
+            style="width:24px;height:24px;border:1px solid #e5e7eb;border-radius:5px;background:white;cursor:pointer;font-size:11px;color:var(--gray-400);flex-shrink:0;display:flex;align-items:center;justify-content:center">${hasDetails?'↑':'↓'}</button>
+          <button onclick="faRemove('${clientId}','${r.id}')" title="Remove"
+            style="width:24px;height:24px;border:none;border-radius:5px;background:rgba(239,68,68,0.07);cursor:pointer;color:#dc2626;font-size:15px;flex-shrink:0;display:flex;align-items:center;justify-content:center">×</button>
         </div>
-        <!-- STRATEGY DETAILS PANEL -->
-        <div id="${noteId}" style="display:${hasNotes?'block':'none'};margin-top:8px;border-top:1px solid #eef0f3;padding-top:8px">
-          <!-- Row 1: Category · Bureau · Risk -->
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px">
-            <select onchange="faUpdateRow('${clientId}','${r.id}','category',this.value)" style="height:26px;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;padding:0 5px;color:var(--navy);background:white">${_opt(CATEGORIES,r.category||'')}</select>
-            <select onchange="faUpdateRow('${clientId}','${r.id}','bureau',this.value)" style="height:26px;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;padding:0 5px;color:var(--navy);background:white">${_opt(BUREAUS,r.bureau||'')}</select>
-            <select onchange="faUpdateRow('${clientId}','${r.id}','riskLevel',this.value)" style="height:26px;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;padding:0 5px;color:var(--navy);background:white">${_opt(RISKS,r.riskLevel||'')}</select>
+
+        <!-- STATUS PILLS (always visible) -->
+        <div style="display:flex;gap:5px;flex-wrap:wrap;padding:6px 10px 8px;border-top:1px solid #f3f4f6;background:#fafafa">
+          ${actBtns}
+        </div>
+
+        <!-- DETAIL PANEL (collapsible) -->
+        <div id="${noteId}" style="display:${hasDetails?'block':'none'};border-top:1px solid #eef0f3">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px">
+
+            <!-- LEFT: strategy metadata -->
+            <div>
+              <div style="font-size:9px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Strategy Metadata</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:5px">
+                <select onchange="faUpdateRow('${clientId}','${r.id}','category',this.value)" style="height:26px;border:1px solid #e5e7eb;border-radius:5px;font-size:10px;padding:0 4px;color:var(--navy);background:white">${_opt(CATEGORIES,r.category||'')}</select>
+                <select onchange="faUpdateRow('${clientId}','${r.id}','bureau',this.value)" style="height:26px;border:1px solid #e5e7eb;border-radius:5px;font-size:10px;padding:0 4px;color:var(--navy);background:white">${_opt(BUREAUS,r.bureau||'')}</select>
+                <select onchange="faUpdateRow('${clientId}','${r.id}','riskLevel',this.value)" style="height:26px;border:1px solid #e5e7eb;border-radius:5px;font-size:10px;padding:0 4px;color:var(--navy);background:white">${_opt(RISKS,r.riskLevel||'')}</select>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px">
+                ${_inp('Est. range (e.g. $10K–$50K)','estRange',r.estRange)}
+                ${_inp('Wait period (e.g. 30 days)','waitPeriod',r.waitPeriod)}
+              </div>
+              <div style="margin-bottom:0">${_inp('Prerequisites before applying…','prerequisites',r.prerequisites)}</div>
+              ${r.status==='denied'?`<div style="margin-top:4px"><input placeholder="Denial reason…" value="${(r.denialReason||'').replace(/"/g,'&quot;')}" oninput="faUpdateRow('${clientId}','${r.id}','denialReason',this.value)" style="width:100%;height:26px;border:1px solid #fecaca;border-radius:5px;font-size:10.5px;padding:0 8px;background:#fff5f5;color:#dc2626;box-sizing:border-box" /></div>`:''}
+            </div>
+
+            <!-- RIGHT: next action + admin/client notes -->
+            <div>
+              <div style="font-size:9px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Notes &amp; Next Step</div>
+              <div style="font-size:10.5px;color:${sc};background:${sb};padding:6px 9px;border-radius:6px;margin-bottom:6px;line-height:1.45">${NEXT_ACTION[r.status]||NEXT_ACTION.queued}</div>
+              <textarea placeholder="Admin notes (internal — not shown to client)…" rows="2" oninput="faUpdateRow('${clientId}','${r.id}','instructions',this.value)"
+                style="width:100%;border:1px solid #e5e7eb;border-radius:5px;font-size:10.5px;padding:5px 7px;resize:none;font-family:inherit;background:white;box-sizing:border-box;margin-bottom:4px">${r.instructions||''}</textarea>
+              <textarea placeholder="Note for client (shown on their portal)…" rows="2" oninput="faUpdateRow('${clientId}','${r.id}','clientNote',this.value)"
+                style="width:100%;border:1px solid #bbf7d0;border-radius:5px;font-size:10.5px;padding:5px 7px;resize:none;font-family:inherit;background:#f0fdf4;color:#166534;box-sizing:border-box">${r.clientNote||''}</textarea>
+            </div>
+
           </div>
-          <!-- Row 2: Est. Range · Wait Period -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
-            ${_inp('Est. range (e.g. $10K–$50K)','estRange',r.estRange)}
-            ${_inp('Wait period (e.g. 30 days)','waitPeriod',r.waitPeriod)}
-          </div>
-          <!-- Row 3: Prerequisites -->
-          <div style="margin-bottom:5px">${_inp('Prerequisites before applying…','prerequisites',r.prerequisites)}</div>
-          <!-- Denial reason -->
-          ${r.status === 'denied' ? `<input placeholder="Denial reason…" value="${(r.denialReason||'').replace(/"/g,'&quot;')}" oninput="faUpdateRow('${clientId}','${r.id}','denialReason',this.value)" style="width:100%;height:26px;border:1px solid #fecaca;border-radius:5px;font-size:11px;padding:0 8px;background:#fff5f5;color:#dc2626;margin-bottom:5px;box-sizing:border-box" />` : ''}
-          <!-- Internal admin notes -->
-          <textarea placeholder="Admin notes (internal — not shown to client)…" rows="2" oninput="faUpdateRow('${clientId}','${r.id}','instructions',this.value)" style="width:100%;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;padding:5px 7px;resize:none;font-family:inherit;background:white;box-sizing:border-box;margin-bottom:4px">${r.instructions||''}</textarea>
-          <!-- Client-visible note -->
-          <textarea placeholder="Note for client (shown on their portal)…" rows="2" oninput="faUpdateRow('${clientId}','${r.id}','clientNote',this.value)" style="width:100%;border:1px solid #bbf7d0;border-radius:5px;font-size:11px;padding:5px 7px;resize:none;font-family:inherit;background:#f0fdf4;color:#166534;box-sizing:border-box">${r.clientNote||''}</textarea>
         </div>
       </div>`;
     }).join('');
