@@ -777,7 +777,7 @@
             <label for="tosAgree">I have read and agree to the <a href="#" onclick="openTos(); return false;">Privacy Policy &amp; Terms of Service</a></label>
           </div>
 
-          <div id="recaptcha-container" style="display:none"></div>
+          <div id="recaptcha-container" style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;left:-9999px;top:-9999px"></div>
 
           <button class="btn-signin" onclick="sendSmsCode()">
             Send Verification Code
@@ -1003,17 +1003,20 @@
     let _confirmationResult = null;
     let _recaptchaVerifier = null;
 
-    // Initialize reCAPTCHA on page load so it's ready before button click
-    window.addEventListener('load', function() {
+    // Initialize invisible reCAPTCHA on page load — must be rendered into a real DOM node
+    // (not display:none) so the widget mounts properly and won't escalate to visible challenge
+    window.addEventListener('load', async function() {
       try {
         _recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-          size: 'invisible', callback: function() {}
+          size: 'invisible',
+          callback: function() {},
+          'expired-callback': function() { _recaptchaVerifier = null; }
         });
-        _recaptchaVerifier.render();
+        await _recaptchaVerifier.render();
       } catch(e) { _recaptchaVerifier = null; }
     });
 
-    function resetPhoneLogin() {
+    async function resetPhoneLogin() {
       document.getElementById('step-phone').style.display = '';
       document.getElementById('step-code').style.display = 'none';
       document.getElementById('loginPhone').value = '';
@@ -1021,11 +1024,14 @@
       hideLoginError(1);
       hideLoginError(2);
       _confirmationResult = null;
-      // Re-init reCAPTCHA
       try {
         if (_recaptchaVerifier) { _recaptchaVerifier.clear(); _recaptchaVerifier = null; }
-        _recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible', callback: function(){} });
-        _recaptchaVerifier.render();
+        _recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+          size: 'invisible',
+          callback: function(){},
+          'expired-callback': function() { _recaptchaVerifier = null; }
+        });
+        await _recaptchaVerifier.render();
       } catch(e) {}
     }
 
