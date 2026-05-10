@@ -5990,7 +5990,12 @@
     });
 
     // Existing bank relationships — from dash data array, approved apps, AND credit report detection
-    var storedRelationships = d.bankRelationships || [];
+    // Normalize: d.bankRelationships may contain strings OR objects {id, name, source, detectedAt}
+    var storedRelationships = (d.bankRelationships || []).map(function(r) {
+      if (typeof r === 'string') return r.toLowerCase();
+      if (r && typeof r === 'object') return (r.id || r.name || '').toLowerCase();
+      return '';
+    }).filter(Boolean);
     var approvedBankIds = apps
       .filter(function(a) { return a.status === 'approved'; })
       .map(function(a) { return (a.bankId || a.bank || '').toLowerCase(); });
@@ -6001,9 +6006,10 @@
     });
 
     var hasRelationship = function(bankId) {
-      var bid = bankId.toLowerCase();
+      var bid = (bankId || '').toLowerCase();
       return existingRelationships.some(function(r) {
-        return r && (r.indexOf(bid) !== -1 || bid.indexOf(r.split('-')[0]) !== -1);
+        if (!r || typeof r !== 'string') return false;
+        return r.indexOf(bid) !== -1 || bid.indexOf(r.split('-')[0]) !== -1;
       });
     };
 
@@ -6269,11 +6275,17 @@
         return true;
       })
       .map(function(ev) {
-        // Merge any state-db bank data (card name, limits) on top of primary sequence definition
-        var dbData = dbBanks[ev.id] || {};
-        var merged = Object.assign({ revenue:50000, income:3000, monthlySpend:3000 }, dbData, ev);
-        return _fsgEnrichBank(merged, profile, ev.round, ev.priority, ev.timing, ev.requiresRelationship);
-      });
+        try {
+          // Merge any state-db bank data (card name, limits) on top of primary sequence definition
+          var dbData = dbBanks[ev.id] || {};
+          var merged = Object.assign({ revenue:50000, income:3000, monthlySpend:3000 }, dbData, ev);
+          return _fsgEnrichBank(merged, profile, ev.round, ev.priority, ev.timing, ev.requiresRelationship);
+        } catch(e) {
+          console.warn('[FSG] Skipped bank', ev.id, '—', e.message);
+          return null;
+        }
+      })
+      .filter(Boolean);
 
     // Boost relationship banks within their round (promote half-a-slot)
     primaryBanks = primaryBanks.map(function(b) {
@@ -12422,6 +12434,62 @@
     }).join('');
   }
 
+  // Look up strategy metadata for a bank by name — used for manual add auto-fill
+  function getBankProductMetadata(bankName) {
+    var bankLow = (bankName || '').toLowerCase().trim();
+    if (!bankLow) return null;
+
+    var seq = FSG_PRIMARY_SEQUENCE.find(function(b) {
+      return b.name.toLowerCase() === bankLow || b.id === bankLow.replace(/\s+/g,'-');
+    });
+    if (!seq) seq = FSG_BACKUP_BANKS.find(function(b) {
+      return b.name.toLowerCase() === bankLow || b.id === bankLow.replace(/\s+/g,'-');
+    });
+
+    var fbKey = null;
+    if (!seq) {
+      fbKey = Object.keys(FSG_NATIONAL_FALLBACK.banks).find(function(k) {
+        var fb = FSG_NATIONAL_FALLBACK.banks[k];
+        return (fb.name || '').toLowerCase() === bankLow || k === bankLow.replace(/\s+/g,'-');
+      });
+    }
+    var fb = fbKey ? FSG_NATIONAL_FALLBACK.banks[fbKey] : null;
+
+    // Partial match fallback (e.g. "Chase" matches "Chase Bank")
+    if (!seq && !fb) {
+      seq = FSG_PRIMARY_SEQUENCE.find(function(b) {
+        var bLow = b.name.toLowerCase();
+        return bLow.indexOf(bankLow) !== -1 || bankLow.indexOf(bLow.split(' ')[0]) !== -1;
+      });
+    }
+    if (!seq && !fb) return null;
+
+    var roundNum = seq ? (seq.round || 4) : 4;
+    var catMap = { 1:'primary', 2:'secondary', 3:'regional', 4:'expansion' };
+    var rawBureau = ((seq ? seq.bureau : (fb ? fb.bureau : '')) || '').toUpperCase();
+    var bureau = rawBureau;
+    if (rawBureau.indexOf('EXPERIAN') !== -1) bureau = 'EX';
+    else if (rawBureau.indexOf('TRANSUNION') !== -1) bureau = 'TU';
+    else if (rawBureau.indexOf('EQUIFAX') !== -1) bureau = 'EQ';
+    else if (rawBureau.indexOf('ALL') !== -1) bureau = 'All 3';
+    else bureau = rawBureau.substring(0,2) || '';
+
+    var timing  = seq ? (seq.timing || '') : (fb ? (fb.notes || '') : '');
+    var whySel  = (seq || fb || {}).whySelected || '';
+    var adminNotes = [timing, whySel ? 'Why selected: ' + whySel : ''].filter(Boolean).join('\n');
+    var prereqs = ((seq || {}).requirements) || ((fb || {}).requirements) || '';
+
+    return {
+      bankId:       seq ? seq.id : (fbKey || ''),
+      category:     catMap[roundNum] || 'primary',
+      bureau:       bureau,
+      riskLevel:    (seq || fb || {}).riskLevel || 'medium',
+      prerequisites: prereqs,
+      instructions: adminNotes,
+      round:        roundNum,
+    };
+  }
+
   function addFundingRow(clientId) {
     const bankInp = document.getElementById('fa-bank-inp-'+clientId);
     const cardInp = document.getElementById('fa-card-inp-'+clientId);
@@ -12434,10 +12502,30 @@
     const libCards = CARD_LIBRARY[bank] || [];
     const libCard  = libCards.find(c => c.name === cardName);
     const introPeriod = libCard ? libCard.introPeriod : 'N/A';
-    const category = catSel ? catSel.value : '';
+    const manualCat   = catSel ? catSel.value : '';
+    // Auto-fill strategy metadata from bank database
+    const meta = getBankProductMetadata(bank);
     const d = getDashData(clientId);
     if (!d.fundingRows) d.fundingRows = [];
-    d.fundingRows.push({ id: 'fr_' + Date.now(), bank, cardName, introPeriod, status: 'queued', amount: '', instructions: '', category });
+    d.fundingRows.push({
+      id:           'fr_' + Date.now(),
+      bankId:       meta ? meta.bankId : '',
+      bank,
+      cardName,
+      introPeriod,
+      status:       'queued',
+      amount:       '',
+      category:     manualCat || (meta ? meta.category : ''),
+      bureau:       meta ? meta.bureau : '',
+      riskLevel:    meta ? meta.riskLevel : 'medium',
+      prerequisites: meta ? meta.prerequisites : '',
+      instructions: meta ? meta.instructions : '',
+      clientNote:   '',
+      visible:      true,
+      round:        meta ? meta.round : 1,
+      source:       'manual',
+      createdAt:    Date.now()
+    });
     saveDashData(clientId, d);
     const container = document.getElementById('fa-rows-'+clientId);
     if (container) container.innerHTML = renderFundingRowsAdmin(clientId, d.fundingRows);
