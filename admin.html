@@ -6776,6 +6776,17 @@
 
     var html = '';
 
+    // ── Apply to Applications banner ──────────────────────────────────────
+    var _r1count = (s.round1||[]).length + (s.round2||[]).length + (s.round3||[]).length + (s.round4||[]).length;
+    html += '<div style="margin-bottom:12px;padding:11px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;display:flex;flex-wrap:wrap;align-items:center;gap:10px">'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:12px;font-weight:700;color:#14532d">Apply Strategy to Funding Applications</div>'
+      + '<div style="font-size:11px;color:#166534;margin-top:2px">Adds all ' + _r1count + ' recommended banks as queued entries. Won\'t overwrite existing rows.</div>'
+      + '<div id="fsg-apply-result-' + clientId + '" style="font-size:11px;margin-top:3px"></div>'
+      + '</div>'
+      + '<button onclick="applyAndShowStrategyRows(\'' + clientId + '\')" style="padding:0 14px;height:30px;background:#059669;color:white;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">Apply Recommended Banks</button>'
+      + '</div>';
+
     // ── Next Best Action ──────────────────────────────────────────────────
     html += '<div class="fsg-nba">' +
       '<div class="fsg-nba-label">Next Best Action</div>' +
@@ -7130,12 +7141,34 @@
         var b2 = document.getElementById('fsg-body-' + clientId);
         if (b2) b2.innerHTML = '<div class="fsg-empty" style="color:#dc2626">Strategy engine error — check console for details.<br><small>' + (err && err.message ? err.message : String(err)) + '</small></div>';
       }
-      // Auto-generate tasks from optimization engine output
       var cached = _fsgStrategyCache[clientId];
+
+      // ── Auto-save credit-report-detected bank relationships ──────────────
+      if (cached && cached.profile && cached.profile.detectedBankRelationships && cached.profile.detectedBankRelationships.length > 0) {
+        try {
+          var _relNameMap = { 'chase':'Chase','boa':'Bank of America','wells-fargo':'Wells Fargo','us-bank':'US Bank','pnc':'PNC','amex':'American Express','citi':'Citi','citizens':'Citizens Bank','truist':'Truist','capital-one':'Capital One','discover':'Discover','navy-federal':'Navy Federal','keybank':'KeyBank','flagstar':'Flagstar','barclays':'Barclays','goldman':'Goldman Sachs' };
+          var d2 = getDashData(clientId);
+          var storedRels = (d2.bankRelationships || []).map(function(r){ return typeof r === 'string' ? r.toLowerCase() : (r.id || r.name || '').toLowerCase(); });
+          var newRels = [];
+          cached.profile.detectedBankRelationships.forEach(function(id) {
+            if (storedRels.indexOf(id) === -1) {
+              newRels.push({ id: id, name: _relNameMap[id] || id, source: 'credit_report', detectedAt: Date.now() });
+            }
+          });
+          if (newRels.length) {
+            d2.bankRelationships = (d2.bankRelationships || []).concat(newRels);
+            saveDashData(clientId, d2);
+            console.log('[FSG] Auto-saved', newRels.length, 'credit-report relationships for', clientId);
+          }
+        } catch(e) { console.warn('[FSG] Relationship save failed:', e); }
+      }
+
+      // ── Auto-generate tasks from optimization engine output ──────────────
       if (cached && cached.optimization && cached.optimization.tasks && cached.optimization.tasks.length > 0) {
         try { _fsgAutoGenerateTasks(clientId, cached.optimization.tasks); } catch(e) {}
       }
-      // Log note about strategy generation
+
+      // ── Log strategy generation note ─────────────────────────────────────
       var noteBody = 'Strategy generated for ' + (cached && cached.clientName ? cached.clientName : clientId) + '.';
       if (cached && cached.profile && cached.profile.state) noteBody += ' State: ' + cached.profile.state + '.';
       if (cached && cached.optimization) noteBody += ' ' + cached.optimization.warnings.length + ' optimization warnings detected.';
@@ -7197,6 +7230,126 @@
     if (!genBody || genBody.innerHTML.trim() === '') return;
     if (!_fsgDatabase) return;
     renderFundingStrategy(clientId);
+  }
+
+  // ── STRATEGY → FUNDING APPLICATIONS BRIDGE ────────────────────────────────
+  // Converts generator output into fundingRow entries. Preserves existing rows.
+  function applyStrategyToFundingRows(clientId) {
+    var strategy = _fsgStrategyCache[clientId];
+    if (!strategy) { strategy = generateFundingStrategy(clientId); }
+    if (!strategy) return 0;
+
+    var d = getDashData(clientId);
+    if (!d.fundingRows) d.fundingRows = [];
+
+    // Index existing rows to prevent duplicates
+    var existingIds   = {};
+    var existingNames = {};
+    d.fundingRows.forEach(function(r) {
+      if (r.bankId) existingIds[r.bankId] = true;
+      if (r.bank)   existingNames[(r.bank || '').toLowerCase()] = true;
+    });
+
+    // Round → FSE category mapping
+    var _cat = function(b) {
+      if (b.isElan)   return 'regional';
+      if (b.isBackup) return 'expansion';
+      return { 1:'primary', 2:'secondary', 3:'regional', 4:'expansion' }[b.ev_round] || 'primary';
+    };
+
+    // Extract wait-period from requirements/timing text (e.g. "season 30 days")
+    var _waitPeriod = function(b) {
+      var txt = [(b.requirements || ''), (b.ev_timing || '')].join(' ');
+      var m = txt.match(/(\d+)\s*day/i) || txt.match(/season\s+(\d+)/i);
+      return m ? m[1] + ' days' : '';
+    };
+
+    // Build admin note from timing + whySelected
+    var _note = function(b) {
+      var parts = [];
+      if (b.ev_timing) parts.push(b.ev_timing);
+      else if (b.notes) parts.push(b.notes);
+      if (b.whySelected) parts.push('Selected: ' + b.whySelected);
+      return parts.join('\n').trim();
+    };
+
+    // Look up card name from CARD_LIBRARY (first card for the bank)
+    var _cardName = function(bankName, generatorCard) {
+      if (generatorCard) return generatorCard;
+      var libCards = CARD_LIBRARY[bankName] || [];
+      return libCards.length ? libCards[0].name : '';
+    };
+
+    var added = 0;
+    var allBanks = []
+      .concat(strategy.round1 || [])
+      .concat(strategy.round2 || [])
+      .concat(strategy.round3 || [])
+      .concat(strategy.round4 || []);
+
+    allBanks.forEach(function(b) {
+      if (!b.name) return;
+      if (b.id   && existingIds[b.id]) return;
+      if (existingNames[(b.name || '').toLowerCase()]) return;
+
+      var row = {
+        id:           'fr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        bankId:       b.id || '',
+        bank:         b.name,
+        cardName:     _cardName(b.name, b.card),
+        introPeriod:  'N/A',
+        status:       'queued',
+        amount:       '',
+        category:     _cat(b),
+        bureau:       b.ev_bureau || '',
+        riskLevel:    (b.riskLevel || 'medium').replace(/[^a-z\-]/g, ''),
+        estRange:     '',
+        prerequisites: b.requirements || '',
+        waitPeriod:   _waitPeriod(b),
+        relationship: b.hasRelationship || false,
+        instructions: _note(b),
+        clientNote:   '',
+        visible:      true,
+        source:       'strategy',
+        round:        b.ev_round || 1,
+        createdAt:    Date.now()
+      };
+      d.fundingRows.push(row);
+      if (b.id) existingIds[b.id] = true;
+      existingNames[(b.name || '').toLowerCase()] = true;
+      added++;
+    });
+
+    if (added > 0) {
+      saveDashData(clientId, d);
+      refreshClientUI(clientId);
+    }
+    return added;
+  }
+
+  // Show confirmation + re-render funding tab after applying strategy
+  function applyAndShowStrategyRows(clientId) {
+    var added = applyStrategyToFundingRows(clientId);
+    var pane = document.getElementById('dtab-funding');
+    if (pane) pane.innerHTML = renderFundingTab(clientId);
+    var el = document.getElementById('fsg-apply-result-' + clientId);
+    if (el) el.innerHTML = added > 0
+      ? '<span style="color:#059669;font-weight:700">' + added + ' bank' + (added !== 1 ? 's' : '') + ' added to Funding Applications</span>'
+      : '<span style="color:#6b7280">All recommended banks are already in Funding Applications</span>';
+    var fundCard = document.getElementById('sp-dtab-funding');
+    if (fundCard && added > 0) setTimeout(function() { fundCard.scrollIntoView({behavior:'smooth',block:'start'}); }, 200);
+  }
+
+  // Toggle client visibility of a funding row
+  function faToggleVisible(clientId, rowId) {
+    var d = getDashData(clientId);
+    var row = (d.fundingRows || []).find(function(r) { return r.id === rowId; });
+    if (!row) return;
+    row.visible = (row.visible === false);  // false → true, true/undefined → false
+    saveDashData(clientId, d);
+    var container = document.getElementById('fa-rows-' + clientId);
+    if (container) container.innerHTML = renderFundingRowsAdmin(clientId, d.fundingRows);
+    refreshClientUI(clientId);
   }
 
   // ── FSG OVERRIDE SYSTEM ────────────────────────────────────────────────────
@@ -12218,13 +12371,18 @@
           <button onclick="(function(){var n=document.getElementById('${noteId}');n.style.display=n.style.display==='none'?'block':'none';})()" title="Strategy details" style="width:24px;height:24px;border:1px solid #e5e7eb;border-radius:5px;background:white;cursor:pointer;font-size:12px;color:${hasNotes?'#7c3aed':'var(--gray-400)'};flex-shrink:0;display:flex;align-items:center;justify-content:center">${hasNotes ? '📝' : '···'}</button>
           <button onclick="faRemove('${clientId}','${r.id}')" title="Delete" style="width:24px;height:24px;border:none;border-radius:5px;background:rgba(239,68,68,0.07);cursor:pointer;color:#dc2626;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">×</button>
         </div>
-        <!-- ACTION BUTTONS ROW: quick status transitions -->
+        <!-- ACTION BUTTONS ROW: quick status transitions + visibility toggle -->
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px solid #f3f4f6">
           ${actBtnsHtml}
           <!-- Status dropdown as fallback for fine control -->
-          <select id="fr-status-${r.id}" onchange="faQuickStatus('${clientId}','${r.id}',this.value)" style="margin-left:auto;height:22px;border:1px solid #e5e7eb;border-radius:4px;font-size:10px;font-weight:600;padding:0 4px;cursor:pointer;background:white;color:var(--gray-500)">
+          <select id="fr-status-${r.id}" onchange="faQuickStatus('${clientId}','${r.id}',this.value)" style="height:22px;border:1px solid #e5e7eb;border-radius:4px;font-size:10px;font-weight:600;padding:0 4px;cursor:pointer;background:white;color:var(--gray-500)">
             ${ALL_STATUSES.map(s => `<option value="${s}"${r.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
           </select>
+          <!-- Client visibility toggle -->
+          <button onclick="faToggleVisible('${clientId}','${r.id}')" title="Toggle client visibility"
+            style="margin-left:auto;height:22px;padding:0 8px;border:1px solid ${r.visible===false?'#e5e7eb':'#86efac'};border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:${r.visible===false?'#f9fafb':'#f0fdf4'};color:${r.visible===false?'#9ca3af':'#15803d'};flex-shrink:0;white-space:nowrap">
+            ${r.visible===false?'⊘ Hidden':'👁 Visible'}
+          </button>
         </div>
         <!-- STRATEGY DETAILS PANEL -->
         <div id="${noteId}" style="display:${hasNotes?'block':'none'};margin-top:8px;border-top:1px solid #eef0f3;padding-top:8px">
@@ -14026,6 +14184,16 @@
     const bankOpts = Object.keys(CARD_LIBRARY).map(b => `<option value="${b}">`).join('');
     return `
     <div>
+      <!-- Strategy prompt banner -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px">
+        <span style="font-size:12px;color:#1e40af;flex:1">
+          💡 <strong>Tip:</strong> Generate a funding strategy first — it auto-populates recommended banks below.
+        </span>
+        <button onclick="(function(){var p=document.getElementById('fsg-panel-${clientId}');if(p&&p.style.display==='none')p.style.display='';document.getElementById('fsg-body-${clientId}')&&document.getElementById('fsg-body-${clientId}').scrollIntoView({behavior:'smooth',block:'start'});generateAndRenderFSG('${clientId}');})()"
+          style="flex-shrink:0;padding:5px 12px;background:#1e40af;color:white;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+          ⚡ Generate Strategy
+        </button>
+      </div>
       <!-- Strategy Entry: unified text+datalist form (replaces old bank/card dropdown chain) -->
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
         <input id="fa-bank-inp-${clientId}" list="fa-bank-dl-${clientId}" placeholder="Bank name…"

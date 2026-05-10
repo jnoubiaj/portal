@@ -3679,7 +3679,7 @@
     if (!root) return;
     root.innerHTML = '';
 
-    const rows = (d.fundingRows || []);
+    const rows = (d.fundingRows || []).filter(r => r.visible !== false);
     const _fmt = n => n >= 1000000 ? '$' + (n/1000000).toFixed(1)+'M' : n >= 1000 ? '$' + Math.round(n/1000)+'K' : n ? '$'+n : '$0';
 
     // ── Update stats bar ──────────────────────────────────────
