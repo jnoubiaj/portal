@@ -3038,29 +3038,6 @@
           <div class="card-body" id="stage-tasks-panel"></div>
         </div>
 
-        <!-- Funding Applications Table -->
-        <div class="section-card fa-section" id="funding-apps-card" style="display:none">
-          <div class="card-header">
-            <div class="card-title">Funding Applications</div>
-            <div class="card-meta" id="funding-apps-meta"></div>
-          </div>
-          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-            <table class="fa-table" id="fa-tbody-table">
-              <thead>
-                <tr>
-                  <th>Bank</th>
-                  <th>Product</th>
-                  <th>Est. Range</th>
-                  <th>Status</th>
-                  <th>Approved</th>
-                  <th>Team Note</th>
-                </tr>
-              </thead>
-              <tbody id="fa-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-
         <!-- Documents preview (full width) -->
         <div class="section-card">
           <div class="card-header">
@@ -3158,16 +3135,20 @@
           </div>
           <div class="fs-state-stats">
             <div class="fs-state-stat">
-              <div class="fs-state-stat-val" id="fs-stat-secured">$45K</div>
+              <div class="fs-state-stat-val" id="fs-stat-secured">—</div>
               <div class="fs-state-stat-lbl">Secured</div>
             </div>
             <div class="fs-state-stat">
-              <div class="fs-state-stat-val" id="fs-stat-approved">2</div>
+              <div class="fs-state-stat-val" id="fs-stat-approved">—</div>
               <div class="fs-state-stat-lbl">Approved</div>
             </div>
             <div class="fs-state-stat">
+              <div class="fs-state-stat-val" id="fs-stat-active">—</div>
+              <div class="fs-state-stat-lbl">Active</div>
+            </div>
+            <div class="fs-state-stat">
               <div class="fs-state-stat-val" id="fs-stat-total">—</div>
-              <div class="fs-state-stat-lbl">Banks Total</div>
+              <div class="fs-state-stat-lbl">Total</div>
             </div>
           </div>
         </div>
@@ -3703,12 +3684,15 @@
 
     // ── Update stats bar ──────────────────────────────────────
     const approvedRows = rows.filter(r => r.status === 'approved');
+    const activeRows   = rows.filter(r => r.status === 'applied' || r.status === 'pending' || r.status === 'queued');
     const approvedTotal = approvedRows.reduce((s, r) => s + (+r.amount || 0), 0);
     const securedEl  = document.getElementById('fs-stat-secured');
     const approvedEl = document.getElementById('fs-stat-approved');
+    const activeEl   = document.getElementById('fs-stat-active');
     const totalEl    = document.getElementById('fs-stat-total');
     if (securedEl)  securedEl.textContent  = _fmt(approvedTotal);
-    if (approvedEl) approvedEl.textContent = approvedRows.length;
+    if (approvedEl) approvedEl.textContent = approvedRows.length || '—';
+    if (activeEl)   activeEl.textContent   = activeRows.length   || '—';
     if (totalEl)    totalEl.textContent    = rows.length;
 
     // ── Empty state ────────────────────────────────────────────
@@ -3755,12 +3739,21 @@
         const approvedLabel = (r.status === 'approved' && r.amount)
           ? '✓ $' + Number(r.amount).toLocaleString() : null;
         const detailId = 'fse-det-' + r.id;
-        const hasDetails = !!(r.clientNote || r.waitPeriod || r.prerequisites);
+        const _nextAction = {
+          queued:   'Your advisor will notify you when it\'s time to apply.',
+          applied:  'Application submitted — awaiting lender decision.',
+          pending:  'Under review with the lender.',
+          approved: 'Congratulations! Funding secured.',
+          denied:   'Your advisor will review reapplication options with you.',
+          excluded: 'Excluded from your current funding sequence.',
+        }[r.status] || null;
+        const hasDetails = !!(r.clientNote || r.waitPeriod || r.prerequisites || _nextAction);
 
         const detailsHtml = hasDetails ? `<div class="fse-card-details" id="${detailId}" style="display:none">
           ${r.prerequisites ? `<div class="fse-detail-item"><span class="fse-detail-icon">⚠️</span><span><strong>Before applying:</strong> ${r.prerequisites}</span></div>` : ''}
           ${r.waitPeriod   ? `<div class="fse-detail-item"><span class="fse-detail-icon">⏱</span><span><strong>Wait period:</strong> ${r.waitPeriod}</span></div>` : ''}
           ${r.clientNote   ? `<div class="fse-detail-item fse-detail-note"><span class="fse-detail-icon">💬</span><span>${r.clientNote}</span></div>` : ''}
+          ${_nextAction    ? `<div class="fse-detail-item" style="color:var(--gray-500);font-size:12px"><span class="fse-detail-icon">→</span><span>${_nextAction}</span></div>` : ''}
         </div>` : '';
 
         return `<div class="fse-card fse-card-${r.status || 'pending'}">
@@ -5042,7 +5035,6 @@
       const dots = document.getElementById('applyingDots'); if(dots) dots.innerHTML = '';
     }
 
-    renderFundingTable(d);
     renderLatestDocs(d);
     // Only re-render full doc list when the Documents section is visible — it's expensive
     if (document.getElementById('section-documents')?.classList.contains('active')) {
@@ -5191,64 +5183,6 @@
     'First Citizens': '#00a651',
     'Discover': '#f76211',
   };
-
-  let _ftHash = '';
-  function renderFundingTable(d) {
-    const rows = (d.fundingRows || []);
-    const card = document.getElementById('funding-apps-card');
-    const tbody = document.getElementById('fa-tbody');
-    const meta = document.getElementById('funding-apps-meta');
-    if (!card || !tbody) return;
-
-    if (!rows.length) {
-      card.style.display = 'none';
-      _ftHash = '';
-      return;
-    }
-    card.style.display = '';
-
-    const statusLabel = { pending:'Pending', queued:'Queued', applied:'Applied', approved:'Approved', denied:'Denied', excluded:'Excluded' };
-    const totalApproved = rows.filter(r => r.status === 'approved').reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-    const activeCount   = rows.filter(r => r.status === 'applied' || r.status === 'pending' || r.status === 'queued').length;
-    if (meta) {
-      let metaStr = rows.length + ' application' + (rows.length !== 1 ? 's' : '');
-      if (totalApproved) metaStr += ' · $' + totalApproved.toLocaleString() + ' approved';
-      if (activeCount) metaStr += ' · ' + activeCount + ' active';
-      meta.textContent = metaStr;
-    }
-
-    // Only rebuild rows when data actually changed — prevents image flash on every poll tick
-    const newHash = JSON.stringify(rows.map(r => [r.id, r.bank, r.cardName, r.status, r.amount, r.clientNote, r.introPeriod, r.bureau, r.estRange]));
-    if (newHash === _ftHash) return;
-    _ftHash = newHash;
-
-    tbody.innerHTML = rows.map((r) => {
-      const statusClass = r.status || 'pending';
-      const label = statusLabel[statusClass] || r.status || 'Pending';
-      const brand = getBankBrand(r.bank);
-      const domain = r.domain || _bankDomain(r.bank) || brand.domain;
-      const bureauHtml = r.bureau ? ` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;background:#f3f4f6;color:#374151;margin-left:4px">${r.bureau}</span>` : '';
-      const noteHtml = r.clientNote
-        ? `<div class="fa-notes">${r.clientNote}</div>`
-        : `<span style="color:var(--gray-300)">—</span>`;
-      return `<tr>
-        <td data-label="Bank">
-          <div class="fa-bank-cell">
-            <div class="fa-logo">
-              <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="${r.bank}"
-                onerror="this.style.display='none';this.parentElement.style.background='${brand.bg}';this.parentElement.style.border='none';this.parentElement.innerHTML='<span style=\\'font-size:10px;font-weight:700;color:white\\'>${brand.initials}</span>'" />
-            </div>
-            <span class="fa-bank-name">${r.bank}${bureauHtml}</span>
-          </div>
-        </td>
-        <td data-label="Product"><span class="fa-product">${r.cardName || '—'}</span></td>
-        <td data-label="Est. Range"><span class="fa-period">${r.estRange || (r.introPeriod && r.introPeriod !== 'N/A' ? r.introPeriod : '—')}</span></td>
-        <td data-label="Status"><span class="fa-status ${statusClass}">${label}</span></td>
-        <td data-label="Amount"><span class="fa-amount">${r.amount ? '$' + Number(r.amount).toLocaleString() : '—'}</span></td>
-        <td data-label="Notes">${noteHtml}</td>
-      </tr>`;
-    }).join('');
-  }
 
   function renderLatestDocs(d) {
     const list = document.getElementById('latest-docs-list');

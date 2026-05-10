@@ -12147,23 +12147,39 @@
   }
 
   function faPopulateCards(clientId) {
-    const bankSel = document.getElementById('fa-bank-sel-'+clientId);
-    const cardSel = document.getElementById('fa-card-sel-'+clientId);
-    if (!bankSel || !cardSel) return;
-    const bank = bankSel.value;
+    const bankInp = document.getElementById('fa-bank-inp-'+clientId);
+    const cardDl  = document.getElementById('fa-card-dl-'+clientId);
+    if (!bankInp || !cardDl) return;
+    const bank = (bankInp.value || '').trim();
     const cards = (bank && CARD_LIBRARY[bank]) || [];
-    cardSel.innerHTML = '<option value="">— Select card —</option>' +
-      cards.map(c => `<option value="${c.name}" data-period="${c.introPeriod}">${c.name} (${c.introPeriod})</option>`).join('');
+    cardDl.innerHTML = cards.map(c => `<option value="${c.name}" data-period="${c.introPeriod}">`).join('');
+  }
+
+  function faQuickStatus(clientId, rowId, status) {
+    faUpdateRow(clientId, rowId, 'status', status);
+    const d = getDashData(clientId);
+    const container = document.getElementById('fa-rows-'+clientId);
+    if (container) container.innerHTML = renderFundingRowsAdmin(clientId, d.fundingRows || []);
   }
 
   function renderFundingRowsAdmin(clientId, rows) {
-    if (!rows.length) return '<div style="font-size:12px;color:var(--gray-400);padding:6px 0;font-style:italic">No applications added yet. Choose a bank and card above to add one.</div>';
+    if (!rows.length) return '<div style="font-size:12px;color:var(--gray-400);padding:6px 0;font-style:italic">No strategy entries yet. Type a bank name above to add one.</div>';
     const statusColor = { pending:'#d97706', queued:'#7c3aed', applied:'#2563eb', approved:'#059669', denied:'#dc2626', excluded:'#6b7280' };
     const statusBg    = { pending:'rgba(245,158,11,0.08)', queued:'rgba(124,58,237,0.08)', applied:'rgba(37,99,235,0.08)', approved:'rgba(16,185,129,0.08)', denied:'rgba(239,68,68,0.06)', excluded:'rgba(107,114,128,0.08)' };
     const ALL_STATUSES = ['pending','queued','applied','approved','denied','excluded'];
     const CATEGORIES   = [['','Category…'],['soft_pull','Soft Pull'],['primary','Primary Bank'],['secondary','Secondary Bank'],['credit_union','Credit Union'],['regional','Regional Bank'],['relationship','Relationship'],['no_pg','No PG / Fintech'],['expansion','Expansion']];
     const BUREAUS      = [['','Bureau…'],['EX','Experian (EX)'],['EQ','Equifax (EQ)'],['TU','TransUnion (TU)'],['EX/EQ','EX + EQ'],['EX/TU','EX + TU'],['All 3','All 3 Bureaus'],['Soft Pull','Soft Pull'],['Call','Call / Branch']];
     const RISKS        = [['','Risk…'],['low','Low Risk'],['medium','Medium Risk'],['high','High Risk']];
+
+    // Quick-action button definitions (most-used status transitions)
+    const ACT_BTNS = [
+      { val:'queued',   label:'Queue',    clr:'#7c3aed' },
+      { val:'applied',  label:'Applied',  clr:'#2563eb' },
+      { val:'approved', label:'Approved', clr:'#059669' },
+      { val:'denied',   label:'Denied',   clr:'#dc2626' },
+      { val:'excluded', label:'Exclude',  clr:'#6b7280' },
+    ];
+
     return rows.map((r, i) => {
       const sc = statusColor[r.status] || '#6b7280';
       const sb = statusBg[r.status]   || 'var(--gray-50)';
@@ -12171,24 +12187,46 @@
       const noteId = 'fr-notes-' + r.id;
       const _opt = (pairs, val) => pairs.map(([v,l]) => `<option value="${v}"${val===v?' selected':''}>${l}</option>`).join('');
       const _inp = (ph, field, val, extra='') => `<input placeholder="${ph}" value="${(val||'').replace(/"/g,'&quot;')}" oninput="faUpdateRow('${clientId}','${r.id}','${field}',this.value)" style="height:26px;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;padding:0 7px;background:white;color:var(--navy);width:100%;box-sizing:border-box${extra}" />`;
+
+      // Bank logo (favicon)
+      const domain = (r.domain || r.bank || '').toLowerCase().replace(/\s+(bank|financial|credit union|federal|savings)$/,'').replace(/\s+/g,'')+'.com';
+      const logoHtml = `<div style="width:30px;height:30px;border-radius:6px;background:#f3f4f6;border:1px solid #e5e7eb;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+        <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="" style="width:20px;height:20px;object-fit:contain"
+          onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:11px;font-weight:800;color:var(--navy)\\'>${(r.bank||'?')[0].toUpperCase()}</span>'" />
+      </div>`;
+
+      // Quick-action buttons row
+      const actBtnsHtml = ACT_BTNS.map(btn => {
+        const isActive = r.status === btn.val;
+        return `<button onclick="faQuickStatus('${clientId}','${r.id}','${btn.val}')"
+          style="height:22px;padding:0 9px;border:1px solid ${isActive ? btn.clr : '#e5e7eb'};border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:${isActive ? btn.clr+'1a' : 'white'};color:${isActive ? btn.clr : '#9ca3af'};flex-shrink:0;white-space:nowrap;transition:color .12s,background .12s,border-color .12s"
+          >${btn.label}</button>`;
+      }).join('');
+
       return `
-      <div style="border:1px solid #eef0f3;border-radius:9px;padding:8px 10px;background:#fafbfc;margin-bottom:6px">
-        <!-- TOP ROW -->
-        <div style="display:flex;align-items:center;gap:7px;min-width:0">
-          <span style="width:18px;height:18px;background:var(--navy);color:white;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</span>
+      <div style="border:1px solid ${sc}30;border-left:3px solid ${sc};border-radius:9px;padding:8px 10px;background:white;margin-bottom:6px">
+        <!-- TOP ROW: logo · info · amount · details · delete -->
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          ${logoHtml}
           <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:12px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.bank}</div>
-            <div style="font-size:11px;color:var(--gray-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.cardName}${r.introPeriod && r.introPeriod !== 'N/A' ? ' · <span style="color:var(--blue)">' + r.introPeriod + '</span>' : ''}${r.category ? ' · <span style="color:#7c3aed;font-weight:600">' + r.category.replace('_',' ') + '</span>' : ''}</div>
+            <div style="font-weight:700;font-size:12px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.bank}${r.cardName ? ' <span style="font-weight:400;color:var(--gray-500)">· '+r.cardName+'</span>' : ''}</div>
+            <div style="font-size:10px;color:var(--gray-400);margin-top:1px">${r.category ? r.category.replace(/_/g,' ') : ''}${r.bureau ? (r.category ? ' · ' : '') + r.bureau : ''}${r.estRange ? ' · ' + r.estRange : ''}</div>
           </div>
-          <select id="fr-status-${r.id}" onchange="(function(el){var sc=${JSON.stringify(statusColor)};var sb=${JSON.stringify(statusBg)};el.style.color=sc[el.value]||'#6b7280';el.style.background=sb[el.value]||'var(--gray-50)';faUpdateRow('${clientId}','${r.id}','status',el.value);})(this)" style="height:26px;border:none;border-radius:5px;font-size:11px;font-weight:700;padding:0 6px;cursor:pointer;background:${sb};color:${sc};flex-shrink:0">
+          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:${sb};color:${sc};flex-shrink:0;white-space:nowrap">${(r.status||'queued').charAt(0).toUpperCase()+(r.status||'queued').slice(1)}</span>
+          <input type="text" inputmode="numeric" id="fr-amount-${r.id}" placeholder="$0" value="${r.amount ? '$'+Number(r.amount).toLocaleString() : ''}" oninput="(function(el){var raw=(el.value||'').replace(/[^0-9]/g,'');var num=raw?parseInt(raw,10):0;el.value=num>0?'$'+num.toLocaleString():'';faUpdateRow('${clientId}','${r.id}','amount',num);})(this)"
+            style="height:26px;width:78px;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;font-weight:600;padding:0 6px;flex-shrink:0;background:white;color:var(--navy);text-align:right" />
+          <button onclick="(function(){var n=document.getElementById('${noteId}');n.style.display=n.style.display==='none'?'block':'none';})()" title="Strategy details" style="width:24px;height:24px;border:1px solid #e5e7eb;border-radius:5px;background:white;cursor:pointer;font-size:12px;color:${hasNotes?'#7c3aed':'var(--gray-400)'};flex-shrink:0;display:flex;align-items:center;justify-content:center">${hasNotes ? '📝' : '···'}</button>
+          <button onclick="faRemove('${clientId}','${r.id}')" title="Delete" style="width:24px;height:24px;border:none;border-radius:5px;background:rgba(239,68,68,0.07);cursor:pointer;color:#dc2626;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">×</button>
+        </div>
+        <!-- ACTION BUTTONS ROW: quick status transitions -->
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px solid #f3f4f6">
+          ${actBtnsHtml}
+          <!-- Status dropdown as fallback for fine control -->
+          <select id="fr-status-${r.id}" onchange="faQuickStatus('${clientId}','${r.id}',this.value)" style="margin-left:auto;height:22px;border:1px solid #e5e7eb;border-radius:4px;font-size:10px;font-weight:600;padding:0 4px;cursor:pointer;background:white;color:var(--gray-500)">
             ${ALL_STATUSES.map(s => `<option value="${s}"${r.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
           </select>
-          <input type="text" inputmode="numeric" id="fr-amount-${r.id}" placeholder="0" value="${r.amount ? Number(r.amount).toLocaleString() : ''}" oninput="(function(el){var raw=(el.value||'').replace(/[^0-9]/g,'');var num=raw?parseInt(raw,10):0;el.value=num>0?num.toLocaleString():'';faUpdateRow('${clientId}','${r.id}','amount',num);})(this)"
-            style="height:26px;width:78px;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;font-weight:600;padding:0 6px;flex-shrink:0;background:white;color:var(--navy);text-align:right" />
-          <button onclick="(function(){var n=document.getElementById('${noteId}');n.style.display=n.style.display==='none'?'block':'none';})()" title="Strategy details" style="width:22px;height:22px;border:1px solid #e5e7eb;border-radius:5px;background:white;cursor:pointer;font-size:11px;color:var(--gray-400);flex-shrink:0;display:flex;align-items:center;justify-content:center">${hasNotes ? '📝' : '···'}</button>
-          <button onclick="faRemove('${clientId}','${r.id}')" title="Delete" style="width:22px;height:22px;border:none;border-radius:5px;background:rgba(239,68,68,0.07);cursor:pointer;color:#dc2626;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">×</button>
         </div>
-        <!-- STRATEGY DETAILS PANEL (collapsed by default) -->
+        <!-- STRATEGY DETAILS PANEL -->
         <div id="${noteId}" style="display:${hasNotes?'block':'none'};margin-top:8px;border-top:1px solid #eef0f3;padding-top:8px">
           <!-- Row 1: Category · Bureau · Risk -->
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px">
@@ -12215,21 +12253,27 @@
   }
 
   function addFundingRow(clientId) {
-    const bankSel = document.getElementById('fa-bank-sel-'+clientId);
-    const cardSel = document.getElementById('fa-card-sel-'+clientId);
-    if (!bankSel || !cardSel) return;
-    const bank = bankSel.value;
-    const cardOpt = cardSel.options[cardSel.selectedIndex];
-    const cardName = cardSel.value;
-    if (!bank || !cardName) { alert('Please select a bank and card.'); return; }
-    const introPeriod = cardOpt ? (cardOpt.getAttribute('data-period') || 'N/A') : 'N/A';
+    const bankInp = document.getElementById('fa-bank-inp-'+clientId);
+    const cardInp = document.getElementById('fa-card-inp-'+clientId);
+    const catSel  = document.getElementById('fa-cat-sel-'+clientId);
+    if (!bankInp) return;
+    const bank     = (bankInp.value || '').trim();
+    const cardName = cardInp ? (cardInp.value || '').trim() : '';
+    if (!bank) { alert('Please enter a bank name.'); return; }
+    // Look up introPeriod from CARD_LIBRARY if the card name matches exactly
+    const libCards = CARD_LIBRARY[bank] || [];
+    const libCard  = libCards.find(c => c.name === cardName);
+    const introPeriod = libCard ? libCard.introPeriod : 'N/A';
+    const category = catSel ? catSel.value : '';
     const d = getDashData(clientId);
     if (!d.fundingRows) d.fundingRows = [];
-    d.fundingRows.push({ id: 'fr_' + Date.now(), bank, cardName, introPeriod, status: 'pending', amount: '', instructions: '' });
+    d.fundingRows.push({ id: 'fr_' + Date.now(), bank, cardName, introPeriod, status: 'queued', amount: '', instructions: '', category });
     saveDashData(clientId, d);
     const container = document.getElementById('fa-rows-'+clientId);
     if (container) container.innerHTML = renderFundingRowsAdmin(clientId, d.fundingRows);
-    bankSel.value = ''; cardSel.innerHTML = '<option value="">— Select card —</option>';
+    bankInp.value = '';
+    if (cardInp) cardInp.value = '';
+    if (catSel)  catSel.value  = '';
     refreshClientUI(clientId);
   }
 
@@ -13979,20 +14023,33 @@
   function renderFundingTab(clientId) {
     const d = getDashData(clientId);
     const rows = d.fundingRows || [];
+    const bankOpts = Object.keys(CARD_LIBRARY).map(b => `<option value="${b}">`).join('');
     return `
     <div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
-        <select id="fa-bank-sel-${clientId}" class="a-add-req-input" style="flex:1;min-width:130px;cursor:pointer;height:34px;font-size:12px" onchange="faPopulateCards('${clientId}')">
-          <option value="">— Select Bank —</option>
-          ${Object.keys(CARD_LIBRARY).map(bank => `<option value="${bank}">${bank}</option>`).join('')}
-        </select>
-        <select id="fa-card-sel-${clientId}" class="a-add-req-input" style="flex:2;min-width:160px;cursor:pointer;height:34px;font-size:12px">
-          <option value="">— Select Card —</option>
+      <!-- Strategy Entry: unified text+datalist form (replaces old bank/card dropdown chain) -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+        <input id="fa-bank-inp-${clientId}" list="fa-bank-dl-${clientId}" placeholder="Bank name…"
+          oninput="faPopulateCards('${clientId}')"
+          style="flex:1;min-width:120px;height:34px;border:1px solid #dde1e8;border-radius:8px;padding:0 10px;font-size:12px;color:var(--navy);background:white" />
+        <datalist id="fa-bank-dl-${clientId}">${bankOpts}</datalist>
+        <input id="fa-card-inp-${clientId}" list="fa-card-dl-${clientId}" placeholder="Product / card…"
+          style="flex:2;min-width:150px;height:34px;border:1px solid #dde1e8;border-radius:8px;padding:0 10px;font-size:12px;color:var(--navy);background:white" />
+        <datalist id="fa-card-dl-${clientId}"></datalist>
+        <select id="fa-cat-sel-${clientId}" style="height:34px;border:1px solid #dde1e8;border-radius:8px;padding:0 8px;font-size:12px;color:var(--navy);background:white;cursor:pointer">
+          <option value="">Category…</option>
+          <option value="soft_pull">Soft Pull</option>
+          <option value="primary">Primary Bank</option>
+          <option value="secondary">Secondary Bank</option>
+          <option value="credit_union">Credit Union</option>
+          <option value="regional">Regional Bank</option>
+          <option value="relationship">Relationship</option>
+          <option value="no_pg">No PG / Fintech</option>
+          <option value="expansion">Expansion</option>
         </select>
         <button onclick="addFundingRow('${clientId}')" style="padding:0 14px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;height:34px;flex-shrink:0">+ Add</button>
       </div>
       <div id="fa-rows-${clientId}" style="display:flex;flex-direction:column;gap:8px">
-        ${rows.length ? renderFundingRowsAdmin(clientId, rows) : '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;font-style:italic">No applications added yet. Choose a bank and card above to add one.</div>'}
+        ${rows.length ? renderFundingRowsAdmin(clientId, rows) : '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;font-style:italic">No strategy entries yet. Type a bank name above to add one.</div>'}
       </div>
     </div>`;
   }
