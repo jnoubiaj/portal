@@ -3682,9 +3682,91 @@
       return;
     }
 
-    // ── Group by category ──────────────────────────────────────
+    // ── Status sort order (for flat Applications section) ──────────────────
+    const _STATUS_SORT = { approved:0, applied:1, pending:2, queued:3, denied:4, excluded:5 };
+
+    // ── Build card HTML (shared between both sections) ──────────────────────
+    const _buildCard = r => {
+      const sCfg = FSE_STATUS_CFG[r.status] || FSE_STATUS_CFG.queued;
+      const isRel = r.relationship || rel.has((r.bank || '').toLowerCase());
+      const bureauCls = FSE_BUREAU_CLS[r.bureau] || '';
+      const domain = r.domain || _bankDomain(r.bank);
+      const fallbackInitial = (r.bank || '?')[0].toUpperCase();
+      const approvedLabel = (r.status === 'approved' && r.amount)
+        ? '✓ $' + Number(r.amount).toLocaleString() : null;
+      const detailId = 'fse-det-' + r.id;
+      const _nextAction = {
+        queued:   'Your advisor will notify you when it\'s time to apply.',
+        applied:  'Application submitted — awaiting lender decision.',
+        pending:  'Under review with the lender.',
+        approved: 'Congratulations! Funding secured.',
+        denied:   'Your advisor will review reapplication options with you.',
+        excluded: 'Excluded from your current funding sequence.',
+      }[r.status] || null;
+      const hasDetails = !!(r.clientNote || r.waitPeriod || r.prerequisites || _nextAction);
+      const detailsHtml = hasDetails ? `<div class="fse-card-details" id="${detailId}" style="display:none">
+        ${r.prerequisites ? `<div class="fse-detail-item"><span class="fse-detail-icon">⚠️</span><span><strong>Before applying:</strong> ${r.prerequisites}</span></div>` : ''}
+        ${r.waitPeriod   ? `<div class="fse-detail-item"><span class="fse-detail-icon">⏱</span><span><strong>Wait period:</strong> ${r.waitPeriod}</span></div>` : ''}
+        ${r.clientNote   ? `<div class="fse-detail-item fse-detail-note"><span class="fse-detail-icon">💬</span><span>${r.clientNote}</span></div>` : ''}
+        ${_nextAction    ? `<div class="fse-detail-item" style="color:var(--gray-500);font-size:12px"><span class="fse-detail-icon">→</span><span>${_nextAction}</span></div>` : ''}
+      </div>` : '';
+      return `<div class="fse-card fse-card-${r.status || 'pending'}">
+        <div class="fse-card-main" onclick="fseToggleDetails('${detailId}')">
+          <div class="fse-card-logo">
+            <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="${r.bank || ''}"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="fse-logo-fallback" style="display:none">${fallbackInitial}</div>
+          </div>
+          <div class="fse-card-info">
+            <div class="fse-card-bank">${r.bank || ''}${isRel ? ' <span class="fse-rel-badge">★</span>' : ''}</div>
+            <div class="fse-card-product">${r.cardName || ''}${r.introPeriod && r.introPeriod !== 'N/A' ? ' · <span style="color:var(--blue);font-size:11px">' + r.introPeriod + '</span>' : ''}</div>
+            <div class="fse-card-tags">
+              ${r.bureau    ? `<span class="fse-bureau ${bureauCls}">${r.bureau}</span>` : ''}
+              ${r.riskLevel ? `<span class="fse-risk fse-risk-${r.riskLevel}">${r.riskLevel.charAt(0).toUpperCase() + r.riskLevel.slice(1)} Risk</span>` : ''}
+              ${isRel ? '<span class="fse-rel-tag">Relationship</span>' : ''}
+            </div>
+          </div>
+          <div class="fse-card-right">
+            ${r.estRange ? `<div class="fse-est-range">${r.estRange}</div>` : ''}
+            <div class="fse-status-badge ${sCfg.cls}">${approvedLabel || sCfg.label}</div>
+            ${hasDetails ? `<div class="fse-details-hint">Details ↓</div>` : ''}
+          </div>
+        </div>
+        ${detailsHtml}
+      </div>`;
+    };
+
+    // ── SECTION 1: Funding Applications (all rows, sorted by status priority) ──
+    const appRows = [...rows].sort((a, b) =>
+      (_STATUS_SORT[a.status] ?? 5) - (_STATUS_SORT[b.status] ?? 5)
+    );
+    const appApprovedAmt = approvedRows.reduce((s, r) => s + (+r.amount || 0), 0);
+    const appApprovedCount = approvedRows.length;
+    const appSummary = appApprovedCount > 0
+      ? `${appApprovedCount} approved · ${_fmt(appApprovedAmt)} secured`
+      : `${rows.length} application${rows.length !== 1 ? 's' : ''} · ${activeRows.length} active`;
+    root.innerHTML += `
+    <div class="fse-section fse-open">
+      <div class="fse-section-hdr" style="background:linear-gradient(135deg,#0A1628,#1a3a6b)">
+        <span class="fse-section-icon">🏦</span>
+        <div class="fse-section-meta">
+          <div class="fse-section-name">Funding Applications</div>
+          <div class="fse-section-sub">${appSummary}</div>
+        </div>
+        <div class="fse-section-right">
+          ${appApprovedCount > 0 ? `<span class="fse-section-approved">${_fmt(appApprovedAmt)}</span>` : ''}
+          <span class="fse-section-count">${appRows.length}</span>
+        </div>
+      </div>
+      <div class="fse-card-list">${appRows.map(_buildCard).join('')}</div>
+    </div>`;
+
+    // ── SECTION 2+: Recommended upcoming banks (queued only, grouped by category) ──
+    const queuedRows = rows.filter(r => r.status === 'queued');
+    if (!queuedRows.length) return; // all rows are active — no upcoming section needed
+
     const groups = {};
-    rows.forEach(r => {
+    queuedRows.forEach(r => {
       const cat = r.category || 'uncategorized';
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push(r);
@@ -3696,7 +3778,7 @@
       return aO - bO;
     });
 
-    let firstOpenDone = false;
+    let firstOpenDone = true; // upcoming sections start collapsed
 
     sortedCats.forEach(cat => {
       const cfg = FSE_CATEGORY_CFG[cat] || FSE_CATEGORY_CFG.uncategorized;
@@ -3704,60 +3786,9 @@
       const approvedInCat = catRows.filter(r => r.status === 'approved');
       const catApprovedAmt = approvedInCat.reduce((s, r) => s + (+r.amount || 0), 0);
       const hasApproval = approvedInCat.length > 0;
-      const isOpen = !firstOpenDone || hasApproval;
-      if (isOpen) firstOpenDone = true;
+      const isOpen = hasApproval; // upcoming sections start closed unless has approval
 
-      const cardsHtml = catRows.map(r => {
-        const sCfg = FSE_STATUS_CFG[r.status] || FSE_STATUS_CFG.queued;
-        const isRel = r.relationship || rel.has((r.bank || '').toLowerCase());
-        const bureauCls = FSE_BUREAU_CLS[r.bureau] || '';
-        const domain = r.domain || _bankDomain(r.bank);
-        const fallbackInitial = (r.bank || '?')[0].toUpperCase();
-        const approvedLabel = (r.status === 'approved' && r.amount)
-          ? '✓ $' + Number(r.amount).toLocaleString() : null;
-        const detailId = 'fse-det-' + r.id;
-        const _nextAction = {
-          queued:   'Your advisor will notify you when it\'s time to apply.',
-          applied:  'Application submitted — awaiting lender decision.',
-          pending:  'Under review with the lender.',
-          approved: 'Congratulations! Funding secured.',
-          denied:   'Your advisor will review reapplication options with you.',
-          excluded: 'Excluded from your current funding sequence.',
-        }[r.status] || null;
-        const hasDetails = !!(r.clientNote || r.waitPeriod || r.prerequisites || _nextAction);
-
-        const detailsHtml = hasDetails ? `<div class="fse-card-details" id="${detailId}" style="display:none">
-          ${r.prerequisites ? `<div class="fse-detail-item"><span class="fse-detail-icon">⚠️</span><span><strong>Before applying:</strong> ${r.prerequisites}</span></div>` : ''}
-          ${r.waitPeriod   ? `<div class="fse-detail-item"><span class="fse-detail-icon">⏱</span><span><strong>Wait period:</strong> ${r.waitPeriod}</span></div>` : ''}
-          ${r.clientNote   ? `<div class="fse-detail-item fse-detail-note"><span class="fse-detail-icon">💬</span><span>${r.clientNote}</span></div>` : ''}
-          ${_nextAction    ? `<div class="fse-detail-item" style="color:var(--gray-500);font-size:12px"><span class="fse-detail-icon">→</span><span>${_nextAction}</span></div>` : ''}
-        </div>` : '';
-
-        return `<div class="fse-card fse-card-${r.status || 'pending'}">
-          <div class="fse-card-main" onclick="fseToggleDetails('${detailId}')">
-            <div class="fse-card-logo">
-              <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="${r.bank || ''}"
-                onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-              <div class="fse-logo-fallback" style="display:none">${fallbackInitial}</div>
-            </div>
-            <div class="fse-card-info">
-              <div class="fse-card-bank">${r.bank || ''}${isRel ? ' <span class="fse-rel-badge">★</span>' : ''}</div>
-              <div class="fse-card-product">${r.cardName || ''}${r.introPeriod && r.introPeriod !== 'N/A' ? ' \xb7 <span style="color:var(--blue);font-size:11px">' + r.introPeriod + '</span>' : ''}</div>
-              <div class="fse-card-tags">
-                ${r.bureau ? `<span class="fse-bureau ${bureauCls}">${r.bureau}</span>` : ''}
-                ${r.riskLevel ? `<span class="fse-risk fse-risk-${r.riskLevel}">${r.riskLevel.charAt(0).toUpperCase() + r.riskLevel.slice(1)} Risk</span>` : ''}
-                ${isRel ? '<span class="fse-rel-tag">Relationship</span>' : ''}
-              </div>
-            </div>
-            <div class="fse-card-right">
-              ${r.estRange ? `<div class="fse-est-range">${r.estRange}</div>` : ''}
-              <div class="fse-status-badge ${sCfg.cls}">${approvedLabel || sCfg.label}</div>
-              ${hasDetails ? `<div class="fse-details-hint">Details ↓</div>` : ''}
-            </div>
-          </div>
-          ${detailsHtml}
-        </div>`;
-      }).join('');
+      const cardsHtml = catRows.map(_buildCard).join('');
 
       root.insertAdjacentHTML('beforeend', `
         <div class="fse-section${isOpen ? ' fse-open' : ''}">
