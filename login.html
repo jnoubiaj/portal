@@ -1119,10 +1119,13 @@
     }
 
     function startClientSession(clientId, email, phone) {
+      const sess = { clientId, email, phone: phone || '', loggedInAt: new Date().toISOString() };
+      try { sessionStorage.setItem('cq_client_session', JSON.stringify(sess)); } catch(e) {}
+      // Backup to localStorage — covers iOS Safari clearing sessionStorage when app goes to background
       try {
-        sessionStorage.setItem('cq_client_session', JSON.stringify({
-          clientId, email, phone: phone || '', loggedInAt: new Date().toISOString()
-        }));
+        localStorage.setItem('cq_client_session_bak', JSON.stringify(
+          Object.assign({}, sess, { expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 })
+        ));
       } catch(e) {}
     }
 

@@ -831,6 +831,14 @@
       margin-bottom: 24px;
     }
 
+    /* ── TASKS + UPDATES ROW ─────────────────────────── */
+    .ws-tasks-updates-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
     /* ── TASKS ────────────────────────────────────────── */
     .task-list {
       display: flex;
@@ -1934,6 +1942,8 @@
 
       /* Two col → single */
       .two-col { grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
+      /* Tasks + Updates row → stacked on mobile */
+      .ws-tasks-updates-row { grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
 
       /* Progress steps — compact row */
       .progress-steps {
@@ -2873,6 +2883,7 @@
       .card-body { padding: 20px; }
       .card-title { font-size: 14px; }
       .two-col { gap: 18px; margin-bottom: 20px; }
+      .ws-tasks-updates-row { gap: 14px; }
       .section-card { margin-bottom: 20px; }
       .fse-section-hdr { padding: 14px 16px; }
       .fse-card-main { padding: 12px 16px; gap: 12px; }
@@ -3141,7 +3152,7 @@
         <div id="ws-hero"></div>
 
         <!-- ── WORKSPACE: TASKS + UPDATES (2-col) ───────────────────────────── -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="ws-tasks-updates-row">
 
           <!-- My Tasks -->
           <div class="ws-panel ws-tasks-panel" style="margin-bottom:0">
@@ -3918,7 +3929,17 @@
 
   function getClientSession() {
     try {
-      return JSON.parse(sessionStorage.getItem('cq_client_session') || 'null');
+      // Primary: sessionStorage (set on login)
+      var s = JSON.parse(sessionStorage.getItem('cq_client_session') || 'null');
+      if (s && s.clientId) return s;
+      // Fallback: localStorage backup — covers iOS sessionStorage clearing on background/reload
+      var lb = JSON.parse(localStorage.getItem('cq_client_session_bak') || 'null');
+      if (lb && lb.clientId && lb.expiresAt && Date.now() < lb.expiresAt) {
+        // Restore to sessionStorage so subsequent calls are fast
+        try { sessionStorage.setItem('cq_client_session', JSON.stringify(lb)); } catch(e2) {}
+        return lb;
+      }
+      return null;
     } catch(e) { return null; }
   }
 
@@ -5512,14 +5533,19 @@
     } // end startFirestoreListeners
 
     // Start immediately if Firebase Auth already has a user (returning visit)
-    // Otherwise wait up to 4s for auth to initialize, then start anyway
+    // If no user: sign in anonymously so Firestore security rules are satisfied
+    // (covers magic-link logins and mobile browsers that lost the phone-auth session)
     let _authStarted = false;
     fsAuthOnStateChange(function(user) {
+      if (!user) {
+        try { firebase.auth().signInAnonymously().catch(function(){}); } catch(e) {}
+      }
       if (!_authStarted) { _authStarted = true; startFirestoreListeners(); }
     });
+    // Shorter fallback timeout — mobile auth resolves quickly or not at all
     setTimeout(function() {
       if (!_authStarted) { _authStarted = true; startFirestoreListeners(); }
-    }, 4000);
+    }, 2000);
   });
 
   const sectionTitles = {
@@ -7500,6 +7526,7 @@
     fsAuthSignOut().catch(() => {});
     try { sessionStorage.removeItem('cq_client_session'); } catch(e) {}
     try { localStorage.removeItem('cq_active_client_session'); } catch(e) {}
+    try { localStorage.removeItem('cq_client_session_bak'); } catch(e) {}
     window.location.replace('login.html');
   }
 
@@ -7545,6 +7572,7 @@
     function doLogout() {
       try { sessionStorage.removeItem('cq_client_session'); } catch(e) {}
       try { localStorage.removeItem('cq_active_client_session'); } catch(e) {}
+      try { localStorage.removeItem('cq_client_session_bak'); } catch(e) {}
       window.location.replace('login.html');
     }
 
