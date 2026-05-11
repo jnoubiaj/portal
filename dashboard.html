@@ -3474,8 +3474,18 @@
   ];
   const CURRENT_STAGE = 1; // ← overridden by Firestore currentStage when data loads
 
+  // Reject stale Firestore stageNames that belong to the old 9-stage schema.
+  // Any saved array that isn't exactly 6 entries, or contains legacy step names, gets replaced by the current default.
+  const _LEGACY_STAGE_FRAGMENTS = ['onboarding complete','fraud alerts off','add tradeline','pay down util','remove inquir'];
+  function _normalizeStages(names) {
+    if (!names || names.length !== 6) return PORTAL_STAGES.map(s => s.label);
+    const lc = names.map(n => (n || '').toLowerCase());
+    if (_LEGACY_STAGE_FRAGMENTS.some(f => lc.some(n => n.includes(f)))) return PORTAL_STAGES.map(s => s.label);
+    return names;
+  }
+
   function syncStageUI() {
-    const _fsStages = (window._fsDashCache && window._fsDashCache.stageNames) ? window._fsDashCache.stageNames.map(l => ({ label: l })) : PORTAL_STAGES;
+    const _fsStages = _normalizeStages(window._fsDashCache && window._fsDashCache.stageNames).map(l => ({ label: l }));
     const _fsStage  = (window._fsDashCache && window._fsDashCache.currentStage) ? window._fsDashCache.currentStage : CURRENT_STAGE;
     const total = _fsStages.length;
     const stage = _fsStage;
@@ -4458,7 +4468,7 @@
 
   const STAGE_TASKS_TEMPLATE = [
     ['Upload Experian login credentials','Confirm personal information','Upload ID + proof of address','Complete onboarding form'],
-    ['Remove inquiries','Turn off fraud alerts','Add authorized user','Pay down utilization'],
+    ['Review credit optimization plan','Monitor dispute progress','Respond to any verification requests','Check in with CapitalQuest team'],
     ['Confirm business information','Provide business details','Approve funding plan'],
     ['Open required bank accounts','Fund accounts to minimum deposit','Complete required transactions','Schedule bank appointment'],
     ['Attend bank appointment','Confirm application submissions','Upload requested documents','Handle reconsideration calls'],
@@ -4485,7 +4495,7 @@
     const el = document.getElementById('ws-hero');
     if (!el) return;
     const cs = d.currentStage || 1;
-    const stages = d.stageNames && d.stageNames.length ? d.stageNames : PORTAL_STAGES.map(s => s.label);
+    const stages = _normalizeStages(d.stageNames);
     const pct = Math.round((cs / stages.length) * 100);
     const stageName = stages[cs - 1] || 'Getting Started';
     const allTasks = (window._dashActiveTasks || d.tasks || []).filter(t => t.clientVisible !== false);
@@ -4536,7 +4546,7 @@
   }
 
   function renderRoadmap(d) {
-    const stages    = d.stageNames && d.stageNames.length ? d.stageNames : PORTAL_STAGES.map(s => s.label);
+    const stages    = _normalizeStages(d.stageNames);
     const cs        = d.currentStage || 1;
     const pct       = Math.round((cs / stages.length) * 100);
     const stageName = stages[cs - 1] || stages[0];
@@ -4814,7 +4824,7 @@
   // ── NEXT BEST ACTION ─────────────────────────────────────────────────────────
   function _getNextBestAction(d) {
     const cs = d.currentStage || 1;
-    const stages = d.stageNames || DEFAULT_DASH.stageNames;
+    const stages = _normalizeStages(d.stageNames);
     const tasks = (d.tasks || []).filter(t => t.clientVisible !== false && t.status !== 'done');
     const now = Date.now();
     // Overdue first
@@ -4867,7 +4877,7 @@
     const titleEl = document.getElementById('stage-tasks-card-title');
     if (!el) return;
     const cs = d.currentStage || 1;
-    const stages = d.stageNames || DEFAULT_DASH.stageNames;
+    const stages = _normalizeStages(d.stageNames);
     const stageName = stages[cs - 1] || 'Current Stage';
     if (titleEl) titleEl.textContent = 'Stage ' + cs + ' — ' + stageName;
     const clientTasks = (overrideTasks || window._dashActiveTasks || d.tasks || []).filter(t => t.clientVisible !== false);
@@ -4904,7 +4914,7 @@
     const el = document.getElementById('tasks-workspace');
     if (!el) return;
     const cs = d.currentStage || 1;
-    const stages = d.stageNames || DEFAULT_DASH.stageNames;
+    const stages = _normalizeStages(d.stageNames);
     // Use overrideTasks → cached _dashActiveTasks → d.tasks (same source as dashboard)
     const allTasks = (overrideTasks || window._dashActiveTasks || d.tasks || []).filter(t => t.clientVisible !== false);
     const now = Date.now();
@@ -5075,7 +5085,7 @@
     try {
       var _PIPELINE_CLIENT_TASKS = [
         ['Upload Experian Login Credentials','Confirm Personal Information','Upload ID + Proof of Address','Complete Onboarding Form'],
-        ['Remove Inquiries','Turn Off Fraud Alerts','Add Authorized User','Pay Down Utilization'],
+        ['Review Credit Optimization Plan','Monitor Dispute Progress','Respond To Verification Requests','Check In With CapitalQuest Team'],
         ['Confirm Business Information','Provide Business Details','Approve Funding Plan'],
         ['Assign Target Banks','Track Personal Account Open Date','Verify Business Account & Open Date','Open Business Account & Deposit Funds'],
         ['Attend Bank Appointment','Confirm Submission','Upload Requested Documents','Handle Reconsideration Calls'],
@@ -5106,7 +5116,7 @@
     const hav = document.querySelector('.header-avatar'); if(hav) hav.textContent = displayInitials;
 
     // Progress
-    const stages = d.stageNames || DEFAULT_DASH.stageNames;
+    const stages = _normalizeStages(d.stageNames);
     const cs = d.currentStage || 1;
     const pct = Math.round((cs / stages.length) * 100);
     renderProgressSteps('progress-steps-mini', stages, cs);
@@ -7296,7 +7306,7 @@
     if (next.pipelineTasks && next.pipelineTasks.assigned) {
       var _PT_LABELS = [
         ['Upload Experian Login Credentials','Confirm Personal Information','Upload ID + Proof of Address','Complete Onboarding Form'],
-        ['Remove Inquiries','Turn Off Fraud Alerts','Add Authorized User','Pay Down Utilization'],
+        ['Review Credit Optimization Plan','Monitor Dispute Progress','Respond To Verification Requests','Check In With CapitalQuest Team'],
         ['Confirm Business Information','Provide Business Details','Approve Funding Plan'],
         ['Assign Target Banks','Track Personal Account Open Date','Verify Business Account & Open Date','Open Business Account & Deposit Funds'],
         ['Attend Bank Appointment','Confirm Submission','Upload Requested Documents','Handle Reconsideration Calls'],
