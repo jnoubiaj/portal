@@ -2037,11 +2037,11 @@
     <p>Sign in to manage your clients</p>
     <div class="lf-group">
       <label>Email Address</label>
-      <input type="email" id="al-email" placeholder="you@capitalquestfunding.com" />
+      <input type="email" id="al-email" placeholder="you@capitalquestfunding.com" autocomplete="username" />
     </div>
     <div class="lf-group">
       <label>Password</label>
-      <input type="password" id="al-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()" />
+      <input type="password" id="al-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin()" />
     </div>
     <div class="lf-error" id="al-error">Invalid email or password. Please try again.</div>
     <button class="btn-login" onclick="adminLogin()">Sign In</button>
@@ -8010,8 +8010,8 @@
       `<select id="ape-${id}" style="${iStyle}" ${iFocus} ${extra||''}>${opts}</select>`;
     const passInp = (id, val, ph) =>
       `<div style="position:relative">
-        <input type="password" id="ape-${id}" value="${((val||'')+'').replace(/"/g,'&quot;')}" placeholder="${ph||''}"
-          style="${iStyle};padding-right:50px" ${iFocus} />
+        <input type="password" id="ape-${id}" data-val="${((val||'')+'').replace(/"/g,'&quot;')}" placeholder="${ph||''}"
+          autocomplete="off" style="${iStyle};padding-right:50px" ${iFocus} />
         <button type="button" onclick="_apeTogglePass('${id}',this)"
           style="position:absolute;right:9px;top:50%;transform:translateY(-50%);background:none;border:1px solid #e2e8f0;border-radius:5px;cursor:pointer;font-size:10px;font-weight:700;color:#64748b;padding:2px 7px;font-family:var(--font-b)">Show</button>
       </div>`;
@@ -8191,6 +8191,11 @@
 
     document.body.appendChild(overlay);
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    // Init password fields from data-val (not value attr) so Chrome doesn't treat them as saved credentials
+    overlay.querySelectorAll('input[type="password"][data-val]').forEach(function(el) {
+      el.value = el.getAttribute('data-val') || '';
+    });
 
     // Address sync: combines split fields into hidden ape-address
     window._apeAddrSync = function() {
