@@ -1,14 +1,44 @@
 // ── GoHighLevel Integration Layer — CapitalQuest Admin Portal ────────────────
 // Provides a unified GHL.* API for all integration needs.
-// API: GHL v2 (services.leadconnectorhq.com) — called browser-native w/ CORS
-// Contact search: proxied via Cloudflare Worker (ghl-proxy.sam-e5a.workers.dev)
+// API: GHL v2 (services.leadconnectorhq.com)
+// Proxy: ghl-server.mjs on localhost:3001 — eliminates CORS, keeps key server-side
+// Contact search: also proxied via Cloudflare Worker (ghl-proxy.sam-e5a.workers.dev)
 // ─────────────────────────────────────────────────────────────────────────────
 
 window.GHL = (function () {
 
-  const API      = 'https://services.leadconnectorhq.com';
-  const PROXY    = 'https://ghl-proxy.sam-e5a.workers.dev';
-  const VER      = '2021-07-28';
+  const API        = 'https://services.leadconnectorhq.com';
+  const PROXY      = 'https://ghl-proxy.sam-e5a.workers.dev';  // Cloudflare (contact search)
+  const LOCAL_PROXY= 'http://localhost:3001/api/ghl';           // local Node proxy (all calls)
+  const VER        = '2021-07-28';
+
+  // ── LOCAL PROXY DETECTION ────────────────────────────────────────────────
+  let _proxyReady = null; // null=unchecked, true=available, false=unavailable
+
+  async function _checkProxy() {
+    if (_proxyReady !== null) return _proxyReady;
+    try {
+      let timer;
+      const done = fetch(LOCAL_PROXY + '/health', { method: 'GET' }).then(r => r.ok);
+      const out  = await Promise.race([
+        done,
+        new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), 1500); }),
+      ]);
+      clearTimeout(timer);
+      _proxyReady = !!out;
+    } catch(e) {
+      _proxyReady = false;
+    }
+    console.log('[GHL] Local proxy (localhost:3001):', _proxyReady ? '✓ available' : '✗ not running (using direct API)');
+    if (typeof window !== 'undefined') window._ghlProxyReady = _proxyReady;
+    return _proxyReady;
+  }
+
+  // Expose so admin.html can show proxy status without re-checking
+  function isProxyReady() { return _proxyReady === true; }
+
+  // Reset proxy check (called after server starts or settings change)
+  function resetProxyCheck() { _proxyReady = null; }
 
   // ── SETTINGS ────────────────────────────────────────────────────────────
   function getSettings () {
@@ -25,10 +55,14 @@ window.GHL = (function () {
         syncMessages:    s.syncMessages    !== false,
         overdueTaskSMS:  s.overdueTaskSMS  !== false,
         overdueTaskEmail:s.overdueTaskEmail!== false,
-        autoSyncSec:     s.autoSyncSec     || 30,
-        defaultUser:     s.defaultUser     || '',
-        fromNumber:      s.fromNumber      || '',
-        enabled:         s.enabled         !== false,
+        autoSyncSec:          s.autoSyncSec          || 30,
+        defaultUser:          s.defaultUser          || '',
+        fromNumber:           s.fromNumber           || '',
+        defaultSmsNumber:     s.defaultSmsNumber     || s.fromNumber || '',
+        defaultEmailAddress:  s.defaultEmailAddress  || '',
+        enabled:              s.enabled              !== false,
+        testMode:             s.testMode             === true,
+        useProxy:             s.useProxy             !== false,   // default ON when proxy available
       };
     } catch (e) {
       return { apiKey: window.GHL_API_KEY || '', locationId: window.GHL_LOCATION_ID || '', enabled: true };
@@ -95,23 +129,60 @@ window.GHL = (function () {
   function getRetryQueue () { return _getQueue(); }
 
   // ── CORE FETCH ──────────────────────────────────────────────────────────
+  // Routes through local proxy (localhost:3001) when available — eliminates CORS.
+  // Falls back to direct GHL API call if proxy is not running.
   async function _fetch (method, path, body, retryItem) {
-    if (!getSettings().enabled) return null;
-    const url = path.startsWith('http') ? path : API + path;
+    const s = getSettings();
+    if (!s.enabled) return null;
+
+    // Test mode: inject _testMode flag into POST/PUT bodies — proxy returns fake success
+    if (s.testMode && body && (method === 'POST' || method === 'PUT')) {
+      body = Object.assign({}, body, { _testMode: true });
+    }
+
+    // Determine URL: proxy (preferred) or direct
+    const useProxy = s.useProxy !== false && await _checkProxy();
+    let url;
+    if (useProxy) {
+      url = path.startsWith('http') ? path : LOCAL_PROXY + path;
+    } else {
+      url = path.startsWith('http') ? path : API + path;
+    }
+
+    console.log('[GHL API →]', method, url,
+      useProxy ? '[proxy]' : '[direct]',
+      s.testMode ? '[TEST]' : '',
+      '| apiKey:', s.apiKey ? s.apiKey.substring(0,12)+'…' : '(none)');
+
     try {
-      const opts = { method, headers: _hdrs() };
+      const hdrs = _hdrs();
+      // When using proxy: forward key + locationId as headers (proxy reads these)
+      if (useProxy) {
+        hdrs['X-GHL-Api-Key']      = s.apiKey;
+        hdrs['X-GHL-Location-Id']  = s.locationId;
+      }
+      const opts = { method, headers: hdrs };
       if (body && method !== 'GET') opts.body = JSON.stringify(body);
       const res = await fetch(url, opts);
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        _logSync('api', false, method + ' ' + path + ' → ' + res.status + ' ' + (data.message || res.statusText));
+        const errMsg = method + ' ' + path + ' → ' + res.status
+          + ' ' + (data.message || data.msg || data.error || res.statusText);
+        console.warn('[GHL API ✗]', res.status, url, '| body:', data);
+        _logSync('api', false, errMsg);
         if (retryItem) _enqueue(retryItem);
         return null;
       }
-      _logSync('api', true, method + ' ' + path);
+
+      console.log('[GHL API ✓]', res.status, url, '| keys:', Object.keys(data));
+      _logSync('api', true, method + ' ' + path + (s.testMode ? ' [TEST]' : ''));
       return data;
     } catch (e) {
-      _logSync('api', false, method + ' ' + path + ': ' + e.message);
+      const isCors = !useProxy && e.name === 'TypeError';
+      console.error('[GHL API ✗]', method, url, '| error:', e.message,
+        isCors ? '⚠ CORS error — start ghl-server.mjs to fix' : '');
+      _logSync('api', false, method + ' ' + path + ': ' + e.message + (isCors ? ' [CORS — run ghl-server.mjs]' : ''));
       if (retryItem) _enqueue(retryItem);
       return null;
     }
@@ -257,15 +328,66 @@ window.GHL = (function () {
     try { return JSON.parse(localStorage.getItem('cq_ghl_msgs_' + contactId) || 'null'); } catch (e) { return null; }
   }
 
-  async function sendMessage (contactId, text, type) {
+  // sendMessage: type = 'SMS' | 'Email'
+  // fromChannel: outbound phone number (SMS) or email address (Email)
+  // emailSubject: subject line (Email only)
+  async function sendMessage (contactId, text, type, fromChannel, emailSubject) {
     type = type || 'SMS';
+    const s = getSettings();
     let convId = null;
     try { convId = JSON.parse(localStorage.getItem('cq_ghl_msgs_' + contactId) || '{}').convId; } catch (e) {}
+
     const body = { type, contactId, message: text };
     if (convId) body.conversationId = convId;
+
+    if (type === 'SMS') {
+      // Resolve outbound number: param → settings → fallback
+      const fromNum = fromChannel
+        || s.defaultSmsNumber
+        || s.fromNumber
+        || '';
+      if (fromNum) body.phone = fromNum;
+      console.log('[GHL sendMessage] SMS | from:', fromNum || '(none)', '| to contactId:', contactId);
+    } else if (type === 'Email') {
+      const fromAddr = fromChannel || s.defaultEmailAddress || '';
+      if (fromAddr)    body.from    = fromAddr;
+      if (emailSubject) body.subject = emailSubject;
+      // If body has html content (email), use html field
+      body.html = text;
+      console.log('[GHL sendMessage] Email | from:', fromAddr || '(none)', '| subj:', emailSubject || '(none)');
+    }
+
+    // When proxy is running, use the validated shortcut endpoints
+    const proxyOk = await _checkProxy();
+    if (proxyOk) {
+      const endpoint = type === 'SMS' ? '/api/ghl/send-sms' : '/api/ghl/send-email';
+      const payload  = type === 'SMS'
+        ? { contactId, message: text, fromPhone: body.phone, conversationId: convId || undefined,
+            _testMode: s.testMode || undefined }
+        : { contactId, subject: body.subject || emailSubject, html: text, body: text,
+            fromEmail: body.from, conversationId: convId || undefined,
+            _testMode: s.testMode || undefined };
+      console.log('[GHL sendMessage] Using proxy shortcut:', endpoint);
+      const res = await fetch(LOCAL_PROXY.replace('/api/ghl', '') + endpoint, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-GHL-Api-Key': s.apiKey, 'X-GHL-Location-Id': s.locationId },
+        body:    JSON.stringify(payload),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errMsg = d.error || d.message || 'Send failed (' + res.status + ')';
+        const hint   = d.hint ? '\n' + d.hint : '';
+        throw new Error(errMsg + hint);
+      }
+      _logSync('message', true, type + ' sent to contact ' + contactId + (s.testMode ? ' [TEST]' : ''));
+      return d;
+    }
+
+    // Proxy not available: fall back to direct GHL call
     const d = await _fetch('POST', '/conversations/messages', body,
       { id: 'sm_' + contactId + '_' + Date.now(), type: 'send_message', contactId, text });
-    _logSync('message', !!d, 'SMS to contact ' + contactId);
+    if (!d) throw new Error('Message send failed — check sync log for details');
+    _logSync('message', !!d, type + ' sent to contact ' + contactId);
     return d;
   }
 
@@ -349,82 +471,300 @@ window.GHL = (function () {
 
   function _parseGhlFields (contact, fieldDefsMap, formSubmissions) {
     const result = {};
-    // Custom fields from contact object
+
+    // 1. Standard contact fields (always present on the contact object)
+    const contactDirectFields = {
+      'first name': contact.firstName, 'last name': contact.lastName,
+      'email': contact.email, 'phone': contact.phone,
+      'address': contact.address1, 'city': contact.city,
+      'state': contact.state, 'zip': contact.postalCode,
+      'company name': contact.companyName,
+    };
+    Object.entries(contactDirectFields).forEach(([k, v]) => { if (v != null && v !== '') result[k] = v; });
+
+    // 2. Custom fields from contact object
     const customFields = contact.customFields || contact.customField || [];
     customFields.forEach(cf => {
       const def = fieldDefsMap[cf.id];
-      const name = def ? def.name : (cf.id || '');
+      const name = def ? def.name : ((cf.fieldKey || cf.id || '').toLowerCase().replace(/_/g,' ').trim());
       if (name && cf.value != null && cf.value !== '') result[name] = cf.value;
     });
-    // Form submission fields (override contact customFields)
+
+    // 3. Form submission fields — GHL returns data in multiple formats:
+    //    a) sub.formFields = array of {id, value}
+    //    b) sub.data = array of {id/fieldId, value, name/fieldKey}
+    //    c) sub.data = plain object { fieldKey: value } (flat map)
     (formSubmissions || []).forEach(sub => {
-      (sub.formFields || sub.data || []).forEach(ff => {
-        const def = fieldDefsMap[ff.id] || fieldDefsMap[ff.fieldId];
-        const name = def ? def.name : (ff.name || ff.fieldKey || '').toLowerCase().trim();
-        if (name && ff.value != null && ff.value !== '') result[name] = ff.value;
+      const rawData = sub.formFields || sub.data;
+      if (Array.isArray(rawData)) {
+        rawData.forEach(ff => {
+          const def  = fieldDefsMap[ff.id] || fieldDefsMap[ff.fieldId];
+          const name = def ? def.name : ((ff.name || ff.fieldKey || ff.id || '').toLowerCase().replace(/_/g,' ').trim());
+          const val  = ff.value != null ? ff.value : ff.fieldValue;
+          if (name && val != null && val !== '') result[name] = val;
+        });
+      } else if (rawData && typeof rawData === 'object') {
+        // Flat key:value object — keys may be field names, fieldKeys, or UUIDs
+        Object.entries(rawData).forEach(([k, v]) => {
+          const def  = fieldDefsMap[k];
+          const name = def ? def.name : k.toLowerCase().replace(/_/g,' ').replace(/-/g,' ').trim();
+          if (name && v != null && v !== '') result[name] = v;
+        });
+      }
+      // Also check top-level submission keys that might carry field values
+      ['firstName','lastName','email','phone','companyName'].forEach(k => {
+        if (sub[k] != null && sub[k] !== '') result[k.toLowerCase()] = sub[k];
       });
     });
+
     return result;
   }
 
   function mapGhlToPortalFields (contact, ghlFields) {
     const f = ghlFields || {};
     const out = {};
+
+    // Pick first non-empty match from a list of normalized field names
     const pick = (...names) => {
-      for (const n of names) { const v = f[n.toLowerCase().trim()]; if (v != null && v !== '') return String(v); }
+      for (const n of names) {
+        const v = f[n.toLowerCase().trim()];
+        if (v != null && v !== '') return String(v).trim();
+      }
       return null;
     };
     const m = (key, ...names) => { const v = pick(...names); if (v) out[key] = v; };
 
-    // Standard contact fields (highest priority — directly on contact object)
+    // ── CONTACT OBJECT (highest priority) ──────────────────────────────────
     if (contact.firstName)   out.firstName = contact.firstName;
     if (contact.lastName)    out.lastName  = contact.lastName;
     if (contact.email)       out.email     = contact.email;
     if (contact.phone)       out.phone     = contact.phone;
-    if (contact.address1)    out.street    = contact.address1;
-    if (contact.city)        out.city      = contact.city;
-    if (contact.state)       out.state     = contact.state;
-    if (contact.postalCode)  out.zip       = contact.postalCode;
     if (contact.companyName) out.bizName   = contact.companyName;
 
-    // Full name split (from custom field)
-    const fullName = pick('full name','name','contact name','applicant name','applicant');
+    // Personal home address from contact object
+    if (contact.address1)   out.street = contact.address1;
+    if (contact.city)       out.homeCity  = contact.city;
+    if (contact.state)      out.homeState = contact.state;
+    if (contact.postalCode) out.homeZip   = contact.postalCode;
+
+    // ── FULL NAME SPLIT ────────────────────────────────────────────────────
+    const fullName = pick(
+      'full name','fullname','name','contact name','applicant name',
+      'applicant full name','applicant','owner name','primary contact name'
+    );
     if (fullName && !out.firstName) {
       const parts = fullName.trim().split(/\s+/);
       out.firstName = parts[0];
       if (parts.length > 1) out.lastName = parts.slice(1).join(' ');
     }
 
-    // Business fields
-    m('bizName',         'business name','businessname','business_name','company','company name','legal business name','legal name');
-    m('dba',             'dba','dba / trade name','trade name','doing business as','dba name');
-    m('ein',             'ein','employer identification number','tax id','federal tax id','fein','employer id');
-    m('dateEstablished', 'date established','date_established','business established','business start date','business open date','year established','date business established');
-    m('bizAddress',      'business address','business_address','business street address','company address','business location');
-    m('bizType',         'business type','business_type','entity type','business structure','entity structure','type of business');
-    m('industry',        'industry','business industry','industry type','business category','type of industry');
-    m('employees',       'employees','# of employees','number of employees','number employees','total employees','employee count');
-    m('monthlySales',    'monthly revenue','monthly_revenue','monthly sales','average monthly revenue','monthly gross revenue','avg monthly revenue','gross monthly revenue');
-    m('ownership',       'ownership','ownership %','ownership percentage','percent ownership','% ownership','ownership percent');
-    m('loanAmount',      'funding goal','funding amount','loan amount','requested amount','desired funding','funding needed','amount requested','how much funding');
-    m('loanReason',      'funding purpose','loan purpose','use of funds','purpose of funding','how will funds be used','funding use','intended use');
-    m('bizCreditCards',  'existing business cards','business credit cards','business cards','current business cards','existing business credit cards');
-    m('bizBanks',        'business banking','business bank','business banks','business bank relationships','current business bank','business banking relationship');
-    m('personalBanks',   'personal banking','personal bank','personal banks','personal bank relationships','current personal bank','personal banking relationship');
-    m('bizPhone',        'business phone','business_phone','company phone','business phone number');
+    // ── BUSINESS FIELDS ────────────────────────────────────────────────────
+    m('bizName',
+      'legal business name','legal name of business','legal company name',
+      'business legal name','business name','businessname','business_name',
+      'company name','company','dba / legal name','registered business name',
+      'full business name','company legal name'
+    );
+    m('dba',
+      'dba','dba name','dba / trade name','trade name','trade name (dba)',
+      'doing business as','dba (if different)','fictitious name','assumed name',
+      'business dba','alternate business name'
+    );
+    m('ein',
+      'ein','employer identification number','employer id number',
+      'federal tax id','federal tax identification number','tax id',
+      'federal ein','fein','tax identification number','business tax id',
+      'employer id','business ein','federal id'
+    );
+    m('dateEstablished',
+      'business date established','date business established',
+      'date established','date business was established',
+      'business established date','business start date','date business opened',
+      'business open date','date opened','established date','year established',
+      'incorporation date','date incorporated','date of incorporation',
+      'formation date','business formation date'
+    );
+    m('bizAddress',
+      'business street address','business address','business address line 1',
+      'business street','company address','company street','business mailing address',
+      'business physical address','street address of business','business location address'
+    );
+    m('bizCity',
+      'business city','city of business','business address city',
+      'company city','business mailing city','city (business)'
+    );
+    m('bizState',
+      'business state','state of business','business address state',
+      'company state','business mailing state','state (business)'
+    );
+    m('bizZip',
+      'business zip','business zip code','business postal code',
+      'business address zip','company zip','zip code (business)',
+      'business zipcode','zip (business)'
+    );
+    m('bizPhone',
+      'business phone','company phone','business phone number',
+      'business telephone','company telephone','business contact number',
+      'office phone','business cell','company cell','business main phone'
+    );
+    m('bizType',
+      'business type','business_type','entity type','type of entity',
+      'business structure','entity structure','type of business',
+      'business entity type','legal entity type','organization type',
+      'business legal structure','company type'
+    );
+    m('industry',
+      'industry','business industry','industry type','business category',
+      'type of industry','industry sector','business sector',
+      'nature of business','primary industry','line of business',
+      'type of work'
+    );
+    m('employees',
+      'employee count','number of employees','# of employees',
+      'employees','total employees','number employees',
+      'full time employees','staff count','number of staff',
+      'how many employees','employees (full & part time)',
+      'total number of employees'
+    );
+    m('monthlySales',
+      'average monthly sales','monthly sales','monthly revenue',
+      'monthly_revenue','average monthly revenue','avg monthly revenue',
+      'average monthly gross revenue','monthly gross revenue',
+      'gross monthly revenue','monthly gross sales','avg monthly sales',
+      'monthly average revenue','monthly income (business)',
+      'average monthly income','monthly business revenue'
+    );
+    m('ownership',
+      'ownership %','ownership percentage','percent ownership',
+      '% ownership','ownership percent','ownership','share ownership',
+      'percentage of ownership','what percent do you own',
+      'what percentage do you own','how much do you own %',
+      'owner percentage','principal ownership %'
+    );
+    m('loanAmount',
+      'desired loan amount','desired funding amount','loan amount requested',
+      'funding goal','funding amount','loan amount','requested amount',
+      'desired funding','funding needed','amount requested',
+      'how much funding','total funding needed','capital needed',
+      'amount of funding','requested loan amount','funding request',
+      'how much are you looking for','desired capital'
+    );
+    m('loanReason',
+      'reason for loan','reason for funding','purpose of loan',
+      'funding purpose','loan purpose','use of funds',
+      'purpose of funding','how will funds be used','funding use',
+      'intended use of funds','what will you use the funds for',
+      'describe the use of funds','loan use','funding intention',
+      'how do you plan to use the funds'
+    );
+    m('bizCreditCards',
+      'current business credit cards','existing business credit cards',
+      'business credit cards','business cards','current business cards',
+      'existing business cards','list business credit cards',
+      'business credit card accounts','active business credit cards',
+      'business credit card relationships','credit cards (business)'
+    );
+    m('bizBanks',
+      'current business banking','current business banking relationships',
+      'business banking','business bank','business banks',
+      'business bank relationships','current business bank',
+      'business banking relationship','existing business banking',
+      'business checking accounts','business bank accounts',
+      'where do you bank (business)','business financial institutions'
+    );
+    m('personalBanks',
+      'current personal banking','current personal banking relationships',
+      'personal banking','personal bank','personal banks',
+      'personal bank relationships','current personal bank',
+      'personal banking relationship','existing personal banking',
+      'personal checking accounts','personal bank accounts',
+      'where do you bank (personal)','personal financial institutions'
+    );
 
-    // Personal fields
-    m('dob',             'date of birth','dob','birth date','birthday','date_of_birth','date of birth (mm/dd/yyyy)');
-    m('ssn',             'social security number','ssn','ss#','social security','full ssn','ssn (last 4)','social');
-    m('maidenName',      "mother's maiden name","mothers maiden name","mother's maiden name",'maiden name','mother maiden name');
-    m('annualIncome',    'annual income','yearly income','annual personal income','personal income','household income','personal annual income');
-    m('citizen',         'us citizen','us citizenship','united states citizen','citizenship','citizen','are you a us citizen');
+    // ── PERSONAL FIELDS ────────────────────────────────────────────────────
+    m('dob',
+      'date of birth','dob','birth date','birthday','date_of_birth',
+      'date of birth (mm/dd/yyyy)','birthdate','date of birth mm/dd/yyyy',
+      'owner date of birth','applicant date of birth','personal dob',
+      'd.o.b','d.o.b.','date of birth:'
+    );
+    m('ssn',
+      'social security number','ssn','ss#','social security',
+      'full ssn','social security #','social security no',
+      'social security no.','full social security number',
+      'social security number (ssn)','ssn#','tax id (personal)',
+      'personal ssn','owner ssn','applicant ssn'
+    );
+    m('maidenName',
+      "mother's maiden name","mothers maiden name","mother maiden name",
+      "mother's maiden name:","maiden name","mother's maiden",
+      'mom maiden name',"mother's last name"
+    );
+    m('annualIncome',
+      'annual income','yearly income','annual personal income',
+      'personal income','household income','personal annual income',
+      'applicant annual income','annual household income',
+      'gross annual income','total annual income','income (annual)',
+      'gross income','personal gross income'
+    );
+    m('citizen',
+      'are you a us citizen','us citizen','us citizenship',
+      'united states citizen','citizenship','citizen',
+      'american citizen','are you an american citizen',
+      'are you a united states citizen','citizenship status',
+      'u.s. citizen','us citizen?','citizen?'
+    );
 
-    // Home address from custom fields (fallback)
-    m('street', 'home address','home street','street address','residential address','personal address','home street address');
-    m('city',   'home city','city');
-    m('state',  'home state','state');
-    m('zip',    'home zip','zip code','postal code','zip');
+    // ── HOME ADDRESS FIELDS ────────────────────────────────────────────────
+    m('street',
+      'home street address','home address','home street',
+      'street address','residential address','personal address',
+      'home address line 1','residential street address',
+      'personal street address','owner home address',
+      'mailing address','personal home address'
+    );
+    m('homeCity',
+      'home city','city','residential city','personal city',
+      'city (personal)','city of residence'
+    );
+    m('homeState',
+      'home state','state','residential state','personal state',
+      'state (personal)','state of residence'
+    );
+    m('homeZip',
+      'home zip','home zip code','zip code','zip','postal code',
+      'home postal code','residential zip','personal zip',
+      'zip (personal)'
+    );
+
+    // ── ADDITIONAL FIELDS ──────────────────────────────────────────────────
+    m('signatureName',
+      'signature','full signature','applicant signature',
+      'print name','printed name','authorized signature',
+      'signature (full name)','sign here'
+    );
+    m('signedDate',
+      'date signed','signature date','date of signature',
+      'signed date','sign date'
+    );
+
+    // ── DERIVED: mirror homeCity/homeState/homeZip → city/state/zip ────────
+    // Portal uses city/state/zip for personal address — populate from home fields
+    if (!out.city  && out.homeCity)  out.city  = out.homeCity;
+    if (!out.state && out.homeState) out.state = out.homeState;
+    if (!out.zip   && out.homeZip)   out.zip   = out.homeZip;
+
+    // ── DERIVED: parse compound business address if city/state/zip missing ─
+    // Some GHL setups return full address as one field "5368 W Borglum Lane, Herriman, UT 84096"
+    if (out.bizAddress && !out.bizCity) {
+      const addrMatch = out.bizAddress.match(/^(.+?),\s*([^,]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+      if (addrMatch) {
+        out.bizAddress = addrMatch[1].trim();
+        out.bizCity    = addrMatch[2].trim();
+        out.bizState   = addrMatch[3].trim();
+        out.bizZip     = addrMatch[4].trim();
+      }
+    }
 
     return out;
   }
@@ -720,6 +1060,87 @@ window.GHL = (function () {
     return phone;
   }
 
+  // ── CONVERSATION INBOX (full list) ──────────────────────────────────────
+
+  // Fetch all conversations for the inbox with optional filters
+  async function getConversationsInbox (opts) {
+    const { locationId } = getSettings();
+    const params = new URLSearchParams({ locationId, limit: String((opts && opts.limit) || 25) });
+    if (opts && opts.query)      params.set('query', opts.query);
+    if (opts && opts.assignedTo) params.set('assignedTo', opts.assignedTo);
+    // status filter: 'unread', 'starred', 'all'
+    if (opts && opts.status && opts.status !== 'all') params.set('status', opts.status);
+    const d = await _fetch('GET', '/conversations/search?' + params.toString());
+    return d?.conversations || [];
+  }
+
+  // Get a single conversation object by its conversation ID
+  async function getConversationById (convId) {
+    const d = await _fetch('GET', '/conversations/' + convId);
+    return d?.conversation || d || null;
+  }
+
+  // Get messages for a conversation (paginated)
+  async function getConversationMessages (convId, opts) {
+    const limit  = (opts && opts.limit) || 50;
+    const lastId = (opts && opts.lastId) || null;
+    let path = '/conversations/' + convId + '/messages?limit=' + limit;
+    if (lastId) path += '&lastMessageId=' + lastId;
+    const d = await _fetch('GET', path);
+    return d?.messages || [];
+  }
+
+  // Update conversation metadata (markAsRead, starred, assignedTo)
+  async function updateConversation (convId, updates) {
+    const d = await _fetch('PUT', '/conversations/' + convId, updates);
+    return d?.conversation || d || null;
+  }
+
+  // Get all users (admins) for this location
+  var _usersCache = null;
+  async function getLocationUsers () {
+    if (_usersCache) return _usersCache;
+    const { locationId } = getSettings();
+    const d = await _fetch('GET', '/users/?locationId=' + locationId + '&limit=50');
+    _usersCache = d?.users || [];
+    return _usersCache;
+  }
+
+  // Get location info (phone, email, etc.) — cached 1 hour
+  async function getLocationInfo () {
+    try {
+      const cached = JSON.parse(localStorage.getItem('cq_ghl_location') || 'null');
+      if (cached && (Date.now() - (cached._ts || 0)) < 3600000) return cached;
+    } catch (e) {}
+    const { locationId } = getSettings();
+    const d = await _fetch('GET', '/locations/' + locationId);
+    const info = d?.location || d || null;
+    if (info) {
+      info._ts = Date.now();
+      try { localStorage.setItem('cq_ghl_location', JSON.stringify(info)); } catch (e) {}
+    }
+    return info;
+  }
+
+  // Add a typed note — prepends a label prefix to the note body
+  async function addTypedNote (contactId, body, noteType) {
+    const prefix = noteType ? '[' + noteType + '] ' : '';
+    return addNote(contactId, prefix + body);
+  }
+
+  // Get all tasks for a contact
+  async function getContactTasks (contactId) {
+    const d = await _fetch('GET', '/contacts/' + contactId + '/tasks');
+    return d?.tasks || [];
+  }
+
+  // Generate a deep-link URL into the GHL app for a conversation or contact
+  function openInGHLUrl (contactId, convId) {
+    if (convId)     return 'https://app.leadconnectorhq.com/v2/location/' + (getSettings().locationId || '') + '/conversations/' + convId;
+    if (contactId)  return 'https://app.leadconnectorhq.com/v2/location/' + (getSettings().locationId || '') + '/contacts/detail/' + contactId;
+    return 'https://app.leadconnectorhq.com/conversations/';
+  }
+
   // ── PUBLIC API ───────────────────────────────────────────────────────────
   return {
     // Settings
@@ -748,7 +1169,15 @@ window.GHL = (function () {
     clearBadgeError,
     // Polling
     startPolling, stopPolling,
+    // Inbox / full conversation center
+    getConversationsInbox, getConversationById, getConversationMessages,
+    updateConversation, getLocationUsers, getLocationInfo,
+    addTypedNote, getContactTasks, openInGHLUrl,
     // Utils
     e164: _e164, fmtPhone: _fmtPhone,
+    // Proxy
+    isProxyReady, resetProxyCheck,
+    // Expose local proxy URL for admin.html status display
+    localProxyUrl: LOCAL_PROXY,
   };
 })();

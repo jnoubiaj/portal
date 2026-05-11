@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "version": "1.0",
-    "updated": "2026-05-05",
+    "version": "2.0",
+    "updated": "2026-05-08",
     "description": "0% Business Credit Card funding database by state — Experian / TransUnion / Equifax / Regional / Elan"
   },
   "banks": {
@@ -13,7 +13,9 @@
       "income": 3000,
       "monthlySpend": 5000,
       "requirements": "Under Chase 5/24 rule; no Chase biz card opened in last 24 months",
-      "notes": "Best 0% intro APR; apply online or in branch; 3+ years in business preferred"
+      "notes": "Best 0% intro APR; apply online or in branch; 3+ years in business preferred",
+      "riskLevel": "low",
+      "whySelected": "Highest 0% business card success rate of any national issuer. Apply first while Experian inquiry count is clean — Chase's 5/24 rule is inquiry-sensitive."
     },
     "barclays": {
       "name": "Barclays",
@@ -23,7 +25,9 @@
       "income": 3000,
       "monthlySpend": 3000,
       "requirements": "Good Experian profile; 2+ years in business",
-      "notes": "Pulls Experian primary; good for EX-heavy strategy"
+      "notes": "Pulls Experian primary; good for EX-heavy strategy",
+      "riskLevel": "low",
+      "whySelected": "EX-only pull — apply same day as Chase for zero additional inquiry impact. Barclays and Chase combine for maximum Round 1 EX coverage in a single day."
     },
     "fnbo": {
       "name": "FNBO",
@@ -33,7 +37,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "Select states only; good Experian profile",
-      "notes": "First National Bank of Omaha; pulls Experian"
+      "notes": "First National Bank of Omaha; pulls Experian",
+      "riskLevel": "low",
+      "whySelected": "Same-day application with Chase and Barclays — all three pull Experian. Stacking all EX banks on one day counts as a single inquiry-event, maximizing coverage at minimum bureau cost."
     },
     "boa": {
       "name": "Bank of America",
@@ -43,7 +49,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "Preferred Rewards for Business membership helps; 2+ years business",
-      "notes": "Pulls TransUnion primarily; existing BofA relationship improves odds significantly"
+      "notes": "Pulls TransUnion primarily; existing BofA relationship improves odds significantly",
+      "riskLevel": "low",
+      "whySelected": "TU-only pull keeps Experian and Equifax clean for other rounds. Existing BofA customers are approved at 2–3× the base rate with materially higher credit limits."
     },
     "capital-one": {
       "name": "Capital One",
@@ -52,8 +60,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "Pulls all 3 bureaus — counts as 3 separate inquiries",
-      "notes": "Apply last in sequence; bureau diversity killer — save for when other inquiries are low"
+      "requirements": "Pulls all 3 bureaus — counts as 3 separate inquiries; apply LAST in sequence",
+      "notes": "Apply last in sequence; bureau diversity killer — save for when other inquiries are low",
+      "riskLevel": "medium",
+      "whySelected": "Apply LAST — Capital One pulls all 3 bureaus simultaneously, consuming inquiry budget on EX, TU, and EQ at once. Strong 2% cash back. Only use after all other bureau-specific banks are applied."
     },
     "navy-federal": {
       "name": "Navy Federal",
@@ -62,8 +72,10 @@
       "revenue": 36000,
       "income": 2500,
       "monthlySpend": 2000,
-      "requirements": "Military membership required (veteran, active duty, or eligible family)",
-      "notes": "Excellent approval odds for members; pulls TransUnion only; high limits"
+      "requirements": "Military membership required (veteran, active duty, or eligible family member)",
+      "notes": "Excellent approval odds for members; pulls TransUnion only; high limits",
+      "riskLevel": "low",
+      "whySelected": "Best approval odds in its class for eligible members. TU-only pull preserves EX and EQ for other rounds. NFCU underwrites with a member-first philosophy — approval rates far exceed national banks."
     },
     "citizens": {
       "name": "Citizens Bank",
@@ -73,7 +85,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "NE states; existing Citizens relationship preferred",
-      "notes": "Pulls TransUnion; strong NE regional bank"
+      "notes": "Pulls TransUnion; strong NE regional bank",
+      "riskLevel": "low",
+      "whySelected": "TU-only pull in New England and Mid-Atlantic. Relationship-focused underwriting means existing Citizens checking customers approve at 3× the base rate."
     },
     "key-bank": {
       "name": "KeyBank",
@@ -83,7 +97,9 @@
       "income": 3000,
       "monthlySpend": 3000,
       "requirements": "Existing KeyBank relationship preferred; select states",
-      "notes": "Pulls TransUnion; relationship banking required"
+      "notes": "Pulls TransUnion; relationship banking required",
+      "riskLevel": "low",
+      "whySelected": "TU-only pull in NE and Pacific Northwest states. Community banking model gives underwriters flexibility not seen at national issuers — strong for existing KeyBank customers."
     },
     "us-bank": {
       "name": "US Bank",
@@ -92,8 +108,10 @@
       "revenue": 75000,
       "income": 3000,
       "monthlySpend": 4000,
-      "requirements": "Existing US Bank business checking account required",
-      "notes": "High limits; must have existing US Bank relationship to approve"
+      "requirements": "MUST open US Bank business checking ($100 min) before applying — relationship is required for approval",
+      "notes": "Highest limits; must have existing US Bank relationship to approve",
+      "riskLevel": "medium",
+      "whySelected": "Highest credit limits of any EQ bank. US Bank approves at dramatically higher rates for existing checking customers — open the account first. EQ-only pull saves EX and TU for other rounds."
     },
     "wells-fargo": {
       "name": "Wells Fargo",
@@ -102,18 +120,22 @@
       "revenue": 50000,
       "income": 2000,
       "monthlySpend": 3000,
-      "requirements": "Existing Wells Fargo business account preferred; apply in branch",
-      "notes": "Pulls Equifax; relationship banking; branch visit improves approval odds"
+      "requirements": "Existing Wells Fargo business account preferred; apply in branch for best results",
+      "notes": "Pulls Equifax; relationship banking; branch visit improves approval odds ~40%",
+      "riskLevel": "low",
+      "whySelected": "EQ-only pull preserves EX and TU for other rounds. In-branch applications outperform online by ~40% approval rate. Existing Wells Fargo business checking customers see materially better outcomes."
     },
     "amex": {
       "name": "American Express",
-      "card": "Blue Business Cash Card",
+      "card": "Blue Business Cash Card / Business Gold Card",
       "bureau": "Equifax",
       "revenue": 100000,
       "income": 4000,
       "monthlySpend": 5000,
-      "requirements": "700+ FICO required; clean credit profile; strong revenue",
-      "notes": "Highest limits available; no preset spending limit options; charge card also available"
+      "requirements": "700+ FICO required; clean EQ bureau; strong annual revenue",
+      "notes": "Highest limits available; no preset spending limit options; charge card also available",
+      "riskLevel": "low",
+      "whySelected": "Highest potential credit limits of all issuers. No preset spending cap on Charge cards means effective limits can reach $100K+. EQ-only pull. Apply after US Bank to keep EQ clean for as long as possible."
     },
     "citi": {
       "name": "Citi",
@@ -123,7 +145,9 @@
       "income": 3000,
       "monthlySpend": 4000,
       "requirements": "Good Equifax profile; existing Citi relationship helps",
-      "notes": "Pulls Equifax; good for clients with clean EQ bureau"
+      "notes": "Pulls Equifax; good for clients with clean EQ bureau",
+      "riskLevel": "medium",
+      "whySelected": "EQ-only pull with strong 0% intro APR offers. Existing Citi relationship improves both approval odds and starting credit limits. Apply after Amex and US Bank in Round 2."
     },
     "discover": {
       "name": "Discover",
@@ -132,8 +156,10 @@
       "revenue": 36000,
       "income": 2500,
       "monthlySpend": 2000,
-      "requirements": "700+ FICO; clean payment history",
-      "notes": "Good entry-level business card; pulls Equifax; easier approval threshold"
+      "requirements": "700+ FICO; clean payment history; no specific relationship required",
+      "notes": "Good entry-level business card; pulls Equifax; easier approval threshold",
+      "riskLevel": "low",
+      "whySelected": "Easiest Equifax approval of any national issuer. Excellent fallback if US Bank, Amex, or Citi decline. EQ-only pull. 1.5% unlimited cash back on all purchases."
     },
     "truist": {
       "name": "Truist",
@@ -143,7 +169,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "SE and Mid-Atlantic states; existing Truist relationship preferred",
-      "notes": "Formerly BB&T/SunTrust; pulls Equifax; strong regional presence"
+      "notes": "Formerly BB&T/SunTrust; pulls Equifax; strong regional presence",
+      "riskLevel": "low",
+      "whySelected": "Formed from BB&T/SunTrust — strong in SE and Mid-Atlantic. Existing Truist customers approved at 3× rate. EQ-only pull fits Round 2 strategy perfectly."
     },
     "fifth-third": {
       "name": "Fifth Third Bank",
@@ -153,7 +181,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "Midwest and SE states; Fifth Third relationship preferred",
-      "notes": "Pulls Equifax; great for Midwest/SE clients with Fifth Third account"
+      "notes": "Pulls Equifax; great for Midwest/SE clients with Fifth Third account",
+      "riskLevel": "low",
+      "whySelected": "Flexible SB underwriting with strong Midwest and SE presence. EQ-only pull. Existing Fifth Third checking customers see 2–3× better approval outcomes in business credit."
     },
     "huntington": {
       "name": "Huntington Bank",
@@ -163,7 +193,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "Midwest states; Huntington business account preferred",
-      "notes": "Pulls Equifax; strong Midwest regional; good relationship bank"
+      "notes": "Pulls Equifax; strong Midwest regional; good relationship bank",
+      "riskLevel": "low",
+      "whySelected": "One of the most flexible Midwest banks for small businesses. EQ-only pull. Known for relationship-first underwriting and a 24-hour grace period on payments."
     },
     "pnc": {
       "name": "PNC Bank",
@@ -173,7 +205,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "Existing PNC relationship preferred; most states",
-      "notes": "Pulls Equifax; widely available regional bank"
+      "notes": "Pulls Equifax; widely available regional bank",
+      "riskLevel": "low",
+      "whySelected": "Broad national coverage — available in 28+ states. EQ-only pull fits Round 2 strategy. Relationship banking model favors existing PNC checking customers with competitive SB card limits."
     },
     "regions": {
       "name": "Regions Bank",
@@ -183,7 +217,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "SE and Midwest states; Regions relationship preferred",
-      "notes": "Pulls Equifax; strong SE regional bank"
+      "notes": "Pulls Equifax; strong SE regional bank",
+      "riskLevel": "low",
+      "whySelected": "Strong SE and South presence. EQ-only pull. Flexible underwriting for small businesses — Regions is known for giving newer businesses a chance when Amex and Citi won't."
     },
     "frost": {
       "name": "Frost Bank",
@@ -192,8 +228,10 @@
       "revenue": 50000,
       "income": 2500,
       "monthlySpend": 3000,
-      "requirements": "Texas only; Frost Bank relationship preferred",
-      "notes": "Strong TX regional bank; pulls Experian; great for TX EX strategy"
+      "requirements": "Texas only; Frost Bank business relationship strongly preferred",
+      "notes": "Strong TX regional bank; pulls Experian; great for TX EX strategy",
+      "riskLevel": "low",
+      "whySelected": "Texas-only community bank with deep local relationships. EX pull pairs with Chase/Barclays on the same day — maximum Round 1 EX strategy for Texas clients."
     },
     "bokf": {
       "name": "BOK Financial",
@@ -203,7 +241,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "OK, TX, NM, CO, AZ, KS, MO; existing BOKF relationship preferred",
-      "notes": "Bank of Oklahoma parent company; solid regional option"
+      "notes": "Bank of Oklahoma parent company; solid regional option",
+      "riskLevel": "low",
+      "whySelected": "South-Central leader covering OK, TX, NM, CO, AZ, KS, MO. EQ-only pull fits Round 2 perfectly. BOKF's community banking approach yields flexible approvals for established local businesses."
     },
     "umb": {
       "name": "UMB Bank",
@@ -213,7 +253,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "MO, KS, CO, AZ, NM, NE, OK, IL; UMB relationship preferred",
-      "notes": "Strong Midwest/Plains bank; pulls Equifax"
+      "notes": "Strong Midwest/Plains bank; pulls Equifax",
+      "riskLevel": "low",
+      "whySelected": "MO and KS regional stronghold with Plains and Southwest reach. EQ-only pull — solid addition to Round 2. Relationship banking model with competitive SB credit programs."
     },
     "commerce": {
       "name": "Commerce Bank",
@@ -223,7 +265,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "MO, KS, IL, OK, CO, NE; Commerce relationship preferred",
-      "notes": "Strong MO/KS bank; pulls Equifax"
+      "notes": "Strong MO/KS bank; pulls Equifax",
+      "riskLevel": "low",
+      "whySelected": "MO/KS community bank with IL and OK reach. EQ-only pull. Community banking flexibility means approval for businesses that national banks turn away."
     },
     "banner": {
       "name": "Banner Bank",
@@ -233,7 +277,9 @@
       "income": 2000,
       "monthlySpend": 2500,
       "requirements": "WA, OR, ID, CA; Banner Bank relationship preferred",
-      "notes": "Pacific Northwest regional bank; pulls Equifax"
+      "notes": "Pacific Northwest regional bank; pulls Equifax",
+      "riskLevel": "low",
+      "whySelected": "Pacific Northwest community bank with flexible SB underwriting. EQ-only pull rounds out Round 2 PNW strategy. Local relationship banking yields faster approvals and more flexible limits."
     },
     "glacier": {
       "name": "Glacier Bank",
@@ -243,7 +289,9 @@
       "income": 2000,
       "monthlySpend": 2000,
       "requirements": "MT, ID, WY, CO, AZ, NV, UT, WA; Glacier relationship preferred",
-      "notes": "Mountain West regional bank; pulls Equifax"
+      "notes": "Mountain West regional bank; pulls Equifax",
+      "riskLevel": "low",
+      "whySelected": "Mountain West community bank covering MT, ID, WY, CO, AZ, NV, UT, WA. EQ-only pull. Very flexible underwriting for local businesses — one of the most accessible regional approvals in the Mountain West."
     },
     "columbia-bank": {
       "name": "Columbia Bank",
@@ -253,7 +301,9 @@
       "income": 2000,
       "monthlySpend": 2500,
       "requirements": "OR, WA, ID; Columbia Bank relationship preferred",
-      "notes": "Pacific Northwest regional; pulls Equifax"
+      "notes": "Pacific Northwest regional; pulls Equifax",
+      "riskLevel": "low",
+      "whySelected": "Pacific NW community bank with OR, WA, and ID coverage. EQ-only pull. Relationship-focused approval process — local banker advocates significantly improve outcomes."
     },
     "independent-tx": {
       "name": "Independent Bank (TX)",
@@ -263,7 +313,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "Texas only; Independent Bank relationship preferred",
-      "notes": "Texas regional bank; pulls Experian"
+      "notes": "Texas regional bank; pulls Experian",
+      "riskLevel": "low",
+      "whySelected": "Texas-focused community bank with EX pull — can apply same day as Chase and Barclays for maximum Round 1 EX coverage without added bureau cost."
     },
     "mercantile-mi": {
       "name": "Mercantile Bank (MI)",
@@ -273,7 +325,9 @@
       "income": 2000,
       "monthlySpend": 2500,
       "requirements": "Michigan only; Mercantile relationship preferred",
-      "notes": "Michigan community bank; pulls Equifax"
+      "notes": "Michigan community bank; pulls Equifax",
+      "riskLevel": "low",
+      "whySelected": "Michigan community bank with local relationship advantage and EQ pull. Ideal Round 2 addition for Michigan clients who have Mercantile business checking."
     },
     "flagstar": {
       "name": "Flagstar Bank",
@@ -283,7 +337,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "MI, IN, CA, WI, OH; Flagstar relationship preferred",
-      "notes": "Pulls Equifax; Michigan-based national bank"
+      "notes": "Pulls Equifax; Michigan-based national bank",
+      "riskLevel": "low",
+      "whySelected": "Michigan-headquartered with multi-state reach including CA. EQ-only pull adds to Midwest and West Coast EQ diversity in Round 2 — especially valuable for clients with MI or CA operations."
     },
     "comerica": {
       "name": "Comerica Bank",
@@ -293,7 +349,9 @@
       "income": 3000,
       "monthlySpend": 4000,
       "requirements": "MI, TX, CA, FL, AZ; Comerica relationship preferred",
-      "notes": "Pulls Equifax; strong MI/TX commercial bank"
+      "notes": "Pulls Equifax; strong MI/TX commercial bank",
+      "riskLevel": "medium",
+      "whySelected": "Commercial-focused with MI and TX strongholds. EQ pull. Higher revenue requirement but yields stronger limits for established businesses — particularly well-suited for TX clients as an EQ complement to Frost's EX."
     },
     "first-midwest": {
       "name": "First Midwest Bank",
@@ -303,7 +361,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "IL, IA, WI, MN, IN; relationship preferred",
-      "notes": "Pulls Equifax; solid Midwest option"
+      "notes": "Pulls Equifax; solid Midwest option",
+      "riskLevel": "low",
+      "whySelected": "Strong Illinois and Midwest regional bank with flexible SB underwriting. EQ-only pull. Good fallback when larger Midwest banks (Huntington, Fifth Third) are not available in-state."
     },
     "east-west": {
       "name": "East West Bank",
@@ -313,7 +373,9 @@
       "income": 3000,
       "monthlySpend": 3000,
       "requirements": "CA, NY, TX, WA; East West relationship preferred",
-      "notes": "Pulls Equifax; strong CA presence"
+      "notes": "Pulls Equifax; strong CA presence",
+      "riskLevel": "low",
+      "whySelected": "CA-focused with NY and TX reach. EQ-only pull. Strong in Asian-American business community and broader CA small business market — often more accessible than Pacific Premier for first-time applicants."
     },
     "pacific-premier": {
       "name": "Pacific Premier Bank",
@@ -323,7 +385,9 @@
       "income": 2500,
       "monthlySpend": 3000,
       "requirements": "CA, WA, AZ, NV, OR; relationship preferred",
-      "notes": "Pulls Equifax; West Coast commercial bank"
+      "notes": "Pulls Equifax; West Coast commercial bank",
+      "riskLevel": "low",
+      "whySelected": "West Coast commercial bank leader covering CA, WA, AZ, NV, OR. EQ-only pull. Relationship-oriented underwriting — existing Pacific Premier commercial clients approved at significantly higher rates."
     },
     "elan-tcf": {
       "name": "TCF / Huntington (Elan)",
@@ -332,8 +396,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "MN, MI, IL, CO; TCF/Huntington bank relationship",
-      "notes": "Elan-issued white-label card; pulls Equifax; good for additional credit"
+      "requirements": "MN, MI, IL, CO; TCF/Huntington bank relationship required",
+      "notes": "Elan-issued white-label card; pulls Equifax; good for additional credit",
+      "riskLevel": "low",
+      "whySelected": "Elan-processed card through Huntington/TCF network — typically easier approval than direct national bank applications. EQ-only pull. Ideal for stacking additional 0% credit in Round 3 for MN, MI, IL, CO clients."
     },
     "elan-isabella": {
       "name": "Isabella Bank (Elan)",
@@ -342,8 +408,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "Michigan only; Isabella Bank relationship",
-      "notes": "Elan-issued; Michigan community bank partner"
+      "requirements": "Michigan only; Isabella Bank relationship required",
+      "notes": "Elan-issued; Michigan community bank partner",
+      "riskLevel": "low",
+      "whySelected": "Elan-issued through Isabella Bank — Michigan community bank partner with less scrutiny than national issuers. EQ-only pull. Excellent Round 3 addition for Michigan clients who want maximum 0% stacking."
     },
     "elan-associated": {
       "name": "Associated Bank (Elan)",
@@ -352,8 +420,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "WI, IL, MN; Associated Bank relationship",
-      "notes": "Elan-issued; pulls Equifax"
+      "requirements": "WI, IL, MN; Associated Bank relationship required",
+      "notes": "Elan-issued; pulls Equifax",
+      "riskLevel": "low",
+      "whySelected": "Elan-processed through Associated Bank — WI, IL, MN community bank with straightforward underwriting. EQ-only pull. Good for stacking additional 0% credit in Round 3 for Midwest clients."
     },
     "elan-old-national": {
       "name": "Old National Bank (Elan)",
@@ -362,8 +432,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "IN, IL, KY, MI, MN, WI; Old National relationship",
-      "notes": "Elan-issued; Midwest community bank"
+      "requirements": "IN, IL, KY, MI, MN, WI; Old National relationship required",
+      "notes": "Elan-issued; Midwest community bank",
+      "riskLevel": "low",
+      "whySelected": "Elan-issued through Old National Bank — Midwest community bank covering IN, IL, KY, MI, MN, WI. Community bank flexibility and less national-bank scrutiny make this a strong Round 3 approval."
     },
     "elan-commerce": {
       "name": "Commerce Bank (Elan)",
@@ -372,8 +444,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "MO, KS; Commerce Bank relationship",
-      "notes": "Elan-issued; pulls Equifax"
+      "requirements": "MO, KS; Commerce Bank relationship required",
+      "notes": "Elan-issued; pulls Equifax",
+      "riskLevel": "low",
+      "whySelected": "Elan-processed through Commerce Bank in MO and KS — excellent Round 3 addition stacking on top of the direct Commerce Bank approval. Two bites at the same apple via Elan."
     },
     "elan-midwest": {
       "name": "MidWestOne Bank (Elan)",
@@ -382,8 +456,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "IA, MN, WI, FL; MidWestOne relationship",
-      "notes": "Elan-issued; Iowa-headquartered community bank"
+      "requirements": "IA, MN, WI, FL; MidWestOne relationship required",
+      "notes": "Elan-issued; Iowa-headquartered community bank",
+      "riskLevel": "low",
+      "whySelected": "Iowa-headquartered Elan partner with IA, MN, WI, and FL reach. Community bank underwriting with less national scrutiny — ideal Round 3 to stack additional 0% credit."
     },
     "elan-columbia": {
       "name": "Columbia Bank (Elan)",
@@ -392,8 +468,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "OR, WA; Columbia Bank relationship",
-      "notes": "Elan-issued; Pacific Northwest regional"
+      "requirements": "OR, WA; Columbia Bank relationship required",
+      "notes": "Elan-issued; Pacific Northwest regional",
+      "riskLevel": "low",
+      "whySelected": "Elan-issued through Columbia Bank — OR and WA community bank. Complements the direct Columbia Bank Round 2 card with a second 0% product via Elan in Round 3."
     },
     "elan-glacier": {
       "name": "Glacier Bank (Elan)",
@@ -402,8 +480,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "MT, ID, WY, CO; Glacier Bank relationship",
-      "notes": "Elan-issued; Mountain West community bank"
+      "requirements": "MT, ID, WY, CO; Glacier Bank relationship required",
+      "notes": "Elan-issued; Mountain West community bank",
+      "riskLevel": "low",
+      "whySelected": "Elan-issued through Glacier Bank — MT, ID, WY, CO community bank. Round 3 addition that stacks on top of the direct Glacier Bank Round 2 approval for Mountain West clients."
     },
     "elan-wintrust": {
       "name": "Wintrust Bank (Elan)",
@@ -412,8 +492,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "IL, WI; Wintrust relationship",
-      "notes": "Elan-issued; Chicago-area regional bank"
+      "requirements": "IL, WI; Wintrust relationship required",
+      "notes": "Elan-issued; Chicago-area regional bank",
+      "riskLevel": "low",
+      "whySelected": "Elan-processed through Wintrust — Chicago-area community bank powerhouse. Less scrutiny than national issuers with EQ-only pull. Ideal Round 3 for IL and WI clients wanting maximum credit stacking."
     },
     "elan-heartland": {
       "name": "Heartland Bank (Elan)",
@@ -422,8 +504,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "OH, MN; Heartland relationship",
-      "notes": "Elan-issued; Midwest community bank"
+      "requirements": "OH, MN; Heartland relationship required",
+      "notes": "Elan-issued; Midwest community bank",
+      "riskLevel": "low",
+      "whySelected": "Elan-issued through Heartland Bank for OH and MN clients. Straightforward community bank underwriting — easier approval than national issuers. Strong Round 3 for Midwest 0% stacking."
     },
     "elan-independent-tx": {
       "name": "Independent Bank TX (Elan)",
@@ -432,8 +516,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "TX; Independent Bank relationship",
-      "notes": "Elan-issued; Texas community bank partner"
+      "requirements": "TX; Independent Bank relationship required",
+      "notes": "Elan-issued; Texas community bank partner",
+      "riskLevel": "low",
+      "whySelected": "Elan-processed through Independent Bank Texas — stacks a Round 3 EQ product on top of the direct Independent Bank Round 1 EX card. Two products from one banking relationship."
     },
     "elan-nb": {
       "name": "National Community Bank (Elan)",
@@ -442,8 +528,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "Select states; community bank relationship",
-      "notes": "Elan white-label card through local partner banks"
+      "requirements": "Select states; community bank relationship required",
+      "notes": "Elan white-label card through local partner banks",
+      "riskLevel": "low",
+      "whySelected": "Elan Financial Services white-label card through local community bank partner — typically the most accessible approval in Round 3. Community bank underwriting with EQ-only pull for clean stacking."
     },
     "elan-banner": {
       "name": "Banner Bank (Elan)",
@@ -452,8 +540,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "WA, OR, ID; Banner Bank relationship",
-      "notes": "Elan-issued; Pacific Northwest community bank"
+      "requirements": "WA, OR, ID; Banner Bank relationship required",
+      "notes": "Elan-issued; Pacific Northwest community bank",
+      "riskLevel": "low",
+      "whySelected": "Elan-processed through Banner Bank — Round 3 EQ product stacking on top of the direct Banner Bank Round 2 card. WA, OR, ID clients can leverage one banking relationship for two separate 0% products."
     },
     "elan-pinnacle": {
       "name": "Pinnacle Bank (Elan)",
@@ -462,8 +552,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "TN, VA, NC, TX; Pinnacle relationship",
-      "notes": "Elan-issued; SE community bank"
+      "requirements": "TN, VA, NC, TX; Pinnacle relationship required",
+      "notes": "Elan-issued; SE community bank",
+      "riskLevel": "low",
+      "whySelected": "Elan-issued through Pinnacle Bank for TN, VA, NC, TX clients. Strong Southeast community bank with relationship-focused underwriting — excellent Round 3 approval for SE clients."
     },
     "elan-bokf": {
       "name": "BOK Financial (Elan)",
@@ -472,8 +564,10 @@
       "revenue": 36000,
       "income": 2000,
       "monthlySpend": 2000,
-      "requirements": "OK, TX, NM, CO, AZ; BOKF relationship",
-      "notes": "Elan-issued; South-Central regional"
+      "requirements": "OK, TX, NM, CO, AZ; BOKF relationship required",
+      "notes": "Elan-issued; South-Central regional",
+      "riskLevel": "low",
+      "whySelected": "Elan-processed through BOK Financial — Round 3 EQ product that stacks on top of the direct BOKF Round 2 card. South-Central clients (OK, TX, NM, CO, AZ) can maximize 0% stacking through one BOKF relationship."
     }
   },
   "states": {
@@ -508,8 +602,8 @@
     "CA": {
       "experian": ["chase", "barclays", "fnbo"],
       "transunion": ["boa", "capital-one", "navy-federal"],
-      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "east-west", "pacific-premier", "banner"],
-      "regional": ["east-west", "pacific-premier", "banner"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "east-west", "pacific-premier", "banner", "flagstar", "comerica"],
+      "regional": ["east-west", "pacific-premier", "banner", "comerica"],
       "elan": ["elan-banner", "elan-nb"]
     },
     "CO": {
@@ -802,8 +896,8 @@
     "WA": {
       "experian": ["chase", "barclays"],
       "transunion": ["boa", "capital-one", "navy-federal", "key-bank"],
-      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "banner", "columbia-bank", "glacier", "east-west"],
-      "regional": ["banner", "columbia-bank", "glacier"],
+      "equifax": ["us-bank", "wells-fargo", "amex", "citi", "discover", "banner", "columbia-bank", "glacier", "east-west", "pacific-premier"],
+      "regional": ["banner", "columbia-bank", "glacier", "pacific-premier"],
       "elan": ["elan-banner", "elan-columbia", "elan-glacier"]
     },
     "WV": {
