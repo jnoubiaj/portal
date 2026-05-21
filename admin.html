@@ -17280,7 +17280,9 @@
   // ── Remote Scheduler Sync ────────────────────────────────────────────────────
   // Keeps the Railway-deployed worker fed with live task/client data
   function _getRemoteSchedulerUrl() {
-    return (localStorage.getItem('cq_scheduler_remote_url') || '').replace(/\/$/, '');
+    var u = (localStorage.getItem('cq_scheduler_remote_url') || '').trim().replace(/\/$/, '');
+    if (u && !u.startsWith('http')) u = 'https://' + u;
+    return u;
   }
   function _syncToRemoteScheduler(endpoint, body) {
     var url = _getRemoteSchedulerUrl();
