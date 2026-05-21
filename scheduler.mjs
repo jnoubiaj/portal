@@ -16,69 +16,89 @@ import https       from 'https';
 import fs          from 'fs';
 import path        from 'path';
 import { fileURLToPath } from 'url';
-import admin       from 'firebase-admin';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// ── Firebase Admin SDK (reads live Firestore data on Railway) ─────────────────
-let _db = null;
-try {
-  const sa = process.env.FIREBASE_SERVICE_ACCOUNT
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-    : null;
-  if (sa && sa.project_id) {
-    admin.initializeApp({ credential: admin.credential.cert(sa) });
-    _db = admin.firestore();
-    console.log('[Scheduler] Firebase Admin SDK initialized — reading live Firestore data');
-  } else {
-    console.warn('[Scheduler] FIREBASE_SERVICE_ACCOUNT not set — will use cache files as fallback');
-  }
-} catch(e) {
-  console.warn('[Scheduler] Firebase Admin init failed:', e.message);
-}
 const CFG_FILE      = path.join(__dirname, 'scheduler-config.json');
 const TASKS_FILE    = path.join(__dirname, 'tasks-cache.json');
 const CLIENTS_FILE  = path.join(__dirname, 'clients-cache.json');
 
-// ── Live data loaders (Firestore Admin SDK → cache fallback) ──────────────────
+// ── Firestore REST (reads schedulerData/live — public read, no auth needed) ───
+const FS_PROJECT = 'capitalquest-portal';
+const FS_API_KEY = 'AIzaSyAlNWS38LA53121Bm0K2QaAKO-TGv3pNI4';
+const FS_DOC_URL = `https://firestore.googleapis.com/v1/projects/${FS_PROJECT}/databases/(default)/documents/schedulerData/live?key=${FS_API_KEY}`;
+
+function fsHttpGet(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, r => {
+      let d = '';
+      r.on('data', c => d += c);
+      r.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
+    });
+    req.on('error', reject);
+    req.setTimeout(8000, () => { req.destroy(); reject(new Error('timeout')); });
+  });
+}
+
+function fsVal(v) {
+  if (!v) return null;
+  if ('stringValue'    in v) return v.stringValue;
+  if ('integerValue'   in v) return parseInt(v.integerValue);
+  if ('doubleValue'    in v) return v.doubleValue;
+  if ('booleanValue'   in v) return v.booleanValue;
+  if ('nullValue'      in v) return null;
+  if ('timestampValue' in v) return new Date(v.timestampValue).getTime();
+  if ('arrayValue'     in v) return (v.arrayValue.values || []).map(fsVal);
+  if ('mapValue'       in v) {
+    const o = {};
+    for (const [k, val] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(val);
+    return o;
+  }
+  return null;
+}
+
+// In-process cache so both loadClientsLive + loadTasksLive share one fetch
+let _sdCache = null;
+let _sdCacheTs = 0;
+
+async function getSchedulerData() {
+  const age = Date.now() - _sdCacheTs;
+  if (_sdCache && age < 120000) return _sdCache; // reuse for up to 2 min per run
+  const res = await fsHttpGet(FS_DOC_URL);
+  if (res.error) throw new Error(res.error.message || JSON.stringify(res.error));
+  const fields = res.fields || {};
+  _sdCache = {
+    clients: fsVal(fields.clients) || [],
+    tasks:   fsVal(fields.tasks)   || {},
+  };
+  _sdCacheTs = Date.now();
+  return _sdCache;
+}
+
+// ── Live data loaders (schedulerData/live → cache fallback) ───────────────────
 
 async function loadClientsLive() {
-  if (_db) {
-    try {
-      const snap = await _db.collection('clients').get();
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (docs.length > 0) {
-        console.log(`[Scheduler] Firestore: loaded ${docs.length} clients`);
-        return docs;
-      }
-    } catch(e) {
-      console.warn('[Scheduler] Firestore clients read failed:', e.message, '— using cache');
+  try {
+    const data = await getSchedulerData();
+    if (data.clients.length > 0) {
+      console.log(`[Scheduler] schedulerData: ${data.clients.length} clients`);
+      return data.clients;
     }
+  } catch(e) {
+    console.warn('[Scheduler] schedulerData read failed:', e.message, '— using cache');
   }
   return loadClients();
 }
 
 async function loadTasksLive() {
-  if (_db) {
-    try {
-      const snap    = await _db.collection('dashboards').get();
-      const taskMap = {};
-      let   count   = 0;
-      snap.docs.forEach(d => {
-        const data = d.data();
-        if (Array.isArray(data.opsTasks) && data.opsTasks.length > 0) {
-          taskMap[d.id] = data.opsTasks;
-          count += data.opsTasks.length;
-        }
-      });
-      if (count > 0) {
-        console.log(`[Scheduler] Firestore: loaded ${count} ops tasks across ${Object.keys(taskMap).length} clients`);
-        return taskMap;
-      }
-      console.warn('[Scheduler] Firestore dashboards found but no opsTasks yet — using cache');
-    } catch(e) {
-      console.warn('[Scheduler] Firestore tasks read failed:', e.message, '— using cache');
+  try {
+    const data  = await getSchedulerData();
+    const count = Object.values(data.tasks).reduce((s, t) => s + (t||[]).length, 0);
+    if (count > 0) {
+      console.log(`[Scheduler] schedulerData: ${count} tasks`);
+      return data.tasks;
     }
+  } catch(e) {
+    console.warn('[Scheduler] schedulerData read failed:', e.message, '— using cache');
   }
   return loadTasks();
 }

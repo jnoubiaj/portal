@@ -2985,14 +2985,15 @@
         renderOverview();
         if (selectedClientId) renderClientDetail(selectedClientId);
         console.log('[Sync] loadClients merged', clients.length, 'clients from Firestore');
-        // Push all live data to Railway scheduler so it always has current portal data
+        // Update schedulerData/live in Firestore so Railway always has current data
+        _saveSchedulerData();
+        // Also push to Railway cache endpoints
         try {
           _syncToRemoteScheduler('/api/data/clients', clients);
           clients.forEach(function(c) {
             var _t = JSON.parse(localStorage.getItem('cq_ops_tasks_' + c.id) || '[]');
             if (_t.length > 0) _syncToRemoteScheduler('/api/data/tasks', { clientId: c.id, tasks: _t });
           });
-          console.log('[Sync] Pushed all data to Railway scheduler');
         } catch(e) {}
       } else if (clients.length > 0) {
         clients.forEach(c => fsSaveClient(c));
@@ -16572,6 +16573,8 @@
     if (typeof fsSetDash === 'function') {
       fsSetDash(clientId, { opsTasks: tasks }).catch(function(){});
     }
+    // Update schedulerData/live so Railway always has fresh task data
+    _saveSchedulerData();
     // Sync to scheduler cache (fire-and-forget — localhost + Railway if configured)
     fetch('http://localhost:3001/api/data/tasks', {
       method: 'POST',
@@ -17307,6 +17310,33 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     }).catch(function(){});
+  }
+
+  // Write all current clients + tasks to Firestore schedulerData/live
+  // Railway scheduler reads this with public read — no auth required
+  var _sdSaveTimer = null;
+  function _saveSchedulerData() {
+    clearTimeout(_sdSaveTimer);
+    _sdSaveTimer = setTimeout(function() {
+      try {
+        var taskMap = {};
+        clients.forEach(function(c) {
+          try {
+            var t = JSON.parse(localStorage.getItem('cq_ops_tasks_' + c.id) || '[]');
+            if (t.length > 0) taskMap[c.id] = t;
+          } catch(e) {}
+        });
+        db.collection('schedulerData').doc('live').set({
+          clients: clients,
+          tasks: taskMap,
+          updatedAt: Date.now()
+        }).then(function() {
+          console.log('[Scheduler] schedulerData/live updated —', clients.length, 'clients,', Object.keys(taskMap).length, 'clients with tasks');
+        }).catch(function(e) {
+          console.warn('[Scheduler] schedulerData write failed:', e.message);
+        });
+      } catch(e) { console.warn('[Scheduler] _saveSchedulerData error:', e); }
+    }, 2000);
   }
 
   // ── Scheduler Settings ──────────────────────────────────────────────────────
