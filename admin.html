@@ -2985,6 +2985,15 @@
         renderOverview();
         if (selectedClientId) renderClientDetail(selectedClientId);
         console.log('[Sync] loadClients merged', clients.length, 'clients from Firestore');
+        // Push all live data to Railway scheduler so it always has current portal data
+        try {
+          _syncToRemoteScheduler('/api/data/clients', clients);
+          clients.forEach(function(c) {
+            var _t = JSON.parse(localStorage.getItem('cq_ops_tasks_' + c.id) || '[]');
+            if (_t.length > 0) _syncToRemoteScheduler('/api/data/tasks', { clientId: c.id, tasks: _t });
+          });
+          console.log('[Sync] Pushed all data to Railway scheduler');
+        } catch(e) {}
       } else if (clients.length > 0) {
         clients.forEach(c => fsSaveClient(c));
       }
@@ -16557,6 +16566,10 @@
       localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(tasks));
       console.log('[Tasks] Saved — clientId:', clientId, '| key: cq_ops_tasks_' + clientId, '| count:', tasks.length, '| titles:', tasks.map(function(t){return t.title;}));
     } catch(e) { console.error('[Tasks] Save failed:', e); }
+    // Persist to Firestore (primary source for Railway scheduler)
+    if (typeof fsSetDash === 'function') {
+      fsSetDash(clientId, { opsTasks: tasks }).catch(function(){});
+    }
     // Sync to scheduler cache (fire-and-forget — localhost + Railway if configured)
     fetch('http://localhost:3001/api/data/tasks', {
       method: 'POST',

@@ -22,6 +22,94 @@ const CFG_FILE      = path.join(__dirname, 'scheduler-config.json');
 const TASKS_FILE    = path.join(__dirname, 'tasks-cache.json');
 const CLIENTS_FILE  = path.join(__dirname, 'clients-cache.json');
 
+// ── Firestore REST API (primary data source on Railway) ───────────────────────
+const FS_PROJECT = 'capitalquest-portal';
+const FS_API_KEY = process.env.FIREBASE_API_KEY || 'AIzaSyAlNWS38LA53121Bm0K2QaAKO-TGv3pNI4';
+const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${FS_PROJECT}/databases/(default)/documents`;
+
+function fsHttpGet(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, r => {
+      let d = '';
+      r.on('data', c => d += c);
+      r.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
+    });
+    req.on('error', reject);
+    req.setTimeout(8000, () => { req.destroy(); reject(new Error('timeout')); });
+  });
+}
+
+// Parse a Firestore field value into a plain JS value
+function fsVal(v) {
+  if (!v) return null;
+  if ('stringValue'    in v) return v.stringValue;
+  if ('integerValue'   in v) return parseInt(v.integerValue);
+  if ('doubleValue'    in v) return v.doubleValue;
+  if ('booleanValue'   in v) return v.booleanValue;
+  if ('nullValue'      in v) return null;
+  if ('timestampValue' in v) return new Date(v.timestampValue).getTime();
+  if ('arrayValue'     in v) return (v.arrayValue.values || []).map(fsVal);
+  if ('mapValue'       in v) {
+    const o = {};
+    for (const [k, val] of Object.entries(v.mapValue.fields || {})) o[k] = fsVal(val);
+    return o;
+  }
+  return null;
+}
+
+function fsParseDoc(doc) {
+  const id  = (doc.name || '').split('/').pop();
+  const obj = { id };
+  for (const [k, v] of Object.entries(doc.fields || {})) obj[k] = fsVal(v);
+  return obj;
+}
+
+async function fsGetCollection(collection) {
+  const docs = [];
+  let url = `${FS_BASE}/${collection}?key=${FS_API_KEY}&pageSize=300`;
+  while (url) {
+    const res = await fsHttpGet(url);
+    if (res.error) throw new Error(res.error.message || JSON.stringify(res.error));
+    (res.documents || []).forEach(d => docs.push(fsParseDoc(d)));
+    url = res.nextPageToken ? `${FS_BASE}/${collection}?key=${FS_API_KEY}&pageSize=300&pageToken=${res.nextPageToken}` : null;
+  }
+  return docs;
+}
+
+async function loadClientsLive() {
+  try {
+    const docs = await fsGetCollection('clients');
+    if (docs.length > 0) {
+      console.log(`[Scheduler] Firestore: loaded ${docs.length} clients`);
+      return docs;
+    }
+  } catch(e) {
+    console.warn('[Scheduler] Firestore clients failed:', e.message, '— falling back to cache');
+  }
+  return loadClients(); // cache fallback
+}
+
+async function loadTasksLive() {
+  try {
+    const dashDocs = await fsGetCollection('dashboards');
+    const taskMap  = {};
+    let   count    = 0;
+    for (const dash of dashDocs) {
+      if (Array.isArray(dash.opsTasks) && dash.opsTasks.length > 0) {
+        taskMap[dash.id] = dash.opsTasks;
+        count += dash.opsTasks.length;
+      }
+    }
+    if (count > 0) {
+      console.log(`[Scheduler] Firestore: loaded ${count} ops tasks across ${Object.keys(taskMap).length} clients`);
+      return taskMap;
+    }
+  } catch(e) {
+    console.warn('[Scheduler] Firestore tasks failed:', e.message, '— falling back to cache');
+  }
+  return loadTasks(); // cache fallback
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function loadConfig() {
@@ -69,9 +157,9 @@ function daysSince(ts) {
 
 // ── Task Aggregation ──────────────────────────────────────────────────────────
 
-function aggregateTasks(cfg) {
-  const taskMap    = loadTasks();
-  const clients    = loadClients();
+async function aggregateTasks(cfg) {
+  const taskMap    = await loadTasksLive();
+  const clients    = await loadClientsLive();
   const clientById = Object.fromEntries(clients.map(c => [c.id, c]));
   const today      = todayStr();
   const tomorrow   = tomorrowStr();
@@ -839,9 +927,9 @@ const SKIP_STATUSES = new Set(['completed', 'cancelled', 'archived', 'closed']);
 
 function capFirst(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
-function buildSameDaySms() {
-  const taskMap    = loadTasks();
-  const clients    = loadClients();
+async function buildSameDaySms() {
+  const taskMap    = await loadTasksLive();
+  const clients    = await loadClientsLive();
   const clientById = Object.fromEntries(clients.map(c => [c.id, c]));
   const today      = todayStr();
   const now        = new Date();
@@ -915,7 +1003,7 @@ async function runSameDayReminder(label) {
   if (!cfg)           { console.error('[Scheduler] Config missing — aborting'); return; }
   if (!cfg.enabled)   { console.log('[Scheduler] Disabled — skipping'); return; }
 
-  const smsText = buildSameDaySms();
+  const smsText = await buildSameDaySms();
   if (!smsText) {
     console.log('[Scheduler] No incomplete same-day tasks — skipping');
     return;
@@ -934,7 +1022,7 @@ async function runSend(type, label) {
   if (!cfg) { console.error('[Scheduler] Config missing — aborting'); return; }
   if (!cfg.enabled) { console.log('[Scheduler] Disabled in config — skipping'); return; }
 
-  const data    = aggregateTasks(cfg);
+  const data    = await aggregateTasks(cfg);
   const dateStr = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
   const isFull  = type === 'full';
 
