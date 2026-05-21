@@ -826,6 +826,99 @@ async function sendSms(cfg, smsText) {
   }
 }
 
+// ── Same-Day Recurring Task Reminders (SMS only) ──────────────────────────────
+// Fires: 10 AM, 12 PM, 2 PM, 4 PM, 6 PM ET
+// Only for tasks due TODAY that are not complete / cancelled / archived.
+// Dedup key: taskId_YYYY-MM-DD_HH — won't resend same task in the same hour slot.
+
+const _sdSent = new Set(); // in-memory dedup; resets on process restart
+
+const SKIP_STATUSES = new Set(['completed', 'cancelled', 'archived', 'closed']);
+
+function buildSameDaySms() {
+  const taskMap    = loadTasks();
+  const clients    = loadClients();
+  const clientById = Object.fromEntries(clients.map(c => [c.id, c]));
+  const today      = todayStr();
+  const now        = new Date();
+  const hourKey    = `${today}_${now.getHours()}`;
+
+  const eligible = [];
+  for (const [clientId, tasks] of Object.entries(taskMap)) {
+    const client = clientById[clientId] || { id: clientId, fname: 'Unknown', lname: '' };
+    const clientName = `${client.fname || ''} ${client.lname || ''}`.trim() || 'Unknown';
+    for (const t of (tasks || [])) {
+      if (SKIP_STATUSES.has(t.status)) continue;
+      if (t.dueDate !== today) continue;
+      const key = `${t.id}_${hourKey}`;
+      if (_sdSent.has(key)) continue;
+      eligible.push({ client, clientName, task: t, key });
+    }
+  }
+
+  if (eligible.length === 0) return null;
+
+  // Mark all as sent for this hour slot
+  eligible.forEach(e => _sdSent.add(e.key));
+
+  const lines = ['CapitalQuest Task Reminder', ''];
+
+  for (const { client, clientName, task: t } of eligible) {
+    const stageIdx   = t.stage != null ? t.stage : (client.currentStage != null ? client.currentStage : 0);
+    const stageLabel = STAGE_NAMES[stageIdx] || `Stage ${stageIdx}`;
+    const pendingDays = t.createdAt ? Math.floor((Date.now() - t.createdAt) / 86400000) : 0;
+    const dueTimeFmt  = t.dueTime ? ` ${t.dueTime}` : '';
+
+    // Overdue: explicit status OR dueTime has already passed today
+    let isOverdue = t.status === 'overdue';
+    if (!isOverdue && t.dueTime) {
+      const [hh, mm] = t.dueTime.split(':').map(Number);
+      const deadline = new Date();
+      deadline.setHours(hh, mm, 0, 0);
+      if (now > deadline) isOverdue = true;
+    }
+
+    lines.push('──────────────');
+    if (isOverdue) lines.push('⚠️ OVERDUE TASK');
+    lines.push(`Client: ${clientName}`);
+    lines.push(`Task: ${t.title || '—'}`);
+    lines.push(`Stage: ${stageLabel}`);
+    lines.push(`Due: Today${dueTimeFmt}`);
+    lines.push(`Pending: ${pendingDays} day${pendingDays !== 1 ? 's' : ''}`);
+    if (t.description) {
+      // Split description at line break or " | " to get action vs next step
+      const parts = t.description.split(/\n|\s\|\s/);
+      lines.push(`Action Needed: ${parts[0].trim()}`);
+      if (parts[1]) lines.push(`Next Step: ${parts[1].trim()}`);
+    }
+    lines.push('');
+  }
+
+  lines.push('──────────────');
+  lines.push('Reply COMPLETE in portal when done.');
+  lines.push('');
+  lines.push('CapitalQuest Admin');
+
+  return lines.join('\n');
+}
+
+async function runSameDayReminder(label) {
+  console.log(`\n[Scheduler] ──── Same-Day Reminder (${label}) ────`);
+  const cfg = loadConfig();
+  if (!cfg)           { console.error('[Scheduler] Config missing — aborting'); return; }
+  if (!cfg.enabled)   { console.log('[Scheduler] Disabled — skipping'); return; }
+
+  const smsText = buildSameDaySms();
+  if (!smsText) {
+    console.log('[Scheduler] No incomplete same-day tasks — skipping');
+    return;
+  }
+
+  console.log('[Scheduler] Sending same-day reminders via SMS…');
+  await sendSms(cfg, smsText);
+  console.log(`[Scheduler] ──── Same-Day Reminder done ────\n`);
+}
+
 // ── Send Logic ────────────────────────────────────────────────────────────────
 
 async function runSend(type, label) {
@@ -877,6 +970,19 @@ for (const [key, entry] of Object.entries(schedule)) {
   scheduledCount++;
 }
 
+// Same-day reminder crons: every 2 hours, 10 AM–6 PM ET
+const sameDayCrons = [
+  { cron: '0 10 * * *', label: '10:00 AM' },
+  { cron: '0 12 * * *', label: '12:00 PM' },
+  { cron: '0 14 * * *', label: '2:00 PM'  },
+  { cron: '0 16 * * *', label: '4:00 PM'  },
+  { cron: '0 18 * * *', label: '6:00 PM'  },
+];
+for (const { cron: c, label } of sameDayCrons) {
+  cron.schedule(c, () => runSameDayReminder(label), { timezone: tz });
+  console.log(`[Scheduler] Registered same-day reminder: ${label} (${c} ${tz})`);
+}
+
 console.log(`\n[Scheduler] Running — ${scheduledCount} jobs scheduled in ${tz}`);
 console.log('[Scheduler] Waiting for task/client cache from admin.html...');
 console.log(`[Scheduler] Cache: ${fs.existsSync(TASKS_FILE) ? '✓' : '✗'} tasks-cache.json  |  ${fs.existsSync(CLIENTS_FILE) ? '✓' : '✗'} clients-cache.json\n`);
@@ -885,4 +991,8 @@ console.log(`[Scheduler] Cache: ${fs.existsSync(TASKS_FILE) ? '✓' : '✗'} tas
 if (process.argv.includes('--test')) {
   console.log('[Scheduler] --test flag detected, running full send now...');
   runSend('full', 'Test Send');
+}
+if (process.argv.includes('--test-sameday')) {
+  console.log('[Scheduler] --test-sameday flag detected, running same-day reminder now...');
+  runSameDayReminder('Test');
 }
