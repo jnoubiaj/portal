@@ -990,6 +990,205 @@ async function buildSameDaySms() {
   return lines.join('\n');
 }
 
+// ── 8 PM End-of-Day: all unfinished tasks ─────────────────────────────────────
+
+async function collectAllUnfinished() {
+  const taskMap    = await loadTasksLive();
+  const clients    = await loadClientsLive();
+  const clientById = Object.fromEntries(clients.map(c => [c.id, c]));
+  const today      = todayStr();
+  const SKIP       = new Set(['completed', 'cancelled', 'archived', 'closed']);
+
+  const items = [];
+  for (const [clientId, tasks] of Object.entries(taskMap)) {
+    const client = clientById[clientId] || { id: clientId, fname: 'Unknown', lname: '' };
+    for (const t of (tasks || [])) {
+      if (SKIP.has(t.status)) continue;
+      const isOverdue  = t.status === 'overdue' || (t.dueDate && t.dueDate < today);
+      const isDueToday = t.dueDate === today;
+      items.push({ client, task: t, isOverdue, isDueToday });
+    }
+  }
+
+  // Sort: overdue first → due today → everything else
+  items.sort((a, b) => {
+    if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+    if (a.isDueToday !== b.isDueToday) return a.isDueToday ? -1 : 1;
+    return 0;
+  });
+  return { items, today };
+}
+
+function buildEightPMEmailHtml(items, today) {
+  const dateStr = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+
+  const rows = items.map(({ client, task: t, isOverdue, isDueToday }) => {
+    const clientName  = `${client.fname || ''} ${client.lname || ''}`.trim() || 'Unknown';
+    const stageLabel  = STAGE_NAMES[t.stage != null ? t.stage : (client.currentStage || 0)] || `Stage ${t.stage}`;
+    const pendingDays = t.createdAt ? Math.floor((Date.now() - t.createdAt) / 86400000) : 0;
+    const dueBadge    = isOverdue
+      ? `<span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">⚠️ OVERDUE</span>`
+      : isDueToday
+        ? `<span style="background:#fff7ed;color:#ea580c;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">Due Today</span>`
+        : `<span style="background:#f0f9ff;color:#0369a1;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${t.dueDate ? fmtDate(t.dueDate) : 'No date'}</span>`;
+
+    const parts       = (t.description || '').split(/\n|\s\|\s/);
+    const action      = parts[0] ? `<div style="font-size:12px;color:#374151;margin-top:6px"><strong>Action:</strong> ${parts[0].trim()}</div>` : '';
+    const nextStep    = parts[1] ? `<div style="font-size:12px;color:#374151;margin-top:2px"><strong>Next Step:</strong> ${parts[1].trim()}</div>` : '';
+
+    return `
+      <tr>
+        <td style="padding:14px 16px;border-bottom:1px solid #f3f4f6;vertical-align:top">
+          <div style="font-weight:700;color:#111827;font-size:14px">${clientName}</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px">${stageLabel}</div>
+        </td>
+        <td style="padding:14px 16px;border-bottom:1px solid #f3f4f6;vertical-align:top">
+          <div style="font-weight:600;color:#1e293b;font-size:13px">${t.title || '—'}</div>
+          <div style="margin-top:4px">${dueBadge}</div>
+          ${action}${nextStep}
+        </td>
+        <td style="padding:14px 16px;border-bottom:1px solid #f3f4f6;vertical-align:top;text-align:center">
+          <div style="font-size:12px;color:${isOverdue?'#dc2626':'#6b7280'};font-weight:${isOverdue?'700':'400'}">${pendingDays}d</div>
+          <div style="font-size:11px;color:#9ca3af">pending</div>
+        </td>
+        <td style="padding:14px 16px;border-bottom:1px solid #f3f4f6;vertical-align:top">
+          <span style="font-size:11px;background:#f3f4f6;color:#374151;padding:2px 6px;border-radius:4px">${cap(t.priority||'medium')}</span>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const tomorrowItems = items.filter(x => x.isOverdue || x.isDueToday);
+  const tomorrowRows = tomorrowItems.map(({ client, task: t, isOverdue }) => {
+    const clientName = `${client.fname || ''} ${client.lname || ''}`.trim() || 'Unknown';
+    const stageLabel = STAGE_NAMES[t.stage != null ? t.stage : (client.currentStage || 0)] || `Stage ${t.stage}`;
+    const overdueDays = (t.dueDate && t.dueDate < today)
+      ? Math.round((new Date(today+'T12:00:00') - new Date(t.dueDate+'T12:00:00')) / 86400000)
+      : 0;
+    const parts    = (t.description || '').split(/\n|\s\|\s/);
+    const nextStep = parts[1] || parts[0] || '—';
+    return `
+      <tr>
+        <td style="padding:12px 16px;border-bottom:1px solid #fde8e8;vertical-align:top">
+          <div style="font-weight:700;color:#111827;font-size:13px">${clientName}</div>
+          <div style="font-size:11px;color:#6b7280">${stageLabel}</div>
+        </td>
+        <td style="padding:12px 16px;border-bottom:1px solid #fde8e8;vertical-align:top">
+          <div style="font-weight:600;color:#1e293b;font-size:13px">${t.title || '—'}</div>
+          ${isOverdue && overdueDays > 0 ? `<div style="font-size:11px;color:#dc2626;margin-top:2px">${overdueDays} day${overdueDays!==1?'s':''} overdue</div>` : ''}
+        </td>
+        <td style="padding:12px 16px;border-bottom:1px solid #fde8e8;vertical-align:top;font-size:12px;color:#374151">${nextStep}</td>
+      </tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 0">
+    <tr><td align="center">
+      <table width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+
+        <!-- Header -->
+        <tr><td style="background:linear-gradient(135deg,#1e3a5f 0%,#2d5986 100%);padding:32px 40px">
+          <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-.3px">CapitalQuest End of Day</div>
+          <div style="font-size:14px;color:#93c5fd;margin-top:6px">Tasks still unfinished as of 8:00 PM · ${dateStr}</div>
+          <div style="margin-top:16px;display:inline-block;background:rgba(255,255,255,.15);border-radius:8px;padding:8px 16px">
+            <span style="color:#ffffff;font-size:13px;font-weight:600">${items.length} open task${items.length!==1?'s':''}</span>
+          </div>
+        </td></tr>
+
+        <!-- All Unfinished Tasks -->
+        <tr><td style="padding:32px 40px 0">
+          <div style="font-size:16px;font-weight:700;color:#111827;margin-bottom:16px">All Open Tasks</div>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+            <tr style="background:#f9fafb">
+              <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;width:25%">Client</th>
+              <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;width:45%">Task</th>
+              <th style="padding:10px 16px;text-align:center;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;width:15%">Pending</th>
+              <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;width:15%">Priority</th>
+            </tr>
+            ${rows || '<tr><td colspan="4" style="padding:20px;text-align:center;color:#059669;font-weight:600">All tasks complete! 🎉</td></tr>'}
+          </table>
+        </td></tr>
+
+        ${tomorrowRows ? `
+        <!-- Still Needs Attention Tomorrow -->
+        <tr><td style="padding:32px 40px 0">
+          <div style="font-size:16px;font-weight:700;color:#dc2626;margin-bottom:4px">⚠️ Still Needs Attention Tomorrow</div>
+          <div style="font-size:13px;color:#6b7280;margin-bottom:16px">These tasks are overdue or were due today and remain incomplete.</div>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #fca5a5;border-radius:8px;overflow:hidden;background:#fff5f5">
+            <tr style="background:#fef2f2">
+              <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.05em;width:25%">Client</th>
+              <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.05em;width:35%">Task</th>
+              <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.05em;width:40%">Suggested Next Step</th>
+            </tr>
+            ${tomorrowRows}
+          </table>
+        </td></tr>` : ''}
+
+        <!-- Footer -->
+        <tr><td style="padding:32px 40px">
+          <div style="border-top:1px solid #e5e7eb;padding-top:24px;text-align:center;font-size:12px;color:#9ca3af">
+            CapitalQuest Admin System · Generated at 8:00 PM ET · <a href="https://jnoubiaj.github.io/portal/admin.html" style="color:#2d5986">Open Portal</a>
+          </div>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+function buildEightPMSmsText(items) {
+  if (items.length === 0) return null;
+  const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  const lines = [
+    'CapitalQuest 8 PM End-of-Day',
+    `${items.length} task${items.length!==1?'s':''} still open`,
+    '',
+  ];
+  for (const { client, task: t, isOverdue, isDueToday } of items) {
+    const clientName = `${client.fname || ''} ${client.lname || ''}`.trim() || 'Unknown';
+    const stageLabel = STAGE_NAMES[t.stage != null ? t.stage : (client.currentStage || 0)] || `Stage ${t.stage}`;
+    const parts      = (t.description || '').split(/\n|\s\|\s/);
+    lines.push('──────────────');
+    if (isOverdue) lines.push('⚠️ OVERDUE');
+    else if (isDueToday) lines.push('📌 Due Today');
+    lines.push(`Client: ${clientName}`);
+    lines.push(`Task: ${t.title || '—'}`);
+    lines.push(`Priority: ${cap(t.priority||'medium')}`);
+    lines.push(`Stage: ${stageLabel}`);
+    if (parts[0]) lines.push(`Action: ${parts[0].trim()}`);
+    if (parts[1]) lines.push(`Next: ${parts[1].trim()}`);
+    lines.push('');
+  }
+  lines.push('──────────────');
+  lines.push('CapitalQuest Admin');
+  return lines.join('\n');
+}
+
+async function runEightPMSend() {
+  console.log(`\n[Scheduler] ──── 8 PM End-of-Day Reminder ────`);
+  const cfg = loadConfig();
+  if (!cfg)         { console.error('[Scheduler] Config missing — aborting'); return; }
+  if (!cfg.enabled) { console.log('[Scheduler] Disabled — skipping'); return; }
+
+  const { items } = await collectAllUnfinished();
+  if (items.length === 0) {
+    console.log('[Scheduler] 8 PM: no open tasks — skipping');
+    return;
+  }
+
+  const dateStr = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const subject = `CapitalQuest End of Day Task Reminder — ${dateStr}`;
+  const htmlBody = buildEightPMEmailHtml(items, todayStr());
+  const smsText  = buildEightPMSmsText(items);
+
+  console.log(`[Scheduler] 8 PM: ${items.length} open tasks`);
+  const sends = [sendEmails(cfg, subject, htmlBody)];
+  if (smsText) sends.push(sendSms(cfg, smsText));
+  await Promise.all(sends);
+  console.log(`[Scheduler] ──── 8 PM End-of-Day done ────\n`);
+}
+
 async function runSameDayReminder(label) {
   console.log(`\n[Scheduler] ──── Same-Day Reminder (${label}) ────`);
   const cfg = loadConfig();
@@ -1058,7 +1257,7 @@ for (const [key, entry] of Object.entries(schedule)) {
   scheduledCount++;
 }
 
-// Same-day reminder crons: every 2 hours, 10 AM–6 PM ET
+// Same-day reminder crons: every 2 hours, 10 AM–8 PM ET
 const sameDayCrons = [
   { cron: '0 10 * * *', label: '10:00 AM' },
   { cron: '0 12 * * *', label: '12:00 PM' },
@@ -1070,6 +1269,10 @@ for (const { cron: c, label } of sameDayCrons) {
   cron.schedule(c, () => runSameDayReminder(label), { timezone: tz });
   console.log(`[Scheduler] Registered same-day reminder: ${label} (${c} ${tz})`);
 }
+
+// 8 PM end-of-day: full sweep of all open tasks — email + SMS
+cron.schedule('0 20 * * *', () => runEightPMSend(), { timezone: tz });
+console.log(`[Scheduler] Registered: 8 PM End-of-Day (0 20 * * * ${tz})`);
 
 console.log(`\n[Scheduler] Running — ${scheduledCount} jobs scheduled in ${tz}`);
 console.log('[Scheduler] Waiting for task/client cache from admin.html...');
@@ -1083,4 +1286,8 @@ if (process.argv.includes('--test')) {
 if (process.argv.includes('--test-sameday')) {
   console.log('[Scheduler] --test-sameday flag detected, running same-day reminder now...');
   runSameDayReminder('Test');
+}
+if (process.argv.includes('--test-8pm')) {
+  console.log('[Scheduler] --test-8pm flag detected, running 8 PM end-of-day send now...');
+  runEightPMSend();
 }
