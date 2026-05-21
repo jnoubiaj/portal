@@ -5791,6 +5791,7 @@
   function getOnboardDataForClient(clientId) {
     const client = getClient(clientId);
     let o = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null');
+    // Fallback 1: search other cq_onboard_data_ keys by matching email
     if (!o && client && client.email) {
       try {
         const prefix = 'cq_onboard_data_';
@@ -5802,6 +5803,28 @@
           }
         }
       } catch(e) {}
+    }
+    // Fallback 2: build from the client roster record (populated from Firestore clients collection).
+    // Covers new devices / cleared cache where cq_onboard_data_ is absent but Firestore has data.
+    if (!o && client) {
+      o = {
+        firstName: client.fname,      lastName: client.lname,
+        email: client.email,          phone: client.phone,
+        address: client.address,      street: client.street,
+        city: client.city,            state: client.state,       zip: client.zip,
+        dob: client.dob,              ssn: client.ssn,           annualIncome: client.annualIncome,
+        maidenName: client.maidenName, citizen: client.citizen,  newCreditAccts: client.newCreditAccts,
+        personalBanks: client.personalBanks,
+        bizName: client.bizName,      dba: client.dba,           ein: client.ein,
+        bizType: client.bizType,      industry: client.industry, employees: client.employees,
+        monthlySales: client.monthlySales, ownership: client.ownership,
+        bizPhone: client.bizPhone,    dateEstablished: client.dateEstablished,
+        loanAmount: client.loanAmount, loanReason: client.loanReason, bizAddress: client.bizAddress,
+        bizBanks: client.bizBanks,    bizCreditCards: client.bizCreditCards,
+        _updatedAt: client._profileUpdatedAt,
+      };
+      // Seed localStorage so subsequent calls are fast
+      try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o)); } catch(e) {}
     }
     return o || {};
   }
@@ -8411,6 +8434,10 @@
       toast.style.opacity = '1';
     };
 
+    // Force address sync before reading any field values — ensures hidden ape-address
+    // reflects what's in the visible street/city/state/zip inputs at save time.
+    try { if (typeof window._apeAddrSync === 'function') window._apeAddrSync(); } catch(e) {}
+
     let o = getOnboardDataForClient(clientId);
     const g = id => (document.getElementById('ape-' + id) || {}).value || '';
     const personalBanks = g('personalBanks').split(',').map(s=>s.trim()).filter(Boolean);
@@ -8450,8 +8477,6 @@
       bizBanks, bizCreditCards,
       experianEmail: g('experianEmail'), experianPass: g('experianPass'),
       pin: g('pin'), secQuestion: g('secQuestion'), secAnswer: g('secAnswer'),
-      // Freshness marker — used by listeners + background fetches to detect newer-than-Firestore
-      // local edits and prevent stale snapshots from clobbering this save.
       _updatedAt: Date.now(),
     });
 
@@ -8460,31 +8485,37 @@
     if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.7'; saveBtn.textContent = 'Saving…'; }
     setStatus('Saving…', '#64748b');
 
-    // 1) Persist to localStorage first (synchronous, never throws)
+    // 1) Persist full onboarding record to localStorage (synchronous, never throws)
     try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o)); } catch(e) {}
 
-    // 2) Mirror key fields into the client roster (used by client list / header / getClient())
+    // 2) Mirror ALL profile fields into the client roster so the clients Firestore
+    //    collection is a complete source of truth — not just name/phone/email.
+    //    This is what makes data persist on other devices and after login.
     const allClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
     const idx = allClients.findIndex(c => c.id === clientId);
     if (idx >= 0) {
-      if (o.firstName) allClients[idx].fname = o.firstName;
-      if (o.lastName)  allClients[idx].lname = o.lastName;
-      if (o.phone)     allClients[idx].phone = o.phone;
-      if (o.email)     allClients[idx].email = o.email;
+      const mirror = {
+        fname: o.firstName,    lname: o.lastName,     phone: o.phone,      email: o.email,
+        address: o.address,    street: o.street,       city: o.city,        state: o.state,  zip: o.zip,
+        dob: o.dob,            ssn: o.ssn,             annualIncome: o.annualIncome,
+        maidenName: o.maidenName, citizen: o.citizen,  newCreditAccts: o.newCreditAccts,
+        personalBanks: o.personalBanks,
+        bizName: o.bizName,    dba: o.dba,             ein: o.ein,          bizType: o.bizType,
+        industry: o.industry,  employees: o.employees, monthlySales: o.monthlySales,
+        ownership: o.ownership, bizPhone: o.bizPhone,  dateEstablished: o.dateEstablished,
+        loanAmount: o.loanAmount, loanReason: o.loanReason, bizAddress: o.bizAddress,
+        bizBanks: o.bizBanks,  bizCreditCards: o.bizCreditCards,
+        _profileUpdatedAt: o._updatedAt,
+      };
+      Object.keys(mirror).forEach(k => { if (mirror[k] !== undefined && mirror[k] !== '') allClients[idx][k] = mirror[k]; });
       try { localStorage.setItem('cq_admin_clients', JSON.stringify(allClients)); } catch(e) {}
-      // Also update the global in-memory array so renderClientDetail sees new data immediately
-      // without requiring a page refresh (was the root cause of the "save not sticking" bug)
+
+      // Mirror into the global in-memory clients array so the UI updates without a refresh
       const globalC = clients.find(c => c.id === clientId);
-      if (globalC) {
-        if (o.firstName) globalC.fname = o.firstName;
-        if (o.lastName)  globalC.lname = o.lastName;
-        if (o.phone)     globalC.phone = o.phone;
-        if (o.email)     globalC.email = o.email;
-      }
+      if (globalC) Object.keys(mirror).forEach(k => { if (mirror[k] !== undefined && mirror[k] !== '') globalC[k] = mirror[k]; });
     }
 
-    // 3) Firestore writes — call SDK directly (the fs* helpers in firebase-config.js
-    //    swallow errors, which is what let this save silently fail in the first place).
+    // 3) Firestore writes — all three collections, direct SDK calls so errors surface
     const fsErrors = [];
     if (idx >= 0) {
       try { await db.collection('clients').doc(allClients[idx].id).set(allClients[idx]); }
