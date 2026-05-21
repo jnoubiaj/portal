@@ -8222,6 +8222,7 @@
     const _fmtSSN   = v => { if (!v) return ''; const d=(v+'').replace(/\D/g,'').slice(0,9); if(d.length>5) return `${d.slice(0,3)}-${d.slice(3,5)}-${d.slice(5)}`; if(d.length>3) return `${d.slice(0,3)}-${d.slice(3)}`; return d; };
     const _fmtEIN   = v => { if (!v) return ''; const d=(v+'').replace(/\D/g,'').slice(0,9); if(d.length>2) return `${d.slice(0,2)}-${d.slice(2)}`; return d; };
     const _fmtCurr  = v => { if (!v) return ''; const n=parseInt((v+'').replace(/[^0-9]/g,''),10); return isNaN(n)?'':(n).toLocaleString(); };
+    const _fmtDate  = v => { if (!v) return ''; const p=(v+'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return p ? `${p[2]}/${p[3]}/${p[1]}` : (v+''); };
 
     // Shared style strings
     const iStyle = `width:100%;height:36px;border:1.5px solid #e2e8f0;border-radius:8px;padding:0 12px;font-size:13px;font-family:var(--font-b);color:var(--navy);outline:none;box-sizing:border-box;background:#fff;transition:border-color 0.15s`;
@@ -8234,6 +8235,7 @@
     const einOI   = `oninput="let d=this.value.replace(/\\D/g,'').slice(0,9);this.value=d.length>2?d.slice(0,2)+'-'+d.slice(2):d" maxlength="10"`;
     const currOI  = `oninput="let n=parseInt(this.value.replace(/[^0-9]/g,''),10);this.value=isNaN(n)?'':n.toLocaleString()"`;
     const zipOI   = `oninput="this.value=this.value.replace(/\\D/g,'').slice(0,5);_apeAddrSync()" maxlength="5"`;
+    const dateOI  = `oninput="let v=this.value,d=v.replace(/\\D/g,'').slice(0,8),r='';if(d.length>4)r=d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4);else if(d.length>2)r=d.slice(0,2)+'/'+d.slice(2);else r=d;if(v!==r)this.value=r" maxlength="10"`;
 
     // Field builders
     const inp = (id, val, ph, extra) =>
@@ -8302,7 +8304,7 @@
               ${fld('Last Name',  inp('lastName',  o.lastName,  'Last name'))}
               ${fld('Email',      inp('email',     o.email,     'email@example.com'))}
               ${fld('Phone',      inp('phone',     _fmtPhone(o.phone), '(000) 000-0000', phoneOI))}
-              ${fld('Date of Birth', inp('dob', o.dob, 'YYYY-MM-DD'))}
+              ${fld('Date of Birth', inp('dob', _fmtDate(o.dob), 'MM/DD/YYYY', dateOI))}
               ${fld("Mother's Maiden Name", inp('maidenName', o.maidenName, 'Maiden name'))}
               ${fld('SSN', inp('ssn', _fmtSSN(o.ssn), '000-00-0000', ssnOI))}
               ${fld('US Citizen', sel('citizen',
@@ -8358,7 +8360,7 @@
                 </div>
               </div>
               ${fld('Business Phone',   inp('bizPhone',       _fmtPhone(o.bizPhone),     '(000) 000-0000', phoneOI))}
-              ${fld('Date Established', inp('dateEstablished', o.dateEstablished,         'YYYY-MM-DD'))}
+              ${fld('Date Established', inp('dateEstablished', _fmtDate(o.dateEstablished), 'MM/DD/YYYY', dateOI))}
               ${fld('Loan Amount',      inp('loanAmount',     _fmtCurr(o.loanAmount),    'e.g. 50,000', currOI))}
               ${fld('Loan Purpose',     inp('loanReason',     o.loanReason,              'e.g. Working capital'))}
             `)}
@@ -8475,8 +8477,11 @@
     const citizenVal = g('citizen');
     const cleanNum = v => v.replace(/[^0-9.]/g,'');
 
+    // Convert MM/DD/YYYY → YYYY-MM-DD for storage
+    const _parseDate = v => { if (!v) return ''; const p=(v+'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return p ? `${p[3]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}` : v; };
+
     // DOB must be 18+ years ago
-    const dobVal = g('dob');
+    const dobVal = _parseDate(g('dob'));
     if (dobVal) {
       const dobDate = new Date(dobVal);
       const minAgeDate = new Date();
@@ -8500,7 +8505,7 @@
       bizName: g('bizName'), dba: g('dba'), ein: g('ein'),
       bizType: g('bizType'), industry: g('industry'), employees: g('employees'),
       monthlySales: cleanNum(g('monthlySales')), ownership: g('ownership'),
-      bizPhone: g('bizPhone'), dateEstablished: g('dateEstablished'),
+      bizPhone: g('bizPhone'), dateEstablished: _parseDate(g('dateEstablished')),
       loanAmount: cleanNum(g('loanAmount')), loanReason: g('loanReason'),
       bizAddress: g('bizAddress'),
       bizBanks, bizCreditCards,
