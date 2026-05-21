@@ -1,17 +1,18 @@
 {
   "scripts": {
-    "serve":          "node serve.mjs",
-    "proxy":          "node ghl-server.mjs",
-    "scheduler":      "node scheduler.mjs",
+    "serve": "node serve.mjs",
+    "proxy": "node ghl-server.mjs",
+    "scheduler": "node scheduler.mjs",
     "scheduler:test": "node scheduler.mjs --test",
-    "start":          "node worker.mjs",
-    "start:local":    "node serve.mjs & node ghl-server.mjs",
-    "start:win":      "start node serve.mjs && start node ghl-server.mjs && start node scheduler.mjs"
+    "start": "node worker.mjs",
+    "start:local": "node serve.mjs & node ghl-server.mjs",
+    "start:win": "start node serve.mjs && start node ghl-server.mjs && start node scheduler.mjs"
   },
   "devDependencies": {
     "puppeteer": "^24.40.0"
   },
   "dependencies": {
+    "firebase-admin": "^13.10.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.7"
   }
