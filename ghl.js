@@ -1055,7 +1055,9 @@ window.GHL = (function () {
 
   function _fmtPhone (phone) {
     if (!phone) return '';
-    const d = phone.replace(/\D/g,'').replace(/^1/, '');
+    let d = ('' + phone).replace(/\D/g, '');
+    if (d.length === 11 && d[0] === '1') d = d.slice(1);
+    d = d.slice(0, 10);
     if (d.length === 10) return '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6);
     return phone;
   }

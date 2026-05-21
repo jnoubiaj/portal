@@ -4345,12 +4345,20 @@
   function statusLabel(s) {
     return { new:'New', pending:'Pending', progress:'In Progress', approved:'Approved', disqualified:'Disqualified' }[s] || s;
   }
+  // Canonical US phone formatter — handles +1, 1-xxx, raw 10/11 digit strings
+  function _phoneUS(v) {
+    if (!v) return '';
+    var d = ('' + v).replace(/\D/g, '');        // strip all non-digits
+    if (d.length === 11 && d[0] === '1') d = d.slice(1); // drop leading country code 1
+    d = d.slice(0, 10);                          // keep at most 10 digits
+    if (d.length === 10) return '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6);
+    if (d.length > 6)    return '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6);
+    if (d.length > 3)    return '(' + d.slice(0,3) + ') ' + d.slice(3);
+    return d;
+  }
   function fmtPhoneAdmin(p) {
-    if (!p) return 'No phone';
-    const d = p.replace(/\D/g,'');
-    if (d.length === 10) return '('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6);
-    if (d.length === 11 && d[0]==='1') return '('+d.slice(1,4)+') '+d.slice(4,7)+'-'+d.slice(7);
-    return p;
+    var f = _phoneUS(p);
+    return f || 'No phone';
   }
 
   // ── CLIENT DETAIL ─────────────────────────────────────────────────────
@@ -5580,13 +5588,7 @@
       if (val === undefined || val === null || val === '') return `<span class="prof-field-val empty">${fallback || '—'}</span>`;
       return `<span class="prof-field-val">${val}</span>`;
     };
-    const fmtPhone = v => {
-      if (!v) return fv('');
-      const d = v.replace(/\D/g,'');
-      if (d.length === 10) return fv(`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`);
-      if (d.length === 11 && d[0]==='1') return fv(`+1 (${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`);
-      return fv(v);
-    };
+    const fmtPhone = v => fv(_phoneUS(v) || v || '');
     const fmtDate = v => {
       if (!v) return fv('');
       try {
@@ -8215,7 +8217,7 @@
     const bizAddress    = o.bizAddress || [o.bizStreet, o.bizCity, o.bizState, o.bizZip].filter(Boolean).join(', ') || '';
 
     // Pre-format helpers (display only — save strips formatting)
-    const _fmtPhone = v => { if (!v) return ''; const d=(v+'').replace(/\D/g,'').slice(0,10); if(d.length>6) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`; if(d.length>3) return `(${d.slice(0,3)}) ${d.slice(3)}`; return d; };
+    const _fmtPhone = v => _phoneUS(v);
     const _fmtSSN   = v => { if (!v) return ''; const d=(v+'').replace(/\D/g,'').slice(0,9); if(d.length>5) return `${d.slice(0,3)}-${d.slice(3,5)}-${d.slice(5)}`; if(d.length>3) return `${d.slice(0,3)}-${d.slice(3)}`; return d; };
     const _fmtEIN   = v => { if (!v) return ''; const d=(v+'').replace(/\D/g,'').slice(0,9); if(d.length>2) return `${d.slice(0,2)}-${d.slice(2)}`; return d; };
     const _fmtCurr  = v => { if (!v) return ''; const n=parseInt((v+'').replace(/[^0-9]/g,''),10); return isNaN(n)?'':(n).toLocaleString(); };
@@ -8226,7 +8228,7 @@
     const lStyle = `font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin-bottom:5px`;
 
     // oninput handlers
-    const phoneOI = `oninput="let d=this.value.replace(/\\D/g,'').slice(0,10);this.value=d.length>6?'('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6):d.length>3?'('+d.slice(0,3)+') '+d.slice(3):d"`;
+    const phoneOI = `oninput="let d=this.value.replace(/\\D/g,'');if(d.length===11&&d[0]==='1')d=d.slice(1);d=d.slice(0,10);this.value=d.length>6?'('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6):d.length>3?'('+d.slice(0,3)+') '+d.slice(3):d"`;
     const ssnOI   = `oninput="let d=this.value.replace(/\\D/g,'').slice(0,9);this.value=d.length>5?d.slice(0,3)+'-'+d.slice(3,5)+'-'+d.slice(5):d.length>3?d.slice(0,3)+'-'+d.slice(3):d" maxlength="11"`;
     const einOI   = `oninput="let d=this.value.replace(/\\D/g,'').slice(0,9);this.value=d.length>2?d.slice(0,2)+'-'+d.slice(2):d" maxlength="10"`;
     const currOI  = `oninput="let n=parseInt(this.value.replace(/[^0-9]/g,''),10);this.value=isNaN(n)?'':n.toLocaleString()"`;
