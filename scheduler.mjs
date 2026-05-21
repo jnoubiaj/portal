@@ -828,12 +828,16 @@ async function sendSms(cfg, smsText) {
 
 // ── Same-Day Recurring Task Reminders (SMS only) ──────────────────────────────
 // Fires: 10 AM, 12 PM, 2 PM, 4 PM, 6 PM ET
-// Only for tasks due TODAY that are not complete / cancelled / archived.
+// Includes ALL incomplete client tasks due today — no priority filter.
+// Only skips: completed, cancelled, archived, closed.
 // Dedup key: taskId_YYYY-MM-DD_HH — won't resend same task in the same hour slot.
 
 const _sdSent = new Set(); // in-memory dedup; resets on process restart
 
+// Statuses that mean "done — stop reminding"
 const SKIP_STATUSES = new Set(['completed', 'cancelled', 'archived', 'closed']);
+
+function capFirst(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
 function buildSameDaySms() {
   const taskMap    = loadTasks();
@@ -848,24 +852,26 @@ function buildSameDaySms() {
     const client = clientById[clientId] || { id: clientId, fname: 'Unknown', lname: '' };
     const clientName = `${client.fname || ''} ${client.lname || ''}`.trim() || 'Unknown';
     for (const t of (tasks || [])) {
+      // Skip only truly done/inactive statuses — ALL priorities included
       if (SKIP_STATUSES.has(t.status)) continue;
       if (t.dueDate !== today) continue;
       const key = `${t.id}_${hourKey}`;
-      if (_sdSent.has(key)) continue;
+      if (_sdSent.has(key)) continue; // already sent this hour
       eligible.push({ client, clientName, task: t, key });
     }
   }
 
   if (eligible.length === 0) return null;
 
-  // Mark all as sent for this hour slot
+  // Mark all as sent for this hour slot before building message
   eligible.forEach(e => _sdSent.add(e.key));
 
   const lines = ['CapitalQuest Task Reminder', ''];
 
   for (const { client, clientName, task: t } of eligible) {
-    const stageIdx   = t.stage != null ? t.stage : (client.currentStage != null ? client.currentStage : 0);
-    const stageLabel = STAGE_NAMES[stageIdx] || `Stage ${stageIdx}`;
+    const stageIdx    = t.stage != null ? t.stage : (client.currentStage != null ? client.currentStage : 0);
+    const stageLabel  = STAGE_NAMES[stageIdx] || `Stage ${stageIdx}`;
+    const priorityLbl = capFirst(t.priority || 'medium');
     const pendingDays = t.createdAt ? Math.floor((Date.now() - t.createdAt) / 86400000) : 0;
     const dueTimeFmt  = t.dueTime ? ` ${t.dueTime}` : '';
 
@@ -882,13 +888,14 @@ function buildSameDaySms() {
     if (isOverdue) lines.push('⚠️ OVERDUE TASK');
     lines.push(`Client: ${clientName}`);
     lines.push(`Task: ${t.title || '—'}`);
+    lines.push(`Priority: ${priorityLbl}`);
     lines.push(`Stage: ${stageLabel}`);
     lines.push(`Due: Today${dueTimeFmt}`);
     lines.push(`Pending: ${pendingDays} day${pendingDays !== 1 ? 's' : ''}`);
     if (t.description) {
-      // Split description at line break or " | " to get action vs next step
+      // Split on newline or " | " to separate action needed from next step
       const parts = t.description.split(/\n|\s\|\s/);
-      lines.push(`Action Needed: ${parts[0].trim()}`);
+      lines.push(`What's Needed: ${parts[0].trim()}`);
       if (parts[1]) lines.push(`Next Step: ${parts[1].trim()}`);
     }
     lines.push('');
