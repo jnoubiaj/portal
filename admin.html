@@ -3525,23 +3525,22 @@
               if (_ci >= 0) {
                 var _capW = function(s){ return s ? s.replace(/\b\w/g, function(l){ return l.toUpperCase(); }) : s; };
                 var _pf = data.profileData;
-                var _nameChanged = false;
-                if (_pf.firstName && clients[_ci].fname !== _capW(_pf.firstName)) { clients[_ci].fname = _capW(_pf.firstName); _nameChanged = true; }
-                if (_pf.lastName  && clients[_ci].lname !== _capW(_pf.lastName))  { clients[_ci].lname = _capW(_pf.lastName);  _nameChanged = true; }
-                if (_nameChanged) {
-                  try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
-                  // Only seed cq_onboard_data_<id> from Firestore profileData if local
-                  // has nothing newer — prevents this listener from clobbering a
-                  // freshly-saved edit that hasn't yet propagated to Firestore.
-                  try {
-                    var _localO = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null');
-                    var _lt = (_localO && _localO._updatedAt) || 0;
-                    var _rt = (_pf && _pf._updatedAt) || 0;
-                    if (_rt >= _lt) {
-                      localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_pf));
-                    }
-                  } catch(e) {}
-                }
+                // Sync name into client roster regardless
+                if (_pf.firstName && clients[_ci].fname !== _capW(_pf.firstName)) clients[_ci].fname = _capW(_pf.firstName);
+                if (_pf.lastName  && clients[_ci].lname !== _capW(_pf.lastName))  clients[_ci].lname = _capW(_pf.lastName);
+                try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+                // Always seed cq_onboard_data_ from Firestore profileData on page load
+                // if Firestore is at least as fresh as local — was previously gated on
+                // name-change only, which caused edits to revert on refresh when name
+                // hadn't changed (e.g. editing address, loanAmount, etc.)
+                try {
+                  var _localO = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null');
+                  var _lt = (_localO && _localO._updatedAt) || 0;
+                  var _rt = (_pf && _pf._updatedAt) || 0;
+                  if (_rt >= _lt) {
+                    localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_pf));
+                  }
+                } catch(e) {}
               }
             }
             // Seed pipelineTasks — always apply Firestore as source of truth on initial load
