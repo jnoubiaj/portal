@@ -2019,65 +2019,6 @@
   .ghl-call-modal { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; display:flex; align-items:center; justify-content:center; }
   .ghl-call-box { background:white; border-radius:16px; padding:24px; width:340px; max-width:calc(100vw - 32px); box-shadow:0 20px 60px rgba(0,0,0,.2); }
 
-
-  /* ── CLIENT ANALYSIS PANEL ───────────────────────────────────────── */
-  .anl-overlay { position:fixed;inset:0;background:rgba(10,20,40,0.55);z-index:9000;display:flex;align-items:stretch;justify-content:flex-end; }
-  .anl-panel { width:min(860px,100vw);height:100%;background:var(--white);display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 40px rgba(0,0,0,0.18); }
-  .anl-panel-head { display:flex;align-items:center;justify-content:space-between;padding:20px 28px 18px;border-bottom:1.5px solid var(--gray-100);flex-shrink:0; }
-  .anl-panel-title { font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--navy); }
-  .anl-panel-sub { font-size:12px;color:var(--gray-400);margin-top:1px; }
-  .anl-close { background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:8px;color:var(--gray-400);font-size:20px;line-height:1;transition:background 0.13s,color 0.13s; }
-  .anl-close:hover { background:var(--danger-bg);color:var(--danger); }
-  .anl-body { flex:1;overflow-y:auto;padding:24px 28px; }
-
-  .anl-health-bar-wrap { background:var(--gray-100);border-radius:100px;height:10px;overflow:hidden;margin:10px 0 6px; }
-  .anl-health-bar { height:100%;border-radius:100px;transition:width 0.6s cubic-bezier(.4,0,.2,1); }
-
-  .anl-section-title { font-family:var(--font-h);font-size:12px;font-weight:800;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.07em;margin:24px 0 12px; }
-  .anl-profile-chips { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px; }
-  .anl-chip { display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:700; }
-  .anl-chip.ok  { background:rgba(16,185,129,0.1);color:var(--success); }
-  .anl-chip.warn{ background:rgba(245,158,11,0.12);color:#b45309; }
-  .anl-chip.bad { background:rgba(239,68,68,0.1);color:var(--danger); }
-  .anl-chip.neu { background:var(--gray-100);color:var(--gray-500); }
-
-  .anl-bank-table { width:100%;border-collapse:collapse; }
-  .anl-bank-table th { font-size:10px;font-weight:800;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.06em;padding:6px 10px;text-align:left;border-bottom:1.5px solid var(--gray-100); }
-  .anl-bank-table td { padding:10px 10px;vertical-align:middle;border-bottom:1px solid var(--gray-50); }
-  .anl-bank-table tr:last-child td { border-bottom:none; }
-  .anl-bank-table tr:hover td { background:var(--gray-50); }
-  .anl-bank-name { display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;color:var(--navy); }
-  .anl-score-bar-wrap { width:80px;background:var(--gray-100);border-radius:100px;height:6px;overflow:hidden; }
-  .anl-score-bar { height:100%;border-radius:100px; }
-  .anl-score-val { font-family:var(--font-h);font-size:13px;font-weight:800;min-width:32px; }
-  .anl-tier-badge { font-size:10px;font-weight:700;padding:3px 7px;border-radius:10px; }
-  .anl-tier-badge.strong { background:rgba(16,185,129,0.12);color:var(--success); }
-  .anl-tier-badge.good   { background:rgba(34,197,94,0.1);color:#15803d; }
-  .anl-tier-badge.maybe  { background:rgba(245,158,11,0.12);color:#b45309; }
-  .anl-tier-badge.low    { background:rgba(249,115,22,0.1);color:#c2410c; }
-  .anl-tier-badge.no     { background:rgba(239,68,68,0.08);color:var(--danger); }
-  .anl-rel-tag { font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px; }
-  .anl-rel-tag.has-rel  { background:rgba(34,167,240,0.12);color:var(--blue); }
-  .anl-rel-tag.no-rel   { background:var(--gray-100);color:var(--gray-400); }
-  .anl-est { font-size:12px;color:var(--gray-500); }
-  .anl-est.strong { color:var(--success);font-weight:700; }
-  .anl-reason-tip { font-size:10px;color:var(--gray-400);max-width:200px; }
-
-  .anl-peer-card { background:rgba(34,167,240,0.05);border:1.5px solid rgba(34,167,240,0.2);border-radius:12px;padding:14px 18px;margin-bottom:10px; }
-  .anl-peer-title { font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px; }
-  .anl-peer-row { font-size:12px;color:var(--gray-500);margin-top:4px; }
-  .anl-peer-row span { font-weight:700;color:var(--navy); }
-
-  .anl-rec-list { display:flex;flex-direction:column;gap:10px; }
-  .anl-rec-item { display:flex;align-items:flex-start;gap:12px;background:var(--gray-50);border-radius:10px;padding:12px 16px; }
-  .anl-rec-num { font-family:var(--font-h);font-size:16px;font-weight:900;color:var(--blue);min-width:24px; }
-  .anl-rec-bank { font-weight:800;font-size:13px;color:var(--navy); }
-  .anl-rec-why { font-size:11px;color:var(--gray-500);margin-top:2px; }
-
-  .anl-risk-list { display:flex;flex-direction:column;gap:6px; }
-  .anl-risk-item { font-size:12px;color:#92400e;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:7px 12px; }
-  .anl-risk-item.hard { color:var(--danger);background:rgba(239,68,68,0.06);border-color:rgba(239,68,68,0.2); }
-
 </style>
 </head>
 <body>
@@ -13315,7 +13256,6 @@
         <div class="bnk-detail-title" style="display:flex;align-items:center;gap:10px">${bankLogo(bankName,32)}${bankName}</div>
       </div>
       <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">${bankName} — Application Stats</div>
-      <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">${bankName} — Application Stats</div>
       <div class="bnk-kpi-row">
         <div class="bnk-kpi"><div class="bnk-kpi-val">${s.clientCount}</div><div class="bnk-kpi-lbl">Clients</div></div>
         <div class="bnk-kpi"><div class="bnk-kpi-val">${s.apps}</div><div class="bnk-kpi-lbl">Applications</div></div>
@@ -13458,7 +13398,6 @@
   }
 
   var WIZ_STEPS = [
-    'Client Snapshot',
     'Credit Profile',
     'Income & Revenue',
     'Personal Banking',
@@ -13468,52 +13407,217 @@
     'Application Details'
   ];
 
-  function wizSaveCurrentFields() {
+  function wizFormatDollar(el) {
+    var raw = el.value.replace(/[^0-9]/g, '');
+    if (raw === '') { el.value = ''; return; }
+    el.value = Number(raw).toLocaleString();
+  }
+  function wizFormatPct(el) {
+    var raw = el.value.replace(/[^0-9.]/g, '');
+    el.value = raw ? raw + '%' : '';
+  }
+  function wizTogglePersonalFields(val) {
+    var disabled = val === 'no';
+    ['wiz-personal-yrs','wiz-personal-mos','wiz-personal-balance'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.disabled = disabled;
+      el.style.opacity = disabled ? '0.35' : '1';
+      el.style.pointerEvents = disabled ? 'none' : '';
+      if (disabled) el.value = '';
+    });
+  }
+  function wizToggleBizFields(val) {
+    var existingEl = document.getElementById('wiz-biz-existing-fields');
+    var newEl      = document.getElementById('wiz-biz-new-fields');
+    if (existingEl) existingEl.style.display = (val === 'existing') ? '' : 'none';
+    if (newEl)      newEl.style.display      = (val === 'new')      ? '' : 'none';
+    // Clear hidden fields
+    if (val !== 'existing') {
+      ['wiz-biz-yrs','wiz-biz-mos','wiz-biz-balance'].forEach(function(id){
+        var el = document.getElementById(id); if (el) el.value = '';
+      });
+    }
+    if (val !== 'new') {
+      var dep = document.getElementById('wiz-biz-deposit'); if (dep) dep.value = '';
+    }
+  }
+  function wizMatchIndustry(raw) {
+    if (!raw) return '';
+    if (raw.indexOf(' | ') !== -1) return raw;
+    var lower = raw.toLowerCase().trim();
+    var opts = [
+      'Accounting & Bookkeeping | 541219',
+      'Auto Repair | 811111',
+      'Beauty / Salon / Barber | 812112',
+      'Catering | 722320',
+      'Childcare / Daycare | 624410',
+      'Cleaning / Janitorial | 561720',
+      'Consulting | 541611',
+      'Construction | 238210',
+      'E-commerce | 454110',
+      'Education / Tutoring | 611691',
+      'Fitness / Gym | 611620',
+      'Food Manufacturing | 311999',
+      'Healthcare / Medical | 621111',
+      'Import / Export | 425120',
+      'Insurance Agency | 524210',
+      'Landscaping | 561730',
+      'Legal Services | 541110',
+      'Manufacturing | 339999',
+      'Marketing / Advertising | 541810',
+      'Non-profit | 813410',
+      'Photography / Videography | 541922',
+      'Printing / Publishing | 511199',
+      'Property Management | 531311',
+      'Real Estate | 531210',
+      'Restaurant / Food Service | 722515',
+      'Retail | 445110',
+      'Security Services | 561621',
+      'Staffing Agency | 561311',
+      'Technology / IT | 541511',
+      'Transportation / Trucking | 484110',
+      'Wholesale / Distribution | 425120'
+    ];
+    for (var i = 0; i < opts.length; i++) {
+      var name = opts[i].split(' | ')[0].toLowerCase();
+      var parts = name.split(/[\/,&]/);
+      for (var p = 0; p < parts.length; p++) {
+        var part = parts[p].trim();
+        if (part && (lower.indexOf(part) !== -1 || part.indexOf(lower) !== -1)) return opts[i];
+      }
+    }
+    return '';
+  }
+  function wizUpdateNaics(val) {
+    var el = document.getElementById('wiz-naics-display');
+    if (!el) return;
+    var code = val ? val.split(' | ')[1] : '';
+    el.textContent = code || '—';
+  }
+  function wizDenialMultiSelect(saved) {
+      var REASONS = [
+        'Low Credit Score',
+        'High Credit Utilization',
+        'Too Many Inquiries',
+        'Collections / Derogatory Marks',
+        'Late Payments / Delinquencies',
+        'Insufficient Income',
+        'High Debt-to-Income (DTI)',
+        'Short Time in Business',
+        'Insufficient Business Revenue',
+        'No Business Bank Account',
+        'Low Average Daily Balance',
+        'NSF / Overdrafts on Bank Statements',
+        'Bankruptcy on File',
+        'No Established Business Credit',
+        'High-Risk Industry / NAICS Code',
+        'Insufficient Collateral',
+        'Fraud Alert / Frozen Credit',
+        'Missing Documentation',
+        'Too Many Open Accounts',
+        'Requires Existing Relationship',
+        'Insufficient Employment History',
+        'Insufficient Time at Address'
+      ];
+      var vals = saved ? saved.split('|') : [];
+      var tagHtml = vals.length
+        ? vals.map(function(v){
+            return '<span class="denial-tag" style="display:inline-flex;align-items:center;background:#dbeafe;color:#1e40af;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin:2px">' + v + '</span>';
+          }).join('')
+        : '<span id="wiz-denial-ph" style="font-size:13px;color:var(--gray-400)">Select denial reasons...</span>';
+      var rows = REASONS.map(function(r) {
+        var chk = vals.indexOf(r) !== -1 ? ' checked' : '';
+        return '<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-radius:6px" onmouseover="this.style.background=\'#f1f5f9\'" onmouseout="this.style.background=\'\'"><input type="checkbox" value="' + r + '" onchange="wizDenialChange()"' + chk + ' style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer"> <span style="font-size:13px;color:#0f2044">' + r + '</span></label>';
+      }).join('');
+      var safeVal = saved.replace(/"/g, '&quot;');
+      return '<div class="wiz-field">'
+        + '<div class="wiz-field-label">Denial Reason (if denied)</div>'
+        + '<input type="hidden" id="wiz-denial" value="' + safeVal + '">'
+        + '<div id="wiz-denial-box" onclick="wizToggleDenialDD(event)" style="min-height:38px;border:1.5px solid var(--gray-200);border-radius:8px;padding:5px 10px;cursor:pointer;background:#fff;display:flex;flex-wrap:wrap;align-items:center;gap:4px;position:relative">' + tagHtml + '</div>'
+        + '<div id="wiz-denial-dd" style="display:none;position:absolute;z-index:9999;background:#fff;border:1.5px solid var(--gray-200);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:8px;max-height:280px;overflow-y:auto;width:460px;margin-top:2px">' + rows + '</div>'
+        + '</div>';
+    }
+    function wizToggleDenialDD(e) {
+      if (e) e.stopPropagation();
+      var dd = document.getElementById('wiz-denial-dd');
+      if (!dd) return;
+      var open = dd.style.display !== 'none';
+      dd.style.display = open ? 'none' : 'block';
+      if (!open) {
+        setTimeout(function() {
+          document.addEventListener('click', function _closeDenial(ev) {
+            var dd2 = document.getElementById('wiz-denial-dd');
+            var box = document.getElementById('wiz-denial-box');
+            if (dd2 && !dd2.contains(ev.target) && box && !box.contains(ev.target)) {
+              dd2.style.display = 'none';
+              document.removeEventListener('click', _closeDenial);
+            }
+          });
+        }, 0);
+      }
+    }
+    function wizDenialChange() {
+      var dd  = document.getElementById('wiz-denial-dd');
+      var inp = document.getElementById('wiz-denial');
+      var box = document.getElementById('wiz-denial-box');
+      if (!dd || !inp || !box) return;
+      var checked = Array.from(dd.querySelectorAll('input[type=checkbox]:checked')).map(function(cb){ return cb.value; });
+      inp.value = checked.join('|');
+      var oldTags = box.querySelectorAll('.denial-tag');
+      oldTags.forEach(function(t){ t.remove(); });
+      var ph = document.getElementById('wiz-denial-ph');
+      if (ph) ph.style.display = checked.length ? 'none' : '';
+      checked.forEach(function(v) {
+        var tag = document.createElement('span');
+        tag.className = 'denial-tag';
+        tag.style.cssText = 'display:inline-flex;align-items:center;background:#dbeafe;color:#1e40af;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin:2px';
+        tag.textContent = v;
+        box.appendChild(tag);
+      });
+    }
+    function wizSaveCurrentFields() {
     var w = window._wiz;
     if (!w) return;
     var s = w.step;
     var g = function(id){ var el = document.getElementById(id); return el ? el.value : ''; };
 
     if (s === 0) {
-      // snapshot: read-only confirm
+      // Credit Profile: read-only
     } else if (s === 1) {
-      // Credit Profile: read-only confirm
-    } else if (s === 2) {
       // Income & Revenue
-      w.data.annualIncome   = g('wiz-annual-income');
-      w.data.monthlySales   = g('wiz-monthly-sales');
-      w.data.loanAmount     = g('wiz-loan-amount');
-      w.data.ownership      = g('wiz-ownership');
-      w.data.industry       = g('wiz-industry');
-      w.data.employees      = g('wiz-employees');
-    } else if (s === 3) {
+      w.data.annualIncome = g('wiz-annual-income');
+      w.data.loanAmount   = g('wiz-loan-amount');
+      w.data.ownership         = g('wiz-ownership');
+      w.data.industry          = g('wiz-industry');
+      w.data.employees         = g('wiz-employees');
+    } else if (s === 2) {
       // Personal Banking
       w.data.hasPersonalAccount = g('wiz-has-personal');
-      w.data.personalAcctYrs    = g('wiz-personal-yrs');
-      w.data.personalAcctMos    = g('wiz-personal-mos');
-      w.data.personalBalance    = g('wiz-personal-balance');
-    } else if (s === 4) {
+      w.data.personalAcctYrs   = g('wiz-personal-yrs');
+      w.data.personalAcctMos   = g('wiz-personal-mos');
+      w.data.personalBalance   = g('wiz-personal-balance');
+    } else if (s === 3) {
       // Business Banking
       w.data.hasBizAccount = g('wiz-has-biz');
       w.data.bizAcctYrs    = g('wiz-biz-yrs');
       w.data.bizAcctMos    = g('wiz-biz-mos');
       w.data.bizBalance    = g('wiz-biz-balance');
-      w.data.bizMonthlyRevenue = g('wiz-biz-rev');
+      w.data.bizDeposit    = g('wiz-biz-deposit');
+      w.data.bizAcctType   = g('wiz-biz-acct-type');
+      w.data.bizAcctOpened = g('wiz-biz-opened');
+    } else if (s === 4) {
+      // Credit Cards — personal is auto from credit report
+      w.data.bizCCCard    = g('wiz-biz-cc-card');
+      w.data.bizCCBalance = g('wiz-biz-cc-balance');
+      w.data.bizCCOpened  = g('wiz-biz-cc-opened');
     } else if (s === 5) {
-      // Credit Cards
-      w.data.hasPersonalCC   = g('wiz-has-personal-cc');
-      w.data.personalCCYrs   = g('wiz-personal-cc-yrs');
-      w.data.personalCCMos   = g('wiz-personal-cc-mos');
-      w.data.personalCCSpend = g('wiz-personal-cc-spend');
-      w.data.hasBizCC        = g('wiz-has-biz-cc');
-      w.data.bizCCSpend      = g('wiz-biz-cc-spend');
-    } else if (s === 6) {
       // Debt & DTI
-      w.data.dti           = g('wiz-dti');
-      w.data.monthlyDebt   = g('wiz-monthly-debt');
+      w.data.dti             = g('wiz-dti');
+      w.data.monthlyDebt     = g('wiz-monthly-debt');
       w.data.hasExistingLoan = g('wiz-has-loan');
       w.data.existingLoanBal = g('wiz-loan-bal');
-    } else if (s === 7) {
+    } else if (s === 6) {
       // Application Details
       w.data.dateApplied  = g('wiz-date');
       w.data.amount       = g('wiz-amount');
@@ -13522,7 +13626,6 @@
       w.data.notes        = g('wiz-notes');
     }
   }
-
   function wizNext() {
     var w = window._wiz;
     if (!w) return;
@@ -13548,8 +13651,12 @@
   function wizCancel() {
     var wrap = document.getElementById('bnk-questionnaire-wrap');
     if (wrap) wrap.innerHTML = '';
-    var inp = document.getElementById('bnk-client-pick');
+    var inp = document.getElementById('bnk-client-search');
     if (inp) inp.value = '';
+    var sel = document.getElementById('bnk-selected-client');
+    if (sel) sel.innerHTML = '';
+    var res = document.getElementById('bnk-search-results');
+    if (res) res.style.display = 'none';
     window._wiz = null;
   }
 
@@ -13625,18 +13732,18 @@
       + '</div>';
   }
 
-  function wizInput(id, label, placeholder, prefill, type) {
+  function wizInput(id, label, placeholder, prefill, type, oninput) {
     var t = type || 'text';
     var autoClass = prefill ? ' auto-prefill' : '';
     var badge = prefill ? ' <span class="wiz-autobadge">AUTO</span>' : '';
     var val = prefill || '';
     return '<div class="wiz-field' + autoClass + '">'
       + '<label class="wiz-field-label" for="' + id + '">' + label + badge + '</label>'
-      + '<input class="wiz-input' + (prefill ? ' wiz-prefilled' : '') + '" id="' + id + '" type="' + t + '" placeholder="' + placeholder + '" value="' + val + '">'
+      + '<input class="wiz-input' + (prefill ? ' wiz-prefilled' : '') + '" id="' + id + '" type="' + t + '" placeholder="' + placeholder + '" value="' + val + '"' + (oninput ? ' oninput="' + oninput + '"' : '') + '>'
       + '</div>';
   }
 
-  function wizSelect(id, label, options, prefill) {
+  function wizSelect(id, label, options, prefill, onchange) {
     var autoClass = prefill ? ' auto-prefill' : '';
     var badge = prefill ? ' <span class="wiz-autobadge">AUTO</span>' : '';
     var opts = options.map(function(o){
@@ -13645,9 +13752,10 @@
       var sel = (prefill && String(prefill) === String(v)) ? ' selected' : '';
       return '<option value="' + v + '"' + sel + '>' + l + '</option>';
     }).join('');
+    var onchAttr = onchange ? ' onchange="' + onchange + '"' : '';
     return '<div class="wiz-field' + autoClass + '">'
       + '<label class="wiz-field-label" for="' + id + '">' + label + badge + '</label>'
-      + '<select class="wiz-input' + (prefill ? ' wiz-prefilled' : '') + '" id="' + id + '">' + opts + '</select>'
+      + '<select class="wiz-input' + (prefill ? ' wiz-prefilled' : '') + '" id="' + id + '"' + onchAttr + '>' + opts + '</select>'
       + '</div>';
   }
 
@@ -13675,42 +13783,7 @@
     var wd = w.data;
 
     if (s === 0) {
-      // ── STEP 0: Client Snapshot
-      var ficoColor = (w.fico && Number(w.fico) >= 700) ? 'var(--success)' : (w.fico && Number(w.fico) >= 650 ? 'var(--warning)' : 'var(--danger)');
-      var existingHtml = '';
-      if (w.existingRows.length) {
-        existingHtml = w.existingRows.map(function(r){
-          var cls = r.status === 'approved' ? 'approved' : (r.status === 'denied' ? 'denied' : (r.status === 'applied' ? 'applied' : 'pending'));
-          return '<div class="bapp-card-chip">'
-            + '<div><div class="bapp-card-name">' + (r.card || w.bankName) + '</div>'
-            + '<div class="bapp-card-sub">' + (r.introPeriod || '') + '</div></div>'
-            + '<span class="bnk-app-chip ' + cls + '">' + (r.status || 'pending') + (r.amount ? ' · $' + Number(r.amount).toLocaleString() : '') + '</span></div>';
-        }).join('');
-      }
-      if (w.loggedApps.length) {
-        existingHtml += w.loggedApps.map(function(a){
-          var cls = a.outcome === 'approved' ? 'approved' : (a.outcome === 'denied' ? 'denied' : 'pending');
-          var dateStr = a.date ? new Date(a.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-          return '<div class="bapp-card-chip">'
-            + '<div><div class="bapp-card-name">' + w.bankName + '</div>'
-            + '<div class="bapp-card-sub">' + dateStr + '</div></div>'
-            + '<span class="bnk-app-chip ' + cls + '">' + a.outcome + (a.amount ? ' · $' + Number(a.amount).toLocaleString() : '') + '</span></div>';
-        }).join('');
-      }
-      if (!existingHtml) existingHtml = '<div style="font-size:12px;color:var(--gray-400);font-style:italic">No prior applications at ' + w.bankName + '</div>';
-
-      body = '<div class="wiz-snapshot-grid">'
-        + wizAutoField('Full Name', (c ? c.fname + ' ' + c.lname : '—'))
-        + wizAutoField('FICO Score', w.fico || '—', { color: w.fico ? ficoColor : '' })
-        + wizAutoField('State', c && c.state ? c.state : (ob.state || '—'))
-        + wizAutoField('Client Status', c && c.status ? c.status : '—')
-        + '</div>'
-        + '<div class="wiz-divider"></div>'
-        + '<div class="wiz-field-label" style="margin-bottom:8px;font-weight:700">Prior Applications at ' + w.bankName + '</div>'
-        + '<div class="bapp-card-rows">' + existingHtml + '</div>';
-
-    } else if (s === 1) {
-      // ── STEP 1: Credit Profile
+      // ── STEP 0: Credit Profile
       var ficoCol2 = (w.fico && Number(w.fico) >= 700) ? 'var(--success)' : (w.fico && Number(w.fico) >= 650 ? 'var(--warning)' : 'var(--danger)');
       var collColor = (w.colls > 0) ? 'var(--danger)' : 'var(--success)';
       var lateColor = (w.lateAcc > 0) ? 'var(--danger)' : 'var(--success)';
@@ -13726,88 +13799,195 @@
         + '<div class="wiz-divider"></div>'
         + '<div style="font-size:12px;color:var(--gray-400);font-style:italic">Review the credit data above. Click Next to continue.</div>';
 
-    } else if (s === 2) {
+    } else if (s === 1) {
       // ── STEP 2: Income & Revenue
-      var pBanks = Array.isArray(ob.personalBanks) ? ob.personalBanks.join(', ') : (ob.personalBanks || '');
-      var bBanks  = Array.isArray(ob.bizBanks) ? ob.bizBanks.join(', ') : (ob.bizBanks || '');
+      var _pList = Array.isArray(ob.personalBanks) ? ob.personalBanks : (ob.personalBanks ? [ob.personalBanks] : []);
+      var _bList  = Array.isArray(ob.bizBanks)      ? ob.bizBanks      : (ob.bizBanks      ? [ob.bizBanks]      : []);
+      var _bnkLower = (w.bankName || '').toLowerCase();
+      var _hasPersonal = _pList.some(function(b){ return b && b.toLowerCase().indexOf(_bnkLower) !== -1; });
+      var _hasBiz      = _bList.some(function(b){  return b && b.toLowerCase().indexOf(_bnkLower) !== -1; });
+      var pBanks = _hasPersonal ? (w.bankName + ' (Personal)') : "Client doesn't have a personal account here";
+      var bBanks  = _hasBiz      ? (w.bankName + ' (Business)') : "Client doesn't have a business account here";
       body = '<div class="wiz-grid">'
-        + wizInput('wiz-annual-income', 'Annual Income ($)', 'e.g. 120000', wd.annualIncome || ob.annualIncome || '', 'text')
-        + wizInput('wiz-monthly-sales', 'Monthly Revenue ($)', 'e.g. 25000', wd.monthlySales || ob.monthlySales || '', 'text')
-        + wizInput('wiz-loan-amount', 'Loan Requested ($)', 'e.g. 50000', wd.loanAmount || ob.loanAmount || '', 'text')
-        + wizInput('wiz-ownership', 'Ownership %', 'e.g. 100', wd.ownership || ob.ownership || '', 'text')
-        + wizInput('wiz-industry', 'Industry', 'e.g. Technology', wd.industry || ob.industry || '', 'text')
+        + wizInput('wiz-annual-income', 'Annual Income ($)', 'e.g. 120000', wd.annualIncome || ob.annualIncome || '', 'text', 'wizFormatDollar(this)')
+        + wizInput('wiz-loan-amount', 'Loan Requested ($)', 'e.g. 50000', wd.loanAmount || ob.loanAmount || '', 'text', 'wizFormatDollar(this)')
+        + wizInput('wiz-ownership', 'Ownership %', 'e.g. 100', wd.ownership || ob.ownership || '', 'text', 'wizFormatPct(this)')
+        + wizSelect('wiz-industry', 'Industry / NAICS Code', [
+            { value: '', label: '— Select Industry —' },
+            { value: 'Accounting & Bookkeeping | 541219', label: 'Accounting & Bookkeeping — 541219' },
+            { value: 'Auto Repair | 811111', label: 'Auto Repair / Automotive — 811111' },
+            { value: 'Beauty / Salon / Barber | 812112', label: 'Beauty / Salon / Barber — 812112' },
+            { value: 'Catering | 722320', label: 'Catering — 722320' },
+            { value: 'Childcare / Daycare | 624410', label: 'Childcare / Daycare — 624410' },
+            { value: 'Cleaning / Janitorial | 561720', label: 'Cleaning / Janitorial — 561720' },
+            { value: 'Consulting | 541611', label: 'Consulting / Professional Services — 541611' },
+            { value: 'Construction | 238210', label: 'Construction (Electrical) — 238210' },
+            { value: 'E-commerce | 454110', label: 'E-commerce / Online Retail — 454110' },
+            { value: 'Education / Tutoring | 611691', label: 'Education / Tutoring — 611691' },
+            { value: 'Fitness / Gym | 611620', label: 'Fitness / Gym — 611620' },
+            { value: 'Food Manufacturing | 311999', label: 'Food Manufacturing — 311999' },
+            { value: 'Healthcare / Medical | 621111', label: 'Healthcare / Medical — 621111' },
+            { value: 'Import / Export | 425120', label: 'Import / Export — 425120' },
+            { value: 'Insurance Agency | 524210', label: 'Insurance Agency — 524210' },
+            { value: 'Landscaping | 561730', label: 'Landscaping — 561730' },
+            { value: 'Legal Services | 541110', label: 'Legal Services — 541110' },
+            { value: 'Manufacturing | 339999', label: 'Manufacturing — 339999' },
+            { value: 'Marketing / Advertising | 541810', label: 'Marketing / Advertising — 541810' },
+            { value: 'Non-profit | 813410', label: 'Non-profit / Civic Org — 813410' },
+            { value: 'Photography / Videography | 541922', label: 'Photography / Videography — 541922' },
+            { value: 'Printing / Publishing | 511199', label: 'Printing / Publishing — 511199' },
+            { value: 'Property Management | 531311', label: 'Property Management — 531311' },
+            { value: 'Real Estate | 531210', label: 'Real Estate — 531210' },
+            { value: 'Restaurant / Food Service | 722515', label: 'Restaurant / Food Service — 722515' },
+            { value: 'Retail | 445110', label: 'Retail (Grocery/Staples) — 445110' },
+            { value: 'Security Services | 561621', label: 'Security Services — 561621' },
+            { value: 'Staffing Agency | 561311', label: 'Staffing Agency — 561311' },
+            { value: 'Technology / IT | 541511', label: 'Technology / IT — 541511' },
+            { value: 'Transportation / Trucking | 484110', label: 'Transportation / Trucking — 484110' },
+            { value: 'Wholesale / Distribution | 425120', label: 'Wholesale / Distribution — 425120' }
+          ], wizMatchIndustry(wd.industry || ob.industry || ''), 'wizUpdateNaics(this.value)')
         + wizInput('wiz-employees', 'Employees', 'e.g. 5', wd.employees || ob.employees || '', 'text')
+        + (function(){ var _naics = wizMatchIndustry(wd.industry || ob.industry || '').split(' | ')[1] || ''; return '<div class="wiz-field auto"><div class="wiz-field-label">NAICS Code <span class="wiz-autobadge">AUTO</span></div><div id="wiz-naics-display" class="wiz-field-val" style="font-size:15px;font-weight:700;color:var(--navy);letter-spacing:0.04em">' + (_naics || '—') + '</div></div>'; })()
         + '</div>'
         + '<div class="wiz-divider"></div>'
         + '<div class="wiz-grid">'
-        + '<div class="wiz-field auto"><div class="wiz-field-label">Personal Banks <span class="wiz-autobadge">AUTO</span></div><div class="wiz-field-val" style="font-size:12px">' + (pBanks || '—') + '</div></div>'
-        + '<div class="wiz-field auto"><div class="wiz-field-label">Business Banks <span class="wiz-autobadge">AUTO</span></div><div class="wiz-field-val" style="font-size:12px">' + (bBanks || '—') + '</div></div>'
+        + '<div class="wiz-field auto"><div class="wiz-field-label">Personal Account at ' + w.bankName + ' <span class="wiz-autobadge">AUTO</span></div><div class="wiz-field-val" style="font-size:12px;color:' + (_hasPersonal ? 'var(--success)' : 'var(--gray-400)') + '">' + pBanks + '</div></div>'
+        + '<div class="wiz-field auto"><div class="wiz-field-label">Business Account at ' + w.bankName + ' <span class="wiz-autobadge">AUTO</span></div><div class="wiz-field-val" style="font-size:12px;color:' + (_hasBiz ? 'var(--success)' : 'var(--gray-400)') + '">' + bBanks + '</div></div>'
         + '</div>';
 
-    } else if (s === 3) {
+    } else if (s === 2) {
       // ── STEP 3: Personal Banking
       body = '<div class="wiz-grid">'
         + wizSelect('wiz-has-personal', 'Has Personal Account?', [
             { value: '', label: '— Select —' },
             { value: 'yes', label: 'Yes' },
             { value: 'no',  label: 'No'  }
-          ], wd.hasPersonalAccount || '')
+          ], wd.hasPersonalAccount || '', 'wizTogglePersonalFields(this.value)')
         + '<div class="wiz-field"><label class="wiz-field-label">How Long (Personal Account)</label><div style="display:flex;gap:8px"><input class="wiz-input" id="wiz-personal-yrs" type="number" min="0" placeholder="Years" value="' + (wd.personalAcctYrs || '') + '" style="width:50%"><input class="wiz-input" id="wiz-personal-mos" type="number" min="0" max="11" placeholder="Months" value="' + (wd.personalAcctMos || '') + '" style="width:50%"></div></div>'
         + wizInput('wiz-personal-balance', 'Avg Monthly Balance ($)', 'e.g. 5000', wd.personalBalance || '', 'text')
         + '</div>';
+      setTimeout(function(){ wizTogglePersonalFields(wd.hasPersonalAccount||''); }, 10);
 
-    } else if (s === 4) {
+    } else if (s === 3) {
       // ── STEP 4: Business Banking
       body = '<div class="wiz-grid">'
-        + wizSelect('wiz-has-biz', 'Has Business Account?', [
+        + wizSelect('wiz-has-biz', 'Business Account Status', [
+            { value: '',        label: '— Select —' },
+            { value: 'existing', label: 'Has Existing Account' },
+            { value: 'new',      label: 'Opening New Account' }
+          ], wd.hasBizAccount || '', 'wizToggleBizFields(this.value)')
+        + wizSelect('wiz-biz-acct-type', 'Account Type at ' + w.bankName, [
             { value: '', label: '— Select —' },
-            { value: 'yes', label: 'Yes' },
-            { value: 'no',  label: 'No'  }
-          ], wd.hasBizAccount || '')
+            { value: 'Business Checking', label: 'Business Checking' },
+            { value: 'Business Savings',  label: 'Business Savings'  },
+            { value: 'Business Money Market', label: 'Business Money Market' },
+            { value: 'Business Premium Checking', label: 'Business Premium Checking' },
+            { value: 'Business Interest Checking', label: 'Business Interest Checking' }
+          ], wd.bizAcctType || '')
+        + '</div>'
+        + '<div id="wiz-biz-existing-fields" class="wiz-grid" style="display:none">'
         + '<div class="wiz-field"><label class="wiz-field-label">How Long (Business Account)</label><div style="display:flex;gap:8px"><input class="wiz-input" id="wiz-biz-yrs" type="number" min="0" placeholder="Years" value="' + (wd.bizAcctYrs || '') + '" style="width:50%"><input class="wiz-input" id="wiz-biz-mos" type="number" min="0" max="11" placeholder="Months" value="' + (wd.bizAcctMos || '') + '" style="width:50%"></div></div>'
-        + wizInput('wiz-biz-balance', 'Avg Monthly Business Balance ($)', 'e.g. 10000', wd.bizBalance || '', 'text')
-        + wizInput('wiz-biz-rev', 'Monthly Business Revenue ($)', 'e.g. 25000', wd.bizMonthlyRevenue || ob.monthlySales || '', 'text')
+        + wizInput('wiz-biz-balance', 'Avg Monthly Business Balance ($)', 'e.g. 10,000', wd.bizBalance || '', 'text', 'wizFormatDollar(this)')
+        + '</div>'
+        + '<div id="wiz-biz-new-fields" class="wiz-grid" style="display:none">'
+        + wizInput('wiz-biz-deposit', 'Amount Deposited ($)', 'e.g. 5,000', wd.bizDeposit || '', 'text', 'wizFormatDollar(this)')
+        + wizInput('wiz-biz-opened', 'Date Account Opened', '', wd.bizAcctOpened || '', 'date')
+        + '</div>';
+      setTimeout(function(){ wizToggleBizFields(wd.hasBizAccount||''); }, 10);
+
+    } else if (s === 4) {
+      // ── STEP 5: Credit Cards
+      var _allAccts = (w.cr && w.cr.accounts) ? w.cr.accounts : [];
+      var _bnkWords = w.bankName.toLowerCase().split(/\s+/).filter(function(wrd){ return wrd.length > 2; });
+      // Match credit report accounts to this bank by creditor name
+      // Credit reports show the bank name (e.g. "CHASE", "AMERICAN EXPRESS") as the account name
+      var _bankAliases = {
+        'american express': ['american express','amex'],
+        'amex':             ['american express','amex'],
+        'bank of america':  ['bank of america','bankamerica','boa'],
+        'wells fargo':      ['wells fargo','wellsfargo'],
+        'us bank':          ['us bank','usbank','u.s. bank'],
+        'td bank':          ['td bank','tdbank']
+      };
+      var _bnkKey2 = (w.bankName || '').toLowerCase();
+      var _matchTerms = _bankAliases[_bnkKey2] || [_bnkKey2];
+      var _personalCCs = _allAccts.filter(function(a){
+        if (!a.isOpen) return false;
+        if (a.type !== 'Credit Card' && a.type !== 'Line of Credit') return false;
+        var aName = (a.name || '').toLowerCase();
+        return _matchTerms.some(function(term){ return aName.indexOf(term) !== -1; });
+      });
+      var _ccHtml = '';
+      if (_personalCCs.length) {
+        _ccHtml = _personalCCs.map(function(a){
+          var authTag = a.isAuthUser
+            ? '<span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;margin-left:6px">Auth User</span>'
+            : '<span style="background:#d1fae5;color:#065f46;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;margin-left:6px">Primary</span>';
+          var bal  = a.balance != null ? '$' + Number(a.balance).toLocaleString() : '—';
+          var lim  = a.limit   != null ? '$' + Number(a.limit).toLocaleString()   : '—';
+          var util = a.util    != null ? Number(a.util) : null;
+          var utilColor = util == null ? 'var(--gray-500)' : util >= 30 ? '#ef4444' : util >= 10 ? '#f59e0b' : '#10b981';
+          var utilStr = util != null ? util + '%' : '—';
+          return '<div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:10px 14px;margin-bottom:8px">'
+            + '<div style="margin-bottom:8px"><span style="font-size:13px;font-weight:700;color:var(--navy)">' + a.name + '</span></div>'
+            + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">'
+            + '<div style="background:var(--white);border:1px solid var(--gray-100);border-radius:6px;padding:7px 10px"><div style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Limit</div><div style="font-size:13px;font-weight:700;color:var(--navy)">' + lim + '</div></div>'
+            + '<div style="background:var(--white);border:1px solid var(--gray-100);border-radius:6px;padding:7px 10px"><div style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Balance</div><div style="font-size:13px;font-weight:700;color:var(--navy)">' + bal + '</div></div>'
+            + '<div style="background:var(--white);border:1px solid var(--gray-100);border-radius:6px;padding:7px 10px"><div style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Utilization</div><div style="font-size:13px;font-weight:700;color:' + utilColor + '">' + utilStr + '</div></div>'
+            + '<div style="background:var(--white);border:1px solid var(--gray-100);border-radius:6px;padding:7px 10px"><div style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Opened</div><div style="font-size:13px;font-weight:700;color:var(--navy)">' + (a.dateOpened || '—') + '</div></div>'
+            + '<div style="background:' + (a.isAuthUser ? '#fef9ec' : '#f0fdf4') + ';border:1px solid ' + (a.isAuthUser ? '#fde68a' : '#bbf7d0') + ';border-radius:6px;padding:7px 10px"><div style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Role</div><div style="font-size:12px;font-weight:700;color:' + (a.isAuthUser ? '#92400e' : '#065f46') + '">' + (a.isAuthUser ? 'Auth User' : 'Primary') + '</div></div>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+      } else {
+        _ccHtml = '<div style="font-size:12px;color:var(--gray-400);font-style:italic;padding:8px 0">No ' + w.bankName + ' credit cards found in credit report</div>';
+      }
+      var BIZ_CARDS = {
+        'Chase': ['Chase Ink Business Cash','Chase Ink Business Unlimited','Chase Ink Business Preferred','Chase Ink Business Premier'],
+        'American Express': ['Amex Blue Business Cash','Amex Blue Business Plus','Amex Business Gold','Amex Business Platinum','Amex Business Green'],
+        'Bank of America': ['BOA Business Advantage Cash Rewards','BOA Business Advantage Unlimited Cash Rewards','BOA Business Advantage Travel Rewards'],
+        'Capital One': ['Capital One Spark Cash','Capital One Spark Cash Plus','Capital One Spark Miles','Capital One Spark Classic'],
+        'Citi': ['Citi Business AAdvantage Platinum Select','Citi Costco Anywhere Visa Business'],
+        'Wells Fargo': ['Wells Fargo Business Platinum Card','Wells Fargo Business Elite Signature Card'],
+        'US Bank': ['US Bank Business Triple Cash Rewards','US Bank Business Altitude Connect'],
+        'Discover': ['Discover it Business Card'],
+        'Truist': ['Truist Business Cash Rewards','Truist One Business'],
+        'PNC': ['PNC Business Visa Credit Card','PNC Cash Rewards Visa Business'],
+        'TD Bank': ['TD Business Solutions Credit Card'],
+        'Flagstar': ['Flagstar Business Visa Platinum']
+      };
+      var _bizCards = BIZ_CARDS[w.bankName] || [];
+      var _bizOpts = [{value:'',label:'— Select Card —'}].concat(_bizCards.map(function(cn){ return {value:cn,label:cn}; }));
+      body = '<div>'
+        + '<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px">Personal Credit Cards <span class="wiz-autobadge">AUTO</span></div>'
+        + _ccHtml
+        + '<div class="wiz-divider"></div>'
+        + '<div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--gray-500);text-transform:uppercase;margin-bottom:8px;margin-top:4px">Business Credit Card at ' + w.bankName + '</div>'
+        + '<div class="wiz-grid">'
+        + wizSelect('wiz-biz-cc-card', 'Business Card', _bizOpts, wd.bizCCCard || '')
+        + wizInput('wiz-biz-cc-balance', 'Balance ($)', 'e.g. 5000', wd.bizCCBalance || '', 'text', 'wizFormatDollar(this)')
+        + wizInput('wiz-biz-cc-opened', 'Date Opened', '', wd.bizCCOpened || '', 'date')
+        + '</div>'
         + '</div>';
 
     } else if (s === 5) {
-      // ── STEP 5: Credit Cards
-      body = '<div class="wiz-grid">'
-        + wizSelect('wiz-has-personal-cc', 'Has Personal Credit Card?', [
-            { value: '', label: '— Select —' },
-            { value: 'yes', label: 'Yes' },
-            { value: 'no',  label: 'No'  }
-          ], wd.hasPersonalCC || '')
-        + '<div class="wiz-field"><label class="wiz-field-label">How Long (Personal CC)</label><div style="display:flex;gap:8px"><input class="wiz-input" id="wiz-personal-cc-yrs" type="number" min="0" placeholder="Years" value="' + (wd.personalCCYrs || '') + '" style="width:50%"><input class="wiz-input" id="wiz-personal-cc-mos" type="number" min="0" max="11" placeholder="Months" value="' + (wd.personalCCMos || '') + '" style="width:50%"></div></div>'
-        + wizInput('wiz-personal-cc-spend', 'Monthly Personal CC Spend ($)', 'e.g. 2000', wd.personalCCSpend || '', 'text')
-        + '</div>'
-        + '<div class="wiz-divider"></div>'
-        + '<div class="wiz-grid">'
-        + wizSelect('wiz-has-biz-cc', 'Has Business Credit Card?', [
-            { value: '', label: '— Select —' },
-            { value: 'yes', label: 'Yes' },
-            { value: 'no',  label: 'No'  }
-          ], wd.hasBizCC || '')
-        + wizInput('wiz-biz-cc-spend', 'Monthly Business CC Spend ($)', 'e.g. 3000', wd.bizCCSpend || '', 'text')
-        + '</div>';
-
-    } else if (s === 6) {
       // ── STEP 6: Debt & DTI
       body = '<div class="wiz-grid">'
         + wizInput('wiz-dti', 'DTI Ratio (%)', 'e.g. 28', wd.dti || '', 'text')
-        + wizInput('wiz-monthly-debt', 'Total Monthly Debt Payments ($)', 'e.g. 1500', wd.monthlyDebt || '', 'text')
+        + wizInput('wiz-monthly-debt', 'Total Monthly Debt Payments ($)', 'e.g. 1500', wd.monthlyDebt || '', 'text', 'wizFormatDollar(this)')
         + wizSelect('wiz-has-loan', 'Existing Loan at ' + w.bankName + '?', [
             { value: '', label: '— Select —' },
             { value: 'yes', label: 'Yes' },
             { value: 'no',  label: 'No'  }
           ], wd.hasExistingLoan || '')
-        + wizInput('wiz-loan-bal', 'Existing Loan Balance ($)', 'e.g. 20000', wd.existingLoanBal || '', 'text')
+        + wizInput('wiz-loan-bal', 'Existing Loan Balance ($)', 'e.g. 20000', wd.existingLoanBal || '', 'text', 'wizFormatDollar(this)')
         + '</div>';
 
-    } else if (s === 7) {
+    } else if (s === 6) {
       // ── STEP 7: Application Details
       body = '<div class="wiz-grid">'
         + wizInput('wiz-date', 'Date Applied', '', wd.dateApplied || new Date().toISOString().slice(0,10), 'date')
-        + wizInput('wiz-amount', 'Amount Requested ($)', 'e.g. 50000', wd.amount || '', 'text')
+        + wizInput('wiz-amount', 'Amount Requested ($)', 'e.g. 50000', wd.amount || '', 'text', 'wizFormatDollar(this)')
         + wizSelect('wiz-outcome', 'Outcome', [
             { value: 'pending',  label: 'Pending'  },
             { value: 'approved', label: 'Approved' },
@@ -13815,7 +13995,7 @@
           ], wd.outcome || 'pending')
         + '</div>'
         + '<div class="wiz-grid" style="margin-top:12px">'
-        + wizInput('wiz-denial', 'Denial Reason (if denied)', 'e.g. Low FICO, insufficient revenue...', wd.denialReason || '', 'text')
+        + wizDenialMultiSelect(wd.denialReason || '')
         + '</div>'
         + '<div class="wiz-field" style="margin-top:12px"><label class="wiz-field-label" for="wiz-notes">Notes</label>'
         + '<textarea class="wiz-input" id="wiz-notes" placeholder="Additional notes..." style="min-height:80px">' + (wd.notes || '') + '</textarea></div>';
@@ -13835,7 +14015,7 @@
       + '<div class="wiz-header">'
       + '<div><div class="wiz-step-badge">Step ' + (s + 1) + ' of ' + total + '</div>'
       + '<div class="wiz-title">' + WIZ_STEPS[s] + '</div>'
-      + (s === 0 ? '<div class="wiz-subtitle">' + (c ? c.fname + ' ' + c.lname : '') + ' — ' + w.bankName + '</div>' : '')
+      + '<div class="wiz-subtitle">' + (c ? c.fname + ' ' + c.lname : '') + ' — ' + w.bankName + '</div>'
       + '</div>'
       + '<button class="wiz-cancel-x" onclick="wizCancel()" title="Cancel">✕</button>'
       + '</div>'
@@ -14324,482 +14504,6 @@
       + '<div><div class="anl-panel-title">Approval Analysis — ' + c.fname + ' ' + c.lname + '</div>'
       + '<div class="anl-panel-sub">Based on credit profile, banking relationships, income &amp; peer comparison</div></div>'
       + '<button class="anl-close" onclick="document.getElementById(\'client-analysis-overlay\').remove()">✕</button>'
-      + '</div>'
-      + '<div class="anl-body">'
-
-      // Profile Health
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'
-      + '<span class="anl-section-title" style="margin:0">Profile Health</span>'
-      + (health !== null ? '<span style="font-family:var(--font-h);font-size:22px;font-weight:900;color:' + healthColor + '">' + health + '<span style="font-size:13px">/100</span> <span style="font-size:13px;font-weight:600;color:var(--gray-400)">' + healthLabel + '</span></span>' : '')
-      + '</div>'
-      + (health !== null ? '<div class="anl-health-bar-wrap"><div class="anl-health-bar" style="width:' + health + '%;background:' + healthColor + '"></div></div>' : '')
-      + '<div class="anl-profile-chips">' + chips + '</div>'
-
-      // Bank Predictions
-      + '<div class="anl-section-title">Bank Approval Predictions</div>'
-      + '<table class="anl-bank-table">'
-      + '<thead><tr><th>Bank</th><th>Score</th><th>Likelihood</th><th>Relationship</th><th>Est. Amount</th><th>Key Factor</th></tr></thead>'
-      + '<tbody>' + bankRows + '</tbody>'
-      + '</table>'
-
-      // Peer Insights
-      + '<div class="anl-section-title">Peer Insights</div>'
-      + peerHtml
-
-      // Recommendations
-      + '<div class="anl-section-title">Top Recommendations</div>'
-      + '<div class="anl-rec-list">' + recHtml + '</div>'
-
-      // Risk Flags
-      + '<div class="anl-section-title">Risk Flags</div>'
-      + '<div class="anl-risk-list">' + riskHtml + '</div>'
-
-      + '</div></div>';
-
-    document.body.appendChild(overlay);
-  }
-
-
-  // ── CLIENT ANALYSIS ENGINE ───────────────────────────────────────────────
-
-  var BANK_CRITERIA = {
-    'Chase':           { minFico:700, strongFico:740, minIncome:50000, strongIncome:100000, maxInq:5,  maxUtil:30, relWeight:20, bizDepWeight:15, minCreditAge:2, range:[15000,50000], note:'5/24 rule: max 5 new accounts in 24 mo' },
-    'American Express':{ minFico:700, strongFico:750, minIncome:50000, strongIncome:120000, maxInq:6,  maxUtil:25, relWeight:15, bizDepWeight:10, minCreditAge:3, range:[10000,50000], note:'Rewards heavy spenders; avoid 0 balance history' },
-    'Wells Fargo':     { minFico:680, strongFico:720, minIncome:40000, strongIncome:80000,  maxInq:7,  maxUtil:35, relWeight:25, bizDepWeight:20, minCreditAge:2, range:[10000,35000], note:'Relationship banking; deposits heavily weighted' },
-    'Bank of America': { minFico:680, strongFico:720, minIncome:40000, strongIncome:80000,  maxInq:7,  maxUtil:35, relWeight:25, bizDepWeight:20, minCreditAge:2, range:[10000,35000], note:'Preferred Rewards tier boosts limits' },
-    'Citi':            { minFico:700, strongFico:740, minIncome:50000, strongIncome:100000, maxInq:6,  maxUtil:30, relWeight:15, bizDepWeight:10, minCreditAge:2, range:[10000,35000], note:'8/65 rule for multiple Citi cards' },
-    'Capital One':     { minFico:660, strongFico:700, minIncome:35000, strongIncome:70000,  maxInq:8,  maxUtil:40, relWeight:10, bizDepWeight:10, minCreditAge:1, range:[5000,25000],  note:'Flexible on newer credit; Spark for business' },
-    'Discover':        { minFico:670, strongFico:710, minIncome:30000, strongIncome:60000,  maxInq:8,  maxUtil:40, relWeight:5,  bizDepWeight:5,  minCreditAge:1, range:[5000,20000],  note:'Flexible; good for rebuilding' },
-    'US Bank':         { minFico:690, strongFico:730, minIncome:45000, strongIncome:90000,  maxInq:6,  maxUtil:30, relWeight:22, bizDepWeight:18, minCreditAge:2, range:[10000,30000], note:'Existing customers get priority' },
-    'PNC Bank':        { minFico:680, strongFico:720, minIncome:40000, strongIncome:80000,  maxInq:7,  maxUtil:35, relWeight:22, bizDepWeight:18, minCreditAge:2, range:[8000,25000],  note:'Regional focus; relationship driven' },
-    'TD Bank':         { minFico:670, strongFico:710, minIncome:35000, strongIncome:70000,  maxInq:7,  maxUtil:35, relWeight:20, bizDepWeight:15, minCreditAge:1, range:[5000,20000],  note:'East Coast focus; relationship accounts' },
-    'Truist':          { minFico:680, strongFico:720, minIncome:40000, strongIncome:80000,  maxInq:7,  maxUtil:35, relWeight:22, bizDepWeight:18, minCreditAge:2, range:[8000,25000],  note:'Southeast focus; combined SunTrust/BBT' },
-    'Navy Federal CU': { minFico:650, strongFico:700, minIncome:30000, strongIncome:60000,  maxInq:8,  maxUtil:40, relWeight:30, bizDepWeight:20, minCreditAge:1, range:[5000,30000],  note:'Military/family membership required' },
-    'PenFed CU':       { minFico:650, strongFico:700, minIncome:30000, strongIncome:60000,  maxInq:8,  maxUtil:40, relWeight:28, bizDepWeight:18, minCreditAge:1, range:[5000,25000],  note:'Membership open to all; very member-friendly' },
-    'Alliant CU':      { minFico:660, strongFico:700, minIncome:35000, strongIncome:70000,  maxInq:7,  maxUtil:38, relWeight:25, bizDepWeight:15, minCreditAge:1, range:[5000,20000],  note:'Online CU; strong for members' },
-  };
-
-  function calcCreditAge(clientId) {
-    var cr = getCreditData(clientId);
-    if (!cr || !cr.accounts || !cr.accounts.length) return null;
-    var ages = cr.accounts.map(function(a) {
-      if (a.ageYears != null) return Number(a.ageYears);
-      if (a.age != null) {
-        var m = String(a.age).match(/(\d+)\s*yr/i);
-        if (m) return Number(m[1]);
-        var m2 = String(a.age).match(/(\d+)\s*mo/i);
-        if (m2) return Number(m2[1]) / 12;
-      }
-      if (a.opened) {
-        var opened = new Date(a.opened);
-        if (!isNaN(opened)) return (Date.now() - opened.getTime()) / (365.25 * 24 * 3600 * 1000);
-      }
-      return null;
-    }).filter(function(v){ return v !== null && v >= 0; });
-    if (!ages.length) return null;
-    var avg = ages.reduce(function(s,v){ return s+v; },0) / ages.length;
-    var oldest = Math.max.apply(null, ages);
-    return { avg: Math.round(avg * 10) / 10, oldest: Math.round(oldest * 10) / 10 };
-  }
-
-  function getRelationshipData(clientId, bankName) {
-    // 1. Check wizard-logged bank apps for this bank
-    var wizApps = getBankApps(clientId).filter(function(a){ return a.bank === bankName; });
-    if (wizApps.length) {
-      var latest = wizApps[0];
-      return {
-        hasPersonal:    latest.hasPersonalAccount === 'yes',
-        personalYrs:    parseFloat(latest.personalAcctYrs) || 0,
-        personalMos:    parseFloat(latest.personalAcctMos) || 0,
-        personalBal:    parseFloat((latest.personalBalance||'').toString().replace(/[$,]/g,'')) || 0,
-        hasBiz:         latest.hasBizAccount === 'yes',
-        bizYrs:         parseFloat(latest.bizAcctYrs) || 0,
-        bizMos:         parseFloat(latest.bizAcctMos) || 0,
-        bizBal:         parseFloat((latest.bizBalance||'').toString().replace(/[$,]/g,'')) || 0,
-        bizRev:         parseFloat((latest.bizMonthlyRevenue||'').toString().replace(/[$,]/g,'')) || 0,
-        source:         'wizard'
-      };
-    }
-    // 2. Fall back to onboarding data
-    var ob = getOnboardDataForClient(clientId) || {};
-    var personalBanks = Array.isArray(ob.personalBanks) ? ob.personalBanks : (ob.personalBanks ? [ob.personalBanks] : []);
-    var bizBanks      = Array.isArray(ob.bizBanks)      ? ob.bizBanks      : (ob.bizBanks      ? [ob.bizBanks]      : []);
-    var bankLow = bankName.toLowerCase();
-    var hasPersonal = personalBanks.some(function(b){ return b && b.toLowerCase().indexOf(bankLow) > -1; });
-    var hasBiz      = bizBanks.some(function(b){ return b && b.toLowerCase().indexOf(bankLow) > -1; });
-    var monthlySales = parseFloat((ob.monthlySales||'').toString().replace(/[$,]/g,'')) || 0;
-    return {
-      hasPersonal: hasPersonal,
-      personalYrs: 0, personalMos: 0, personalBal: 0,
-      hasBiz: hasBiz, bizYrs: 0, bizMos: 0,
-      bizBal: 0, bizRev: monthlySales,
-      source: 'onboarding'
-    };
-  }
-
-  function parseNum(v) {
-    if (v == null || v === '' || v === '—') return null;
-    var n = parseFloat(String(v).replace(/[$,%]/g,''));
-    return isNaN(n) ? null : n;
-  }
-
-  function scoreClientForBank(clientId, bankName) {
-    var crit = BANK_CRITERIA[bankName];
-    if (!crit) return null;
-
-    var cr  = getCreditData(clientId);
-    var ob  = getOnboardDataForClient(clientId) || {};
-    var d   = getDashData(clientId);
-    var rel = getRelationshipData(clientId, bankName);
-    var age = calcCreditAge(clientId);
-
-    var fico    = parseNum(cr && cr.fico) || parseNum(d && d.creditScore) || null;
-    var inqs    = parseNum(cr && cr.recentInquiries);
-    var colls   = parseNum(cr && cr.collections);
-    var late    = parseNum(cr && cr.late);
-    var accts   = (cr && cr.accounts) ? cr.accounts : [];
-    var utils   = accts.filter(function(a){ return a.util != null; }).map(function(a){ return parseFloat(a.util); });
-    var maxUtil = utils.length ? Math.max.apply(null, utils) : null;
-
-    var annualIncome = parseNum(ob.annualIncome);
-    var monthlyRev   = parseNum(ob.monthlySales) || rel.bizRev || 0;
-    var annualRevEq  = monthlyRev * 12;
-    var effectiveIncome = annualIncome || annualRevEq || null;
-
-    var score    = 0;
-    var reasons  = [];
-    var warnings = [];
-    var hardFail = false;
-
-    // ── FICO (0-30 pts) ──────────────────────────────────────────────────
-    if (fico !== null) {
-      if (fico >= crit.strongFico)                              { score += 30; reasons.push('Strong FICO ' + fico); }
-      else if (fico >= crit.minFico + (crit.strongFico - crit.minFico) * 0.5) { score += 20; reasons.push('Good FICO ' + fico); }
-      else if (fico >= crit.minFico)                            { score += 10; reasons.push('FICO ' + fico + ' meets minimum'); }
-      else                                                       { score -= 25; warnings.push('FICO ' + fico + ' below ' + crit.minFico + ' minimum'); hardFail = fico < crit.minFico - 40; }
-    } else {
-      warnings.push('No FICO score on file');
-    }
-
-    // ── INCOME (0-15 pts) ────────────────────────────────────────────────
-    if (effectiveIncome !== null) {
-      if (effectiveIncome >= crit.strongIncome)          { score += 15; reasons.push('Strong income $' + Math.round(effectiveIncome/1000) + 'k'); }
-      else if (effectiveIncome >= crit.minIncome)        { score += 8;  reasons.push('Income meets minimum'); }
-      else                                                { score -= 15; warnings.push('Income $' + Math.round(effectiveIncome/1000) + 'k below $' + Math.round(crit.minIncome/1000) + 'k minimum'); }
-    } else {
-      warnings.push('No income data on file');
-    }
-
-    // ── CREDIT AGE (0-10 pts) ────────────────────────────────────────────
-    if (age !== null) {
-      if (age.avg >= 5)                          { score += 10; reasons.push('Excellent credit age ' + age.avg + 'yr avg'); }
-      else if (age.avg >= 3)                     { score += 7;  reasons.push('Good credit age ' + age.avg + 'yr avg'); }
-      else if (age.avg >= crit.minCreditAge)     { score += 3;  reasons.push('Credit age ' + age.avg + 'yr'); }
-      else                                       { score -= 5;  warnings.push('Thin credit age: ' + age.avg + 'yr avg (' + crit.minCreditAge + 'yr+ preferred)'); }
-      if (age.oldest >= 10) { score += 3; reasons.push('Oldest account ' + age.oldest + 'yr'); }
-    } else {
-      warnings.push('Credit age unavailable — upload full credit report');
-    }
-
-    // ── INQUIRIES (0-10 pts) ─────────────────────────────────────────────
-    if (inqs !== null) {
-      if (inqs === 0)              { score += 10; reasons.push('Zero recent inquiries'); }
-      else if (inqs <= 2)          { score += 7;  reasons.push(inqs + ' inquiry' + (inqs>1?'s':'')); }
-      else if (inqs <= crit.maxInq){ score += 3; }
-      else                         { score -= 15; warnings.push(inqs + ' inquiries (max ' + crit.maxInq + ' for ' + bankName + ')'); }
-    }
-
-    // ── COLLECTIONS (hard penalty) ───────────────────────────────────────
-    if (colls !== null) {
-      if (colls > 0) { score -= 30; warnings.push(colls + ' collection(s) — major disqualifier at most banks'); if (colls >= 2) hardFail = true; }
-      else            { score += 5; reasons.push('No collections'); }
-    }
-
-    // ── LATE ACCOUNTS (penalty) ──────────────────────────────────────────
-    if (late !== null) {
-      if (late > 0) { score -= 12; warnings.push(late + ' late account(s)'); }
-      else          { score += 3;  reasons.push('No late accounts'); }
-    }
-
-    // ── UTILIZATION (0-8 pts) ────────────────────────────────────────────
-    if (maxUtil !== null) {
-      if (maxUtil <= 10)              { score += 8;  reasons.push('Excellent utilization ' + maxUtil + '%'); }
-      else if (maxUtil <= 20)         { score += 5; }
-      else if (maxUtil <= crit.maxUtil){ score += 2; }
-      else                            { score -= 8;  warnings.push(maxUtil + '% utilization (keep under ' + crit.maxUtil + '%)'); }
-    }
-
-    // ── BANKING RELATIONSHIP (0-35 pts) ──────────────────────────────────
-    var relScore = 0;
-    var relDetails = [];
-    var hasAnyRel = false;
-
-    if (rel.hasPersonal) {
-      hasAnyRel = true;
-      relScore += 8;
-      relDetails.push('Personal account');
-      var personalTenure = rel.personalYrs + (rel.personalMos / 12);
-      if (personalTenure >= 5)      { relScore += 7; relDetails.push(rel.personalYrs + 'yr tenure (excellent)'); }
-      else if (personalTenure >= 2) { relScore += 5; relDetails.push(rel.personalYrs + 'yr tenure (good)'); }
-      else if (personalTenure >= 1) { relScore += 2; relDetails.push(rel.personalYrs + 'yr tenure'); }
-      else                          { warnings.push('New personal account (<1yr) at ' + bankName); }
-      if (rel.personalBal >= 10000) { relScore += 5; relDetails.push('$' + Math.round(rel.personalBal/1000) + 'k avg balance'); }
-      else if (rel.personalBal >= 5000) { relScore += 3; }
-    }
-
-    if (rel.hasBiz) {
-      hasAnyRel = true;
-      relScore += 10;
-      relDetails.push('Business account');
-      var bizTenure = rel.bizYrs + (rel.bizMos / 12);
-      if (bizTenure >= 3)      { relScore += 7; relDetails.push(rel.bizYrs + 'yr business banking'); }
-      else if (bizTenure >= 1) { relScore += 4; relDetails.push(rel.bizYrs + 'yr biz acct'); }
-      else                     { warnings.push('New business account (<1yr) at ' + bankName); }
-      // Business deposits — major weight
-      var monthlyDep = rel.bizBal || rel.bizRev;
-      if (monthlyDep >= 20000)      { relScore += 12; relDetails.push('$' + Math.round(monthlyDep/1000) + 'k/mo deposits (premium)'); }
-      else if (monthlyDep >= 10000) { relScore += 8;  relDetails.push('$' + Math.round(monthlyDep/1000) + 'k/mo deposits (strong)'); }
-      else if (monthlyDep >= 5000)  { relScore += 5;  relDetails.push('$' + Math.round(monthlyDep/1000) + 'k/mo deposits'); }
-      else if (monthlyDep >= 1000)  { relScore += 2; }
-      else                          { warnings.push('Low or unknown monthly deposits at ' + bankName); }
-    }
-
-    if (!hasAnyRel) {
-      warnings.push('No existing relationship at ' + bankName + ' — cold application');
-    }
-
-    // Cap relationship bonus at relWeight defined per bank
-    var cappedRelScore = Math.min(relScore, crit.relWeight + 15);
-    score += cappedRelScore;
-    if (hasAnyRel) reasons.push('Relationship: ' + relDetails.join(', '));
-
-    // ── PEER SIGNAL (added later by caller) ─────────────────────────────
-    score = Math.max(0, Math.min(100, score));
-
-    // ── TIER ─────────────────────────────────────────────────────────────
-    var tier;
-    if (hardFail)    tier = 'no';
-    else if (score >= 80) tier = 'strong';
-    else if (score >= 65) tier = 'good';
-    else if (score >= 50) tier = 'maybe';
-    else if (score >= 35) tier = 'low';
-    else                  tier = 'no';
-
-    // ── ESTIMATED AMOUNT ─────────────────────────────────────────────────
-    var estMin = null, estMax = null;
-    if (tier !== 'no' && effectiveIncome) {
-      var incFactor = 0;
-      if (score >= 80)       incFactor = 0.30;
-      else if (score >= 65)  incFactor = 0.20;
-      else if (score >= 50)  incFactor = 0.12;
-      else                   incFactor = 0.08;
-      var baseEst = effectiveIncome * incFactor;
-      estMin = Math.round(Math.max(crit.range[0] * 0.6, baseEst * 0.7) / 1000) * 1000;
-      estMax = Math.round(Math.min(crit.range[1] * 1.1, baseEst * 1.3) / 1000) * 1000;
-    } else if (tier !== 'no') {
-      estMin = crit.range[0];
-      estMax = crit.range[1];
-    }
-
-    return {
-      bank: bankName, score: score, tier: tier,
-      reasons: reasons, warnings: warnings,
-      estMin: estMin, estMax: estMax,
-      rel: rel, hasRel: hasAnyRel, relDetails: relDetails,
-      hardFail: hardFail
-    };
-  }
-
-  function findSimilarClients(clientId) {
-    var cr  = getCreditData(clientId);
-    var ob  = getOnboardDataForClient(clientId) || {};
-    var d   = getDashData(clientId);
-    var fico = parseNum(cr && cr.fico) || parseNum(d && d.creditScore) || null;
-    var income = parseNum(ob.annualIncome) || parseNum(ob.monthlySales) * 12 || null;
-    if (!fico && !income) return [];
-
-    return clients.filter(function(c) {
-      if (c.id === clientId || c.archived) return false;
-      var cr2  = getCreditData(c.id);
-      var ob2  = getOnboardDataForClient(c.id) || {};
-      var d2   = getDashData(c.id);
-      var f2   = parseNum(cr2 && cr2.fico) || parseNum(d2 && d2.creditScore) || null;
-      var inc2 = parseNum(ob2.annualIncome) || parseNum(ob2.monthlySales) * 12 || null;
-
-      var ficoMatch   = !fico || !f2   || Math.abs(fico - f2)     <= 60;
-      var incomeMatch = !income || !inc2 || Math.abs(income - inc2) / Math.max(income, inc2) <= 0.45;
-      return ficoMatch && incomeMatch;
-    }).map(function(c) {
-      var dashRows = getDashData(c.id).fundingRows || [];
-      var wizApps  = getBankApps(c.id);
-      var allApps  = [];
-      dashRows.forEach(function(r) {
-        allApps.push({ bank: r.bank, outcome: r.status, amount: Number(r.amount) || 0 });
-      });
-      wizApps.forEach(function(a) {
-        allApps.push({ bank: a.bank, outcome: a.outcome, amount: Number(a.amount) || 0 });
-      });
-      return { clientId: c.id, name: c.fname + ' ' + c.lname, apps: allApps };
-    }).filter(function(p){ return p.apps.length > 0; });
-  }
-
-  function buildPeerInsights(peers) {
-    var bankMap = {};
-    peers.forEach(function(p) {
-      p.apps.forEach(function(a) {
-        if (!bankMap[a.bank]) bankMap[a.bank] = { total:0, approved:0, amounts:[] };
-        bankMap[a.bank].total++;
-        if (a.outcome === 'approved') { bankMap[a.bank].approved++; if(a.amount) bankMap[a.bank].amounts.push(a.amount); }
-      });
-    });
-    var out = [];
-    Object.keys(bankMap).forEach(function(bank) {
-      var bm = bankMap[bank];
-      var avgAmt = bm.amounts.length ? Math.round(bm.amounts.reduce(function(s,v){return s+v;},0)/bm.amounts.length) : 0;
-      out.push({ bank: bank, total: bm.total, approved: bm.approved, rate: Math.round(bm.approved/bm.total*100), avgAmt: avgAmt });
-    });
-    out.sort(function(a,b){ return b.approved - a.approved; });
-    return out;
-  }
-
-  function showClientAnalysis(clientId) {
-    var c   = getClient(clientId);
-    if (!c) return;
-    var cr  = getCreditData(clientId);
-    var ob  = getOnboardDataForClient(clientId) || {};
-    var d   = getDashData(clientId);
-    var age = calcCreditAge(clientId);
-
-    var fico       = parseNum(cr && cr.fico) || parseNum(d && d.creditScore) || null;
-    var inqs       = parseNum(cr && cr.recentInquiries);
-    var colls      = parseNum(cr && cr.collections);
-    var late       = parseNum(cr && cr.late);
-    var accts      = (cr && cr.accounts) ? cr.accounts : [];
-    var utils      = accts.filter(function(a){ return a.util!=null; }).map(function(a){ return parseFloat(a.util); });
-    var maxUtil    = utils.length ? Math.max.apply(null,utils) : null;
-    var income     = parseNum(ob.annualIncome);
-    var monthlyRev = parseNum(ob.monthlySales);
-
-    // Score all banks
-    var allBankNames = Object.keys(BANK_CRITERIA);
-    var bankScores = allBankNames.map(function(bn){ return scoreClientForBank(clientId, bn); })
-      .filter(Boolean)
-      .sort(function(a,b){ return b.score - a.score; });
-
-    // Peer comparison
-    var peers = findSimilarClients(clientId);
-    var peerInsights = buildPeerInsights(peers);
-
-    // Profile health score (weighted avg of key factors)
-    var healthParts = [];
-    if (fico !== null) healthParts.push(Math.min(100, Math.max(0, (fico - 580) / (800 - 580) * 100)));
-    if (income !== null) healthParts.push(Math.min(100, income / 150000 * 100));
-    if (maxUtil !== null) healthParts.push(Math.max(0, 100 - maxUtil * 2));
-    if (inqs !== null) healthParts.push(Math.max(0, 100 - inqs * 12));
-    if (colls !== null) healthParts.push(colls === 0 ? 100 : Math.max(0, 100 - colls * 40));
-    if (age !== null) healthParts.push(Math.min(100, age.avg / 8 * 100));
-    var health = healthParts.length ? Math.round(healthParts.reduce(function(s,v){return s+v;},0) / healthParts.length) : null;
-    var healthColor = health >= 70 ? 'var(--success)' : health >= 50 ? '#d97706' : 'var(--danger)';
-    var healthLabel = health >= 75 ? 'Strong Profile' : health >= 60 ? 'Good Profile' : health >= 45 ? 'Fair Profile' : 'Needs Work';
-
-    // Profile chips
-    function chip(cls, icon, text) { return '<span class="anl-chip ' + cls + '">' + icon + ' ' + text + '</span>'; }
-    var chips = '';
-    if (fico !== null)  chips += chip(fico >= 720 ? 'ok' : fico >= 680 ? 'warn' : 'bad', fico >= 720 ? '✅' : '⚠️', 'FICO ' + fico);
-    if (income !== null) chips += chip(income >= 80000 ? 'ok' : income >= 50000 ? 'warn' : 'bad', income >= 80000 ? '✅' : '⚠️', '$' + Math.round(income/1000) + 'k/yr');
-    if (monthlyRev !== null) chips += chip(monthlyRev >= 15000 ? 'ok' : 'warn', '💼', '$' + Math.round(monthlyRev/1000) + 'k/mo rev');
-    if (age !== null)   chips += chip(age.avg >= 3 ? 'ok' : age.avg >= 1.5 ? 'warn' : 'bad', age.avg >= 3 ? '✅' : '⚠️', age.avg + 'yr credit age');
-    if (inqs !== null)  chips += chip(inqs <= 2 ? 'ok' : inqs <= 5 ? 'warn' : 'bad', inqs <= 2 ? '✅' : '⚠️', inqs + ' inquir' + (inqs===1?'y':'ies'));
-    if (colls !== null) chips += chip(colls === 0 ? 'ok' : 'bad', colls === 0 ? '✅' : '❌', colls === 0 ? 'No collections' : colls + ' collection(s)');
-    if (late !== null)  chips += chip(late === 0 ? 'ok' : 'bad', late === 0 ? '✅' : '⚠️', late === 0 ? 'No lates' : late + ' late acct(s)');
-    if (maxUtil !== null) chips += chip(maxUtil <= 20 ? 'ok' : maxUtil <= 35 ? 'warn' : 'bad', maxUtil <= 20 ? '✅' : '⚠️', maxUtil + '% utilization');
-    if (!chips) chips = '<span class="anl-chip neu">⚠️ Upload credit report &amp; onboarding for full analysis</span>';
-
-    // Bank table rows
-    var tierLabel = { strong:'Strong', good:'Good', maybe:'Possible', low:'Unlikely', no:'Not Ready' };
-    var tierClass = { strong:'strong', good:'good', maybe:'maybe', low:'low', no:'no' };
-    var bankRows = bankScores.map(function(bs) {
-      var barColor = bs.tier === 'strong' ? 'var(--success)' : bs.tier === 'good' ? '#22c55e' : bs.tier === 'maybe' ? '#f59e0b' : bs.tier === 'low' ? '#f97316' : 'var(--danger)';
-      var scoreColor = bs.tier === 'strong' || bs.tier === 'good' ? 'var(--success)' : bs.tier === 'maybe' ? '#d97706' : 'var(--danger)';
-      var est = bs.estMin && bs.estMax
-        ? '<span class="anl-est' + (bs.tier==='strong'?' strong':'') + '">$' + Math.round(bs.estMin/1000) + 'k–$' + Math.round(bs.estMax/1000) + 'k</span>'
-        : '<span class="anl-est">—</span>';
-      var relHtml = bs.hasRel
-        ? '<span class="anl-rel-tag has-rel">✓ ' + (bs.rel.hasBiz ? 'Biz' : '') + (bs.rel.hasPersonal && bs.rel.hasBiz ? '+' : '') + (bs.rel.hasPersonal ? 'Personal' : '') + '</span>'
-        : '<span class="anl-rel-tag no-rel">None</span>';
-      var topReason = (bs.warnings.length && (bs.tier === 'low' || bs.tier === 'no')) ? bs.warnings[0] : (bs.reasons[0] || '');
-      return '<tr>'
-        + '<td><div class="anl-bank-name">' + bankLogo(bs.bank, 20) + bs.bank + '</div></td>'
-        + '<td><div style="display:flex;align-items:center;gap:8px"><div class="anl-score-bar-wrap"><div class="anl-score-bar" style="width:' + bs.score + '%;background:' + barColor + '"></div></div><span class="anl-score-val" style="color:' + scoreColor + '">' + bs.score + '</span></div></td>'
-        + '<td><span class="anl-tier-badge ' + tierClass[bs.tier] + '">' + tierLabel[bs.tier] + '</span></td>'
-        + '<td>' + relHtml + '</td>'
-        + '<td>' + est + '</td>'
-        + '<td class="anl-reason-tip">' + topReason + '</td>'
-        + '</tr>';
-    }).join('');
-
-    // Peer insights
-    var peerHtml = '';
-    if (peers.length > 0 && peerInsights.length > 0) {
-      peerHtml = '<div class="anl-peer-card">'
-        + '<div class="anl-peer-title">📊 ' + peers.length + ' similar client' + (peers.length>1?'s':'') + ' found in your portfolio</div>'
-        + peerInsights.slice(0,5).map(function(pi){
-            return '<div class="anl-peer-row">• <span>' + pi.bank + '</span>: ' + pi.approved + '/' + pi.total + ' approved'
-              + (pi.avgAmt ? ' · avg $' + pi.avgAmt.toLocaleString() : '')
-              + ' (' + pi.rate + '%)</div>';
-          }).join('')
-        + '</div>';
-      // Boost scores for banks where peers were approved
-      peerInsights.forEach(function(pi) {
-        if (pi.rate >= 50) {
-          var match = bankScores.find(function(bs){ return bs.bank === pi.bank; });
-          if (match) {
-            match.peerBoost = Math.round(pi.rate / 20);
-            match.score = Math.min(100, match.score + match.peerBoost);
-          }
-        }
-      });
-    } else {
-      peerHtml = '<div class="anl-peer-card"><div class="anl-peer-title">No similar clients in portfolio yet</div><div class="anl-peer-row">As you log more applications, peer comparisons will appear here.</div></div>';
-    }
-
-    // Top 3 recommendations
-    var topBanks = bankScores.filter(function(bs){ return bs.tier !== 'no'; }).slice(0,3);
-    var recHtml = topBanks.map(function(bs, i) {
-      var whyParts = bs.reasons.slice(0,2);
-      if (bs.peerBoost) whyParts.push(bs.peerBoost + ' pts from peer approval data');
-      return '<div class="anl-rec-item">'
-        + '<div class="anl-rec-num">' + (i+1) + '</div>'
-        + '<div><div style="display:flex;align-items:center;gap:8px">' + bankLogo(bs.bank, 18) + '<span class="anl-rec-bank">' + bs.bank + '</span>'
-        + '<span class="anl-tier-badge ' + tierClass[bs.tier] + '">' + tierLabel[bs.tier] + '</span></div>'
-        + '<div class="anl-rec-why">' + (whyParts.join(' · ') || 'Profile meets basic criteria') + '</div>'
-        + (bs.estMin ? '<div class="anl-rec-why" style="color:var(--success);font-weight:700;margin-top:2px">Est. $' + Math.round(bs.estMin/1000) + 'k–$' + Math.round(bs.estMax/1000) + 'k</div>' : '')
-        + '</div></div>';
-    }).join('');
-    if (!recHtml) recHtml = '<div class="anl-peer-card"><div class="anl-peer-row">Not enough data to make recommendations. Add credit report and onboarding data.</div></div>';
-
-    // Risk flags
-    var allWarnings = [];
-    bankScores.forEach(function(bs){ bs.warnings.forEach(function(w){ if(allWarnings.indexOf(w)===-1) allWarnings.push(w); }); });
-    var hardFlags = allWarnings.filter(function(w){ return w.indexOf('collection')>-1 || w.indexOf('below')>-1; });
-    var softFlags = allWarnings.filter(function(w){ return hardFlags.indexOf(w)===-1; }).slice(0,5);
-    var riskHtml = hardFlags.map(function(w){ return '<div class="anl-risk-item hard">⚠️ ' + w + '</div>'; }).join('')
-      + softFlags.map(function(w){ return '<div class="anl-risk-item">⚡ ' + w + '</div>'; }).join('');
-    if (!riskHtml) riskHtml = '<div class="anl-chip ok" style="font-size:12px">✅ No major risk flags</div>';
-
-    // ── RENDER PANEL ──────────────────────────────────────────────────────
-    var existing = document.getElementById('client-analysis-overlay');
-    if (existing) existing.remove();
-
-    var overlay = document.createElement('div');
-    overlay.className = 'anl-overlay';
-    overlay.id = 'client-analysis-overlay';
-    overlay.onclick = function(e){ if(e.target === overlay) overlay.remove(); };
-    overlay.innerHTML = '<div class="anl-panel">'
-      + '<div class="anl-panel-head">'
-      + '<div><div class="anl-panel-title">Approval Analysis — ' + c.fname + ' ' + c.lname + '</div>'
-      + '<div class="anl-panel-sub">Based on credit profile, banking relationships, income &amp; peer comparison</div></div>'
-      + '<button class="anl-close" onclick="document.getElementById('client-analysis-overlay').remove()">✕</button>'
       + '</div>'
       + '<div class="anl-body">'
 
