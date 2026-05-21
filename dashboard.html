@@ -3632,7 +3632,7 @@
 
   function _renderFsStrategySummary(d, el, relSet) {
     if (!el) return;
-    const fico = +(d.creditScore || (d.creditData && (d.creditData.fico8 || d.creditData.fico)) || 0);
+    const fico = _canonicalScore(d);
     const goal = +(d.fundingGoal || 0);
     const state = (d.profileData && d.profileData.state) || (d.onboardData && d.onboardData.state) || null;
     const approved = (d.fundingRows || []).filter(r => r.status === 'approved').reduce((s, r) => s + (+r.amount || 0), 0);
@@ -3955,6 +3955,37 @@
 
   function _getCreditKey() {
     try { var s = getClientSession(); return 'cq_credit_data_' + (s && s.clientId ? s.clientId : 'anon'); } catch(e) { return 'cq_credit_data_anon'; }
+  }
+
+  // ── CANONICAL CREDIT SCORE (mobile portal) ─────────────────────────────────
+  // Mirrors admin.html's getClientScore so the client view always agrees with
+  // the Credit Analyzer / Client Snapshot. Priority:
+  //   1. Manual admin override        (creditData.ficoManualOverride.score)
+  //   2. Latest parsed analyzer       (creditData.fico, then .fico8)
+  //   3. Stored dashboard creditScore (legacy denormalized cache)
+  //   4. Local credit cache           (cq_credit_data_<id>)
+  // 300 and 850 are sentinel placeholders the analyzer treats as bad parses,
+  // so they're filtered here too — stops a stale "300" from beating real data.
+  // Returns 0 when no usable score exists (callers fall back to '—' for display).
+  function _canonicalScore(d) {
+    if (!d) d = {};
+    var isReal = function(v) { var n = Number(v); return n > 300 && n < 850; };
+    var cd = d.creditData;
+    if (cd) {
+      if (cd.ficoManualOverride && isReal(cd.ficoManualOverride.score)) return Number(cd.ficoManualOverride.score);
+      if (isReal(cd.fico))  return Number(cd.fico);
+      if (isReal(cd.fico8)) return Number(cd.fico8);
+    }
+    if (isReal(d.creditScore)) return Number(d.creditScore);
+    try {
+      var _cd = JSON.parse(localStorage.getItem(_getCreditKey()) || 'null');
+      if (_cd) {
+        if (_cd.ficoManualOverride && isReal(_cd.ficoManualOverride.score)) return Number(_cd.ficoManualOverride.score);
+        if (isReal(_cd.fico))  return Number(_cd.fico);
+        if (isReal(_cd.fico8)) return Number(_cd.fico8);
+      }
+    } catch(e) {}
+    return 0;
   }
 
   function getDashData() {
@@ -5031,17 +5062,9 @@
     // Total Funding Secured starts at $0
     const wbf = document.getElementById('wb-funding'); if(wbf) wbf.textContent = d.fundingSecured ? '$' + Number(d.fundingSecured).toLocaleString() : '$0';
 
-    // Stats — admin-set score → Firestore creditData.fico → local credit report FICO
-    let _ficoDisplay = d.creditScore || '';
-    if (!_ficoDisplay && d.creditData) {
-      _ficoDisplay = String(d.creditData.fico8 || d.creditData.fico || '');
-    }
-    if (!_ficoDisplay) {
-      try {
-        const _cd = JSON.parse(localStorage.getItem(_getCreditKey()) || 'null');
-        if (_cd && (_cd.fico8 || _cd.fico)) _ficoDisplay = String(_cd.fico8 || _cd.fico);
-      } catch(e) {}
-    }
+    // Stats — single canonical FICO source. See _canonicalScore() above.
+    const _ficoNum = _canonicalScore(d);
+    const _ficoDisplay = _ficoNum ? String(_ficoNum) : '';
     const sf = document.getElementById('s-fico'); if(sf) sf.textContent = _ficoDisplay || '—';
 
     // Credit score grade badge

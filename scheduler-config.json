@@ -1,0 +1,54 @@
+{
+  "_readme": "CapitalQuest Daily Summary Scheduler — edit this file to configure",
+
+  "enabled": true,
+  "timezone": "America/New_York",
+
+  "schedule": {
+    "morning":   { "cron": "0 9  * * *", "type": "full",     "label": "Morning Brief"     },
+    "midday":    { "cron": "0 12 * * *", "type": "reminder", "label": "Midday Reminder"   },
+    "afternoon": { "cron": "0 15 * * *", "type": "reminder", "label": "Afternoon Reminder" },
+    "evening":   { "cron": "0 18 * * *", "type": "full",     "label": "End-of-Day Recap"  }
+  },
+
+  "recipients": {
+    "email": [
+      "sam@capitalquestfunding.com",
+      "ali@capitalquestfunding.com"
+    ],
+    "sms": [
+      { "name": "Sam", "phone": "+17348833558" },
+      { "name": "Ali", "phone": "+13132893740" }
+    ]
+  },
+
+  "email": {
+    "_comment": "SMTP config — user/pass must match the sending account. tasks@ requires its own Google Workspace account + App Password.",
+    "_comment2": "To create App Password: myaccount.google.com/apppasswords (2FA must be on)",
+    "host":    "smtp.gmail.com",
+    "port":    587,
+    "secure":  false,
+    "user":    "tasks@capitalquestfunding.com",
+    "pass":    "yapymamqntmlpwps",
+    "from":    "CapitalQuest Task Alerts <tasks@capitalquestfunding.com>",
+    "replyTo": "sam@capitalquestfunding.com"
+  },
+
+  "sms": {
+    "_comment": "Uses your existing GHL number via the local proxy (ghl-server.mjs must be running)",
+    "provider":   "ghl",
+    "proxyUrl":   "http://localhost:3001",
+    "fromPhone":  "+17346669917"
+  },
+
+  "thresholds": {
+    "noActivityDays": 5,
+    "stageStuck": {
+      "0": 7,
+      "1": 45,
+      "2": 14,
+      "3": 14,
+      "4": 10
+    }
+  }
+}

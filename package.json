@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "serve":          "node serve.mjs",
+    "proxy":          "node ghl-server.mjs",
+    "scheduler":      "node scheduler.mjs",
+    "scheduler:test": "node scheduler.mjs --test",
+    "start":          "node serve.mjs & node ghl-server.mjs",
+    "start:win":      "start node serve.mjs && start node ghl-server.mjs && start node scheduler.mjs"
+  },
+  "devDependencies": {
+    "puppeteer": "^24.40.0"
+  },
+  "dependencies": {
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.7"
+  }
+}

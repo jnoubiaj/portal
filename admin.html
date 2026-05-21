@@ -2507,6 +2507,108 @@
               </div>
             </div>
 
+            <!-- Daily Summary Scheduler Card -->
+            <div class="a-card" style="margin-bottom:18px" id="scheduler-settings-card">
+              <div class="a-card-hdr a-coll-hdr" onclick="aToggle('coll-scheduler','chev-scheduler')">
+                <div class="a-card-hdrl">
+                  <div class="a-card-title">Daily Summary Scheduler</div>
+                  <div class="a-card-sub" id="scheduler-status-sub">Email + SMS summaries sent to Sam & Ali</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span id="scheduler-badge" style="font-size:10px;padding:2px 8px;border-radius:10px;background:#dcfce7;color:#166534;font-weight:700">ON</span>
+                  <svg id="chev-scheduler" style="width:16px;height:16px;color:var(--gray-400);transition:transform .2s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </div>
+              <div id="coll-scheduler" style="padding:0 16px 16px">
+
+                <!-- Enable toggle -->
+                <div class="ghl-toggle-row" style="margin-bottom:12px">
+                  <div>
+                    <div class="ghl-toggle-label">Daily Summaries Enabled</div>
+                    <div class="ghl-toggle-sub">Master switch — disabling stops all scheduled sends</div>
+                  </div>
+                  <input type="checkbox" id="sched-enabled" checked onchange="_schedUpdateBadge()">
+                </div>
+
+                <!-- Schedule times -->
+                <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 8px">Send Schedule (America/New_York)</div>
+                <div class="ghl-settings-grid" style="margin-bottom:14px">
+                  <div>
+                    <div class="ghl-settings-label">Morning Brief</div>
+                    <input class="ghl-settings-input" id="sched-time-morning" type="time" value="09:00">
+                    <div style="font-size:10px;color:var(--gray-400);margin-top:3px">Full summary · overdue, stuck, funding</div>
+                  </div>
+                  <div>
+                    <div class="ghl-settings-label">Midday Reminder</div>
+                    <input class="ghl-settings-input" id="sched-time-midday" type="time" value="12:00">
+                    <div style="font-size:10px;color:var(--gray-400);margin-top:3px">Active tasks only · no completed</div>
+                  </div>
+                  <div>
+                    <div class="ghl-settings-label">Afternoon Reminder</div>
+                    <input class="ghl-settings-input" id="sched-time-afternoon" type="time" value="15:00">
+                    <div style="font-size:10px;color:var(--gray-400);margin-top:3px">Active tasks only · no completed</div>
+                  </div>
+                  <div>
+                    <div class="ghl-settings-label">End-of-Day Recap</div>
+                    <input class="ghl-settings-input" id="sched-time-evening" type="time" value="18:00">
+                    <div style="font-size:10px;color:var(--gray-400);margin-top:3px">Full summary</div>
+                  </div>
+                </div>
+
+                <!-- Email settings -->
+                <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 8px">Email (SMTP)</div>
+                <div class="ghl-settings-grid" style="margin-bottom:14px">
+                  <div>
+                    <div class="ghl-settings-label">SMTP Host</div>
+                    <input class="ghl-settings-input" id="sched-email-host" placeholder="smtp.gmail.com">
+                  </div>
+                  <div>
+                    <div class="ghl-settings-label">SMTP Port</div>
+                    <input class="ghl-settings-input" id="sched-email-port" type="number" placeholder="587">
+                  </div>
+                  <div>
+                    <div class="ghl-settings-label">Email Address</div>
+                    <input class="ghl-settings-input" id="sched-email-user" type="email" placeholder="sam@capitalquestfunding.com">
+                  </div>
+                  <div>
+                    <div class="ghl-settings-label">App Password</div>
+                    <input class="ghl-settings-input" id="sched-email-pass" type="password" placeholder="Gmail App Password" autocomplete="off">
+                  </div>
+                </div>
+
+                <!-- SMS settings -->
+                <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 8px">SMS (Twilio)</div>
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#92400e">
+                  Get credentials at <strong>console.twilio.com</strong> → Account Info. You'll need Account SID, Auth Token, and a purchased Twilio phone number.
+                </div>
+                <div class="ghl-settings-grid" style="margin-bottom:14px">
+                  <div>
+                    <div class="ghl-settings-label">Twilio Account SID</div>
+                    <input class="ghl-settings-input" id="sched-twilio-sid" placeholder="ACxxxx…" autocomplete="off">
+                  </div>
+                  <div>
+                    <div class="ghl-settings-label">Twilio Auth Token</div>
+                    <input class="ghl-settings-input" id="sched-twilio-token" type="password" placeholder="Auth token" autocomplete="off">
+                  </div>
+                  <div>
+                    <div class="ghl-settings-label">From Phone Number</div>
+                    <input class="ghl-settings-input" id="sched-twilio-from" placeholder="+17135550000">
+                  </div>
+                </div>
+
+                <!-- Save button + status -->
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button onclick="_schedSave()" style="padding:8px 20px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Save Scheduler Settings</button>
+                  <button onclick="_schedLoad()" style="padding:8px 14px;background:#f3f4f6;color:var(--navy);border:1px solid var(--gray-200);border-radius:8px;font-size:12px;cursor:pointer">Reload from File</button>
+                  <span id="sched-save-msg" style="font-size:12px;color:#059669;display:none">Saved!</span>
+                </div>
+
+                <div style="margin-top:14px;padding:10px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;font-size:11px;color:#0369a1">
+                  <strong>To activate:</strong> run <code>node scheduler.mjs</code> in the portal folder (separate terminal). It auto-starts with correct timings. Add <code>--test</code> to send a test summary immediately.
+                </div>
+              </div>
+            </div>
+
             <!-- Import from GHL Card -->
             <div class="a-card" style="margin-bottom:18px">
               <div class="a-card-hdr">
@@ -2879,6 +2981,12 @@
     clients.forEach(c => { if (c && !c.updatedAt) { c.updatedAt = now; c.updatedBy = by; } });
     try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
     clients.forEach(c => fsSaveClient(c).catch(() => {}));
+    // Sync to scheduler cache (fire-and-forget)
+    fetch('http://localhost:3001/api/data/clients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(clients)
+    }).catch(function(){});
   }
   function getClient(id) { return clients.find(c => c.id === id); }
 
@@ -3422,7 +3530,17 @@
                 if (_pf.lastName  && clients[_ci].lname !== _capW(_pf.lastName))  { clients[_ci].lname = _capW(_pf.lastName);  _nameChanged = true; }
                 if (_nameChanged) {
                   try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
-                  try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_pf)); } catch(e) {}
+                  // Only seed cq_onboard_data_<id> from Firestore profileData if local
+                  // has nothing newer — prevents this listener from clobbering a
+                  // freshly-saved edit that hasn't yet propagated to Firestore.
+                  try {
+                    var _localO = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null');
+                    var _lt = (_localO && _localO._updatedAt) || 0;
+                    var _rt = (_pf && _pf._updatedAt) || 0;
+                    if (_rt >= _lt) {
+                      localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_pf));
+                    }
+                  } catch(e) {}
                 }
               }
             }
@@ -3470,7 +3588,17 @@
               if (_pf2.firstName) clients[_ci2].fname = _capW2(_pf2.firstName);
               if (_pf2.lastName)  clients[_ci2].lname = _capW2(_pf2.lastName);
               try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
-              try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_pf2)); } catch(e) {}
+              // TS-guarded: only overwrite cq_onboard_data_<id> when the incoming
+              // Firestore profileData is at least as fresh as the local cache.
+              // Stops "modified" snapshots from clobbering freshly-saved local edits.
+              try {
+                var _localO2 = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || 'null');
+                var _lt2 = (_localO2 && _localO2._updatedAt) || 0;
+                var _rt2 = (_pf2 && _pf2._updatedAt) || 0;
+                if (_rt2 >= _lt2) {
+                  localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_pf2));
+                }
+              } catch(e) {}
               renderClientList();
             }
           }
@@ -3511,6 +3639,16 @@
               if (data.creditScore     !== undefined)  _exDm.creditScore     = data.creditScore;
               localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exDm));
             } catch(e) {}
+          }
+          // Mirror Firestore creditData into local cache so getClientScore() sees
+          // the latest analyzer result on this device (was previously only seeded
+          // on initial 'added' load — meant cross-device parses didn't propagate).
+          if (data.creditData) {
+            try { localStorage.setItem('cq_credit_' + clientId, JSON.stringify(data.creditData)); } catch(e) {}
+          }
+          // If anything score-relevant changed, repaint every FICO display + recompute funding readiness.
+          if (data.creditScore !== undefined || data.creditData) {
+            try { _refreshCaSnapScore(clientId); } catch(e) {}
           }
           if (data.bankRelationships) {
             try { localStorage.setItem('cq_bankrels_' + clientId, JSON.stringify(data.bankRelationships)); } catch(e) {}
@@ -4095,7 +4233,7 @@
       var days = (si >= 0) ? plDaysInStage(c.id, si) : 0;
       var daysCls = days <= 2 ? 'ok' : days <= 5 ? 'warn' : 'hot';
       var daysBadge = (si >= 0) ? '<span class="a-cl-days ' + daysCls + '">' + days + 'd</span>' : '';
-      var fico = c.fico || (ob && ob.fico) || '';
+      var fico = getClientScore(c.id) || c.fico || (ob && ob.fico) || '';
       var d = getDashData(c.id);
       var funded = (d.fundingRows||[]).filter(function(r){ return r.status==='approved'; }).reduce(function(s,r){ return s+(Number(r.amount)||0); }, 0);
       var meta = '';
@@ -4261,7 +4399,9 @@
     const _displayLast  = _ob?.lastName  || c.lname;
 
     const _d = getDashData(id);
-    const _fico = _d.creditScore || (creditData && creditData.fico) || '';
+    // Canonical FICO source — see getClientScore() above. Never read
+    // _d.creditScore or creditData.fico directly for display anymore.
+    const _fico = getClientScore(id);
     const _stageName = (_d.stageNames || [])[Math.max(0, (_d.currentStage || 1) - 1)] || 'Setup';
     const _fundingApproved = _d.fundingApproved ? '$' + Number(_d.fundingApproved).toLocaleString() : '';
     const _statusCls = { new:'s-new', pending:'s-pending', progress:'s-progress', approved:'s-approved', disqualified:'s-disqualified' }[c.status] || 's-new';
@@ -4615,7 +4755,7 @@
               </div>
             </div>
             ${_ob ? `
-              ${_fico ? `<div class="a-qi-row"><span class="a-qi-label">FICO</span><span class="a-qi-val" style="color:${Number(_fico)>=700?'#059669':Number(_fico)>=680?'#d97706':'#dc2626'};font-weight:800;font-size:14px">${_fico}</span></div>` : ''}
+              ${_fico ? `<div class="a-qi-row"><span class="a-qi-label">FICO</span><span id="snap-fico-${id}" class="a-qi-val" style="color:${Number(_fico)>=700?'#059669':Number(_fico)>=680?'#d97706':'#dc2626'};font-weight:800;font-size:14px">${_fico}</span></div>` : ''}
               <div class="a-qi-row"><span class="a-qi-label">Phone</span><span class="a-qi-val" style="display:flex;align-items:center;gap:6px">${_ob.phone || c.phone || '—'}${(_ob.phone || c.phone) ? `<button class="ghl-call-btn" onclick="showCallModal('${id}','${_escHtml(_ob.phone || c.phone || '')}')"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>Call</button>` : ''}</span></div>
               <div class="a-qi-row"><span class="a-qi-label">Email</span><span class="a-qi-val">${c.email || '—'}</span></div>
               ${_ob.bizName ? `<div class="a-qi-row"><span class="a-qi-label">Business</span><span class="a-qi-val">${_ob.bizName}</span></div>` : ''}
@@ -5352,8 +5492,18 @@
     // Background: fetch from Firestore once (no recursion) and re-render with fresh client ref
     if (!_skipSync) {
       const hasPersonalData = d => d && (d.firstName || d.ssn || d.street);
+      // Timestamp-aware merge — newer _updatedAt wins. Without this, a stale Firestore
+      // snapshot can clobber a freshly-saved local edit (which is what was making the
+      // Edit Client Profile modal appear to lose data on reopen).
+      const mergeByTs = (local, remote) => {
+        const lt = (local && local._updatedAt) || 0;
+        const rt = (remote && remote._updatedAt) || 0;
+        return lt > rt
+          ? Object.assign({}, remote || {}, local || {})   // local newer → local overrides
+          : Object.assign({}, local  || {}, remote || {}); // remote newer (or equal) → remote overrides
+      };
       fsGetOnboarding(clientId).then(fsOd => {
-        const mergedBase = Object.assign({}, o || {}, fsOd || {});
+        const mergedBase = mergeByTs(o, fsOd);
         // If merged still has no personal data but client has email, scan all Firestore records
         if (!hasPersonalData(mergedBase) && client.email) {
           return fsGetAllOnboarding().then(all => {
@@ -5361,7 +5511,8 @@
             const matches = all.filter(od => od.email && od.email.toLowerCase() === client.email.toLowerCase() && hasPersonalData(od));
             if (!matches.length) return mergedBase;
             const best = matches.find(od => od.ssn) || matches[0];
-            return Object.assign({}, best, o || {}, fsOd || {});
+            // 'best' is the email-matched fallback record; layer newer of (local, fsOd) on top.
+            return Object.assign({}, best, mergeByTs(o, fsOd));
           });
         }
         return mergedBase;
@@ -5655,6 +5806,38 @@
     return o || {};
   }
 
+  // ── CANONICAL CREDIT SCORE ─────────────────────────────────────────────────
+  // Single source of truth for a client's FICO. Priority:
+  //   1. Manual admin override        (creditData.ficoManualOverride.score)
+  //   2. Latest analyzer / report     (creditData.fico)  ← also reflects the
+  //                                    override since adminCrManualScore sets
+  //                                    creditData.fico = score
+  //   3. Stored dashboard creditScore (legacy / denormalized cache)
+  //   4. Onboarding fico              (final fallback)
+  // FICO range is 300–850; 300 and 850 are sentinels the analyzer treats as
+  // failed parses, so they're filtered out here too — prevents a stale "300"
+  // in one source from beating a real parsed score in another.
+  // Returns a Number, or '' when nothing usable is on file.
+  function getClientScore(clientId) {
+    if (!clientId) return '';
+    const isReal = v => { const n = Number(v); return n > 300 && n < 850; };
+    try {
+      const cr = getCreditData(clientId);
+      if (cr) {
+        if (cr.ficoManualOverride && isReal(cr.ficoManualOverride.score)) return Number(cr.ficoManualOverride.score);
+        if (isReal(cr.fico)) return Number(cr.fico);
+        if (isReal(cr.fico8)) return Number(cr.fico8);
+      }
+      const d = getDashData(clientId);
+      if (d && isReal(d.creditScore)) return Number(d.creditScore);
+      const ob = getOnboardDataForClient(clientId);
+      if (ob && isReal(ob.fico)) return Number(ob.fico);
+    } catch(e) {}
+    return '';
+  }
+  // Make it reachable from the inline onclick scope too.
+  try { window.getClientScore = getClientScore; } catch(e) {}
+
   function aToggle(bodyId, chevId) {
     var el = document.getElementById(bodyId);
     if (!el) return;
@@ -5910,7 +6093,9 @@
     var apps = d.fundingRows || [];
 
     var state = getClientState(clientId);
-    var creditScore = Number(d.creditScore || (cr && cr.fico) || 0);
+    // Canonical FICO — see getClientScore() above. Funding readiness, bank
+    // eligibility, and risk gating must all agree with the Client Snapshot.
+    var creditScore = Number(getClientScore(clientId) || 0);
     var utilization = Number((cr && cr.util) || 0);
     // Bureau-specific inquiries: use stored overrides if available, else fall back to Experian report total
     var expInq = Number(d.experianInquiries != null ? d.experianInquiries : ((cr && cr.recentInquiries) || 0));
@@ -7852,9 +8037,9 @@
       statusEl.className = 'a-csh-pill ' + _statusCls;
     }
     if (ficoEl) {
-      var _creditData = getCreditData(clientId);
-      var _fico = _d.creditScore || (_creditData && _creditData.fico) || '';
+      var _fico = getClientScore(clientId);
       if (_fico) { ficoEl.textContent = _fico + ' FICO'; ficoEl.style.display = ''; }
+      else       { ficoEl.style.display = 'none'; }
     }
     if (fundedEl) {
       var _apps = (_d.fundingRows || []);
@@ -8216,6 +8401,16 @@
   }
 
   async function saveAdminProfileEdit(clientId) {
+    const overlay = document.getElementById('admin-profile-edit-overlay');
+    const saveBtn = overlay ? overlay.querySelector('button[onclick^="saveAdminProfileEdit"]') : null;
+    const toast = document.getElementById('admin-profile-save-toast');
+    const setStatus = (msg, color) => {
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.style.color = color || 'var(--success)';
+      toast.style.opacity = '1';
+    };
+
     let o = getOnboardDataForClient(clientId);
     const g = id => (document.getElementById('ape-' + id) || {}).value || '';
     const personalBanks = g('personalBanks').split(',').map(s=>s.trim()).filter(Boolean);
@@ -8255,36 +8450,66 @@
       bizBanks, bizCreditCards,
       experianEmail: g('experianEmail'), experianPass: g('experianPass'),
       pin: g('pin'), secQuestion: g('secQuestion'), secAnswer: g('secAnswer'),
+      // Freshness marker — used by listeners + background fetches to detect newer-than-Firestore
+      // local edits and prevent stale snapshots from clobbering this save.
+      _updatedAt: Date.now(),
     });
 
-    // Update admin client record name/phone
+    // Disable Save button + show in-flight status while writes are pending
+    const origLabel = saveBtn ? saveBtn.textContent : '';
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.7'; saveBtn.textContent = 'Saving…'; }
+    setStatus('Saving…', '#64748b');
+
+    // 1) Persist to localStorage first (synchronous, never throws)
+    try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o)); } catch(e) {}
+
+    // 2) Mirror name/phone into the client roster (used by client list / header)
     const clients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
     const idx = clients.findIndex(c => c.id === clientId);
     if (idx >= 0) {
       if (o.firstName) clients[idx].fname = o.firstName;
       if (o.lastName)  clients[idx].lname = o.lastName;
       if (o.phone)     clients[idx].phone = o.phone;
-      localStorage.setItem('cq_admin_clients', JSON.stringify(clients));
-      try { await fsSaveClient(clients[idx]); } catch(e) {}
+      try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
     }
 
-    // Save onboarding data
-    try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o)); } catch(e) {}
-    try { await fsSetOnboarding(clientId, o); } catch(e) {}
-    // Push profile snapshot to dashboards collection so client can read it (bypasses onboarding rules)
-    try { await fsSetDash(clientId, { profileData: o }); } catch(e) {}
+    // 3) Firestore writes — call SDK directly (the fs* helpers in firebase-config.js
+    //    swallow errors, which is what let this save silently fail in the first place).
+    const fsErrors = [];
+    if (idx >= 0) {
+      try { await db.collection('clients').doc(clients[idx].id).set(clients[idx]); }
+      catch(e) { fsErrors.push('client (' + (e.code || e.message || 'unknown') + ')'); }
+    }
+    try { await db.collection('onboarding').doc(clientId).set(o); }
+    catch(e) { fsErrors.push('onboarding (' + (e.code || e.message || 'unknown') + ')'); }
+    try { await db.collection('dashboards').doc(clientId).set({ profileData: o }, { merge: true }); }
+    catch(e) { fsErrors.push('dashboard (' + (e.code || e.message || 'unknown') + ')'); }
 
-    const toast = document.getElementById('admin-profile-save-toast');
-    if (toast) { toast.textContent = '✓ Saved'; toast.style.opacity = '1'; setTimeout(() => { toast.style.opacity = '0'; }, 2000); }
+    // 4) Save FAILED — KEEP modal open, surface error, do NOT discard edits
+    if (fsErrors.length > 0) {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.textContent = origLabel || 'Save Changes'; }
+      setStatus('✗ Save failed: ' + fsErrors.join('; '), '#dc2626');
+      console.error('[saveAdminProfileEdit] Firestore write failures:', fsErrors);
+      return;
+    }
+
+    // 5) Success — broadcast, re-render, then close modal
+    setStatus('✓ Saved', 'var(--success)');
+
+    try {
+      window.dispatchEvent(new CustomEvent('cq:client-updated', { detail: { clientId, profile: o } }));
+    } catch(e) {}
 
     // Regenerate funding strategy now that profile (including state) may have changed
     try { refreshFundingStrategy(clientId); } catch(e) {}
 
-    // Re-render detail panel
+    // Re-render detail panel (header, snapshot, funding engine, applications, overview),
+    // then remove the modal. renderClientDetail re-renders synchronously; the small
+    // delay just lets the "✓ Saved" toast register visually.
     setTimeout(() => {
       document.getElementById('admin-profile-edit-overlay')?.remove();
       renderClientDetail(clientId);
-    }, 1200);
+    }, 800);
   }
 
   // ── GHL FORM DATA IMPORT ─────────────────────────────────────────────────
@@ -9477,10 +9702,40 @@
   }
 
   function _refreshCaSnapScore(clientId, score) {
-    var el = document.getElementById('ca-snap-score-' + clientId);
-    if (!el) return;
-    el.textContent = score || '—';
-    el.style.color = (score >= 700) ? '#059669' : (score >= 680) ? '#d97706' : '#dc2626';
+    // Pull from canonical getter if caller didn't pass a score, so this works
+    // as a generic "score-changed, repaint all sites" trigger too.
+    if (score === undefined || score === null || score === '') {
+      score = getClientScore(clientId);
+    }
+    var n     = Number(score) || 0;
+    var disp  = (n && n > 300 && n < 850) ? n : (score || '—');
+    var color = (n >= 700) ? '#059669' : (n >= 680) ? '#d97706' : (n ? '#dc2626' : '#94a3b8');
+
+    // 1) Credit Analyzer top stat
+    var caEl = document.getElementById('ca-snap-score-' + clientId);
+    if (caEl) { caEl.textContent = disp; caEl.style.color = color; }
+
+    // 2) Client Snapshot (right rail)
+    var snapEl = document.getElementById('snap-fico-' + clientId);
+    if (snapEl) {
+      snapEl.textContent = disp;
+      snapEl.style.color = color;
+    }
+
+    // 3) Sticky client header FICO badge
+    var hdrEl = document.getElementById('csh-fico-' + clientId);
+    if (hdrEl) {
+      if (n) { hdrEl.textContent = n + ' FICO'; hdrEl.style.display = ''; }
+      else   { hdrEl.style.display = 'none'; }
+    }
+
+    // 4) Funding readiness / Funding Strategy Engine use the score directly —
+    //    refresh them so the qualification logic and readiness % stay in lockstep
+    //    with the displayed FICO. Best-effort: never let a render error escape.
+    try { if (typeof refreshFundingStrategy === 'function') refreshFundingStrategy(clientId); } catch(e) {}
+
+    // 5) Broadcast for any other subscribers (future hooks, funding engine, etc.)
+    try { window.dispatchEvent(new CustomEvent('cq:score-updated', { detail: { clientId: clientId, score: n } })); } catch(e) {}
   }
 
   function adminCrReparse(clientId) {
@@ -16243,6 +16498,12 @@
       localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(tasks));
       console.log('[Tasks] Saved — clientId:', clientId, '| key: cq_ops_tasks_' + clientId, '| count:', tasks.length, '| titles:', tasks.map(function(t){return t.title;}));
     } catch(e) { console.error('[Tasks] Save failed:', e); }
+    // Sync to scheduler cache (fire-and-forget)
+    fetch('http://localhost:3001/api/data/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: clientId, tasks: tasks })
+    }).catch(function(){});
   }
   function createOpsTask(clientId, fields) {
     var tasks = getOpsTasks(clientId);
@@ -16955,6 +17216,103 @@
     }
     console.log('[Admin] Proxy check result:', ready);
   }
+
+  // ── Scheduler Settings ──────────────────────────────────────────────────────
+  function _schedUpdateBadge() {
+    var en = document.getElementById('sched-enabled');
+    var badge = document.getElementById('scheduler-badge');
+    if (!badge || !en) return;
+    if (en.checked) { badge.textContent = 'ON'; badge.style.background = '#dcfce7'; badge.style.color = '#166534'; }
+    else            { badge.textContent = 'OFF'; badge.style.background = '#fee2e2'; badge.style.color = '#991b1b'; }
+  }
+  async function _schedLoad() {
+    try {
+      var r = await fetch('http://localhost:3001/api/data/scheduler-config');
+      if (!r.ok) return;
+      var cfg = await r.json();
+      var g = function(id) { return document.getElementById(id); };
+      var sv = function(id, val) { var el = g(id); if (el && val != null) el.value = val; };
+      var sc = function(id, val) { var el = g(id); if (el) el.checked = !!val; };
+      sc('sched-enabled', cfg.enabled !== false);
+      _schedUpdateBadge();
+      sv('sched-time-morning',   (cfg.schedule && cfg.schedule.morning && cfg.schedule.morning.cron)   ? cfg.schedule.morning.cron.replace(/^0 (\d+).*/, function(_,h){return h.padStart(2,'0')+':00';}) : '09:00');
+      sv('sched-time-midday',    (cfg.schedule && cfg.schedule.midday && cfg.schedule.midday.cron)     ? cfg.schedule.midday.cron.replace(/^0 (\d+).*/, function(_,h){return h.padStart(2,'0')+':00';}) : '12:00');
+      sv('sched-time-afternoon', (cfg.schedule && cfg.schedule.afternoon && cfg.schedule.afternoon.cron) ? cfg.schedule.afternoon.cron.replace(/^0 (\d+).*/, function(_,h){return h.padStart(2,'0')+':00';}) : '15:00');
+      sv('sched-time-evening',   (cfg.schedule && cfg.schedule.evening && cfg.schedule.evening.cron)   ? cfg.schedule.evening.cron.replace(/^0 (\d+).*/, function(_,h){return h.padStart(2,'0')+':00';}) : '18:00');
+      if (cfg.email) {
+        sv('sched-email-host', cfg.email.host);
+        sv('sched-email-port', cfg.email.port);
+        sv('sched-email-user', cfg.email.user);
+        sv('sched-email-pass', cfg.email.pass);
+      }
+      if (cfg.sms) {
+        sv('sched-twilio-sid',   cfg.sms.accountSid);
+        sv('sched-twilio-token', cfg.sms.authToken);
+        sv('sched-twilio-from',  cfg.sms.fromPhone);
+      }
+    } catch(e) { console.warn('[Scheduler] Could not load config:', e.message); }
+  }
+  function _timeToCron(timeVal) {
+    var parts = (timeVal || '09:00').split(':');
+    return '0 ' + parseInt(parts[0] || 9, 10) + ' * * *';
+  }
+  async function _schedSave() {
+    var g = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    var gc = function(id) { var el = document.getElementById(id); return el ? el.checked : false; };
+    var cfg = {
+      enabled: gc('sched-enabled'),
+      timezone: 'America/New_York',
+      schedule: {
+        morning:   { cron: _timeToCron(g('sched-time-morning')),   type: 'full',     label: 'Morning Brief' },
+        midday:    { cron: _timeToCron(g('sched-time-midday')),    type: 'reminder', label: 'Midday Reminder' },
+        afternoon: { cron: _timeToCron(g('sched-time-afternoon')), type: 'reminder', label: 'Afternoon Reminder' },
+        evening:   { cron: _timeToCron(g('sched-time-evening')),   type: 'full',     label: 'End-of-Day Recap' },
+      },
+      recipients: {
+        email: ['sam@capitalquestfunding.com', 'ali@capitalquestfunding.com'],
+        sms: [
+          { name: 'Sam', phone: '+17348833558' },
+          { name: 'Ali', phone: '+13132893740' }
+        ]
+      },
+      email: {
+        host: g('sched-email-host') || 'smtp.gmail.com',
+        port: parseInt(g('sched-email-port') || '587', 10),
+        secure: false,
+        user: g('sched-email-user'),
+        pass: g('sched-email-pass') || '••••••••',
+        from: 'CapitalQuest Admin <' + (g('sched-email-user') || 'sam@capitalquestfunding.com') + '>'
+      },
+      sms: {
+        provider: 'twilio',
+        accountSid: g('sched-twilio-sid'),
+        authToken: g('sched-twilio-token') || '••••••••',
+        fromPhone: g('sched-twilio-from')
+      }
+    };
+    try {
+      var r = await fetch('http://localhost:3001/api/data/scheduler-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg)
+      });
+      if (r.ok) {
+        _schedUpdateBadge();
+        var msg = document.getElementById('sched-save-msg');
+        if (msg) { msg.style.display = 'inline'; setTimeout(function(){ msg.style.display = 'none'; }, 2500); }
+        console.log('[Scheduler] Settings saved');
+      }
+    } catch(e) { console.error('[Scheduler] Save failed:', e.message); }
+  }
+  // Auto-load scheduler settings when settings section opens
+  (function() {
+    var _origSwitch = window.switchAdminSection;
+    window.switchAdminSection = function(section) {
+      if (typeof _origSwitch === 'function') _origSwitch(section);
+      if (section === 'settings') setTimeout(_schedLoad, 300);
+    };
+  })();
+  // ────────────────────────────────────────────────────────────────────────────
 
   function _ghlRefreshLog() {
     if (typeof GHL === 'undefined') return;
