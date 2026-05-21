@@ -8463,21 +8463,31 @@
     // 1) Persist to localStorage first (synchronous, never throws)
     try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o)); } catch(e) {}
 
-    // 2) Mirror name/phone into the client roster (used by client list / header)
-    const clients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
-    const idx = clients.findIndex(c => c.id === clientId);
+    // 2) Mirror key fields into the client roster (used by client list / header / getClient())
+    const allClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+    const idx = allClients.findIndex(c => c.id === clientId);
     if (idx >= 0) {
-      if (o.firstName) clients[idx].fname = o.firstName;
-      if (o.lastName)  clients[idx].lname = o.lastName;
-      if (o.phone)     clients[idx].phone = o.phone;
-      try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+      if (o.firstName) allClients[idx].fname = o.firstName;
+      if (o.lastName)  allClients[idx].lname = o.lastName;
+      if (o.phone)     allClients[idx].phone = o.phone;
+      if (o.email)     allClients[idx].email = o.email;
+      try { localStorage.setItem('cq_admin_clients', JSON.stringify(allClients)); } catch(e) {}
+      // Also update the global in-memory array so renderClientDetail sees new data immediately
+      // without requiring a page refresh (was the root cause of the "save not sticking" bug)
+      const globalC = clients.find(c => c.id === clientId);
+      if (globalC) {
+        if (o.firstName) globalC.fname = o.firstName;
+        if (o.lastName)  globalC.lname = o.lastName;
+        if (o.phone)     globalC.phone = o.phone;
+        if (o.email)     globalC.email = o.email;
+      }
     }
 
     // 3) Firestore writes — call SDK directly (the fs* helpers in firebase-config.js
     //    swallow errors, which is what let this save silently fail in the first place).
     const fsErrors = [];
     if (idx >= 0) {
-      try { await db.collection('clients').doc(clients[idx].id).set(clients[idx]); }
+      try { await db.collection('clients').doc(allClients[idx].id).set(allClients[idx]); }
       catch(e) { fsErrors.push('client (' + (e.code || e.message || 'unknown') + ')'); }
     }
     try { await db.collection('onboarding').doc(clientId).set(o); }
@@ -8508,6 +8518,7 @@
     // delay just lets the "✓ Saved" toast register visually.
     setTimeout(() => {
       document.getElementById('admin-profile-edit-overlay')?.remove();
+      renderClientList();
       renderClientDetail(clientId);
     }, 800);
   }
