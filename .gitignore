@@ -3,3 +3,4 @@ temporary screenshots/
 *.png
 tasks-cache.json
 clients-cache.json
+ghl-config.json

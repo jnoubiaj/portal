@@ -419,7 +419,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, '0.0.0.0', () => {
   const apiKey = resolveKey({});
   const locId  = resolveLocId({});
   console.log('');

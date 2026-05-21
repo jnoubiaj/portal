@@ -4,7 +4,8 @@
     "proxy":          "node ghl-server.mjs",
     "scheduler":      "node scheduler.mjs",
     "scheduler:test": "node scheduler.mjs --test",
-    "start":          "node serve.mjs & node ghl-server.mjs",
+    "start":          "node worker.mjs",
+    "start:local":    "node serve.mjs & node ghl-server.mjs",
     "start:win":      "start node serve.mjs && start node ghl-server.mjs && start node scheduler.mjs"
   },
   "devDependencies": {

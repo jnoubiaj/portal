@@ -26,7 +26,13 @@ const CLIENTS_FILE  = path.join(__dirname, 'clients-cache.json');
 
 function loadConfig() {
   try {
-    return JSON.parse(fs.readFileSync(CFG_FILE, 'utf8'));
+    const cfg = JSON.parse(fs.readFileSync(CFG_FILE, 'utf8'));
+    // Env var overrides (used in Railway deployment — set via Railway dashboard)
+    if (process.env.EMAIL_PASS && cfg.email) cfg.email.pass = process.env.EMAIL_PASS;
+    if (process.env.EMAIL_USER && cfg.email) cfg.email.user = process.env.EMAIL_USER;
+    if (process.env.EMAIL_FROM && cfg.email) cfg.email.from = process.env.EMAIL_FROM;
+    if (process.env.SMS_FROM_PHONE && cfg.sms) cfg.sms.fromPhone = process.env.SMS_FROM_PHONE;
+    return cfg;
   } catch(e) {
     console.error('[Scheduler] Could not read scheduler-config.json:', e.message);
     return null;
@@ -792,7 +798,9 @@ async function lookupGhlContactId(phone, proxyUrl) {
 
 async function sendSms(cfg, smsText) {
   const { sms, recipients } = cfg;
-  const proxyUrl = (sms && sms.proxyUrl) || 'http://localhost:3001';
+  const proxyUrl = process.env.GHL_PROXY_PORT
+    ? `http://localhost:${process.env.GHL_PROXY_PORT}`
+    : ((sms && sms.proxyUrl) || 'http://localhost:3001');
   const fromPhone = sms && sms.fromPhone;
 
   if (!fromPhone || fromPhone === '+1XXXXXXXXXX') {

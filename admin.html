@@ -2603,8 +2603,25 @@
                   <span id="sched-save-msg" style="font-size:12px;color:#059669;display:none">Saved!</span>
                 </div>
 
+                <!-- Railway URL -->
+                <div style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 8px">Cloud Deployment (Railway)</div>
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#166534">
+                  After deploying to Railway, paste your Railway URL here. Admin will automatically push live data to it so emails &amp; texts always reflect current portal data.
+                </div>
+                <div style="margin-bottom:10px">
+                  <div class="ghl-settings-label">Railway Worker URL</div>
+                  <input class="ghl-settings-input" id="sched-railway-url" placeholder="https://your-app.up.railway.app" style="max-width:420px"
+                    oninput="localStorage.setItem('cq_scheduler_remote_url', this.value.trim())"
+                    value="">
+                  <div style="font-size:10px;color:var(--gray-400);margin-top:3px">Leave blank to use localhost only</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
+                  <button onclick="_schedCheckRailway()" style="padding:6px 14px;background:#f3f4f6;color:var(--navy);border:1px solid var(--gray-200);border-radius:8px;font-size:12px;cursor:pointer">Check Connection</button>
+                  <span id="sched-railway-status" style="font-size:11px;color:var(--gray-400)">—</span>
+                </div>
+
                 <div style="margin-top:14px;padding:10px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;font-size:11px;color:#0369a1">
-                  <strong>To activate:</strong> run <code>node scheduler.mjs</code> in the portal folder (separate terminal). It auto-starts with correct timings. Add <code>--test</code> to send a test summary immediately.
+                  <strong>Local:</strong> run <code>node worker.mjs</code> in the portal folder to start both proxy + scheduler. &nbsp;|&nbsp; <strong>Cloud:</strong> deploy to Railway at <strong>railway.app</strong> — always-on, no PC required.
                 </div>
               </div>
             </div>
@@ -2981,12 +2998,13 @@
     clients.forEach(c => { if (c && !c.updatedAt) { c.updatedAt = now; c.updatedBy = by; } });
     try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
     clients.forEach(c => fsSaveClient(c).catch(() => {}));
-    // Sync to scheduler cache (fire-and-forget)
+    // Sync to scheduler cache (fire-and-forget — localhost + Railway if configured)
     fetch('http://localhost:3001/api/data/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(clients)
     }).catch(function(){});
+    _syncToRemoteScheduler('/api/data/clients', clients);
   }
   function getClient(id) { return clients.find(c => c.id === id); }
 
@@ -16539,12 +16557,13 @@
       localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(tasks));
       console.log('[Tasks] Saved — clientId:', clientId, '| key: cq_ops_tasks_' + clientId, '| count:', tasks.length, '| titles:', tasks.map(function(t){return t.title;}));
     } catch(e) { console.error('[Tasks] Save failed:', e); }
-    // Sync to scheduler cache (fire-and-forget)
+    // Sync to scheduler cache (fire-and-forget — localhost + Railway if configured)
     fetch('http://localhost:3001/api/data/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ clientId: clientId, tasks: tasks })
     }).catch(function(){});
+    _syncToRemoteScheduler('/api/data/tasks', { clientId: clientId, tasks: tasks });
   }
   function createOpsTask(clientId, fields) {
     var tasks = getOpsTasks(clientId);
@@ -17258,6 +17277,21 @@
     console.log('[Admin] Proxy check result:', ready);
   }
 
+  // ── Remote Scheduler Sync ────────────────────────────────────────────────────
+  // Keeps the Railway-deployed worker fed with live task/client data
+  function _getRemoteSchedulerUrl() {
+    return (localStorage.getItem('cq_scheduler_remote_url') || '').replace(/\/$/, '');
+  }
+  function _syncToRemoteScheduler(endpoint, body) {
+    var url = _getRemoteSchedulerUrl();
+    if (!url) return;
+    fetch(url + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).catch(function(){});
+  }
+
   // ── Scheduler Settings ──────────────────────────────────────────────────────
   function _schedUpdateBadge() {
     var en = document.getElementById('sched-enabled');
@@ -17292,6 +17326,9 @@
         sv('sched-twilio-from',  cfg.sms.fromPhone);
       }
     } catch(e) { console.warn('[Scheduler] Could not load config:', e.message); }
+    // Always populate Railway URL from localStorage (independent of proxy)
+    var railwayEl = document.getElementById('sched-railway-url');
+    if (railwayEl) railwayEl.value = _getRemoteSchedulerUrl();
   }
   function _timeToCron(timeVal) {
     var parts = (timeVal || '09:00').split(':');
@@ -17344,6 +17381,22 @@
         console.log('[Scheduler] Settings saved');
       }
     } catch(e) { console.error('[Scheduler] Save failed:', e.message); }
+  }
+  async function _schedCheckRailway() {
+    var status = document.getElementById('sched-railway-status');
+    var url = _getRemoteSchedulerUrl();
+    if (!url) { if (status) status.textContent = 'No URL set'; return; }
+    if (status) status.textContent = 'Checking…';
+    try {
+      var r = await fetch(url + '/health', { signal: AbortSignal.timeout(5000) });
+      if (r.ok) {
+        if (status) { status.textContent = 'Connected ✓'; status.style.color = '#059669'; }
+      } else {
+        if (status) { status.textContent = 'Error ' + r.status; status.style.color = '#dc2626'; }
+      }
+    } catch(e) {
+      if (status) { status.textContent = 'Could not reach: ' + e.message; status.style.color = '#dc2626'; }
+    }
   }
   // Auto-load scheduler settings when settings section opens
   (function() {
