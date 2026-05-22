@@ -7503,10 +7503,14 @@
     }
 
     // ── Recommended Funding Sequence ──────────────────────────────────────
+    function _roundSub(banks, hint) {
+      var names = banks.map(function(b) { return b.bankName || b.id; });
+      return names.join(' · ') + (hint ? ' · ' + hint : '');
+    }
     var roundDefs = [
-      { num: 1, banks: s.round1, avail: s.r1Avail, label: 'Round 1 — Primary Banks', sub: 'Citizens · US Bank · Chase · Amex (with relationship) · Apply same day within each round', color: '#0A1628' },
-      { num: 2, banks: s.round2, avail: s.r2Avail, label: 'Round 2 — Secondary Banks', sub: 'Bank of America · Wells Fargo · PNC · Truist · Regional banks with relationship', color: '#065f46' },
-      { num: 3, banks: s.round3, avail: s.r3Avail, label: 'Round 3 — Elan + Regional Expansion', sub: 'Flagstar · Elan partner banks · State-specific community banks', color: '#1d4ed8' }
+      { num: 1, banks: s.round1, avail: s.r1Avail, label: 'Round 1 — Primary Banks', sub: _roundSub(s.round1, 'Apply same day within each round'), color: '#0A1628' },
+      { num: 2, banks: s.round2, avail: s.r2Avail, label: 'Round 2 — Secondary Banks', sub: _roundSub(s.round2, 'Regional banks with relationship'), color: '#065f46' },
+      { num: 3, banks: s.round3, avail: s.r3Avail, label: 'Round 3 — Elan + Regional Expansion', sub: _roundSub(s.round3, 'State-specific community banks'), color: '#1d4ed8' }
     ];
     var hasAnyRound = roundDefs.some(function(r) { return r.banks.length > 0; }) || (s.round4 && s.round4.length > 0);
     if (hasAnyRound) {
