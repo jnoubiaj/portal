@@ -2052,7 +2052,7 @@
   .a-ch2 {
     display:flex; align-items:center; gap:14px; flex-wrap:nowrap;
     padding:14px 20px; background:var(--white); border-bottom:1px solid var(--gray-100);
-    position:sticky; top:0; z-index:10; overflow:hidden;
+    position:sticky; top:0; z-index:10; overflow:visible;
   }
   .a-ch2-identity { min-width:0; flex-shrink:1; }
   .a-ch2-name { font-family:var(--font-h); font-size:16px; font-weight:800; color:var(--navy); letter-spacing:-0.02em; display:flex; align-items:center; gap:6px; overflow:hidden; }
@@ -2086,9 +2086,9 @@
   }
   .btn-more:hover { border-color:var(--gray-300); background:var(--gray-50); color:var(--navy); }
   .a-more-drop {
-    position:absolute; top:calc(100% + 6px); right:0; min-width:192px; background:var(--white);
+    position:fixed; min-width:192px; background:var(--white);
     border:1.5px solid var(--gray-100); border-radius:12px; box-shadow:0 8px 32px rgba(10,22,40,0.12);
-    z-index:9999; overflow:hidden; display:none;
+    z-index:99999; overflow:hidden; display:none;
   }
   .a-more-drop.open { display:block; animation:dropIn 0.15s ease; }
   @keyframes dropIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
@@ -5170,7 +5170,17 @@
     if (!drop) return;
     var isOpen = drop.classList.contains('open');
     closeMoreActions();
-    if (!isOpen) drop.classList.add('open');
+    if (!isOpen) {
+      // Use fixed positioning based on button's viewport rect — escapes all stacking contexts
+      var btn = e && (e.currentTarget || e.target.closest('.btn-more'));
+      if (btn) {
+        var r = btn.getBoundingClientRect();
+        drop.style.top  = (r.bottom + 6) + 'px';
+        drop.style.right = (window.innerWidth - r.right) + 'px';
+        drop.style.left = 'auto';
+      }
+      drop.classList.add('open');
+    }
   }
   function closeMoreActions() {
     document.querySelectorAll('.a-more-drop.open').forEach(function(d) { d.classList.remove('open'); });
