@@ -4,21 +4,21 @@
 
 window.BANK_RELATIONSHIP_RULES = {
   'chase': {
-    bankName:'Chase', bureau:'TU/EX',
-    requiresRelationship:false, businessCheckingRequired:false, businessCheckingRecommended:true,
-    minimumDeposit:5000, recommendedDeposit:10000, seasoningDays:14, requiredTransactions:10,
-    brmRecommended:true, applicationMethod:'online or branch',
-    relationshipNotes:'Chase BRM relationship and 90-day banking history significantly improve approval odds and starting limits.',
-    steps:['Open Chase business checking','Deposit $10,000 minimum','Complete 10+ business transactions over 14 days','Request BRM introduction before applying','Apply online or in-branch with BRM present'],
+    bankName:'Chase', bureau:'EX+TU',
+    requiresRelationship:false, businessCheckingRequired:true, businessCheckingRecommended:true,
+    minimumDeposit:2000, recommendedDeposit:5000, seasoningDays:14, requiredTransactions:5,
+    brmRecommended:true, applicationMethod:'online',
+    relationshipNotes:'Chase checking account + $2,000+ balance + account activity is required per Evergreen. Dual pull: EX + TU. Apply AFTER US Bank to protect TU inquiry count. BRM relationship improves limits.',
+    steps:['Open Chase business checking (REQUIRED)','Deposit $2,000 minimum ($5,000+ recommended)','Complete 5+ business transactions over 14 days','Request BRM introduction if possible','Apply online only — use Chase online application portal'],
     taskKeys:['chase-open-checking','chase-deposit','chase-transactions','chase-brm','chase-apply']
   },
   'boa': {
     bankName:'Bank of America', bureau:'TU',
-    requiresRelationship:false, businessCheckingRequired:false, businessCheckingRecommended:true,
-    minimumDeposit:5000, recommendedDeposit:10000, seasoningDays:14, requiredTransactions:0,
+    requiresRelationship:false, businessCheckingRequired:true, businessCheckingRecommended:true,
+    minimumDeposit:5000, recommendedDeposit:10000, seasoningDays:14, requiredTransactions:5,
     brmRecommended:true, applicationMethod:'online or branch',
-    relationshipNotes:'BofA Preferred Rewards for Business membership improves approval rate 2–3x. BRM introduction strongly recommended.',
-    steps:['Open BofA business checking','Deposit $5,000–$10,000','Season account for 14 days','Request BRM introduction','Apply online or with BRM in branch'],
+    relationshipNotes:'BOA checking + $5,000+ balance + account activity required per Evergreen. BRM strongly recommended — can get up to 5 cards in ONE day on one TU inquiry. Net Profit field = 45%–60% of Revenue.',
+    steps:['Open BOA business checking (required)','Deposit $5,000 minimum ($10,000 recommended)','Complete 5+ transactions over 14 days','Request BRM introduction — up to 5 cards in one day','Apply online or with BRM; enter Net Profit = 45%–60% of annual revenue'],
     taskKeys:['boa-open-checking','boa-deposit','boa-season','boa-brm','boa-apply']
   },
   'wells-fargo': {
@@ -32,20 +32,20 @@ window.BANK_RELATIONSHIP_RULES = {
   },
   'us-bank': {
     bankName:'US Bank', bureau:'TU',
-    requiresRelationship:true, businessCheckingRequired:true, businessCheckingRecommended:true,
-    minimumDeposit:5000, recommendedDeposit:10000, seasoningDays:30, requiredTransactions:0,
-    brmRecommended:false, applicationMethod:'branch required',
-    relationshipNotes:'US Bank REQUIRES existing business checking. This is a hard requirement — applications without it are declined.',
-    steps:['Open US Bank business checking (REQUIRED)','Deposit $5,000 minimum','Season account for 30 days','Apply in branch — bring checking account info'],
-    taskKeys:['usbank-open-checking','usbank-deposit','usbank-season','usbank-apply']
+    requiresRelationship:false, businessCheckingRequired:false, businessCheckingRecommended:true,
+    minimumDeposit:0, recommendedDeposit:5000, seasoningDays:0, requiredTransactions:0,
+    brmRecommended:false, applicationMethod:'online or branch',
+    relationshipNotes:'US Bank does NOT require an existing checking account — Evergreen confirmed. Apply online or via BRM directly. Account is recommended for better limits but not required. Apply BEFORE Chase — both pull TransUnion.',
+    steps:['No prior relationship required — apply online at usbank.com or visit a US Bank branch','Opening a US Bank business checking account is recommended but not required','If opening account: deposit $5,000+ and season briefly before applying','Apply BEFORE Chase — both pull TransUnion; protect TU inquiry budget'],
+    taskKeys:['usbank-apply']
   },
   'pnc': {
     bankName:'PNC', bureau:'EX',
-    requiresRelationship:false, businessCheckingRequired:false, businessCheckingRecommended:true,
-    minimumDeposit:3000, recommendedDeposit:5000, seasoningDays:60, requiredTransactions:0,
+    requiresRelationship:false, businessCheckingRequired:true, businessCheckingRecommended:true,
+    minimumDeposit:2000, recommendedDeposit:5000, seasoningDays:30, requiredTransactions:0,
     brmRecommended:false, applicationMethod:'online or branch',
-    relationshipNotes:'PNC rewards existing checking customers. 60-day seasoning period significantly improves outcomes.',
-    steps:['Open PNC business checking','Deposit $3,000 minimum','Season for 60 days','Apply online or in branch'],
+    relationshipNotes:'PNC requires account + $2,000+ balance + account activity per Evergreen. 0% for 13 months — longest of any national EX bank. Online or BRM.',
+    steps:['Open PNC business checking (required)','Deposit $2,000 minimum','Ensure account activity (transactions)','Apply online or in branch'],
     taskKeys:['pnc-open-checking','pnc-deposit','pnc-season','pnc-apply']
   },
   'citizens': {
@@ -59,12 +59,57 @@ window.BANK_RELATIONSHIP_RULES = {
   },
   'keybank': {
     bankName:'KeyBank', bureau:'EQ',
-    requiresRelationship:false, businessCheckingRequired:false, businessCheckingRecommended:false,
+    requiresRelationship:true, businessCheckingRequired:true, businessCheckingRecommended:true,
     minimumDeposit:1000, recommendedDeposit:2500, seasoningDays:0, requiredTransactions:0,
+    brmRecommended:false, applicationMethod:'branch or brm',
+    relationshipNotes:'KeyBank requires existing account with $1k+ balance. In-branch or BRM only — no online application. Request $25,000 credit line. EQ pull.',
+    steps:['Open KeyBank business checking','Deposit $1,000 minimum','Apply in branch or via BRM — no online application','Request $25,000 credit line on application'],
+    taskKeys:['keybank-open-checking','keybank-deposit','keybank-apply']
+  },
+  'truist': {
+    bankName:'Truist', bureau:'EQ',
+    requiresRelationship:false, businessCheckingRequired:false, businessCheckingRecommended:false,
+    minimumDeposit:0, recommendedDeposit:0, seasoningDays:0, requiredTransactions:0,
     brmRecommended:false, applicationMethod:'online or branch',
-    relationshipNotes:'KeyBank does not require a prior relationship. Good option for clients with limited existing bank relationships.',
-    steps:['No prior relationship required','Apply online or in branch directly'],
-    taskKeys:['keybank-apply']
+    relationshipNotes:'Truist does not require existing account. Up to 2 cards per day on one EQ inquiry — strategic EQ bureau diversification. Available in SE states only.',
+    steps:['No prior relationship required','Apply online or in branch','Can apply for up to 2 Truist cards in a single day on one inquiry'],
+    taskKeys:['truist-apply']
+  },
+  'flagstar': {
+    bankName:'Flagstar Bank', bureau:'EX',
+    requiresRelationship:false, businessCheckingRequired:false, businessCheckingRecommended:false,
+    minimumDeposit:0, recommendedDeposit:0, seasoningDays:0, requiredTransactions:0,
+    brmRecommended:false, applicationMethod:'online',
+    relationshipNotes:'Flagstar does not require existing account. Online applications only — no branch option. Best 0% intro in the sequence at 18 months. Enter Checking Balance field as $50,000+.',
+    steps:['No prior relationship required','Apply online only at flagstar.com','Use a zip code in Flagstar service area','Enter "Checking Balance" field as $50,000+'],
+    taskKeys:['flagstar-apply']
+  },
+  'bmo': {
+    bankName:'BMO Harris', bureau:'TU',
+    requiresRelationship:true, businessCheckingRequired:true, businessCheckingRecommended:true,
+    minimumDeposit:1000, recommendedDeposit:3000, seasoningDays:30, requiredTransactions:0,
+    brmRecommended:false, applicationMethod:'branch or brm',
+    relationshipNotes:'BMO requires existing checking account with $1k+ balance. Wait 30 days after opening before applying. Sometimes requests docs. In branch or BRM.',
+    steps:['Open BMO Harris business checking','Deposit $1,000 minimum','Wait 30 days after account opening','Apply in branch or via BRM — may request financial documents'],
+    taskKeys:['bmo-open-checking','bmo-deposit','bmo-season','bmo-apply']
+  },
+  'valley-bank': {
+    bankName:'Valley Bank', bureau:'TU',
+    requiresRelationship:true, businessCheckingRequired:true, businessCheckingRecommended:true,
+    minimumDeposit:2000, recommendedDeposit:5000, seasoningDays:30, requiredTransactions:0,
+    brmRecommended:false, applicationMethod:'branch',
+    relationshipNotes:'Valley Bank requires existing account with $2k+ balance. Wait 30 days after opening. In-branch applications only — no online option.',
+    steps:['Open Valley Bank business checking','Deposit $2,000 minimum','Wait 30 days after account opening','Apply in branch only — no online application'],
+    taskKeys:['valley-open-checking','valley-deposit','valley-season','valley-apply']
+  },
+  'regions': {
+    bankName:'Regions Bank', bureau:'TU',
+    requiresRelationship:true, businessCheckingRequired:true, businessCheckingRecommended:true,
+    minimumDeposit:1000, recommendedDeposit:3000, seasoningDays:30, requiredTransactions:0,
+    brmRecommended:false, applicationMethod:'branch',
+    relationshipNotes:'Regions requires existing account with $1k+ balance. Wait 30 days after opening. In-branch applications only — no online option. Available in SE states.',
+    steps:['Open Regions business checking','Deposit $1,000 minimum','Wait 30 days after account opening','Apply in branch only — no online application available'],
+    taskKeys:['regions-open-checking','regions-deposit','regions-season','regions-apply']
   },
   'first-citizens': {
     bankName:'First Citizens Bank', bureau:'EX',

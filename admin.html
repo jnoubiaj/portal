@@ -5916,26 +5916,32 @@
   // State database controls regional/Elan availability; this controls national bank order.
   // Amex: only included when client has existing Amex relationship.
   var FSG_PRIMARY_SEQUENCE = [
-    { id:'amex',        name:'American Express', card:'Blue Business Cash / Business Gold',            bureau:'EX',  round:1, priority:1, minScore:700, minBizAge:2, requiresRelationship:true,  riskLevel:'low',        whySelected:'Highest available limits. Apply first ONLY with existing Amex relationship — EX pull, largest starting balances.',    timing:'Apply first if existing Amex relationship — highest limits, EX-only pull' },
-    { id:'citizens',    name:'Citizens Bank',    card:'Citizens Business Rewards',                     bureau:'EX',  round:1, priority:2, minScore:680, minBizAge:1, requiresRelationship:false, riskLevel:'low',        whySelected:'EX pull only. No relationship required. Solid approval rate for qualified applicants with clean Experian.',          timing:'EX pull — no relationship required; good approval rate for 680+ FICO' },
-    { id:'us-bank',     name:'US Bank',          card:'Business Triple Cash Rewards Visa',             bureau:'TU',  round:1, priority:3, minScore:700, minBizAge:1, requiresRelationship:true,  riskLevel:'low-medium', whySelected:'REQUIRES existing US Bank checking account. TU pull. Must open account 30 days before applying.',                   timing:'REQUIRES US Bank business checking opened and seasoned 30 days before application' },
-    { id:'chase',       name:'Chase',            card:'Ink Business Cash / Ink Business Unlimited',   bureau:'TU',  round:1, priority:4, minScore:680, minBizAge:1, requiresRelationship:false, riskLevel:'low',        whySelected:'Core national bank. TU/EX pull. 5/24 rule applies. Relationship checking account improves approval odds.',            timing:'Core national bank — TU/EX pull; 5/24 rule applies; BRM or checking account helps' },
-    { id:'boa',         name:'Bank of America',  card:'Business Advantage Unlimited Cash Rewards',    bureau:'TU',  round:2, priority:5, minScore:680, minBizAge:2, requiresRelationship:false, riskLevel:'low',        whySelected:'TU pull only. BRM relationship or Preferred Rewards membership strongly recommended for 2–3× better approval odds.', timing:'TU pull — BRM introduction strongly recommended for best approval odds and limits' },
-    { id:'wells-fargo', name:'Wells Fargo',      card:'Business Signify Cash / Business Secured',     bureau:'EX',  round:2, priority:6, minScore:680, minBizAge:1, requiresRelationship:false, riskLevel:'low',        whySelected:'EX pull. Apply in branch with existing WF checking account for best outcome.',                                       timing:'EX pull — apply in branch with existing Wells Fargo checking account' },
-    { id:'pnc',         name:'PNC',              card:'PNC Cash Rewards Visa Business',                bureau:'EX',  round:2, priority:7, minScore:680, minBizAge:1, requiresRelationship:false, riskLevel:'low-medium', whySelected:'EX pull. Open PNC checking and season 60 days for materially better approval odds and starting limits.',            timing:'EX pull — open PNC checking, deposit $3K, season 60 days before applying' },
-    { id:'truist',      name:'Truist',           card:'Truist Business Cash Rewards',                  bureau:'EQ',  round:2, priority:8, minScore:680, minBizAge:1, requiresRelationship:false, riskLevel:'low-medium', whySelected:'EQ pull — diversifies bureau inquiries after EX and TU banks. Good for clients with clean Equifax.',                timing:'EQ pull — use to diversify bureau inquiries after EX and TU banks in Rounds 1–2' },
-    { id:'flagstar',    name:'Flagstar',         card:'Flagstar Business Credit Card',                 bureau:'EX',  round:3, priority:9, minScore:680, minBizAge:1, requiresRelationship:false, riskLevel:'medium',     whySelected:'EX pull. Expansion bank for Round 3 — additional 0% credit stacking after primary sequence.',                     timing:'EX pull — Round 3 expansion; use for additional credit stacking after core sequence' }
+    // Round 1 — National core banks. Apply in this Evergreen-specified order.
+    { id:'amex',        name:'American Express', card:'AMEX Blue Business Plus / AMEX Blue Business Cash',                             bureau:'EX',                    round:1, priority:1, minScore:700, minBizAge:1, requiresRelationship:true,  national:true,  riskLevel:'low',    whySelected:'Highest available limits. Soft EX pull when existing AMEX relationship — zero inquiry cost. Skip to US Bank if no prior AMEX relationship.', timing:'Apply FIRST if client has existing AMEX personal card — EX soft pull, highest limits. Rev $325k–$350k, Income $115k–$125k, Monthly Spend $18k–$25k. Recon: 1-800-567-1083' },
+    { id:'citizens',    name:'Citizens Bank',    card:'Citizens Bank Business Credit Card',                                            bureau:'EX',                    round:1, priority:2, minScore:680, minBizAge:1, requiresRelationship:false, national:false, riskLevel:'low',    whySelected:'EX pull (soft personal / hard business). Generous limits — go early since soft personal pull. Net Revenue = 74% of gross. No account required. Regional: check state availability.', timing:'EX soft pull (personal) / hard (business). No account required; in branch or BRM. Rev $750k–$925k, Net Revenue = 74% of gross revenue. Recon: 1-888-798-4600' },
+    { id:'us-bank',     name:'US Bank',          card:'US Bank Business Triple Cash Rewards / US Bank Business Shield',                bureau:'TU',                    round:1, priority:3, minScore:700, minBizAge:1, requiresRelationship:false, national:true,  riskLevel:'low',    whySelected:'TU pull. No account required — apply online or BRM. Apply BEFORE Chase — both pull TransUnion. Protecting TU inquiry count here preserves Chase approval odds.', timing:'Apply BEFORE Chase — both pull TransUnion. No account required; online or BRM. Rev $625k–$750k, Income $250k–$350k, Monthly Spend $25k. Recon: 1-800-282-8111' },
+    { id:'chase',       name:'Chase',            card:'Chase Ink Business Unlimited / Chase Ink Business Cash',                       bureau:'EX', bureauSecondary:'TU', round:1, priority:4, minScore:680, minBizAge:1, requiresRelationship:false, national:true,  riskLevel:'low',    whySelected:'Most generous limits. DUAL hard pull: Experian + TransUnion. Apply after US Bank (both pull TU). Chase checking + $2k+ balance + activity required. Online only.', timing:'Dual EX + TU hard pull — apply after US Bank. Requires Chase checking + $2,000+ balance + activity; online only. Rev $550k–$600k, Income $150k–$305k, Monthly Spend $25k. Recon: 1-800-453-9719' },
+
+    // Round 2 — Continue after Round 1 approvals.
+    { id:'boa',         name:'Bank of America',  card:'BOA Business Customized Cash / Unlimited Cash / Travel Rewards / Platinum Plus', bureau:'TU',                  round:2, priority:5, minScore:680, minBizAge:1, requiresRelationship:false, national:true,  riskLevel:'low',    whySelected:'TU pull. Up to 5 cards in ONE day on one inquiry. Net Profit = 45%–60% of Revenue. BOA checking + $5k+ balance + activity required. BRM strongly recommended.', timing:'TU pull — up to 5 cards/day on 1 inquiry. BOA checking + $5,000+ balance + activity required. Net Profit = 45%–60% of Revenue. Online or BRM. Recon: 1-866-422-8089' },
+    { id:'wells-fargo', name:'Wells Fargo',      card:'Wells Fargo Signify Business Cash',                                            bureau:'EX',                    round:2, priority:6, minScore:680, minBizAge:1, requiresRelationship:false, national:true,  riskLevel:'low',    whySelected:'EX pull. No account required but $2k–$5k balance recommended. 0% for 12 months. No docs, online or BRM. Straightforward national EX bank.', timing:'EX pull — no account required but $2k–$5k balance recommended. Rev $225k–$325k, Income $125k–$300k, Monthly Spend $25k. 0% for 12 months. Recon: 1-800-967-9521' },
+    { id:'pnc',         name:'PNC',              card:'PNC Visa Business Credit Card',                                                bureau:'EX',                    round:2, priority:7, minScore:680, minBizAge:1, requiresRelationship:false, national:true,  riskLevel:'low',    whySelected:'EX pull. Longest 0% intro of national EX banks at 13 months. PNC account + $2k+ balance + activity required. Online or BRM.', timing:'EX pull — PNC account + $2,000+ balance + activity required. Rev $523k–$700k, Income $224k–$300k. 0% for 13 months. Online or BRM. Recon: 1-800-474-2101' },
+    { id:'truist',      name:'Truist',           card:'Truist Business Card / Truist Business Cash Rewards',                          bureau:'EQ',                    round:2, priority:8, minScore:680, minBizAge:1, requiresRelationship:false, national:false, riskLevel:'low',    whySelected:'EQ pull — diversifies bureau inquiries after EX/TU banks in Rounds 1–2. Strategic: up to 2 cards per day on one EQ pull. No account required. Regional: SE states only.', timing:'EQ pull — diversifies after EX/TU banks; up to 2 cards/day on 1 EQ inquiry. No account required; online or BRM. Rev $500k–$650k, Income $225k–$300k. Recon: 1-800-878-2265' },
+
+    // Round 3 — Expansion. Complete Rounds 1–2 before applying here.
+    { id:'flagstar',    name:'Flagstar Bank',    card:'Flagstar Business Edition Visa (0% 18mo) / Flagstar Absolute Rewards (0% 12mo)', bureau:'EX',                  round:3, priority:9,  minScore:680, minBizAge:1, requiresRelationship:false, national:false, riskLevel:'medium', whySelected:'EX pull. BEST 0% term at 18 months — longest in the full Evergreen sequence. No account required; online only. Checking Balance field: $50k+. Regional: select states.', timing:'EX pull — BEST 0% at 18 months. No account required; online only. Rev $480k–$600k, Checking Balance $50k+. Recon: 1-888-757-1140' },
+    { id:'fnbo',        name:'FNBO',             card:'FNBO Evergreen Business Mastercard',                                           bureau:'EX',                    round:3, priority:10, minScore:680, minBizAge:1, requiresRelationship:false, national:false, riskLevel:'medium', whySelected:'EX pull. 0% for 6 months. No docs, no account required. Use a zip code near an FNBO branch for online application. Midwest + select states only.', timing:'EX pull — use zip near FNBO branch for online application. Rev $480k–$600k. 0% for 6 months. Recon: 1-888-757-1140' }
   ];
 
   // BACKUP BANKS — Round 4 only. Not part of primary sequence.
   // Used only when funding goal is not met after Rounds 1–3.
+  // Note: FNBO is in FSG_PRIMARY_SEQUENCE as Round 3 with state filtering — not in backup.
   var FSG_BACKUP_BANKS = [
     { id:'barclays',    name:'Barclays',     card:'Barclays Business Rewards Mastercard', bureau:'EX',  priority:1, riskLevel:'medium', timing:'Backup EX bank — use if primary EX banks decline or funding gap remains after Round 3' },
-    { id:'fnbo',        name:'FNBO',         card:'FNBO Business Edition Rewards',        bureau:'EX',  priority:2, riskLevel:'medium', timing:'Backup EX bank — First National Bank of Omaha; additional EX credit stacking option' },
-    { id:'citi',        name:'Citi',         card:'Citi Business AAdvantage Platinum',    bureau:'TU',  priority:3, riskLevel:'medium', timing:'Backup TU bank — use if primary TU banks decline or additional TU credit needed' },
-    { id:'discover',    name:'Discover',     card:'Discover it Business Card',            bureau:'EQ',  priority:4, riskLevel:'medium', timing:'Backup EQ bank — easiest EQ approval; use for additional EQ credit stacking' },
-    { id:'capital-one', name:'Capital One',  card:'Spark Cash Select for Business',       bureau:'ALL', priority:5, riskLevel:'high',   timing:'Apply LAST — pulls all 3 bureaus simultaneously; use only when other options exhausted' },
-    { id:'navy-federal',name:'Navy Federal', card:'Business Visa Signature Card',         bureau:'TU',  priority:6, riskLevel:'medium', timing:'Backup TU option — military/veteran membership required; excellent rates for eligible members' }
+    { id:'citi',        name:'Citi',         card:'Citi Business AAdvantage Platinum',    bureau:'TU',  priority:2, riskLevel:'medium', timing:'Backup TU bank — use if primary TU banks decline or additional TU credit needed' },
+    { id:'discover',    name:'Discover',     card:'Discover it Business Card',            bureau:'EQ',  priority:3, riskLevel:'medium', timing:'Backup EQ bank — easiest EQ approval; use for additional EQ credit stacking' },
+    { id:'capital-one', name:'Capital One',  card:'Spark Cash Select for Business',       bureau:'ALL', priority:4, riskLevel:'high',   timing:'Apply LAST — pulls all 3 bureaus simultaneously; use only when other options exhausted' },
+    { id:'navy-federal',name:'Navy Federal', card:'Business Visa Signature Card',         bureau:'TU',  priority:5, riskLevel:'medium', timing:'Backup TU option — military/veteran membership required; excellent rates for eligible members' }
   ];
 
   // Inquiry threshold by bureau — above these, recommend removal before EX/TU banks
@@ -5947,7 +5953,7 @@
     banks: {
       'citizens':      { name:'Citizens Bank',    card:'Citizens Business Rewards',                    bureau:'Experian',   revenue:50000, income:3000, monthlySpend:3000, requirements:'680+ FICO', notes:'EX pull; no relationship required', riskLevel:'low', whySelected:'EX only — solid approval rate, no prior relationship required.' },
       'us-bank':       { name:'US Bank',           card:'Business Triple Cash Rewards Visa',            bureau:'TransUnion', revenue:50000, income:3000, monthlySpend:5000, requirements:'Must have US Bank business checking (30-day seasoning)', notes:'TU pull; requires relationship', riskLevel:'low-medium', whySelected:'Requires existing US Bank checking. TU-only pull.' },
-      'chase':         { name:'Chase',             card:'Ink Business Cash / Ink Business Unlimited',   bureau:'TransUnion', revenue:50000, income:3000, monthlySpend:5000, requirements:'Under Chase 5/24 rule', notes:'TU/EX pull; 5/24 rule applies', riskLevel:'low', whySelected:'Core national bank. TU/EX pull. 5/24 rule applies.' },
+      'chase':         { name:'Chase',             card:'Chase Ink Business Unlimited / Ink Business Cash', bureau:'Experian', bureauNote:'Dual pull: Experian + TransUnion', revenue:50000, income:3000, monthlySpend:5000, requirements:'Chase checking + $2,000+ balance + activity required', notes:'Dual EX+TU pull; apply after US Bank; online only', riskLevel:'low', whySelected:'Most generous limits. Dual EX+TU hard pull — apply after US Bank to protect TransUnion count.' },
       'boa':           { name:'Bank of America',   card:'Business Advantage Unlimited Cash Rewards',    bureau:'TransUnion', revenue:50000, income:2500, monthlySpend:3000, requirements:'2+ years in business; BRM recommended', notes:'TU pull; BRM strongly recommended', riskLevel:'low', whySelected:'TU-only pull. BRM relationship or Preferred Rewards improves approval 2-3x.' },
       'wells-fargo':   { name:'Wells Fargo',       card:'Business Signify Cash',                        bureau:'Experian',   revenue:50000, income:2500, monthlySpend:3000, requirements:'Existing WF relationship preferred; apply in branch', notes:'EX pull; in-branch preferred', riskLevel:'low', whySelected:'EX-only pull; apply in branch with existing account.' },
       'pnc':           { name:'PNC',               card:'PNC Cash Rewards Visa Business',               bureau:'Experian',   revenue:50000, income:2500, monthlySpend:3000, requirements:'Open PNC checking 60 days before applying', notes:'EX pull; seasoning required', riskLevel:'low-medium', whySelected:'EX pull. Open PNC checking and season 60 days for best results.' },
@@ -5968,6 +5974,76 @@
       }
     }
   };
+
+  // Evergreen-correct bureau assignments — authoritative source for all FSG bureau logic.
+  // Returns { primary, secondary?, label, multi, soft? } or null for unknown bank.
+  function getBankBureaus(bankId) {
+    var map = {
+      'amex':         { primary:'EX',  label:'Experian (soft pull with existing AMEX relationship)',    multi:false, soft:true  },
+      'citizens':     { primary:'EX',  label:'Experian (soft personal / hard business)',                multi:false            },
+      'us-bank':      { primary:'TU',  label:'TransUnion',                                              multi:false            },
+      'chase':        { primary:'EX',  secondary:'TU', label:'Experian + TransUnion (dual hard pull)',  multi:true             },
+      'boa':          { primary:'TU',  label:'TransUnion',                                              multi:false            },
+      'wells-fargo':  { primary:'EX',  label:'Experian',                                                multi:false            },
+      'pnc':          { primary:'EX',  label:'Experian',                                                multi:false            },
+      'truist':       { primary:'EQ',  label:'Equifax',                                                 multi:false            },
+      'flagstar':     { primary:'EX',  label:'Experian',                                                multi:false            },
+      'fnbo':         { primary:'EX',  label:'Experian',                                                multi:false            },
+      'valley-bank':  { primary:'TU',  label:'TransUnion',                                              multi:false            },
+      'bmo':          { primary:'TU',  label:'TransUnion',                                              multi:false            },
+      'keybank':      { primary:'EQ',  label:'Equifax',                                                 multi:false            },
+      'regions':      { primary:'TU',  label:'TransUnion',                                              multi:false            },
+      'elan':         { primary:'TU',  label:'TransUnion',                                              multi:false            },
+      'barclays':     { primary:'EX',  label:'Experian',                                                multi:false            },
+      'citi':         { primary:'TU',  label:'TransUnion',                                              multi:false            },
+      'discover':     { primary:'EQ',  label:'Equifax',                                                 multi:false            },
+      'capital-one':  { primary:'ALL', label:'All 3 bureaus — simultaneous hard pull',                  multi:true             },
+      'navy-federal': { primary:'TU',  label:'TransUnion',                                              multi:false            }
+    };
+    return map[bankId] || null;
+  }
+
+  // Returns inquiry risk for a bank + client profile combination.
+  // risk: 'ok' | 'elevated' | 'high' | 'unknown'
+  function getBureauInquiryRisk(profile, bankId) {
+    var bureauInfo = getBankBureaus(bankId);
+    if (!bureauInfo) return { risk:'unknown', level:0, label:'' };
+    var primary = bureauInfo.primary;
+    var inqCount = 0, bureauName = '';
+    if      (primary === 'EX')  { inqCount = profile.expInq || 0; bureauName = 'Experian'; }
+    else if (primary === 'TU')  { inqCount = profile.tuInq  || 0; bureauName = 'TransUnion'; }
+    else if (primary === 'EQ')  { inqCount = profile.eqInq  || 0; bureauName = 'Equifax'; }
+    else if (primary === 'ALL') { inqCount = Math.max(profile.expInq||0, profile.tuInq||0, profile.eqInq||0); bureauName = 'All Bureaus'; }
+    var warnThresh  = (FSG_INQ_WARN[primary]  != null) ? FSG_INQ_WARN[primary]  : 5;
+    var blockThresh = (FSG_INQ_BLOCK[primary] != null) ? FSG_INQ_BLOCK[primary] : 8;
+    var risk, label;
+    if      (inqCount > blockThresh) { risk = 'high';     label = bureauName + ' ' + inqCount + ' inquiries — removal strongly recommended before applying'; }
+    else if (inqCount > warnThresh)  { risk = 'elevated'; label = bureauName + ' ' + inqCount + ' inquiries — approaching threshold'; }
+    else                             { risk = 'ok';       label = bureauName + ' inquiries OK (' + inqCount + ')'; }
+    // Chase: also check TU secondary
+    if (bureauInfo.secondary === 'TU') {
+      var tuCount = profile.tuInq || 0;
+      if (tuCount > (FSG_INQ_BLOCK.TU || 8) && risk !== 'high') {
+        risk = 'elevated'; label += '; TU also elevated (' + tuCount + ')';
+      } else if (tuCount > (FSG_INQ_WARN.TU || 5) && risk === 'ok') {
+        risk = 'elevated'; label += '; TU elevated (' + tuCount + ')';
+      }
+    }
+    return { risk:risk, level:inqCount, label:label, bureauName:bureauName };
+  }
+
+  // Returns true if bankId is available in the client's state per the state database.
+  // Fails open (returns true) when state or database data is unavailable — never drop banks on bad data.
+  function isBankAvailableInState(bankId, profile) {
+    if (!bankId || !profile.state || !profile.banksByState) return true;
+    var bs = profile.banksByState;
+    var allIds = []
+      .concat((bs.experian   || []).map(function(b) { return b.id || b; }))
+      .concat((bs.transunion || []).map(function(b) { return b.id || b; }))
+      .concat((bs.equifax    || []).map(function(b) { return b.id || b; }))
+      .concat((bs.regional   || []).map(function(b) { return b.id || b; }));
+    return allIds.indexOf(bankId) !== -1;
+  }
 
   function _fsgValidateDatabase(db) {
     if (!db || !db.banks || !db.states) return false;
@@ -6415,29 +6491,29 @@
       optSteps.push({ step: 'Pay down to below 30% utilization before applying (currently ' + profile.utilization + '%)', why: '30% is the industry threshold; above it reduces both approval odds and credit limits offered' });
     }
 
-    // Inquiry flags by bureau — recommend removal, not exclusion
+    // Inquiry flags by bureau — recommend removal, not exclusion from sequence
     if (profile.expInq > FSG_INQ_BLOCK.EX) {
       if (readiness !== 'blocked') readiness = 'optimize';
       inquiryFlags.ex = true;
-      reasons.push(profile.expInq + ' Experian inquiries (above ' + FSG_INQ_BLOCK.EX + ' triggers Chase 5/24 and impacts Citizens, Wells Fargo, PNC)');
-      optSteps.push({ step: 'Run Experian inquiry removal before Citizens, Chase, Wells Fargo, and PNC applications', why: 'Our process removes inquiries — do not skip EX banks, optimize timing. Remove first, then apply full sequence.' });
+      reasons.push(profile.expInq + ' Experian inquiries (above ' + FSG_INQ_BLOCK.EX + ' — impacts AMEX, Citizens, Chase dual pull, Wells Fargo, PNC, and Flagstar)');
+      optSteps.push({ step: 'Run Experian inquiry removal before AMEX, Citizens, Chase, Wells Fargo, PNC, and Flagstar applications', why: 'Experian is the most-pulled bureau in the Evergreen sequence — AMEX (soft), Citizens, Chase (dual EX+TU), WF, PNC, and Flagstar all pull EX. Remove first, then apply full sequence.' });
     } else if (profile.expInq > FSG_INQ_WARN.EX) {
       if (readiness === 'ready') readiness = 'optimize';
       inquiryFlags.ex = true;
-      reasons.push(profile.expInq + ' Experian inquiries — inquiry removal recommended before EX banks');
-      optSteps.push({ step: 'Recommend Experian inquiry removal before Round 1 EX banks (Citizens, Wells Fargo, PNC)', why: 'Chase 5/24 rule triggers above ' + FSG_INQ_WARN.EX + ' EX inquiries; removing first preserves the full funding sequence' });
+      reasons.push(profile.expInq + ' Experian inquiries — inquiry removal recommended before EX banks (AMEX, Citizens, Chase, Wells Fargo, PNC, Flagstar)');
+      optSteps.push({ step: 'Recommend Experian inquiry removal before Round 1 EX banks (Citizens, Chase, Wells Fargo, PNC)', why: 'Chase 5/24-equivalent sensitivity triggers above ' + FSG_INQ_WARN.EX + ' EX inquiries; removing first preserves the full funding sequence and limits at all EX banks' });
     }
     if (profile.tuInq > FSG_INQ_WARN.TU) {
       if (readiness === 'ready') readiness = 'optimize';
       inquiryFlags.tu = true;
-      reasons.push(profile.tuInq + ' TransUnion inquiries — affects Chase, Bank of America, and US Bank (all TU banks)');
-      optSteps.push({ step: 'Run TransUnion inquiry removal before Chase, Bank of America, and US Bank applications', why: 'Chase, BofA, and US Bank primarily pull TransUnion; high TU inquiry count reduces approval odds and starting limits at all three' });
+      reasons.push(profile.tuInq + ' TransUnion inquiries — affects US Bank, Chase (dual EX+TU), Bank of America, and Elan-backed banks');
+      optSteps.push({ step: 'Run TransUnion inquiry removal before US Bank, Chase, and Bank of America applications', why: 'Apply US Bank before Chase — both pull TU. BofA also pulls TU. High TU count reduces approval odds and limits at all three. Remove first, then apply in Evergreen order.' });
     }
     if (profile.eqInq > FSG_INQ_WARN.EQ) {
       if (readiness === 'ready') readiness = 'optimize';
       inquiryFlags.eq = true;
-      reasons.push(profile.eqInq + ' Equifax inquiries — impacts Truist and KeyBank (EQ-pull banks)');
-      optSteps.push({ step: 'Run Equifax inquiry removal before Truist and KeyBank applications', why: 'Truist and KeyBank pull Equifax; high EQ inquiry count reduces approval odds and starting limits' });
+      reasons.push(profile.eqInq + ' Equifax inquiries — impacts Truist (up to 2 cards/day) and KeyBank (EQ-pull banks)');
+      optSteps.push({ step: 'Run Equifax inquiry removal before Truist and KeyBank applications', why: 'Truist (up to 2 cards on 1 EQ pull) and KeyBank both pull Equifax — high EQ count reduces approval odds and starting limits at both' });
     }
     if (profile.newAccounts > 5) {
       if (readiness !== 'blocked') readiness = 'optimize';
@@ -6505,9 +6581,13 @@
     // ── Step A: Primary national banks (always included, order is canonical) ──
     var primaryBanks = FSG_PRIMARY_SEQUENCE
       .filter(function(ev) {
-        // Amex: only include when client has existing relationship
+        // Amex: only include when client has existing relationship (soft pull gate)
         if (ev.id === 'amex' && ev.requiresRelationship) {
           return profile.hasRelationship('amex');
+        }
+        // Regional banks (national:false): check state availability via state database
+        if (!ev.national && profile.banksByState && profile.state) {
+          return isBankAvailableInState(ev.id, profile);
         }
         return true;
       })
