@@ -17,6 +17,7 @@ import http  from 'http';
 import fs    from 'fs';
 import path  from 'path';
 import { fileURLToPath } from 'url';
+import { spawn }         from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GHL_BASE  = 'https://services.leadconnectorhq.com';
@@ -269,6 +270,65 @@ const server = http.createServer(async (req, res) => {
     } catch(e) { return sendJson(res, 500, { error: e.message }); }
   }
 
+  // ── Scheduler diagnostics ─────────────────────────────────────────────────
+  if (reqPath === '/debug') {
+    try {
+      const cfgFile   = path.join(__dirname, 'scheduler-config.json');
+      const cfg       = fs.existsSync(cfgFile) ? JSON.parse(fs.readFileSync(cfgFile, 'utf8')) : null;
+      const tasksFile = path.join(__dirname, 'tasks-cache.json');
+      const cliFile   = path.join(__dirname, 'clients-cache.json');
+      const ghlFile   = path.join(__dirname, 'ghl-config.json');
+      let taskCount = 0, clientCount = 0;
+      try { const t = JSON.parse(fs.readFileSync(tasksFile,'utf8')); taskCount  = Object.values(t).reduce((s,a)=>s+(a||[]).length,0); } catch(e){}
+      try { const c = JSON.parse(fs.readFileSync(cliFile,'utf8'));   clientCount = c.length; } catch(e){}
+      return sendJson(res, 200, {
+        schedulerEnabled: cfg?.enabled,
+        emailUser:        cfg?.email?.user || '(not set)',
+        emailPassSet:     !!(cfg?.email?.pass),
+        emailPassLength:  cfg?.email?.pass?.length || 0,
+        emailFrom:        cfg?.email?.from || '(not set)',
+        recipients:       cfg?.recipients,
+        tasksCacheExists: fs.existsSync(tasksFile),
+        taskCount,
+        clientsCacheExists: fs.existsSync(cliFile),
+        clientCount,
+        ghlConfigExists:  fs.existsSync(ghlFile),
+        timezone:         cfg?.timezone,
+        port:             PORT,
+        ghlProxyPort:     process.env.GHL_PROXY_PORT || '(not set)',
+        nodeVersion:      process.version,
+        pid:              process.pid,
+        uptime:           Math.round(process.uptime()) + 's',
+      });
+    } catch(e) { return sendJson(res, 500, { error: e.message }); }
+  }
+
+  if (reqPath === '/trigger-test') {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' });
+    res.write('=== CapitalQuest Scheduler Test ===\n');
+    res.write(`Started at: ${new Date().toLocaleString('en-US',{timeZone:'America/New_York'})} ET\n\n`);
+    const child = spawn(process.execPath, [path.join(__dirname, 'scheduler.mjs'), '--test'], {
+      cwd: __dirname, env: { ...process.env }
+    });
+    child.stdout.on('data', d => res.write(d.toString()));
+    child.stderr.on('data', d => res.write('ERR: ' + d.toString()));
+    child.on('close', code => res.end(`\n\n=== Done (exit ${code}) ===\n`));
+    return;
+  }
+
+  if (reqPath === '/trigger-8pm') {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' });
+    res.write('=== 8 PM End-of-Day Test ===\n');
+    res.write(`Started at: ${new Date().toLocaleString('en-US',{timeZone:'America/New_York'})} ET\n\n`);
+    const child = spawn(process.execPath, [path.join(__dirname, 'scheduler.mjs'), '--test-8pm'], {
+      cwd: __dirname, env: { ...process.env }
+    });
+    child.stdout.on('data', d => res.write(d.toString()));
+    child.stderr.on('data', d => res.write('ERR: ' + d.toString()));
+    child.on('close', code => res.end(`\n\n=== Done (exit ${code}) ===\n`));
+    return;
+  }
+
   // ── Must start with /api/ghl/ ─────────────────────────────────────────────
   if (!reqPath.startsWith('/api/ghl/')) {
     return sendJson(res, 404, { error: 'Not found. Valid prefix: /api/ghl/' });
@@ -440,6 +500,9 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('  POST /api/ghl/send-email  — send email (validated)');
   console.log('  GET  /api/ghl/*           — any GHL GET endpoint');
   console.log('  GET  /health              — health check');
+  console.log('  GET  /debug               — scheduler diagnostic info');
+  console.log('  GET  /trigger-test        — fire test email+SMS send now');
+  console.log('  GET  /trigger-8pm         — fire 8 PM end-of-day send now');
   console.log('');
   console.log('  Add ?testMode=1 or body._testMode=true to simulate without sending');
   console.log('');
