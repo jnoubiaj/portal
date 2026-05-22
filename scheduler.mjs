@@ -775,43 +775,37 @@ function buildReminderSmsText(data) {
 
 async function sendEmails(cfg, subject, htmlBody) {
   const { email, recipients } = cfg;
-  if (!email || !email.user || !email.pass || email.pass === 'YOUR_APP_PASSWORD_HERE' || email.pass === 'TASKS_APP_PASSWORD_HERE') {
-    console.warn('[Scheduler] Email not configured — skipping email send');
-    console.warn('[Scheduler] Set email.user = tasks@capitalquestfunding.com and email.pass = App Password in scheduler-config.json');
+
+  // Resend API key: env var takes priority, then config file
+  const resendKey = process.env.RESEND_API_KEY || cfg.resendApiKey || '';
+
+  const mailFrom  = (email && email.from)    || `CapitalQuest Task Alerts <tasks@capitalquestfunding.com>`;
+  const mailReply = (email && email.replyTo) || null;
+
+  if (!resendKey) {
+    console.warn('[Scheduler] RESEND_API_KEY not set — email skipped. Add it to Railway env vars.');
+    console.warn('[Scheduler] Sign up free at resend.com → verify capitalquestfunding.com → copy API key → paste into Railway env vars as RESEND_API_KEY');
     return;
   }
-  // Try port 587 (STARTTLS) first; if connection times out, retry on 465 (SSL)
-  async function tryTransport(port, secure) {
-    return nodemailer.createTransport({
-      host:              email.host || 'smtp.gmail.com',
-      port,
-      secure,
-      auth:              { user: email.user, pass: email.pass },
-      connectionTimeout: 12000,
-      greetingTimeout:   10000,
-      socketTimeout:     15000,
-    });
-  }
-
-  const mailFrom  = email.from    || `CapitalQuest Task Alerts <${email.user}>`;
-  const mailReply = email.replyTo || null;
 
   for (const to of (recipients?.email || [])) {
-    let sent = false;
-    for (const [port, secure] of [[587, false], [465, true]]) {
-      try {
-        const t = await tryTransport(port, secure);
-        const msg = { from: mailFrom, to, subject, html: htmlBody };
-        if (mailReply) msg.replyTo = mailReply;
-        await t.sendMail(msg);
-        console.log(`[Scheduler] Email sent → ${to} (port ${port})`);
-        sent = true;
-        break;
-      } catch(e) {
-        console.warn(`[Scheduler] Email port ${port} FAILED → ${to}: ${e.message}`);
+    try {
+      const payload = { from: mailFrom, to: [to], subject, html: htmlBody };
+      if (mailReply) payload.reply_to = mailReply;
+      const res = await fetch('https://api.resend.com/emails', {
+        method:  'POST',
+        headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        console.log(`[Scheduler] Email sent → ${to} (id: ${data.id})`);
+      } else {
+        console.error(`[Scheduler] Email FAILED → ${to}: ${data.message || data.name || res.status}`);
       }
+    } catch(e) {
+      console.error(`[Scheduler] Email FAILED → ${to}: ${e.message}`);
     }
-    if (!sent) console.error(`[Scheduler] Email FAILED (all ports) → ${to}`);
   }
 }
 
@@ -903,9 +897,11 @@ async function lookupGhlContactId(phone, proxyUrl) {
 
 async function sendSms(cfg, smsText) {
   const { sms, recipients } = cfg;
+  // 127.0.0.1 not localhost — Railway resolves localhost to IPv6 ::1
+  // but ghl-server only binds IPv4 (0.0.0.0), causing ECONNREFUSED
   const proxyUrl = process.env.GHL_PROXY_PORT
-    ? `http://localhost:${process.env.GHL_PROXY_PORT}`
-    : ((sms && sms.proxyUrl) || 'http://localhost:3001');
+    ? `http://127.0.0.1:${process.env.GHL_PROXY_PORT}`
+    : ((sms && sms.proxyUrl) || 'http://127.0.0.1:3001');
   const fromPhone = sms && sms.fromPhone;
 
   if (!fromPhone || fromPhone === '+1XXXXXXXXXX') {
