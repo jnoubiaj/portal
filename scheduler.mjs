@@ -773,35 +773,59 @@ function buildReminderSmsText(data) {
 
 // ── Email Sender ──────────────────────────────────────────────────────────────
 
+// Look up GHL contact ID by email address
+async function lookupGhlContactByEmail(emailAddr, proxyUrl) {
+  if (_contactIdCache[emailAddr]) return _contactIdCache[emailAddr];
+  try {
+    const ghlCfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'ghl-config.json'), 'utf8'));
+    const locId  = ghlCfg.locationId || '';
+    if (!locId) return null;
+    const url = `${proxyUrl}/api/ghl/contacts/?locationId=${locId}&query=${encodeURIComponent(emailAddr)}`;
+    const { status, data } = await localGet(url);
+    if (status === 200) {
+      const contacts = data?.contacts || data?.data || [];
+      if (contacts.length > 0) {
+        _contactIdCache[emailAddr] = contacts[0].id;
+        console.log(`[Scheduler] GHL contact for ${emailAddr}: ${contacts[0].id}`);
+        return contacts[0].id;
+      }
+      console.warn(`[Scheduler] No GHL contact found for email ${emailAddr}`);
+    } else {
+      console.warn(`[Scheduler] GHL contact lookup for ${emailAddr} → status ${status}`);
+    }
+  } catch(e) {
+    console.warn('[Scheduler] GHL email lookup error:', e.message);
+  }
+  return null;
+}
+
 async function sendEmails(cfg, subject, htmlBody) {
   const { email, recipients } = cfg;
+  const mailFrom = (email && email.from) || 'CapitalQuest Task Alerts <tasks@capitalquestfunding.com>';
 
-  // Resend API key: env var takes priority, then config file
-  const resendKey = process.env.RESEND_API_KEY || cfg.resendApiKey || '';
-
-  const mailFrom  = (email && email.from)    || `CapitalQuest Task Alerts <tasks@capitalquestfunding.com>`;
-  const mailReply = (email && email.replyTo) || null;
-
-  if (!resendKey) {
-    console.warn('[Scheduler] RESEND_API_KEY not set — email skipped. Add it to Railway env vars.');
-    console.warn('[Scheduler] Sign up free at resend.com → verify capitalquestfunding.com → copy API key → paste into Railway env vars as RESEND_API_KEY');
-    return;
-  }
+  // Use the same GHL proxy that already handles SMS — no SMTP needed
+  const proxyUrl = process.env.GHL_PROXY_PORT
+    ? `http://127.0.0.1:${process.env.GHL_PROXY_PORT}`
+    : 'http://127.0.0.1:3001';
 
   for (const to of (recipients?.email || [])) {
+    const contactId = await lookupGhlContactByEmail(to, proxyUrl);
+    if (!contactId) {
+      console.error(`[Scheduler] Email skipped → ${to}: no GHL contact found`);
+      continue;
+    }
     try {
-      const payload = { from: mailFrom, to: [to], subject, html: htmlBody };
-      if (mailReply) payload.reply_to = mailReply;
-      const res = await fetch('https://api.resend.com/emails', {
-        method:  'POST',
-        headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
+      const { status, data, error } = await localPost(`${proxyUrl}/api/ghl/send-email`, {
+        contactId,
+        fromEmail: mailFrom,
+        toEmail:   to,
+        subject,
+        html:      htmlBody,
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        console.log(`[Scheduler] Email sent → ${to} (id: ${data.id})`);
+      if (error || status >= 400) {
+        console.error(`[Scheduler] Email FAILED → ${to}: ${error || data?.error || status}`);
       } else {
-        console.error(`[Scheduler] Email FAILED → ${to}: ${data.message || data.name || res.status}`);
+        console.log(`[Scheduler] Email sent → ${to} via GHL`);
       }
     } catch(e) {
       console.error(`[Scheduler] Email FAILED → ${to}: ${e.message}`);
