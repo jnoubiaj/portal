@@ -780,23 +780,38 @@ async function sendEmails(cfg, subject, htmlBody) {
     console.warn('[Scheduler] Set email.user = tasks@capitalquestfunding.com and email.pass = App Password in scheduler-config.json');
     return;
   }
-  const transporter = nodemailer.createTransport({
-    host:   email.host   || 'smtp.gmail.com',
-    port:   email.port   || 587,
-    secure: email.secure || false,
-    auth:   { user: email.user, pass: email.pass },
-  });
+  // Try port 587 (STARTTLS) first; if connection times out, retry on 465 (SSL)
+  async function tryTransport(port, secure) {
+    return nodemailer.createTransport({
+      host:              email.host || 'smtp.gmail.com',
+      port,
+      secure,
+      auth:              { user: email.user, pass: email.pass },
+      connectionTimeout: 12000,
+      greetingTimeout:   10000,
+      socketTimeout:     15000,
+    });
+  }
+
   const mailFrom  = email.from    || `CapitalQuest Task Alerts <${email.user}>`;
   const mailReply = email.replyTo || null;
+
   for (const to of (recipients?.email || [])) {
-    try {
-      const msg = { from: mailFrom, to, subject, html: htmlBody };
-      if (mailReply) msg.replyTo = mailReply;
-      await transporter.sendMail(msg);
-      console.log(`[Scheduler] Email sent → ${to} (from: ${mailFrom})`);
-    } catch(e) {
-      console.error(`[Scheduler] Email FAILED → ${to}:`, e.message);
+    let sent = false;
+    for (const [port, secure] of [[587, false], [465, true]]) {
+      try {
+        const t = await tryTransport(port, secure);
+        const msg = { from: mailFrom, to, subject, html: htmlBody };
+        if (mailReply) msg.replyTo = mailReply;
+        await t.sendMail(msg);
+        console.log(`[Scheduler] Email sent → ${to} (port ${port})`);
+        sent = true;
+        break;
+      } catch(e) {
+        console.warn(`[Scheduler] Email port ${port} FAILED → ${to}: ${e.message}`);
+      }
     }
+    if (!sent) console.error(`[Scheduler] Email FAILED (all ports) → ${to}`);
   }
 }
 
@@ -856,23 +871,32 @@ function localGet(url) {
 const _contactIdCache = {};
 
 async function lookupGhlContactId(phone, proxyUrl) {
-  const digits = phone.replace(/\D/g, '').replace(/^1/, '');
-  if (_contactIdCache[digits]) return _contactIdCache[digits];
+  const digits10 = phone.replace(/\D/g, '').replace(/^1/, '').slice(-10);
+  if (_contactIdCache[digits10]) return _contactIdCache[digits10];
   try {
     const ghlCfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'ghl-config.json'), 'utf8'));
     const locId  = ghlCfg.locationId || '';
-    const { status, data } = await localGet(
-      `${proxyUrl}/api/ghl/contacts/?locationId=${locId}&query=${encodeURIComponent(digits)}`
-    );
-    if (status === 200) {
-      const contacts = data?.contacts || data?.data || [];
-      if (contacts.length > 0) {
-        _contactIdCache[digits] = contacts[0].id;
-        console.log(`[Scheduler] Found GHL contact for ${phone}: ${contacts[0].id} (${contacts[0].firstName || ''} ${contacts[0].lastName || ''})`);
-        return contacts[0].id;
+    if (!locId) { console.warn('[Scheduler] GHL locationId missing in ghl-config.json'); return null; }
+
+    // Try multiple query formats: 10-digit, E.164, formatted
+    const queries = [digits10, `+1${digits10}`, `(${digits10.slice(0,3)}) ${digits10.slice(3,6)}-${digits10.slice(6)}`];
+    for (const q of queries) {
+      const url = `${proxyUrl}/api/ghl/contacts/?locationId=${locId}&query=${encodeURIComponent(q)}`;
+      const { status, data, error } = await localGet(url);
+      console.log(`[Scheduler] GHL contact lookup (${q}) → status:${status}`, error ? `error:${error}` : `contacts:${JSON.stringify(data?.contacts?.length ?? data?.data?.length ?? 'no-array')}`);
+      if (status === 200) {
+        const contacts = data?.contacts || data?.data || [];
+        if (contacts.length > 0) {
+          const c = contacts[0];
+          _contactIdCache[digits10] = c.id;
+          console.log(`[Scheduler] Found GHL contact for ${phone}: ${c.id} (${c.firstName||''} ${c.lastName||''})`);
+          return c.id;
+        }
       }
     }
-  } catch(e) { /* proxy not running */ }
+  } catch(e) {
+    console.warn('[Scheduler] GHL contact lookup error:', e.message);
+  }
   console.warn(`[Scheduler] Could not find GHL contact for ${phone} — SMS skipped for this recipient`);
   return null;
 }
