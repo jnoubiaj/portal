@@ -2019,6 +2019,119 @@
   .ghl-call-modal { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; display:flex; align-items:center; justify-content:center; }
   .ghl-call-box { background:white; border-radius:16px; padding:24px; width:340px; max-width:calc(100vw - 32px); box-shadow:0 20px 60px rgba(0,0,0,.2); }
 
+  /* ══ ADMIN REDESIGN v2.0 — Modern, Clean, Operational ════════════════════ */
+
+  /* Clean client rows v2 */
+  .a-client-row-v2 {
+    display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer;
+    border-bottom:1px solid rgba(0,0,0,0.04); transition:background 0.1s; position:relative;
+  }
+  .a-client-row-v2:hover { background:#f9fafb; }
+  .a-client-row-v2.active { background:#f0f9ff; border-left:2.5px solid var(--blue); padding-left:11.5px; }
+  .a-crv2-avatar { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:var(--font-h); font-weight:700; font-size:13px; color:var(--white); }
+  .a-crv2-body { flex:1; min-width:0; }
+  .a-crv2-name { font-size:13px; font-weight:600; color:var(--navy); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:-0.01em; }
+  .a-crv2-sub  { font-size:11px; color:var(--gray-400); margin-top:1px; display:flex; align-items:center; gap:4px; }
+  .a-crv2-fico { color:var(--blue); font-weight:600; }
+  .a-crv2-sep  { color:var(--gray-200); }
+  .a-crv2-right { flex-shrink:0; }
+  .a-crv2-days { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; display:inline-block; }
+  .a-crv2-days.ok   { color:#64748b; background:#f1f5f9; }
+  .a-crv2-days.warn { color:#92400e; background:#fef3c7; }
+  .a-crv2-days.hot  { color:#991b1b; background:#fee2e2; }
+  .a-crv2-stage { color:var(--gray-400); }
+  .a-crv2-arc { font-size:9px; background:#f5f3ff; color:#8b5cf6; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:4px; }
+
+  /* Today mode toggle */
+  .a-today-bar { padding:8px 12px 0; }
+  .a-today-toggle { display:flex; background:var(--gray-100); border-radius:8px; padding:3px; gap:2px; }
+  .a-today-btn { flex:1; height:28px; border-radius:6px; border:none; cursor:pointer; font-family:var(--font-b); font-size:11px; font-weight:600; color:var(--gray-500); background:transparent; transition:all 0.15s; }
+  .a-today-btn.active { background:var(--white); color:var(--navy); box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+
+  /* New client header v2 */
+  .a-ch2 {
+    display:flex; align-items:center; gap:14px; flex-wrap:nowrap;
+    padding:14px 20px; background:var(--white); border-bottom:1px solid var(--gray-100);
+    position:sticky; top:0; z-index:10; overflow:hidden;
+  }
+  .a-ch2-identity { min-width:0; flex-shrink:1; }
+  .a-ch2-name { font-family:var(--font-h); font-size:16px; font-weight:800; color:var(--navy); letter-spacing:-0.02em; display:flex; align-items:center; gap:6px; overflow:hidden; }
+  .a-ch2-name-text { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .a-ch2-state { font-size:10px; font-weight:700; color:var(--blue); background:rgba(34,167,240,0.1); padding:2px 7px; border-radius:5px; border:1px solid rgba(34,167,240,0.2); flex-shrink:0; }
+  .a-ch2-email { font-size:11px; color:var(--gray-400); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .a-ch2-stats { display:flex; align-items:stretch; margin-left:auto; flex-shrink:0; }
+  .a-ch2-stat { display:flex; flex-direction:column; align-items:center; padding:0 13px; border-right:1px solid var(--gray-100); }
+  .a-ch2-stat:last-child { border-right:none; }
+  .a-ch2-stat-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--gray-400); margin-bottom:2px; white-space:nowrap; }
+  .a-ch2-stat-val { font-family:var(--font-h); font-size:14px; font-weight:800; color:var(--navy); white-space:nowrap; line-height:1.2; }
+  .a-ch2-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:16px; }
+
+  /* Continue Client button */
+  .btn-continue {
+    height:36px; padding:0 16px; border-radius:9px; background:#059669; border:none;
+    font-family:var(--font-h); font-size:12px; font-weight:700; color:var(--white);
+    cursor:pointer; display:flex; align-items:center; gap:6px; transition:background 0.13s;
+    white-space:nowrap; box-shadow:0 2px 8px rgba(5,150,105,0.22);
+  }
+  .btn-continue:hover { background:#047857; }
+  .btn-continue:active { transform:scale(0.98); }
+
+  /* More Actions dropdown */
+  .a-more-wrap { position:relative; }
+  .btn-more {
+    height:36px; width:36px; border-radius:9px; border:1.5px solid var(--gray-200);
+    background:var(--white); cursor:pointer; display:flex; align-items:center; justify-content:center;
+    color:var(--gray-500); font-size:18px; font-weight:700; letter-spacing:1px;
+    transition:all 0.13s; font-family:var(--font-b); line-height:1;
+  }
+  .btn-more:hover { border-color:var(--gray-300); background:var(--gray-50); color:var(--navy); }
+  .a-more-drop {
+    position:absolute; top:calc(100% + 6px); right:0; min-width:192px; background:var(--white);
+    border:1.5px solid var(--gray-100); border-radius:12px; box-shadow:0 8px 32px rgba(10,22,40,0.12);
+    z-index:9999; overflow:hidden; display:none;
+  }
+  .a-more-drop.open { display:block; animation:dropIn 0.15s ease; }
+  @keyframes dropIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+  .a-more-item {
+    display:flex; align-items:center; gap:10px; padding:10px 14px; font-size:13px;
+    font-weight:500; color:var(--gray-700); cursor:pointer; transition:background 0.1s; white-space:nowrap;
+  }
+  .a-more-item:hover { background:var(--gray-50); }
+  .a-more-item svg { width:14px; height:14px; opacity:0.6; flex-shrink:0; }
+  .a-more-item.danger { color:var(--danger); }
+  .a-more-item.danger:hover { background:var(--danger-bg); }
+  .a-more-sep { height:1px; background:var(--gray-100); margin:4px 0; }
+
+  /* Quick action bar v2 */
+  .a-sp-ab-v2 {
+    display:flex; gap:8px; padding:8px 20px; background:var(--white);
+    border-bottom:1px solid var(--gray-100); flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
+  }
+  .a-sp-ab-v2::-webkit-scrollbar { display:none; }
+  .a-sp-ab-v2-btn {
+    height:32px; padding:0 13px; border-radius:8px; border:1.5px solid var(--gray-200);
+    background:var(--white); font-family:var(--font-b); font-size:12px; font-weight:600;
+    color:var(--gray-600); cursor:pointer; display:flex; align-items:center; gap:6px;
+    white-space:nowrap; transition:all 0.13s; flex-shrink:0;
+  }
+  .a-sp-ab-v2-btn:hover { background:var(--gray-50); border-color:var(--gray-300); color:var(--navy); }
+  .a-sp-ab-v2-btn svg { opacity:0.65; width:13px; height:13px; flex-shrink:0; }
+  .a-sp-ab-v2-btn.blue { border-color:rgba(34,167,240,0.3); color:var(--blue); background:rgba(34,167,240,0.04); }
+  .a-sp-ab-v2-btn.blue:hover { background:rgba(34,167,240,0.1); }
+  .a-sp-ab-v2-btn.green { border-color:rgba(16,185,129,0.3); color:#059669; background:rgba(16,185,129,0.04); }
+  .a-sp-ab-v2-btn.green:hover { background:rgba(16,185,129,0.1); }
+
+  /* Tighter workspace */
+  .a-sp-workspace { padding:14px 20px !important; gap:10px !important; }
+  .a-card { border-radius:12px !important; border:1px solid var(--gray-100) !important; box-shadow:0 1px 4px rgba(10,22,40,0.04) !important; }
+  .a-card-hdr { padding:14px 18px !important; }
+  .a-coll-hdr:hover { background:rgba(0,0,0,0.015) !important; cursor:pointer; }
+  .a-cmd-card { border-top:3px solid var(--blue) !important; }
+
+  /* Responsive */
+  @media (max-width:1200px) { .a-ch2-stats { display:none; } }
+  @media (max-width:960px)  { .a-ch2 { flex-wrap:wrap; padding:12px 14px; } .a-ch2-actions { margin-left:0; } }
+
 </style>
 </head>
 <body>
@@ -2188,6 +2301,12 @@
                       <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M15 19l-7-7 7-7"/></svg>
                     </button>
                   </div>
+                </div>
+              </div>
+              <div class="a-today-bar">
+                <div class="a-today-toggle">
+                  <button class="a-today-btn active" id="today-btn-all" onclick="setTodayMode('all')">All Clients</button>
+                  <button class="a-today-btn" id="today-btn-today" onclick="setTodayMode('today')">My Tasks Today</button>
                 </div>
               </div>
               <div class="a-cl-search-wrap">
@@ -3500,6 +3619,11 @@
       var drop = document.getElementById('notif-drop');
       if (drop) drop.classList.remove('open');
     }
+    // Close more-actions dropdown on outside click
+    var openDrops = document.querySelectorAll('.a-more-drop.open');
+    if (openDrops.length > 0 && !e.target.closest('.a-more-wrap')) {
+      openDrops.forEach(function(d) { d.classList.remove('open'); });
+    }
   });
 
   function initNotifListeners() {
@@ -4231,7 +4355,14 @@
       const ob = getOnboardDataForClient(c.id);
       const clientState = (ob?.state || '').toLowerCase();
       const matchState = !stateFilter || clientState === stateFilter;
-      return matchQ && matchF && matchState;
+      if (!matchQ || !matchF || !matchState) return false;
+      // Today mode: only show clients who have at least one pending task
+      if (_todayMode === 'today') {
+        const d = getDashData(c.id);
+        const hasPending = (d.tasks || []).some(function(t) { return t.status !== 'done'; });
+        if (!hasPending) return false;
+      }
+      return true;
     });
 
     const archivedCount = clients.filter(c => c.archived).length;
@@ -4257,26 +4388,26 @@
       var dl = ob&&ob.lastName  ? ob.lastName  : c.lname;
       var t = getClientTasks(c.id);
       var si = (t && typeof t.stage === 'number') ? t.stage : -1;
+      var stageName = (si >= 0 && PIPELINE_STAGES[si]) ? PIPELINE_STAGES[si].name : '';
       var days = (si >= 0) ? plDaysInStage(c.id, si) : 0;
       var daysCls = days <= 2 ? 'ok' : days <= 5 ? 'warn' : 'hot';
-      var daysBadge = (si >= 0) ? '<span class="a-cl-days ' + daysCls + '">' + days + 'd</span>' : '';
       var fico = getClientScore(c.id) || c.fico || (ob && ob.fico) || '';
-      var d = getDashData(c.id);
-      var funded = (d.fundingRows||[]).filter(function(r){ return r.status==='approved'; }).reduce(function(s,r){ return s+(Number(r.amount)||0); }, 0);
-      var meta = '';
-      if (fico) meta += 'FICO ' + fico;
-      if (funded > 0) meta += (meta ? ' · ' : '') + '$' + Number(funded).toLocaleString();
-      var statusClass = c.status==='progress'?'progress':c.status==='approved'?'approved':c.status==='disqualified'?'disqual':c.status==='new'?'new':'pending';
-      var statusBadge = c.archived
-        ? '<span class="status-pill" style="background:#f5f3ff;color:#8b5cf6;border:1px solid #ede9fe">Archived</span>'
-        : '<span class="status-pill sp-' + statusClass + '">' + statusLabel(c.status) + '</span>';
-      return '<div class="a-client-row ' + (selectedClientId===c.id?'active':'') + '" onclick="selectClient(\'' + c.id + '\')">' +
-        '<div class="a-cl-avatar" style="background:' + (c.archived?'#8b5cf6':c.color) + ';' + (c.photo?'padding:0':'') + '">' + (c.photo ? '<img src="'+c.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />' : df[0] + (dl?dl[0]:'')) + '</div>' +
-        '<div class="a-cl-body">' +
-          '<div class="a-cl-name">' + df + ' ' + dl + (c.archived ? ' <span style="font-size:9px;background:#f5f3ff;color:#8b5cf6;padding:1px 5px;border-radius:3px;font-weight:700">ARC</span>' : '') + '</div>' +
-          (meta ? '<div class="a-cl-meta">' + meta + '</div>' : '') +
+      var initials = (df[0]||'?') + (dl?dl[0]:'');
+      var avatarBg = c.archived ? '#8b5cf6' : (c.color || '#22a7f0');
+      var avatarInner = c.photo
+        ? '<img src="'+c.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />'
+        : initials;
+      var arcTag = c.archived ? ' <span class="a-crv2-arc">ARC</span>' : '';
+      var ficoTag = fico ? '<span class="a-crv2-fico">' + fico + '</span>' : '';
+      var daysBadge = (si >= 0) ? '<span class="a-crv2-days ' + daysCls + '">' + days + 'd</span>' : '';
+      var stageTag = stageName ? '<span class="a-crv2-stage">' + stageName + '</span>' : '';
+      return '<div class="a-client-row-v2 ' + (selectedClientId===c.id?'active':'') + '" onclick="selectClient(\'' + c.id + '\')">' +
+        '<div class="a-crv2-avatar" style="background:' + avatarBg + ';' + (c.photo?'padding:0':'') + '">' + avatarInner + '</div>' +
+        '<div class="a-crv2-body">' +
+          '<div class="a-crv2-name">' + df + ' ' + dl + arcTag + '</div>' +
+          '<div class="a-crv2-sub">' + (ficoTag ? ficoTag : '') + (ficoTag && stageTag ? '<span class="a-crv2-sep">·</span>' : '') + stageTag + '</div>' +
         '</div>' +
-        '<div class="a-cl-right">' + (si >= 0 ? daysBadge : statusBadge) + '</div>' +
+        '<div class="a-crv2-right">' + daysBadge + '</div>' +
       '</div>';
     }
 
@@ -4467,65 +4598,86 @@
     const _crCaution = !_crBlock && creditData ? ((creditData.fico >= 700 && creditData.fico < 740) || (creditData.recentInquiries || 0) > 4 || (creditData.late || 0) > 0 || (creditData.util || 0) > 50 || (creditData.recentCCAccounts || 0) >= 3) : false;
     const _crStatusLabel = !creditData ? 'No Report' : _crBlock ? 'Blocked' : _crCaution ? 'Caution' : 'Ready';
     const _crStatusCls = !creditData ? 'none' : _crBlock ? 'blocked' : _crCaution ? 'caution' : 'ready';
+    const _daysInStage = plDaysInStage(id, Math.max(0, (_d.currentStage || 1) - 1));
+    const _daysCls = _daysInStage <= 2 ? 'ok' : _daysInStage <= 5 ? 'warn' : 'hot';
 
     document.getElementById('a-detail-card').innerHTML = `
 
-      <!-- COMPACT STICKY HEADER -->
-      <div class="a-csh">
-        <div class="a-dh-avatar" style="background:${c.color};${c.photo?'padding:0;':''}width:36px;height:36px;font-size:13px;" onclick="triggerPhotoUpload('${id}')" title="Upload photo">
+      <!-- CLIENT HEADER V2 -->
+      <div class="a-ch2" id="a-ch2-${id}">
+        <div class="a-dh-avatar" style="background:${c.color};${c.photo?'padding:0;':''}width:40px;height:40px;min-width:40px;font-size:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:700;color:white;cursor:pointer;position:relative;overflow:hidden;" onclick="triggerPhotoUpload('${id}')" title="Upload photo">
           ${c.photo ? `<img src="${c.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />` : `${(c.fname||'?')[0]}${(c.lname||'')[0]||''}`}
           <div class="a-avatar-overlay"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
         </div>
         <input type="file" id="photo-upload-${id}" accept="image/*" style="display:none" onchange="handlePhotoUpload('${id}',this)" />
-        <div class="a-csh-info">
-          <div class="a-csh-name">${_displayFirst} ${_displayLast}${_ob?.state ? ` <span style="font-size:10px;font-weight:700;color:var(--blue);background:#f0f9ff;padding:2px 7px;border-radius:5px;border:1px solid rgba(34,167,240,0.2);vertical-align:middle">${_ob.state}</span>` : ''}</div>
-          <div class="a-csh-sub" id="csh-sub-${id}">${c.email}${_nextTask ? ` · Next: ${_nextTask.text}` : ''}</div>
+        <div class="a-ch2-identity">
+          <div class="a-ch2-name">
+            <span class="a-ch2-name-text" id="csh-name-${id}">${_displayFirst} ${_displayLast}</span>
+            ${_ob?.state ? `<span class="a-ch2-state">${_ob.state}</span>` : ''}
+            ${c.archived ? `<span style="font-size:10px;background:#f5f3ff;color:#8b5cf6;padding:2px 7px;border-radius:5px;font-weight:700">ARCHIVED</span>` : ''}
+          </div>
+          <div class="a-ch2-email">${c.email}</div>
         </div>
-        <div class="a-csh-pills">
-          ${_fico ? `<span class="a-csh-pill fico" id="csh-fico-${id}">${_fico} FICO</span>` : ''}
-          <span class="a-csh-pill ${_statusCls}" id="csh-status-${id}">${_statusLabel}</span>
-          <span class="a-csh-pill stage" id="csh-stage-${id}">${_stageName}</span>
-          <span class="a-csh-pill funded" id="csh-funded-${id}" style="${_fundingApproved ? '' : 'display:none'}">${_fundingApproved ? _fundingApproved + ' funded' : ''}</span>
-          ${ghlLinkPillHTML(c)}
+
+        <div class="a-ch2-stats">
+          ${_fico ? `<div class="a-ch2-stat"><span class="a-ch2-stat-lbl">FICO</span><span class="a-ch2-stat-val" id="csh-fico-${id}" style="color:var(--blue)">${_fico}</span></div>` : ''}
+          <div class="a-ch2-stat"><span class="a-ch2-stat-lbl">Stage</span><span class="a-ch2-stat-val" id="csh-stage-${id}" style="font-size:12px">${_stageName}</span></div>
+          <div class="a-ch2-stat"><span class="a-ch2-stat-lbl">Days</span><span class="a-ch2-stat-val" id="csh-days-${id}" style="color:${_daysCls==='ok'?'var(--gray-500)':_daysCls==='warn'?'#b45309':'var(--danger)'}">${_daysInStage}d</span></div>
+          ${_fundGoal > 0 ? `<div class="a-ch2-stat"><span class="a-ch2-stat-lbl">Goal</span><span class="a-ch2-stat-val">${_fmtMoney(_fundGoal)}</span></div>` : ''}
+          ${_totalFunded > 0 ? `<div class="a-ch2-stat"><span class="a-ch2-stat-lbl">Approved</span><span class="a-ch2-stat-val" id="csh-funded-${id}" style="color:#059669">${_fmtMoney(_totalFunded)}</span></div>` : ''}
         </div>
-        <div class="a-csh-actions">
-          ${c.status !== 'approved'     ? `<button class="a-action-btn approve" onclick="updateStatus('${id}','approved')">Approve</button>` : ''}
-          ${c.status !== 'disqualified' ? `<button class="a-action-btn disqual" onclick="updateStatus('${id}','disqualified')">Disqualify</button>` : ''}
-          <button class="a-action-btn" onclick="showAdminProfileEdit('${id}')" style="border-color:var(--navy);color:var(--navy);background:transparent;display:inline-flex;align-items:center;gap:5px"
-            onmouseover="this.style.background='var(--navy)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">
-            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit
+
+        <div class="a-ch2-actions">
+          <button class="btn-continue" onclick="continueClient('${id}')">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            Continue Client
           </button>
-          <button class="a-action-btn" onclick="showClientAnalysis('${id}')" style="border-color:var(--blue);color:var(--blue);background:rgba(34,167,240,0.06);font-weight:700;display:inline-flex;align-items:center;gap:5px"
-            onmouseover="this.style.background='var(--blue)';this.style.color='white'" onmouseout="this.style.background='rgba(34,167,240,0.06)';this.style.color='var(--blue)'">
-            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            Analyze
-          </button>
-          ${c.archived
-            ? `<button class="a-action-btn" onclick="restoreClient('${id}')" style="border-color:#10b981;color:#10b981;background:transparent" onmouseover="this.style.background='#10b981';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#10b981'">↩ Restore</button>`
-            : `<button class="a-action-btn" onclick="archiveClient('${id}')" style="border-color:#8b5cf6;color:#8b5cf6;background:transparent" onmouseover="this.style.background='#8b5cf6';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#8b5cf6'">Archive</button>`}
-          <button class="a-action-btn" onclick="deleteClient('${id}')" style="border-color:#ef4444;color:#ef4444;background:transparent" onmouseover="this.style.background='#ef4444';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#ef4444'">Delete</button>
+          <div class="a-more-wrap" id="more-wrap-${id}">
+            <button class="btn-more" onclick="toggleMoreActions('${id}',event)" title="More actions">···</button>
+            <div class="a-more-drop" id="more-drop-${id}">
+              <div class="a-more-item" onclick="closeMoreActions();showAdminProfileEdit('${id}')">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit Profile
+              </div>
+              <div class="a-more-item" onclick="closeMoreActions();showClientAnalysis('${id}')">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Credit Analyzer
+              </div>
+              <div class="a-more-sep"></div>
+              ${c.status !== 'approved' ? `<div class="a-more-item" onclick="closeMoreActions();updateStatus('${id}','approved')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Mark Approved</div>` : ''}
+              ${c.archived
+                ? `<div class="a-more-item" onclick="closeMoreActions();restoreClient('${id}')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Restore Client</div>`
+                : `<div class="a-more-item" onclick="closeMoreActions();archiveClient('${id}')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>Archive Client</div>`}
+              <div class="a-more-sep"></div>
+              ${c.status !== 'disqualified' ? `<div class="a-more-item danger" onclick="closeMoreActions();updateStatus('${id}','disqualified')"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Disqualify</div>` : ''}
+              <div class="a-more-item danger" onclick="closeMoreActions();deleteClient('${id}')">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                Delete Client
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- ACTION BAR -->
-      <div class="a-sp-ab">
-        <button class="a-sp-ab-btn blue" onclick="(function(){var s=document.getElementById('sp-dtab-funding');if(s)s.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(function(){var b=document.getElementById('fa-bank-sel-${id}');if(b){b.focus();b.style.outline='2px solid var(--blue)';}},350);})()">
-          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      <!-- ACTION BAR V2 -->
+      <div class="a-sp-ab-v2">
+        <button class="a-sp-ab-v2-btn blue" onclick="(function(){var s=document.getElementById('sp-dtab-funding');if(s)s.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(function(){var b=document.getElementById('fa-bank-sel-${id}');if(b){b.focus();b.style.outline='2px solid var(--blue)';}},350);})()">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Add Application
         </button>
-        <button class="a-sp-ab-btn" onclick="openTaskModal('${id}')">
-          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        <button class="a-sp-ab-v2-btn" onclick="openTaskModal('${id}')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           Add Task
         </button>
-        <button class="a-sp-ab-btn" onclick="(function(){var s=document.getElementById('sp-dtab-documents');if(s){s.classList.remove('collapsed');s.scrollIntoView({behavior:'smooth'});}setTimeout(function(){var e=document.getElementById('new-req-input-${id}');if(e)e.focus();},350)})()">
-          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <button class="a-sp-ab-v2-btn" onclick="(function(){var s=document.getElementById('sp-dtab-documents');if(s){s.classList.remove('collapsed');s.scrollIntoView({behavior:'smooth'});}setTimeout(function(){var e=document.getElementById('new-req-input-${id}');if(e)e.focus();},350)})()">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           Request Docs
         </button>
-        <button class="a-sp-ab-btn green" onclick="(function(){var s=document.getElementById('sp-dtab-messages');if(s){s.classList.remove('collapsed');s.scrollIntoView({behavior:'smooth'});}setTimeout(function(){var e=document.getElementById('dchat-input-${id}');if(e)e.focus();},350)})()">
-          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <button class="a-sp-ab-v2-btn green" onclick="(function(){var s=document.getElementById('sp-dtab-messages');if(s){s.classList.remove('collapsed');s.scrollIntoView({behavior:'smooth'});}setTimeout(function(){var e=document.getElementById('dchat-input-${id}');if(e)e.focus();},350)})()">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           Send Message
         </button>
+        ${ghlLinkPillHTML(c) ? `<span style="margin-left:auto">${ghlLinkPillHTML(c)}</span>` : ''}
       </div>
 
       <!-- WORKSPACE: 60/40 GRID -->
@@ -4993,6 +5145,35 @@
       sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
       if (tab === 'dashboard') setTimeout(function(){ autoCalcFundingApproved(selectedClientId); }, 60);
     }
+  }
+
+  // ── TODAY MODE ────────────────────────────────────────────────────────
+  var _todayMode = 'all';
+  function setTodayMode(mode) {
+    _todayMode = mode;
+    document.querySelectorAll('.a-today-btn').forEach(function(b) { b.classList.remove('active'); });
+    var btn = document.getElementById('today-btn-' + mode);
+    if (btn) btn.classList.add('active');
+    renderClientList();
+  }
+
+  // ── CONTINUE CLIENT ───────────────────────────────────────────────────
+  function continueClient(id) {
+    var el = document.getElementById('cmd-next-action-' + id) || document.getElementById('a-detail-card');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── MORE ACTIONS DROPDOWN ─────────────────────────────────────────────
+  function toggleMoreActions(id, e) {
+    if (e) e.stopPropagation();
+    var drop = document.getElementById('more-drop-' + id);
+    if (!drop) return;
+    var isOpen = drop.classList.contains('open');
+    closeMoreActions();
+    if (!isOpen) drop.classList.add('open');
+  }
+  function closeMoreActions() {
+    document.querySelectorAll('.a-more-drop.open').forEach(function(d) { d.classList.remove('open'); });
   }
 
   // ── DELETE CLIENT ─────────────────────────────────────────────────────
