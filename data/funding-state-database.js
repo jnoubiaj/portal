@@ -439,8 +439,8 @@ window.FUNDING_DATABASE = {
     "AL": {
       "experian":   ["amex","chase","pnc","wells-fargo","citizens"],
       "transunion": ["us-bank","boa","bmo","valley-bank","regions"],
-      "equifax":    ["truist","keybank"],
-      "regional":   ["citizens","valley-bank","regions","truist","keybank"],
+      "equifax":    ["truist"],
+      "regional":   ["citizens","valley-bank","regions","truist"],
       "elan":       ["elan"],
       "elanBanks":  ["TraditionsBank","Bryant Bank","The First Bank","Smart Bank","Progress Bank & Trust"]
     },
@@ -465,18 +465,18 @@ window.FUNDING_DATABASE = {
 
     "AR": {
       "experian":   ["amex","chase","pnc","wells-fargo"],
-      "transunion": ["us-bank","boa","bmo"],
-      "equifax":    [],
-      "regional":   [],
+      "transunion": ["us-bank","boa","bmo","regions"],
+      "equifax":    ["truist"],
+      "regional":   ["regions","truist"],
       "elan":       ["elan"],
       "elanBanks":  ["Southern Bank"]
     },
 
     "CA": {
       "experian":   ["amex","chase","pnc","wells-fargo","flagstar"],
-      "transunion": ["us-bank","boa","bmo"],
+      "transunion": ["us-bank","boa","bmo","valley-bank"],
       "equifax":    [],
-      "regional":   ["flagstar"],
+      "regional":   ["flagstar","valley-bank"],
       "elan":       ["elan"],
       "elanBanks":  ["LA Financial Credit Union","Flagship Bank","Mechanics Bank","Westamerica Bank","Citizens Business Bank","Umpqua Bank","Bank of the Sierra","Bank of Marin","Banc of California","Farmers & Merchants Bank","Central Valley Community Bank","Exchange Bank","HomeStreet Bank","Poppy Bank","Royal Business Bank"]
     },
@@ -518,10 +518,10 @@ window.FUNDING_DATABASE = {
     },
 
     "GA": {
-      "experian":   ["amex","chase","pnc","wells-fargo"],
-      "transunion": ["us-bank","boa","bmo","regions"],
+      "experian":   ["amex","chase","pnc","wells-fargo","citizens"],
+      "transunion": ["us-bank","boa","bmo","valley-bank","regions"],
       "equifax":    ["truist"],
-      "regional":   ["regions","truist"],
+      "regional":   ["citizens","valley-bank","regions","truist"],
       "elan":       ["elan"],
       "elanBanks":  ["Ameris Bank","United Community Bank","Renasant Bank","SouthState Bank","Colony Bank","The Heritage Bank","The First Bank","Capital City Bank","Hyperion Bank","Home Trust Bank"]
     },
@@ -537,27 +537,27 @@ window.FUNDING_DATABASE = {
 
     "ID": {
       "experian":   ["amex","chase","pnc","wells-fargo"],
-      "transunion": ["us-bank","boa","bmo"],
+      "transunion": ["us-bank","boa","bmo","valley-bank"],
       "equifax":    ["keybank"],
-      "regional":   ["keybank"],
+      "regional":   ["keybank","valley-bank"],
       "elan":       ["elan"],
       "elanBanks":  ["First Federal Savings Bank","Umpqua Bank","Idaho First Bank","Twin River Bank","Idaho Trust Bank"]
     },
 
     "IL": {
       "experian":   ["amex","chase","pnc","wells-fargo","fnbo"],
-      "transunion": ["us-bank","boa","bmo","regions"],
+      "transunion": ["us-bank","boa","bmo","valley-bank","regions"],
       "equifax":    [],
-      "regional":   ["fnbo","regions"],
+      "regional":   ["fnbo","valley-bank","regions"],
       "elan":       ["elan"],
       "elanBanks":  ["Midland State Bank","Heartland Credit Union","First American Bank","Old Second National Bank","Busey Bank","Midland States Bank","Parkway Bank","Banterra Bank","Marquette Bank","BankFinancial","Peoples National Bank","TBK Bank","FCB Banks","First National Bank of Waterloo","Dieterich Bank"]
     },
 
     "IN": {
       "experian":   ["amex","chase","pnc","wells-fargo","flagstar"],
-      "transunion": ["us-bank","boa","bmo","regions"],
-      "equifax":    ["truist","keybank"],
-      "regional":   ["flagstar","regions","truist","keybank"],
+      "transunion": ["us-bank","boa","bmo"],
+      "equifax":    ["keybank"],
+      "regional":   ["flagstar","keybank"],
       "elan":       ["elan"],
       "elanBanks":  ["The Farmers Bank","First Merchants Bank","1st Source Bank","Lake City Bank","Horizon Bank","Star Financial Bank","The Farmers & Merchants State Bank","United Fidelity Bank","Civista Bank","WesBanco Bank","Campbell & Fetter Bank"]
     },
@@ -600,9 +600,9 @@ window.FUNDING_DATABASE = {
 
     "ME": {
       "experian":   ["amex","chase","pnc","wells-fargo"],
-      "transunion": ["us-bank","boa","bmo","valley-bank"],
+      "transunion": ["us-bank","boa","bmo"],
       "equifax":    ["keybank"],
-      "regional":   ["valley-bank","keybank"],
+      "regional":   ["keybank"],
       "elan":       ["elan"],
       "elanBanks":  ["Camden National Bank","Bar Harbor Bank & Trust","First National Bank","Kennebunk Savings Bank","Skowhegan Savings Bank","Androscoggin Bank","Maine Community Bank","Northeast Bank","Franklin Savings Bank","Auburn Savings Bank","NBT Bank"]
     },
@@ -619,8 +619,8 @@ window.FUNDING_DATABASE = {
     "MA": {
       "experian":   ["amex","chase","pnc","wells-fargo","citizens"],
       "transunion": ["us-bank","boa","bmo"],
-      "equifax":    ["keybank"],
-      "regional":   ["citizens","keybank"],
+      "equifax":    [],
+      "regional":   ["citizens"],
       "elan":       ["elan"],
       "elanBanks":  ["Rockland Trust","Eastern Bank","Salem Five Cents Savings Bank","Middlesex Savings Bank","HarborOne Bank","Westfield Bank","Enterprise Bank","Webster Bank","Cambridge Trust Company","North Shore Bank","Lowell Five Cent Savings Bank","Bluestone Bank","BankFive","Easthampton Savings Bank","Hometown Bank","Dedham Savings","East Cambridge Savings Bank"]
     },
@@ -635,10 +635,10 @@ window.FUNDING_DATABASE = {
     },
 
     "MN": {
-      "experian":   ["amex","chase","pnc","wells-fargo"],
+      "experian":   ["amex","chase","pnc","wells-fargo","flagstar","fnbo"],
       "transunion": ["us-bank","boa","bmo"],
       "equifax":    [],
-      "regional":   [],
+      "regional":   ["flagstar","fnbo"],
       "elan":       ["elan"],
       "elanBanks":  ["Bremer Bank","Frandsen Bank & Trust","Premier Bank","MidCountry Bank","RiverWood Bank","CCF Bank","United Prairie Bank","Think Mutual Bank","Border Bank","Pioneer Bank","Kensington Bank","Cornerstone State Bank","Sterling State Bank","Midwest Bank"]
     },
@@ -653,19 +653,19 @@ window.FUNDING_DATABASE = {
     },
 
     "MO": {
-      "experian":   ["amex","chase","pnc","wells-fargo"],
+      "experian":   ["amex","chase","pnc","wells-fargo","fnbo"],
       "transunion": ["us-bank","boa","bmo","regions"],
       "equifax":    [],
-      "regional":   ["regions"],
+      "regional":   ["fnbo","regions"],
       "elan":       ["elan"],
       "elanBanks":  ["Southern Bank","Bank Midwest","HNB National Bank","Mid-Missouri Bank","Wood & Huston Bank","Montgomery Bank","Country Club Bank","Midland States Bank","Town & Country Bank","Nodaway Valley Bank","Sullivan Bank"]
     },
 
     "MT": {
       "experian":   ["amex","chase","pnc","wells-fargo"],
-      "transunion": ["us-bank","boa","bmo","valley-bank"],
+      "transunion": ["us-bank","boa","bmo"],
       "equifax":    [],
-      "regional":   ["valley-bank"],
+      "regional":   [],
       "elan":       ["elan"],
       "elanBanks":  ["American Bank","Little Horn State Bank","Unity Bank","First Federal Bank & Trust","First Citizens Bank of Butte"]
     },
@@ -681,9 +681,9 @@ window.FUNDING_DATABASE = {
 
     "NV": {
       "experian":   ["amex","chase","pnc","wells-fargo","flagstar"],
-      "transunion": ["us-bank","boa","bmo"],
+      "transunion": ["us-bank","boa","bmo","valley-bank"],
       "equifax":    [],
-      "regional":   ["flagstar"],
+      "regional":   ["flagstar","valley-bank"],
       "elan":       ["elan"],
       "elanBanks":  ["Valley Bank of Nevada","Umpqua Bank","Royal Business Bank"]
     },
@@ -726,18 +726,18 @@ window.FUNDING_DATABASE = {
 
     "NC": {
       "experian":   ["amex","chase","pnc","wells-fargo","flagstar"],
-      "transunion": ["us-bank","boa","bmo","regions"],
+      "transunion": ["us-bank","boa","bmo","valley-bank","regions"],
       "equifax":    ["truist"],
-      "regional":   ["flagstar","regions","truist"],
+      "regional":   ["flagstar","valley-bank","regions","truist"],
       "elan":       ["elan"],
       "elanBanks":  ["Carolina Bank","United Community Bank","HomeTrust Bank","SouthState Bank","Towne Bank","Farmers & Merchants Bank","Atlantic Union Bank"]
     },
 
     "ND": {
-      "experian":   ["amex","chase","pnc","wells-fargo"],
+      "experian":   ["amex","chase","pnc","wells-fargo","fnbo"],
       "transunion": ["us-bank","boa","bmo"],
       "equifax":    [],
-      "regional":   [],
+      "regional":   ["fnbo"],
       "elan":       ["elan"],
       "elanBanks":  ["Cornerstone Bank","First United Bank","Alerus Financial","Ramsey National Bank","Kirkwood Bank","Union State Bank","Citizens State Bank of Lankin","VISIONBank"]
     },
@@ -745,8 +745,8 @@ window.FUNDING_DATABASE = {
     "OH": {
       "experian":   ["amex","chase","pnc","wells-fargo","citizens","flagstar"],
       "transunion": ["us-bank","boa","bmo"],
-      "equifax":    ["truist","keybank"],
-      "regional":   ["citizens","flagstar","truist","keybank"],
+      "equifax":    ["keybank"],
+      "regional":   ["citizens","flagstar","keybank"],
       "elan":       ["elan"],
       "elanBanks":  ["Fahey Bank","Park National Bank","Premier Bank","WesBanco Bank","LCNB National Bank","Civista Bank","The Farmers & Merchants State Bank","Unified Bank","The Union Bank Company","First State Bank","Wayne Savings Community Bank","Old Fort Banking","First Merchants Bank","Mechanics Bank"]
     },
@@ -762,9 +762,9 @@ window.FUNDING_DATABASE = {
 
     "OR": {
       "experian":   ["amex","chase","pnc","wells-fargo"],
-      "transunion": ["us-bank","boa","bmo"],
+      "transunion": ["us-bank","boa","bmo","valley-bank"],
       "equifax":    ["keybank"],
-      "regional":   ["keybank"],
+      "regional":   ["keybank","valley-bank"],
       "elan":       ["elan"],
       "elanBanks":  ["Columbia State Bank","Umpqua Bank","HomeStreet Bank","Peoples Bank","First Financial Northwest Bank","Riverview Community Bank","SaviBank","Olympia Federal Savings","Commencement Bank","Twin River Bank"]
     },
@@ -772,8 +772,8 @@ window.FUNDING_DATABASE = {
     "PA": {
       "experian":   ["amex","chase","pnc","wells-fargo","citizens"],
       "transunion": ["us-bank","boa","bmo"],
-      "equifax":    ["truist","keybank"],
-      "regional":   ["citizens","truist","keybank"],
+      "equifax":    [],
+      "regional":   ["citizens"],
       "elan":       ["elan"],
       "elanBanks":  ["Univest Bank","Fulton Bank","Mid Penn Bank","WesBanco Bank","NBT Bank","Peoples Security Bank & Trust","PeoplesBank","Penn Community Bank","Orrstown Bank","Fidelity Deposit & Discount Bank","First Keystone Community Bank","AmeriServ Financial Bank","Jersey Shore State Bank"]
     },
@@ -789,9 +789,9 @@ window.FUNDING_DATABASE = {
 
     "SC": {
       "experian":   ["amex","chase","pnc","wells-fargo"],
-      "transunion": ["us-bank","boa","bmo"],
+      "transunion": ["us-bank","boa","bmo","regions"],
       "equifax":    ["truist"],
-      "regional":   ["truist"],
+      "regional":   ["truist","regions"],
       "elan":       ["elan"],
       "elanBanks":  ["Carolina Bank","SouthState Bank","United Community Bank","Anderson Brothers Bank","Carolina Bank & Trust","Ameris Bank","Countybank","Coastal Carolina National Bank","The Commercial Bank","Park National Bank"]
     },
@@ -806,19 +806,19 @@ window.FUNDING_DATABASE = {
     },
 
     "TN": {
-      "experian":   ["amex","chase","pnc","wells-fargo"],
-      "transunion": ["us-bank","boa","bmo","regions"],
+      "experian":   ["amex","chase","pnc","wells-fargo","citizens"],
+      "transunion": ["us-bank","boa","bmo","valley-bank","regions"],
       "equifax":    ["truist"],
-      "regional":   ["regions","truist"],
+      "regional":   ["citizens","valley-bank","regions","truist"],
       "elan":       ["elan"],
       "elanBanks":  ["United Community Bank","First Citizens National Bank","SmartBank","Home Federal Bank","First Farmers & Merchants Bank","Citizens Bank of Lafayette","Bank of Tennessee","F&M Bank","Renasant Bank","SouthEast Bank","Volunteer State Bank","Independent Bank"]
     },
 
     "TX": {
       "experian":   ["amex","chase","pnc","wells-fargo","fnbo"],
-      "transunion": ["us-bank","boa","bmo","regions"],
+      "transunion": ["us-bank","boa","bmo","valley-bank","regions"],
       "equifax":    ["truist"],
-      "regional":   ["fnbo","regions","truist"],
+      "regional":   ["fnbo","valley-bank","regions","truist"],
       "elan":       ["elan"],
       "elanBanks":  ["Bank of Texas","First Convenience Bank","First Financial Bank","PlainsCapital Bank","Southside Bank","VeraBank","Lone Star National Bank","Broadway National Bank","American Momentum Bank"]
     },
@@ -843,9 +843,9 @@ window.FUNDING_DATABASE = {
 
     "VA": {
       "experian":   ["amex","chase","pnc","wells-fargo","citizens"],
-      "transunion": ["us-bank","boa","bmo"],
+      "transunion": ["us-bank","boa","bmo","valley-bank"],
       "equifax":    ["truist"],
-      "regional":   ["citizens","truist"],
+      "regional":   ["citizens","valley-bank","truist"],
       "elan":       ["elan"],
       "elanBanks":  ["Carolina Bank","Atlantic Union Bank","Towne Bank","Virginia National Bank","City National Bank","Sandy Spring Bank","Fulton Bank","EagleBank"]
     },
