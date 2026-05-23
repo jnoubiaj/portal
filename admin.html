@@ -4624,6 +4624,14 @@
   var _profileBackfillDone = {};
 
   function selectClient(id) {
+    // Immediately clear the Next Actions panel before any new render runs.
+    // Without this, the previous client's task list stays painted for the
+    // 200–800ms until refreshSidebarTasks fires for the newly-selected
+    // client, which looks like the panel is showing the wrong client's tasks.
+    var _prevBody = document.getElementById('sp-right-tasks-body');
+    if (_prevBody && selectedClientId !== id) {
+      _prevBody.innerHTML = '<div style="font-size:12px;color:var(--gray-400);padding:6px 0;display:flex;align-items:center;gap:8px"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="opacity:0.5"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>Loading client actions…</div>';
+    }
     selectedClientId = id;
     activeDetailTab = 'overview';
     // Persist selection so refresh restores this client
@@ -8357,47 +8365,30 @@
   function refreshSidebarTasks(clientId) {
     var card = document.getElementById('sp-right-tasks-top');
     if (!card) return;
+    // Stale-client guard: if the selected client changed between when this
+    // call was scheduled and now, drop the render. Prevents the previous
+    // client's tasks from flashing into the new client's Next Actions panel.
+    if (typeof selectedClientId !== 'undefined' && selectedClientId && clientId !== selectedClientId) return;
 
-    // ── OPS TASKS (new centralized store) ──
-    var opsTasks = getOpsTasks(clientId);
+    // ── OPS TASKS (the only kind of task shown in Next Actions) ──
+    // Only render tasks belonging to THIS client — guards against any stale
+    // task object from a different client ending up in this list.
+    var opsTasks = getOpsTasks(clientId).filter(function(t){
+      return !t.clientId || t.clientId === clientId;
+    });
     var activeOps = sortOpsTasks(opsTasks.filter(function(t){ return t.status !== 'completed'; }));
     var doneOps   = opsTasks.filter(function(t){ return t.status === 'completed'; });
 
-    // ── PIPELINE TASKS (existing system, unchanged) ──
-    var t = getClientTasks(clientId);
-    var stageIdx = (t && typeof t.stage === 'number') ? t.stage : 0;
-    var stage = PIPELINE_STAGES[stageIdx] || PIPELINE_STAGES[0];
-    var plTasks = [];
-    if (t && stage) {
-      var assigned  = t.assigned[stageIdx] || [];
-      var iassigned = (t.iassigned && t.iassigned[stageIdx]) || [];
-      var cs        = (t.customTasks && t.customTasks[stageIdx]) || {};
-      var customInt = cs.i || [];
-      var customCli = cs.c || [];
-      iassigned.forEach(function(idx) {
-        var key = 's' + stageIdx + 'i' + idx;
-        plTasks.push({ key: key, text: stage.internal[idx] || 'Task', done: !!(t.checked && t.checked[key]) });
-      });
-      assigned.forEach(function(idx) {
-        var key = 's' + stageIdx + 'c' + idx;
-        plTasks.push({ key: key, text: stage.client[idx] || 'Task', done: !!(t.checked && t.checked[key]) });
-      });
-      customInt.forEach(function(task, i) {
-        var key = 's' + stageIdx + 'xi' + i;
-        plTasks.push({ key: key, text: (task && task.label) ? task.label : (task || 'Task'), done: !!(t.checked && t.checked[key]) });
-      });
-      customCli.forEach(function(task, i) {
-        var key = 's' + stageIdx + 'xc' + i;
-        plTasks.push({ key: key, text: (task && task.label) ? task.label : (task || 'Task'), done: !!(t.checked && t.checked[key]) });
-      });
-    }
-    var activePl = plTasks.filter(function(tk) { return !tk.done; });
-    var donePl   = plTasks.filter(function(tk) { return tk.done; });
+    // Pipeline tasks are intentionally NOT rendered in Next Actions.
+    // Per-stage checklists still live in cq_tasks_${id} (used by the
+    // pipeline-board modal, sidebar stage grouping, and stage advance
+    // logic). The Next Actions panel only shows real, intentionally
+    // created tasks (manual + automation + funding generator + GHL).
 
-    var totalPending = activeOps.length + activePl.length;
+    var totalPending = activeOps.length;
     var subCount = totalPending > 0
       ? '<div class="a-card-sub">' + totalPending + ' pending</div>'
-      : (opsTasks.length + plTasks.length > 0 ? '<div class="a-card-sub" style="color:#059669">All done</div>' : '');
+      : (opsTasks.length > 0 ? '<div class="a-card-sub" style="color:#059669">All done</div>' : '');
 
     // Render ops task row with Complete / Extend / Edit buttons
     function opsRow(task) {
@@ -8428,32 +8419,10 @@
       + '</div>';
     }
 
-    // Render pipeline task row (existing behavior preserved)
-    function plRow(tk, isDone) {
-      var chk = isDone
-        ? '<button onclick="sidebarTogglePipelineTask(\'' + clientId + '\',\'' + tk.key + '\')" title="Mark undone" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #10b981;background:#10b981;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></button>'
-        : '<button onclick="sidebarTogglePipelineTask(\'' + clientId + '\',\'' + tk.key + '\')" title="Mark done" style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--gray-300);background:white;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"></button>';
-      var txt = isDone
-        ? '<div class="a-na-text" style="text-decoration:line-through;color:var(--gray-400)">' + tk.text + '</div>'
-        : '<div class="a-na-text">' + tk.text + '</div>';
-      var opacity = isDone ? 'opacity:0.55;' : '';
-      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:' + (isDone ? '4' : '5') + 'px 0;' + opacity + '">' + chk + '<div style="min-width:0">' + txt + '</div></div>';
-    }
-
-    // Build body
+    // Build body — ops tasks only (pipeline checklist removed per product spec).
     var body = '';
     if (activeOps.length > 0) {
       body += activeOps.map(opsRow).join('');
-    }
-    if (activePl.length > 0 || donePl.length > 0) {
-      if (activeOps.length > 0 || doneOps.length > 0) {
-        body += '<div class="ot-divider">Pipeline Tasks</div>';
-      }
-      body += activePl.map(function(tk) { return plRow(tk, false); }).join('');
-      if (donePl.length > 0) {
-        body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">'
-          + donePl.map(function(tk) { return plRow(tk, true); }).join('') + '</div>';
-      }
     }
     if (doneOps.length > 0) {
       body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">'
