@@ -3401,63 +3401,35 @@
     }
   })();
 
-  // Firebase Auth state — confirm or revoke fast-restore.
+  // Firebase Auth state — confirm fast-restore.
   //
-  // Critical: Firebase's onAuthStateChanged often fires with `null` IMMEDIATELY
-  // on page load while it's restoring the session from sessionStorage, then
-  // fires again with the real user a moment later. Showing the login screen
-  // on that first null fire is what causes the 1-second login flash on
-  // every refresh. To stop the flash:
-  //   • If we already showed the app from a cached admin session, treat a
-  //     null user as "Firebase still warming up" and wait a grace period.
-  //   • If a real user arrives during the grace window, cancel the timer
-  //     and the user never sees a flicker.
-  //   • If still null after the grace window, then confirm the sign-out
-  //     and reveal the login screen.
+  // IMPORTANT: This handler NEVER auto-hides the admin app, never auto-shows
+  // the login screen, and never auto-clears the cached admin session. The
+  // only ways the login screen ever appears are:
+  //   1. The page loads with NO cached admin in localStorage (fast-restore's
+  //      else branch).
+  //   2. The user explicitly clicks Sign Out (adminLogout) — which clears the
+  //      cache, signs out from Firebase, and calls location.reload(). After
+  //      reload, fast-restore takes the no-cache branch and shows login.
   //
-  // Manual logout still works instantly because fsAuthSignOut() also calls
-  // location.reload(), which re-runs the fast-restore IIFE — and that IIFE
-  // sees an empty cache, so the login screen shows right away.
-  var _authLogoutTimer = null;
-  var _authGraceMs = 4000;
+  // Earlier attempts had this handler revoke the cached session when Firebase
+  // fired with a null user (with a short grace window). That was unreliable:
+  // Firebase routinely fires null first while warming up and the real user
+  // arrives later — sometimes >4 seconds later on slower connections. When
+  // the grace expired prematurely, the cache was wiped and every subsequent
+  // refresh started cold on the login screen. The handler now just confirms
+  // the user when Firebase fires with one and otherwise stays out of the way.
+  // The cached UI continues to display from localStorage; Firestore writes
+  // either succeed (token still valid / auto-refreshed) or fail silently
+  // until the user manually re-signs-in.
   fsAuthOnStateChange(function(user) {
     if (user && ADMIN_PROFILES[user.email]) {
-      if (_authLogoutTimer) { clearTimeout(_authLogoutTimer); _authLogoutTimer = null; }
       _showAdminApp(user);
-      return;
     }
-    // Null or non-admin user. Don't immediately wipe the cached admin session —
-    // give Firebase a moment to finish restoring auth state.
-    var _hasCached = false;
-    try { _hasCached = !!localStorage.getItem('cq_admin_user'); } catch(e) {}
-    var _showLoginNow = function() {
-      try { localStorage.removeItem('cq_admin_user'); } catch(e) {}
-      _adminAppInited = false;
-      currentAdmin = null;
-      var appEl   = document.getElementById('admin-app');
-      var loginEl = document.getElementById('admin-login');
-      if (appEl)   appEl.style.display = 'none';
-      if (loginEl) loginEl.classList.add('show');
-    };
-    if (!_hasCached) {
-      // No cached admin session and Firebase has no user — login is the right
-      // screen, show it without waiting.
-      _showLoginNow();
-      return;
-    }
-    // Cached session exists. Wait for Firebase to either confirm the user or
-    // confirm sign-out via a second fire. Re-check fsAuthCurrentUser() once
-    // the grace window elapses; if still empty, then revoke.
-    if (_authLogoutTimer) clearTimeout(_authLogoutTimer);
-    _authLogoutTimer = setTimeout(function() {
-      _authLogoutTimer = null;
-      var live = (typeof fsAuthCurrentUser === 'function') ? fsAuthCurrentUser() : null;
-      if (live && ADMIN_PROFILES[live.email]) {
-        _showAdminApp(live);
-      } else {
-        _showLoginNow();
-      }
-    }, _authGraceMs);
+    // Null / non-admin user: deliberately no UI action. The fast-restore
+    // IIFE already chose between login and admin-app based on the cached
+    // session. Don't fight that choice — let the user explicitly sign out
+    // if they need a fresh session.
   });
 
   // Re-render overview once DOM is fully ready
