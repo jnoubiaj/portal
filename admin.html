@@ -5115,6 +5115,33 @@
         try { localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(fsDash.pipelineTasks)); } catch(e) {}
       }
 
+      // Recover opsTasks (Next Actions) from Firestore when local is empty or stale.
+      // Firestore is the source of truth across devices; localStorage can get
+      // wiped (incognito, cache clear, new browser) leaving the UI showing
+      // "no tasks" even though tasks exist remotely.
+      if (fsDash && Array.isArray(fsDash.opsTasks)) {
+        try {
+          var _localOps = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
+          var _localIds = {};
+          _localOps.forEach(function(t) { if (t && t.id) _localIds[t.id] = t; });
+          var _merged = _localOps.slice();
+          var _added = 0;
+          fsDash.opsTasks.forEach(function(t) {
+            if (t && t.id && !_localIds[t.id]) {
+              _merged.push(t);
+              _added++;
+            }
+          });
+          if (_added > 0 || _localOps.length === 0) {
+            localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(_merged));
+            console.log('[Tasks] Recovered from Firestore — clientId:', clientId, '| added:', _added, '| total:', _merged.length);
+            if (typeof refreshSidebarTasks === 'function') {
+              try { refreshSidebarTasks(clientId); } catch(e) {}
+            }
+          }
+        } catch(e) { console.error('[Tasks] Recovery failed:', e); }
+      }
+
       // Full replace — prevents duplicates on repeated calls
       listEl.innerHTML = rows.length
         ? rows.join('')
