@@ -4804,7 +4804,7 @@
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Add Application
         </button>
-        <button class="a-sp-ab-v2-btn" onclick="openTaskModal('${id}')">
+        <button class="a-sp-ab-v2-btn" onclick="opsOpenCreate('${id}')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           Add Task
         </button>
@@ -4875,6 +4875,11 @@
               </div>
             </div>
             <div id="cmd-prog-hint-${id}" style="${_fundGoal > 0 || _totalFunded > 0 ? 'display:none' : 'font-size:11px;color:var(--gray-400);margin-top:4px'}">Set a funding goal and add applications to track progress.</div>
+          </div>
+
+          <!-- STAGE PROGRESS WORKSPACE — inline replacement for the old pipeline-tasks modal -->
+          <div class="a-card" id="sp-stage-progress-${id}" style="margin-bottom:14px">
+            ${renderStageProgressCard(id)}
           </div>
 
           <!-- Funding Applications (full-width) -->
@@ -5004,7 +5009,7 @@
                 <div class="a-card-sub">Stage ${_d.currentStage || 1} · ${(_d.tasks||[]).filter(t=>t.status!=='done').length} task${(_d.tasks||[]).filter(t=>t.status!=='done').length !== 1 ? 's' : ''} pending</div>
               </div>
               <div class="a-card-btns">
-                <button class="a-card-btn" onclick="event.stopPropagation();openTaskModal('${id}')">+ Task</button>
+                <button class="a-card-btn" onclick="event.stopPropagation();opsOpenCreate('${id}')">+ Task</button>
                 <svg id="chev-dash-${id}" class="a-coll-chev" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="transform:rotate(-90deg)"><path d="M19 9l-7 7-7-7"/></svg>
               </div>
             </div>
@@ -8362,6 +8367,155 @@
     }
   }
 
+  // ── STAGE PROGRESS CARD ───────────────────────────────────────────────
+  // Inline dashboard replacement for the retired pipeline-task modal.
+  // Reads current stage from cq_tasks_.stage (with cq_dash_ fallback) and
+  // lists the client's open ops tasks tagged for this stage. The
+  // "Mark Stage Complete" button advances via _applyStageChange — the
+  // same code path used by the slider, so persistence behaves identically.
+  function renderStageProgressCard(clientId) {
+    var t = (typeof getClientTasks === 'function') ? getClientTasks(clientId) : null;
+    var d = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+    var stageIdx = (t && typeof t.stage === 'number') ? t.stage : Math.max(0, (d.currentStage || 1) - 1);
+    var stage = PIPELINE_STAGES[stageIdx] || PIPELINE_STAGES[0];
+    var nextStage = PIPELINE_STAGES[stageIdx + 1];
+    var totalStages = PIPELINE_STAGES.length;
+    var ops = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
+    var stageOps = ops.filter(function(x){
+      var xs = (typeof x.stage === 'number') ? x.stage : ((typeof x.stage === 'string' && x.stage) ? parseInt(x.stage, 10) - 1 : stageIdx);
+      return xs === stageIdx;
+    });
+    var doneCount = stageOps.filter(function(x){ return x.status === 'completed'; }).length;
+    var totalCount = stageOps.length;
+    var pct = totalCount > 0 ? Math.round(doneCount / totalCount * 100) : 0;
+    var allDone = totalCount > 0 && doneCount === totalCount;
+
+    function _row(task) {
+      var typeBadge = task.type === 'client'
+        ? '<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:#eff6ff;color:#1d4ed8;letter-spacing:0.03em">CLIENT</span>'
+        : '<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:#f5f3ff;color:#6d28d9;letter-spacing:0.03em">ADMIN</span>';
+      var due = task.dueDate ? '<span style="font-size:10.5px;color:var(--gray-400);margin-left:auto">' + task.dueDate + '</span>' : '';
+      var isDone = task.status === 'completed';
+      var chk = isDone
+        ? '<button onclick="opsToggleTaskFromStageCard(\'' + clientId + '\',\'' + task.id + '\')" title="Mark undone" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #10b981;background:#10b981;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></button>'
+        : '<button onclick="opsToggleTaskFromStageCard(\'' + clientId + '\',\'' + task.id + '\')" title="Mark done" style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--gray-300);background:white;cursor:pointer;flex-shrink:0"></button>';
+      var titleStyle = isDone ? 'text-decoration:line-through;color:var(--gray-400)' : 'color:var(--navy)';
+      return '<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--gray-100)">'
+        + chk
+        + '<div style="flex:1;min-width:0;font-size:12.5px;' + titleStyle + '">' + _escHtml(task.title || '') + '</div>'
+        + typeBadge + due
+        + '</div>';
+    }
+
+    var hdr = '<div class="a-card-hdr">'
+      + '<div class="a-card-hdrl">'
+        + '<div class="a-card-title">Stage Progress</div>'
+        + '<div class="a-card-sub" style="display:flex;align-items:center;gap:8px">'
+          + '<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:' + stage.color + '"></span>' + stage.name + '</span>'
+          + '<span style="color:var(--gray-300)">·</span>'
+          + '<span>' + doneCount + ' of ' + totalCount + ' task' + (totalCount === 1 ? '' : 's') + ' complete</span>'
+        + '</div>'
+      + '</div>'
+      + '<div class="a-card-btns" style="display:flex;gap:6px">'
+        + '<button class="a-card-btn" onclick="addStageTask(\'' + clientId + '\',\'admin\')">+ Admin Task</button>'
+        + '<button class="a-card-btn" onclick="addStageTask(\'' + clientId + '\',\'client\')">+ Client Task</button>'
+      + '</div>'
+    + '</div>';
+
+    var bar = '<div style="height:6px;background:var(--gray-100);border-radius:999px;margin:6px 0 14px;overflow:hidden">'
+      + '<div style="height:100%;width:' + pct + '%;background:' + stage.color + ';border-radius:999px;transition:width 0.25s"></div>'
+    + '</div>';
+
+    var list = totalCount === 0
+      ? '<div style="font-size:12px;color:var(--gray-400);padding:10px 0;text-align:center;border:1px dashed var(--gray-200);border-radius:8px;margin-bottom:12px">No tasks yet for this stage. Use the buttons above to add an admin or client task.</div>'
+      : '<div style="margin-bottom:12px">' + stageOps.map(_row).join('') + '</div>';
+
+    var btnLabel, btnAction, btnStyle;
+    if (nextStage) {
+      btnLabel = allDone || totalCount === 0 ? 'Mark Stage Complete — Move to ' + nextStage.name : 'Move to ' + nextStage.name + ' →';
+      btnAction = '_applyStageChange(\'' + clientId + '\',' + (stageIdx + 1) + ')';
+      btnStyle  = 'background:linear-gradient(135deg,' + stage.color + ',' + stage.dark + ');color:white';
+    } else {
+      btnLabel = 'Final stage — mark client funded';
+      btnAction = 'plMarkFinalComplete(\'' + clientId + '\')';
+      btnStyle  = 'background:#059669;color:white';
+    }
+    var advance = '<button onclick="' + btnAction + '" style="width:100%;height:38px;border:none;border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:0.02em;cursor:pointer;' + btnStyle + ';transition:opacity 0.12s" onmouseover="this.style.opacity=\'0.88\'" onmouseout="this.style.opacity=\'1\'">' + btnLabel + '</button>';
+
+    var footer = '<div style="font-size:10.5px;color:var(--gray-400);margin-top:8px;text-align:center">Stage ' + (stageIdx + 1) + ' of ' + totalStages + '</div>';
+
+    return hdr + bar + list + advance + footer;
+  }
+
+  function refreshStageProgressCard(clientId) {
+    var card = document.getElementById('sp-stage-progress-' + clientId);
+    if (!card) return;
+    if (typeof selectedClientId !== 'undefined' && selectedClientId && clientId !== selectedClientId) return;
+    try { card.innerHTML = renderStageProgressCard(clientId); } catch(e) {}
+  }
+
+  // Toggle ops task done/undone from inside the stage progress card. Mirrors
+  // opsCompleteTask but also un-completes if already done. Updates the card
+  // and the right-sidebar Next Actions in sync.
+  function opsToggleTaskFromStageCard(clientId, taskId) {
+    var tasks = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
+    var idx = tasks.findIndex(function(t){ return t.id === taskId; });
+    if (idx < 0) return;
+    if (tasks[idx].status === 'completed') {
+      tasks[idx].status = 'pending';
+      tasks[idx].completedAt = null;
+      tasks[idx].completedBy = null;
+      if (typeof _saveOpsTasks === 'function') _saveOpsTasks(clientId, tasks);
+    } else {
+      if (typeof completeOpsTask === 'function') completeOpsTask(clientId, taskId);
+    }
+    refreshStageProgressCard(clientId);
+    if (typeof refreshSidebarTasks === 'function') refreshSidebarTasks(clientId);
+  }
+
+  // Open the ops-task creator pre-tagged for this client's current stage and
+  // marked as admin/client visibility. Wraps opsOpenCreate so the user can
+  // create the right kind of task in one click from the Stage Progress card.
+  function addStageTask(clientId, type) {
+    if (typeof opsOpenCreate !== 'function') return;
+    opsOpenCreate(clientId);
+    // Pre-select the visibility type once the modal is on screen
+    setTimeout(function() {
+      var sel = document.getElementById('otf-type');
+      if (sel && (type === 'admin' || type === 'client')) sel.value = type;
+    }, 60);
+  }
+
+  // Helper for the final-stage button on the Stage Progress card. Mirrors
+  // the legacy final-stage flow inside plAdvance: archive the client and
+  // mark funded. Stage data persists via _applyStageChange / saveDashData.
+  function plMarkFinalComplete(clientId) {
+    if (typeof PIPELINE_STAGES === 'undefined') return;
+    var finalIdx = PIPELINE_STAGES.length - 1;
+    var t = (typeof initClientTasks === 'function') ? initClientTasks(clientId) : null;
+    if (t) {
+      t.stage = finalIdx;
+      t.completedAt = Date.now();
+      if (typeof saveClientTasks === 'function') saveClientTasks(clientId, t);
+    }
+    var d = (typeof getDashData === 'function') ? getDashData(clientId) : null;
+    if (d) {
+      d.currentStage = PIPELINE_STAGES.length;
+      if (typeof saveDashData === 'function') saveDashData(clientId, d);
+    }
+    var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+    if (c) {
+      c.archived = true;
+      c.status = 'approved';
+      c.fundedAt = Date.now();
+      if (typeof saveClients === 'function') saveClients();
+      try { logActivity('Client <strong>' + (c.fname || '') + ' ' + (c.lname || '') + '</strong> funded &amp; archived', '#10b981'); } catch(e) {}
+    }
+    if (typeof renderClientList === 'function') renderClientList();
+    if (typeof renderOverview === 'function') renderOverview();
+    refreshStageProgressCard(clientId);
+  }
+
   function refreshSidebarTasks(clientId) {
     var card = document.getElementById('sp-right-tasks-top');
     if (!card) return;
@@ -8542,6 +8696,7 @@
     updateOverdueTaskStatuses(clientId);
     refreshFundingUI(clientId);
     refreshSidebarTasks(clientId);
+    if (typeof refreshStageProgressCard === 'function') refreshStageProgressCard(clientId);
     refreshFundingStrategy(clientId);
     renderClientList();
 
@@ -15318,37 +15473,30 @@
   //  PIPELINE — 6-stage client funding task system
   // ══════════════════════════════════════════════════
 
+  // Pipeline stages — names, colors, and metadata for stage navigation +
+  // sidebar grouping + stage advance logic. The .client and .internal task
+  // arrays are intentionally empty: the old hardcoded checklist system has
+  // been retired. Real tasks now live in cq_ops_tasks_${id} and are created
+  // manually, by the funding generator, by GHL import, or by automations.
   var PIPELINE_STAGES = [
     { name: 'Initial Setup',       sub: 'Credit Review',
       color: '#3b82f6', light: '#eff6ff', border: '#bfdbfe', dark: '#1d4ed8',
-      client:   ['Upload Experian Login Credentials','Confirm Personal Information','Upload ID + Proof of Address','Complete Onboarding Form'],
-      internal: ['Pull Experian Report','Analyze Credit Profile','Identify Negative Items','Identify Inquiries','Calculate DTI'],
-      idays:    [0, 2, 2, 0, 0] },
+      client: [], internal: [], idays: [] },
     { name: 'Credit Optimization', sub: 'Remove & Repair',
       color: '#8b5cf6', light: '#f5f3ff', border: '#ddd6fe', dark: '#6d28d9',
-      client:   ['Remove Inquiries','Turn Off Fraud Alerts','Add Authorized User','Pay Down Utilization'],
-      internal: ['Remove Inquiries','Turn Off Fraud Alerts','Add Authorized User','Pay Down Utilization'],
-      idays:    [3, 2, 30, 60] },
+      client: [], internal: [], idays: [] },
     { name: 'Funding Strategy',    sub: 'Plan & Sequence',
       color: '#f59e0b', light: '#fffbeb', border: '#fde68a', dark: '#b45309',
-      client:   ['Confirm Business Information','Provide Business Details','Approve Funding Plan'],
-      internal: ['Build Funding Sequence & Select Banks','Set Application Order','Determine Application Numbers'],
-      idays:    [1, 1, 1] },
+      client: [], internal: [], idays: [] },
     { name: 'Bank Relationships',  sub: 'Open Accounts',
       color: '#10b981', light: '#ecfdf5', border: '#a7f3d0', dark: '#047857',
-      client:   ['Assign Target Banks','Track Personal Account Open Date','Verify Business Account & Open Date','Open Business Account & Deposit Funds'],
-      internal: ['Assign Target Banks','Track Personal Account Open Date','Verify Business Account & Open Date','Open Business Account & Deposit Funds'],
-      idays:    [1, 1, 1, 7] },
+      client: [], internal: [], idays: [] },
     { name: 'Application Phase',   sub: 'Submit & Track',
       color: '#f97316', light: '#fff7ed', border: '#fed7aa', dark: '#c2410c',
-      client:   ['Attend Bank Appointment','Confirm Submission','Upload Requested Documents','Handle Reconsideration Calls'],
-      internal: ['Introduce Client to BRM','Submit Applications','Track Application Dates','Handle Reconsideration Calls'],
-      idays:    [1, 3, 7, 7] },
+      client: [], internal: [], idays: [] },
     { name: 'Decision / Results',  sub: 'Approved & Funded',
       color: '#059669', light: '#ecfdf5', border: '#6ee7b7', dark: '#065f46',
-      client:   ['Accept Offer','Upload Approval Letters','Confirm Card Received'],
-      internal: ['Log Approval Amounts','Update Funding Dashboard','Send Congratulations','Request Referrals'],
-      idays:    [0, 0, 0, 2] }
+      client: [], internal: [], idays: [] }
   ];
 
   function getClientTasks(id) {
@@ -16026,12 +16174,21 @@
       }
 
       iassigned.forEach(function(idx) {
+        // Legacy hardcoded pipeline tasks have been retired (PIPELINE_STAGES
+        // .internal is now empty). Skip indices that no longer resolve to a
+        // task label so old saved references don't surface as blank rows.
+        var _label = stage.internal[idx];
+        if (!_label) return;
         var key = 's' + si + 'i' + idx;
         var offsetDays = (stage.idays && stage.idays[idx] !== undefined) ? stage.idays[idx] : null;
         var dueTs = (stageStart !== null && offsetDays !== null) ? stageStart + offsetDays * 86400000 : null;
-        addTask(key, stage.internal[idx], dueTs);
+        addTask(key, _label, dueTs);
       });
-      assigned.forEach(function(ti) { addTask('s'+si+'c'+ti, stage.client[ti]||'', null); });
+      assigned.forEach(function(ti) {
+        var _cl = stage.client[ti];
+        if (!_cl) return;
+        addTask('s'+si+'c'+ti, _cl, null);
+      });
       customInt.forEach(function(task, i) {
         var norm = _fsgNormalizeTask(task);
         addTask('s'+si+'xi'+i, norm.label, norm.dueDate ? _fsgDateToTs(norm.dueDate) : null, norm.priority);
@@ -16184,7 +16341,7 @@
             var pct = p.total ? Math.round(p.done/p.total*100) : 0;
             var days = plDaysInStage(c.id, si);
             var _pn = _getClientNames(c);
-            return '<div class="pl-card" onclick="openTaskModal(\'' + c.id + '\')" style="border-left:3px solid ' + stage.color + '">'
+            return '<div class="pl-card" onclick="selectClient(\'' + c.id + '\')" style="border-left:3px solid ' + stage.color + '">'
               + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
               + '<div style="width:32px;height:32px;border-radius:9px;background:' + stage.light + ';color:' + stage.color + ';font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + plInitials(c) + '</div>'
               + '<div style="flex:1;min-width:0">'
@@ -16210,7 +16367,7 @@
     var unCards = unstarted.length
       ? unstarted.map(function(c){
           var _un = _getClientNames(c);
-          return '<div class="pl-card" onclick="openTaskModal(\'' + c.id + '\')">'
+          return '<div class="pl-card" onclick="selectClient(\'' + c.id + '\')">'
             + '<div style="display:flex;align-items:center;gap:9px">'
             + '<div style="width:32px;height:32px;border-radius:9px;background:#f1f5f9;color:#94a3b8;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + plInitials(c) + '</div>'
             + '<div><div class="pl-card-name">' + _un.fn + ' ' + _un.ln + '</div>'
@@ -16378,7 +16535,7 @@
           // Quote for onclick attributes
           var safeId = c.id.replace(/'/g,"\\'");
 
-          return '<div class="pl-card' + urgentClass + highValClass + '" onclick="openTaskModal(\'' + safeId + '\')" style="border-left:3px solid ' + borderColor + ';' + cardBgFinal + 'padding-right:14px;padding-bottom:30px" title="' + _pn.fn + ' ' + _pn.ln + ' · Stage ' + (si+1) + ': ' + stage.name + '">'
+          return '<div class="pl-card' + urgentClass + highValClass + '" onclick="selectClient(\'' + safeId + '\')" style="border-left:3px solid ' + borderColor + ';' + cardBgFinal + 'padding-right:14px;padding-bottom:30px" title="' + _pn.fn + ' ' + _pn.ln + ' · Stage ' + (si+1) + ': ' + stage.name + '">'
             // Large days badge — top right (absolute)
             + '<div class="pl-days-badge" style="background:' + daysBg2 + ';color:' + daysColor2 + '" title="' + days + ' days in this stage">' + days + 'd</div>'
             // Row 1: avatar + name + priority badge
@@ -16418,7 +16575,7 @@
             + '<button class="pl-qa-btn" onclick="event.stopPropagation();selectClientFromOv(\'' + safeId + '\')" title="Open client profile">'
             + '<svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Open'
             + '</button>'
-            + '<button class="pl-qa-btn" onclick="event.stopPropagation();openTaskModal(\'' + safeId + '\')" title="Open task view">'
+            + '<button class="pl-qa-btn" onclick="event.stopPropagation();selectClient(\'' + safeId + '\')" title="Open client workspace">'
             + '<svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> Tasks'
             + '</button>'
             + '</div>'
@@ -16442,7 +16599,7 @@
       var ovUnCards = unstarted.map(function(c) {
         var _un = _getClientNames(c);
         var ficoColor = c.fico >= 700 ? '#10b981' : c.fico >= 600 ? '#f59e0b' : c.fico ? '#ef4444' : '#94a3b8';
-        return '<div class="pl-card" onclick="openTaskModal(\'' + c.id + '\')">'
+        return '<div class="pl-card" onclick="selectClient(\'' + c.id + '\')">'
           + '<div style="display:flex;align-items:center;gap:7px">'
           + '<div style="width:26px;height:26px;border-radius:6px;background:#f1f5f9;color:#94a3b8;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">' + plInitials(c) + '</div>'
           + '<div style="flex:1;min-width:0"><div class="pl-card-name" style="font-size:11px">' + _un.fn + ' ' + _un.ln + '</div>'
@@ -17213,6 +17370,7 @@
     if (!clientId) return;
     updateOverdueTaskStatuses(clientId);
     refreshSidebarTasks(clientId);
+    if (typeof refreshStageProgressCard === 'function') refreshStageProgressCard(clientId);
     refreshActivityTimeline(clientId);
   }
   function opsOpenCreate(clientId) { _renderOpsTaskModal(clientId, null); }
