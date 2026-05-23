@@ -49,15 +49,19 @@
     input, select, textarea { font-size: 16px !important; }
 
     /* ── LOGIN ─────────────────────────────────── */
+    /* Default-hidden so it can never flash on initial paint. Only the auth
+       handler explicitly sets display:flex when login is genuinely required
+       (no cached session at all, or after the grace period confirms signout). */
     #admin-login {
       min-height: 100vh;
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       background: var(--navy);
       background-image: radial-gradient(ellipse at 20% 50%, rgba(34,167,240,0.12) 0%, transparent 60%),
                         radial-gradient(ellipse at 80% 20%, rgba(26,58,107,0.4) 0%, transparent 50%);
     }
+    #admin-login.show { display: flex; }
     .login-box {
       background: var(--white);
       border-radius: 20px;
@@ -2205,8 +2209,10 @@
 </head>
 <body>
 
-<!-- ── LOGIN ───────────────────────────────────────────────────────── -->
-<div id="admin-login" style="display:none">
+<!-- ── LOGIN ─────────────────────────────────────────────────────────
+     Hidden by default via CSS (display:none). Only revealed by adding the
+     `.show` class — set from the auth handler when login is genuinely needed. -->
+<div id="admin-login">
   <div class="login-box">
     <div class="login-logo">
       <img src="Brand_assets/CapitalQuest%20Consulting-R-02.png" alt="CapitalQuest" />
@@ -3052,7 +3058,7 @@
     const profile = ADMIN_PROFILES[user.email] || { name: user.email, initials: user.email[0].toUpperCase() };
     currentAdmin = { email: user.email, ...profile };
     try { localStorage.setItem('cq_admin_user', JSON.stringify({ email: user.email })); } catch(e) {}
-    document.getElementById('admin-login').style.display = 'none';
+    document.getElementById('admin-login').classList.remove('show');
     document.getElementById('admin-app').style.display = 'block';
     document.getElementById('sb-avatar').textContent = profile.initials;
     document.getElementById('sb-name').textContent = profile.name;
@@ -3381,17 +3387,17 @@
         var _profile = ADMIN_PROFILES[_cached.email];
         currentAdmin = { email: _cached.email, name: _profile.name, initials: _profile.initials };
         _adminAppInited = true;
-        document.getElementById('admin-login').style.display = 'none';
+        document.getElementById('admin-login').classList.remove('show');
         document.getElementById('admin-app').style.display = 'block';
         document.getElementById('sb-avatar').textContent = _profile.initials;
         document.getElementById('sb-name').textContent = _profile.name;
         if (typeof initAdminApp === 'function') initAdminApp();
         setTimeout(function() { try { if (typeof _ghlInit === 'function') _ghlInit(); } catch(e) {} }, 500);
       } else {
-        document.getElementById('admin-login').style.display = 'flex';
+        document.getElementById('admin-login').classList.add('show');
       }
     } catch(e) {
-      document.getElementById('admin-login').style.display = 'flex';
+      document.getElementById('admin-login').classList.add('show');
     }
   })();
 
@@ -3430,8 +3436,8 @@
       currentAdmin = null;
       var appEl   = document.getElementById('admin-app');
       var loginEl = document.getElementById('admin-login');
-      if (appEl)   appEl.style.display   = 'none';
-      if (loginEl) loginEl.style.display = 'flex';
+      if (appEl)   appEl.style.display = 'none';
+      if (loginEl) loginEl.classList.add('show');
     };
     if (!_hasCached) {
       // No cached admin session and Firebase has no user — login is the right
