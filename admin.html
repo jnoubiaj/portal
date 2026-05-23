@@ -1549,9 +1549,9 @@
     display: flex; flex-direction: column; gap: 12px;
   }
   .a-sp-right > .a-card { flex-shrink: 0; margin-bottom: 0 !important; }
-  /* Messages card expands to fill remaining sidebar height */
-  .a-sp-right > #sp-dtab-messages { flex: 1 !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden; }
-  .a-sp-right > #sp-dtab-messages > #dtab-messages { flex: 1 !important; min-height: 0 !important; height: auto !important; }
+  /* Notes card expands to fill remaining sidebar height */
+  .a-sp-right > #sp-right-notes { flex: 1 !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden; }
+  .a-sp-right > #sp-right-notes > .a-sn-body { flex: 1 !important; min-height: 0 !important; height: auto !important; }
 
   /* Sections */
   .a-sp-sec { border-bottom: 1px solid var(--gray-100); }
@@ -1693,13 +1693,21 @@
   /* Remove old section-hdr green tint (cards replace it) */
   #sp-dtab-funding > .a-sp-sec-hdr { display: none !important; }
 
-  /* Messages card: flex column — chat scrolls, input always pinned at bottom */
-  #sp-dtab-messages { display: flex; flex-direction: column; overflow: hidden; }
-  #sp-dtab-messages .a-card-hdr { flex-shrink: 0; }
-  #sp-dtab-messages #dtab-messages { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
-  #sp-dtab-messages .a-chat-msgs { flex: 1 !important; overflow-y: auto !important; max-height: none !important; min-height: 0 !important; margin-bottom: 0 !important; padding: 4px 0 !important; }
-  #sp-dtab-messages .a-chat-input-row { flex-shrink: 0 !important; margin-top: 8px; border-top: 1px solid var(--gray-100); padding-top: 8px; }
-  #sp-dtab-messages .a-chat-wrap { height: auto !important; }
+  /* Notes card: flex column — notes scroll, input pinned at bottom */
+  #sp-right-notes { display: flex; flex-direction: column; overflow: hidden; }
+  #sp-right-notes .a-card-hdr { flex-shrink: 0; }
+  #sp-right-notes .a-sn-body { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+  #sp-right-notes .a-sn-list { flex: 1; overflow-y: auto; min-height: 0; padding: 4px 0; display: flex; flex-direction: column; gap: 8px; }
+  #sp-right-notes .a-sn-input-row { flex-shrink: 0; margin-top: 8px; border-top: 1px solid var(--gray-100); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .a-sn-item { padding: 8px 10px; background: var(--gray-50, #f9fafb); border: 1px solid var(--gray-100); border-radius: 7px; }
+  .a-sn-meta { font-family: var(--font-h); font-size: 10.5px; font-weight: 700; color: var(--navy); letter-spacing: 0.02em; margin-bottom: 3px; }
+  .a-sn-body-text { font-size: 12px; line-height: 1.45; color: var(--gray-700, #374151); white-space: pre-wrap; word-break: break-word; }
+  .a-sn-empty { font-size: 12px; color: var(--gray-400); text-align: center; padding: 14px 8px; font-style: italic; }
+  .a-sn-input { width: 100%; resize: none; border: 1px solid var(--gray-200, #e5e7eb); border-radius: 7px; padding: 7px 9px; font-family: inherit; font-size: 12px; line-height: 1.4; color: var(--gray-800, #1f2937); background: white; outline: none; transition: border-color 0.12s; }
+  .a-sn-input:focus { border-color: var(--navy); }
+  .a-sn-add { height: 30px; border-radius: 7px; border: none; background: var(--navy); color: white; font-family: var(--font-h); font-size: 11px; font-weight: 700; letter-spacing: 0.02em; cursor: pointer; transition: opacity 0.12s; }
+  .a-sn-add:hover { opacity: 0.88; }
+  .a-sn-add:active { opacity: 0.75; }
 
   /* Tighter internal spacing for funding + dashboard content */
   .a-sp-left .fund-header { margin-bottom: 12px; }
@@ -4541,7 +4549,12 @@
     }, 150);
     // Real-time listener: refresh docs when client uploads or admin data changes
     if (_clientDashUnsub) { try { _clientDashUnsub(); } catch(e) {} }
-    _clientDashUnsub = fsListenDash(id, (snapData) => { loadClientDocsFromFirestore(id, snapData); });
+    _clientDashUnsub = fsListenDash(id, (snapData) => {
+      loadClientDocsFromFirestore(id, snapData);
+      if (snapData && Array.isArray(snapData.adminNotes)) {
+        try { _mergeIncomingAdminNotes(id, snapData.adminNotes); } catch(e) {}
+      }
+    });
     // Switch to clients section if not already
     document.querySelectorAll('.a-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.a-nav-item').forEach(n => n.classList.remove('active'));
@@ -4673,7 +4686,7 @@
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           Request Docs
         </button>
-        <button class="a-sp-ab-v2-btn green" onclick="(function(){var s=document.getElementById('sp-dtab-messages');if(s){s.classList.remove('collapsed');s.scrollIntoView({behavior:'smooth'});}setTimeout(function(){var e=document.getElementById('dchat-input-${id}');if(e)e.focus();},350)})()">
+        <button class="a-sp-ab-v2-btn green" onclick="openGHLPage('${id}')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           Send Message
         </button>
@@ -4954,28 +4967,29 @@
             <button onclick="showClientFullProfile('${id}')" style="width:100%;margin-top:10px;height:30px;border-radius:7px;border:1.5px solid var(--navy);background:transparent;font-family:var(--font-h);font-size:11px;font-weight:700;color:var(--navy);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--navy)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">View Full Profile</button>
           </div>
 
-          <!-- MESSAGES (portal chat only — GHL communication lives in the GHL section) -->
-          <div class="a-card" id="sp-dtab-messages">
+          <!-- INTERNAL ADMIN NOTES -->
+          <div class="a-card" id="sp-right-notes">
             <div class="a-card-hdr">
               <div class="a-card-hdrl">
-                <div class="a-card-title">Messages</div>
-                ${msgs.length > 0 ? `<div class="a-card-sub">${msgs.length} total</div>` : '<div class="a-card-sub">No messages yet</div>'}
-              </div>
-              <div class="a-card-btns">
-                <button class="a-card-btn" onclick="openGHLPage('${id}')" title="Open full GHL conversation">GHL ↗</button>
+                <div class="a-card-title">Notes</div>
+                <div class="a-card-sub">Internal notes for this client</div>
               </div>
             </div>
-            <div id="dtab-messages" style="display:flex;flex-direction:column">
-              <div class="a-chat-msgs" id="dchat-msgs-${id}" style="overflow-y:auto;padding:4px 0">
-                ${msgs.map(m => chatMsgHTML(m)).join('')}
+            <div class="a-sn-body">
+              <div class="a-sn-list" id="sidebar-notes-list-${id}">
+                ${renderSidebarNotes(id)}
               </div>
-              <div class="a-chat-input-row">
-                <input class="a-chat-input" id="dchat-input-${id}" placeholder="Message ${c.fname}…" onkeydown="if(event.key==='Enter')sendMsg('${id}')" />
-                <button class="a-chat-send" onclick="sendMsg('${id}')">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
-                </button>
+              <div class="a-sn-input-row">
+                <textarea class="a-sn-input" id="sidebar-note-input-${id}" rows="2" placeholder="Add an internal note…" onkeydown="if(event.key==='Enter' && (event.metaKey||event.ctrlKey)){event.preventDefault();addSidebarNote('${id}');}"></textarea>
+                <button class="a-sn-add" onclick="addSidebarNote('${id}')">Add Note</button>
               </div>
             </div>
+          </div>
+
+          <!-- Hidden message infrastructure (preserved so sendMsg / GHL listeners keep working) -->
+          <div style="display:none" aria-hidden="true">
+            <div class="a-chat-msgs" id="dchat-msgs-${id}">${msgs.map(m => chatMsgHTML(m)).join('')}</div>
+            <input class="a-chat-input" id="dchat-input-${id}" />
           </div>
 
         </div><!-- /a-sp-right -->
@@ -5136,7 +5150,7 @@
     activeDetailTab = tab;
     if (!selectedClientId) return;
     // Map old tab names to the new section IDs in the 2-column layout
-    const idMap = { overview: 'sp-right-info', messages: 'sp-dtab-messages', dashboard: 'sp-dtab-dashboard', documents: 'sp-dtab-documents', funding: 'sp-dtab-funding', credit: null };
+    const idMap = { overview: 'sp-right-info', messages: null, notes: 'sp-right-notes', dashboard: 'sp-dtab-dashboard', documents: 'sp-dtab-documents', funding: 'sp-dtab-funding', credit: null };
     const secId = idMap[tab] !== undefined ? idMap[tab] : ('sp-dtab-' + tab);
     if (!secId) return;
     const sec = document.getElementById(secId);
@@ -17212,7 +17226,91 @@
     if (notes.length > 1000) notes = notes.slice(0, 1000);
     try { localStorage.setItem('cq_notes_' + clientId, JSON.stringify(notes)); } catch(e) {}
     _syncNotesToFirestore(clientId);
+    _syncAdminNotesToFirestore(clientId);
     return noteObj;
+  }
+
+  function _syncAdminNotesToFirestore(clientId) {
+    if (typeof fsSetDash !== 'function') return;
+    var allNotes = _getAllClientNotes(clientId);
+    var adminNotes = allNotes.filter(function(n) { return !n.deleted && n.visibility === 'internal'; }).slice(0, 200);
+    fsSetDash(clientId, { adminNotes: adminNotes }).catch(function(){});
+  }
+
+  function _mergeIncomingAdminNotes(clientId, incoming) {
+    if (!Array.isArray(incoming)) return false;
+    var local = _getAllClientNotes(clientId);
+    var localIds = {};
+    local.forEach(function(n) { localIds[n.id] = true; });
+    var added = false;
+    incoming.forEach(function(n) {
+      if (n && n.id && !localIds[n.id]) {
+        local.unshift(n);
+        added = true;
+      }
+    });
+    if (added) {
+      if (local.length > 1000) local = local.slice(0, 1000);
+      try { localStorage.setItem('cq_notes_' + clientId, JSON.stringify(local)); } catch(e) {}
+      refreshSidebarNotes(clientId);
+      if (typeof refreshClientTimeline === 'function') {
+        try { refreshClientTimeline(clientId); } catch(e) {}
+      }
+    }
+    return added;
+  }
+
+  function renderSidebarNotes(clientId) {
+    var notes = getClientNotes(clientId).slice(0, 3);
+    if (!notes.length) {
+      return '<div class="a-sn-empty">No notes yet</div>';
+    }
+    return notes.map(function(n) {
+      var d = new Date(n.createdAt);
+      var when = isNaN(d.getTime()) ? '' : d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+      var whoFull = n.createdBy || 'Admin';
+      var who = whoFull.split(' ')[0];
+      var text = n.body || n.title || '';
+      return '<div class="a-sn-item">'
+        + '<div class="a-sn-meta">' + _escHtml(who) + (when ? ' — ' + when : '') + '</div>'
+        + '<div class="a-sn-body-text">' + _escHtml(text) + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function refreshSidebarNotes(clientId) {
+    var el = document.getElementById('sidebar-notes-list-' + clientId);
+    if (el) el.innerHTML = renderSidebarNotes(clientId);
+  }
+
+  function addSidebarNote(clientId) {
+    var inp = document.getElementById('sidebar-note-input-' + clientId);
+    if (!inp) return;
+    var body = (inp.value || '').trim();
+    if (!body) return;
+    var d = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+    var note = {
+      id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+      clientId: clientId,
+      type: 'manual',
+      visibility: 'internal',
+      category: 'Note',
+      title: '',
+      body: body,
+      createdAt: new Date().toISOString(),
+      createdBy: (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.name) ? currentAdmin.name : 'Admin',
+      stage: (d && d.currentStage) ? d.currentStage : null,
+      pinned: false,
+      source: 'sidebar',
+      metadata: {},
+      deleted: false, deletedAt: null, deletedBy: null
+    };
+    saveClientNote(clientId, note);
+    inp.value = '';
+    refreshSidebarNotes(clientId);
+    if (typeof refreshClientTimeline === 'function') {
+      try { refreshClientTimeline(clientId); } catch(e) {}
+    }
   }
 
   function addSystemNote(clientId, type, category, title, body, metadata) {
