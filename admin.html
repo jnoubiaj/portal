@@ -3851,6 +3851,18 @@
           _syncUpdateOpenClient(clientId, 'dashboard-snapshot');
           // Overview pipeline list
           try { if (typeof renderOverview === 'function') renderOverview(); } catch(e) {}
+          // Re-render the left client-list sidebar if stage actually changed for
+          // this client (from another device, GHL webhook, or the client's own
+          // dashboard). Otherwise the sidebar can show the wrong stage section
+          // even though storage has the new value.
+          var _prevStage = (prev && prev.currentStage);
+          var _prevPlStage = prev && prev.pipelineTasks && prev.pipelineTasks.stage;
+          var _newPlStage = data.pipelineTasks && data.pipelineTasks.stage;
+          if ((data.currentStage !== undefined && data.currentStage !== _prevStage) ||
+              (_newPlStage !== undefined && _newPlStage !== _prevPlStage)) {
+            try { if (typeof renderClientList === 'function') renderClientList(); } catch(e) {}
+            try { if (typeof renderPipeline === 'function') renderPipeline(); } catch(e) {}
+          }
           console.log('[Sync] dashboard modified | clientId:', clientId, '| stage:', data.currentStage, '| by:', data._updatedBy||'?', '| at:', data._updatedAt ? new Date(data._updatedAt).toLocaleTimeString() : '?');
 
           dashPrev[clientId] = data;
@@ -4422,12 +4434,25 @@
       return;
     }
 
+    // Resolve canonical stage index for a client. cq_tasks_.stage is the
+    // primary source (0-indexed). If missing, fall back to cq_dash_.currentStage
+    // (1-indexed) so the sidebar grouping still works when one store is stale
+    // or the legacy seeding wrote dash but not tasks.
+    function _resolveStageIdx(clientId) {
+      var t = getClientTasks(clientId);
+      if (t && typeof t.stage === 'number') return t.stage;
+      try {
+        var d = getDashData(clientId);
+        if (d && typeof d.currentStage === 'number') return Math.max(0, d.currentStage - 1);
+      } catch(e) {}
+      return -1;
+    }
+
     function _renderClientRow(c) {
       var ob = getOnboardDataForClient(c.id);
       var df = ob&&ob.firstName ? ob.firstName : c.fname;
       var dl = ob&&ob.lastName  ? ob.lastName  : c.lname;
-      var t = getClientTasks(c.id);
-      var si = (t && typeof t.stage === 'number') ? t.stage : -1;
+      var si = _resolveStageIdx(c.id);
       var stageName = (si >= 0 && PIPELINE_STAGES[si]) ? PIPELINE_STAGES[si].name : '';
       var days = (si >= 0) ? plDaysInStage(c.id, si) : 0;
       var daysCls = days <= 2 ? 'ok' : days <= 5 ? 'warn' : 'hot';
@@ -4461,12 +4486,12 @@
     }
 
     // If searching/filtering, show flat list still grouped by stage
-    // Group by pipeline stage
+    // Group by pipeline stage — uses _resolveStageIdx so a client with
+    // currentStage in cq_dash_ but no cq_tasks_.stage still groups correctly
     var groups = {};
     var noStage = [];
     filtered.forEach(function(c) {
-      var t = getClientTasks(c.id);
-      var si = (t && typeof t.stage === 'number') ? t.stage : -1;
+      var si = _resolveStageIdx(c.id);
       if (si >= 0 && si < PIPELINE_STAGES.length) {
         if (!groups[si]) groups[si] = [];
         groups[si].push(c);
@@ -12857,9 +12882,10 @@
   }
 
   function setCurrentStage(clientId, stage) {
-    const d = getDashData(clientId);
-    d.currentStage = stage;
-    saveDashData(clientId, d);
+    // Always go through the unified helper so cq_tasks_.stage stays in sync
+    // (was previously only updating cq_dash_.currentStage — would leave the
+    // left sidebar stuck on the old stage).
+    _applyStageChange(clientId, stage - 1);
     renderClientDetail(clientId);
   }
 
@@ -12887,25 +12913,13 @@
       }
       if (name) name.style.color = i+1 <= cs ? 'var(--navy)' : 'var(--gray-400)';
     }
-    // Auto-save + publish immediately
-    d.currentStage = cs;
-    saveDashData(clientId, d);
-    const c = getClient(clientId);
-    logActivity(`Progress stage updated to <strong>${d.stageNames[cs-1]}</strong> for ${c?.fname||''}`, '#22A7F0');
-    addSystemNote(clientId, 'stage', 'Stage', 'Stage Changed to ' + (d.stageNames[cs-1]||'Stage '+cs), 'Progress moved to Stage ' + cs + ' of ' + stageCount + ': ' + (d.stageNames[cs-1]||'') + ' (' + Math.round(fillPct) + '% complete)', { stage: cs, stageName: d.stageNames[cs-1]||'' });
-    // Sync stage to GHL
-    if (typeof GHL !== 'undefined') GHL.syncStage(c, d.stageNames[cs-1]).catch(()=>{});
-    else syncGHLPipelineStage(clientId, d.stageNames[cs-1], c).catch(()=>{});
-    // Sync pipeline stage (dashboard stage click → pipeline)
-    var _pt = initClientTasks(clientId);
-    var _newStage = cs - 1;
-    if (_pt.stage !== _newStage) {
-      _pt.stage = _newStage;
-      if (!_pt.stageStartedAt) _pt.stageStartedAt = {};
-      if (!_pt.stageStartedAt[_newStage]) _pt.stageStartedAt[_newStage] = Date.now();
-    }
-    saveClientTasks(clientId, _pt);
-    if (typeof renderPipeline === 'function') { renderPipeline(); renderOvClientTasks(); }
+    // Persist via the unified helper — writes BOTH cq_tasks_.stage and
+    // cq_dash_.currentStage, logs the change, syncs to GHL, AND refreshes
+    // every dependent surface (left sidebar grouping, pipeline board,
+    // overview, open client workspace). The slider path used to skip
+    // renderClientList(), which is why the left sidebar wouldn't move
+    // the client to the new phase section.
+    _applyStageChange(clientId, cs - 1);
     // Toast
     const toast = document.getElementById('stage-saved-toast-'+clientId);
     if (toast) { toast.textContent = '✓ Stage updated & published'; toast.style.opacity='1'; setTimeout(()=>toast.style.opacity='0',2500); }
@@ -16675,23 +16689,79 @@
     document.body.appendChild(bg);
   }
 
+  // ── SINGLE SOURCE OF TRUTH FOR STAGE CHANGES ──────────────────────────────
+  // Every UI control that moves a client between phases MUST go through this.
+  // Writes BOTH stores (cq_tasks_ + cq_dash_) and re-renders every dependent
+  // surface — left sidebar grouping, pipeline board, overview, open client
+  // workspace. Returns true if the stage actually changed.
+  function _applyStageChange(clientId, newStageIdx, opts) {
+    if (typeof newStageIdx !== 'number' || isNaN(newStageIdx)) return false;
+    if (newStageIdx < 0 || newStageIdx >= PIPELINE_STAGES.length) return false;
+    opts = opts || {};
+    var t = initClientTasks(clientId);
+    var prevStage = (typeof t.stage === 'number') ? t.stage : 0;
+    if (prevStage === newStageIdx && !opts.force) return false;
+
+    // 1. cq_tasks_${id}.stage (0-indexed) — drives LEFT SIDEBAR grouping
+    t.stage = newStageIdx;
+    if (!t.stageStartedAt) t.stageStartedAt = {};
+    if (!t.stageStartedAt[newStageIdx]) t.stageStartedAt[newStageIdx] = Date.now();
+    saveClientTasks(clientId, t);
+
+    // 2. cq_dash_${id}.currentStage (1-indexed) — drives header pill, stage
+    //    slider, dashboard editor, client portal
+    var d = getDashData(clientId);
+    d.currentStage = newStageIdx + 1;
+    saveDashData(clientId, d);
+
+    // 3. UI refresh — every surface that reads either store, in dependency order
+    try { renderClientList(); } catch(e) {}
+    try { if (typeof renderPipeline === 'function') renderPipeline(); } catch(e) {}
+    try { if (typeof renderOvClientTasks === 'function') renderOvClientTasks(); } catch(e) {}
+    try { if (typeof refreshClientUI === 'function') refreshClientUI(clientId); } catch(e) {}
+
+    // 4. Activity log + system note (caller can suppress for batched ops)
+    if (!opts.suppressLog) {
+      var c = getClient(clientId);
+      var stage = PIPELINE_STAGES[newStageIdx] || {};
+      var stageName = stage.name || ('Stage ' + (newStageIdx + 1));
+      var stageColor = stage.color || '#22A7F0';
+      var nameStr = c
+        ? (function(){var _ln=_getClientNames(c);return (_ln.fn+' '+_ln.ln).trim();})()
+        : clientId;
+      try { logActivity('Client <strong>' + nameStr + '</strong> moved to S' + (newStageIdx + 1) + ' — ' + stageName, stageColor); } catch(e) {}
+      try {
+        if (typeof addSystemNote === 'function') {
+          var prevName = (PIPELINE_STAGES[prevStage] && PIPELINE_STAGES[prevStage].name) || ('S' + (prevStage + 1));
+          addSystemNote(clientId, 'stage', 'Stage', 'Stage changed to ' + stageName,
+            'Moved from ' + prevName + ' to ' + stageName,
+            { stage: newStageIdx + 1, stageName: stageName, prevStage: prevStage + 1 });
+        }
+      } catch(e) {}
+    }
+
+    // 5. GHL pipeline sync
+    if (!opts.skipGhl) {
+      try {
+        var c2 = getClient(clientId);
+        var stageNm = (PIPELINE_STAGES[newStageIdx] && PIPELINE_STAGES[newStageIdx].name) || '';
+        if (c2 && typeof GHL !== 'undefined' && GHL && typeof GHL.syncStage === 'function') {
+          GHL.syncStage(c2, stageNm).catch(function(){});
+        } else if (c2 && typeof syncGHLPipelineStage === 'function') {
+          syncGHLPipelineStage(clientId, stageNm, c2).catch(function(){});
+        }
+      } catch(e) {}
+    }
+
+    return true;
+  }
+
   function plMoveToStage(clientId, newStage) {
     if (isNaN(newStage) || newStage < 0 || newStage >= PIPELINE_STAGES.length) return;
     var t = initClientTasks(clientId);
     if (newStage === t.stage) { renderTaskModal(clientId, newStage); return; }
-    t.stage = newStage;
-    if (!t.stageStartedAt) t.stageStartedAt = {};
-    if (!t.stageStartedAt[newStage]) t.stageStartedAt[newStage] = Date.now();
-    saveClientTasks(clientId, t);
-    var d = getDashData(clientId);
-    d.currentStage = newStage + 1;
-    saveDashData(clientId, d);
-    var c = getClient(clientId);
-    logActivity('Client <strong>' + (c ? (function(){var _ln=_getClientNames(c);return _ln.fn+' '+_ln.ln;})() : clientId) + '</strong> moved to S' + (newStage+1) + ' — ' + PIPELINE_STAGES[newStage].name, PIPELINE_STAGES[newStage].color);
+    _applyStageChange(clientId, newStage);
     renderTaskModal(clientId, newStage);
-    renderPipeline();
-    renderOvClientTasks();
-    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
   function plRemoveAssigned(clientId, stageIdx, taskIdx) {
@@ -16862,18 +16932,13 @@
   }
 
   function plAdvance(clientId, currentStage) {
-    var t = initClientTasks(clientId);
     if (currentStage < PIPELINE_STAGES.length - 1) {
-      t.stage = currentStage + 1;
-      if (!t.stageStartedAt) t.stageStartedAt = {};
-      t.stageStartedAt[t.stage] = Date.now();
-      saveClientTasks(clientId, t);
-      var d = getDashData(clientId);
-      d.currentStage = t.stage + 1;
-      saveDashData(clientId, d);
-      renderTaskModal(clientId, t.stage);
+      _applyStageChange(clientId, currentStage + 1);
+      var _ct = getClientTasks(clientId);
+      renderTaskModal(clientId, (_ct && typeof _ct.stage === 'number') ? _ct.stage : currentStage + 1);
     } else {
       // Final stage complete — archive client and remove from pipeline
+      var t = initClientTasks(clientId);
       t.stage = currentStage;
       t.completedAt = Date.now();
       saveClientTasks(clientId, t);
@@ -16888,13 +16953,14 @@
         saveClients();
         logActivity('Client <strong>' + (c.fname||'') + ' ' + (c.lname||'') + '</strong> funded &amp; archived', '#10b981');
       }
-      document.getElementById('pl-modal-bg').remove();
+      var _bg = document.getElementById('pl-modal-bg');
+      if (_bg) _bg.remove();
       renderClientList();
-      renderOverview();
+      try { if (typeof renderOverview === 'function') renderOverview(); } catch(e) {}
+      try { if (typeof renderPipeline === 'function') renderPipeline(); } catch(e) {}
+      try { if (typeof renderOvClientTasks === 'function') renderOvClientTasks(); } catch(e) {}
+      if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
     }
-    renderPipeline();
-    renderOvClientTasks();
-    if (typeof refreshClientUI === 'function') refreshClientUI(clientId);
   }
 
 
