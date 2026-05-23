@@ -3853,15 +3853,21 @@
           try { if (typeof renderOverview === 'function') renderOverview(); } catch(e) {}
           // Re-render the left client-list sidebar if stage actually changed for
           // this client (from another device, GHL webhook, or the client's own
-          // dashboard). Otherwise the sidebar can show the wrong stage section
-          // even though storage has the new value.
+          // dashboard). Debounced — a single local save fires the listener
+          // multiple times (once per Firestore field write); without this
+          // debounce each echo would force a full sidebar + pipeline render
+          // and lock the UI for a full second on slower devices.
           var _prevStage = (prev && prev.currentStage);
           var _prevPlStage = prev && prev.pipelineTasks && prev.pipelineTasks.stage;
           var _newPlStage = data.pipelineTasks && data.pipelineTasks.stage;
           if ((data.currentStage !== undefined && data.currentStage !== _prevStage) ||
               (_newPlStage !== undefined && _newPlStage !== _prevPlStage)) {
-            try { if (typeof renderClientList === 'function') renderClientList(); } catch(e) {}
-            try { if (typeof renderPipeline === 'function') renderPipeline(); } catch(e) {}
+            if (window._stageRerenderTimer) clearTimeout(window._stageRerenderTimer);
+            window._stageRerenderTimer = setTimeout(function() {
+              window._stageRerenderTimer = null;
+              try { if (typeof renderClientList === 'function') renderClientList(); } catch(e) {}
+              try { if (typeof renderPipeline === 'function') renderPipeline(); } catch(e) {}
+            }, 250);
           }
           console.log('[Sync] dashboard modified | clientId:', clientId, '| stage:', data.currentStage, '| by:', data._updatedBy||'?', '| at:', data._updatedAt ? new Date(data._updatedAt).toLocaleTimeString() : '?');
 
@@ -16693,7 +16699,14 @@
   // Every UI control that moves a client between phases MUST go through this.
   // Writes BOTH stores (cq_tasks_ + cq_dash_) and re-renders every dependent
   // surface — left sidebar grouping, pipeline board, overview, open client
-  // workspace. Returns true if the stage actually changed.
+  // workspace.
+  //
+  // Performance: the click handler returns FAST. Only the data write and
+  // the four critical renders run synchronously. Logging, system notes, and
+  // the GHL network call are queued via setTimeout(0) so they happen on the
+  // next tick, AFTER the user already sees the move. This avoids the
+  // tab-freeze we saw when addSystemNote + GHL sync + cascading listener
+  // echoes all happened in one synchronous burst.
   function _applyStageChange(clientId, newStageIdx, opts) {
     if (typeof newStageIdx !== 'number' || isNaN(newStageIdx)) return false;
     if (newStageIdx < 0 || newStageIdx >= PIPELINE_STAGES.length) return false;
@@ -16714,43 +16727,46 @@
     d.currentStage = newStageIdx + 1;
     saveDashData(clientId, d);
 
-    // 3. UI refresh — every surface that reads either store, in dependency order
-    try { renderClientList(); } catch(e) {}
+    // 3. Immediate UI refresh — refreshClientUI already calls renderClientList,
+    //    so don't double-render here. Pipeline board + overview tasks are
+    //    cheap enough to call inline.
     try { if (typeof renderPipeline === 'function') renderPipeline(); } catch(e) {}
     try { if (typeof renderOvClientTasks === 'function') renderOvClientTasks(); } catch(e) {}
     try { if (typeof refreshClientUI === 'function') refreshClientUI(clientId); } catch(e) {}
 
-    // 4. Activity log + system note (caller can suppress for batched ops)
-    if (!opts.suppressLog) {
-      var c = getClient(clientId);
-      var stage = PIPELINE_STAGES[newStageIdx] || {};
-      var stageName = stage.name || ('Stage ' + (newStageIdx + 1));
-      var stageColor = stage.color || '#22A7F0';
-      var nameStr = c
-        ? (function(){var _ln=_getClientNames(c);return (_ln.fn+' '+_ln.ln).trim();})()
-        : clientId;
-      try { logActivity('Client <strong>' + nameStr + '</strong> moved to S' + (newStageIdx + 1) + ' — ' + stageName, stageColor); } catch(e) {}
-      try {
-        if (typeof addSystemNote === 'function') {
-          var prevName = (PIPELINE_STAGES[prevStage] && PIPELINE_STAGES[prevStage].name) || ('S' + (prevStage + 1));
-          addSystemNote(clientId, 'stage', 'Stage', 'Stage changed to ' + stageName,
-            'Moved from ' + prevName + ' to ' + stageName,
-            { stage: newStageIdx + 1, stageName: stageName, prevStage: prevStage + 1 });
+    // 4. Deferred side-effects: logging, system note, GHL sync. These each
+    //    can trigger Firestore writes + listener echoes; pushing them to a
+    //    next-tick task keeps the click responsive.
+    if (!opts.suppressLog || !opts.skipGhl) {
+      setTimeout(function() {
+        var c = getClient(clientId);
+        var stage = PIPELINE_STAGES[newStageIdx] || {};
+        var stageName = stage.name || ('Stage ' + (newStageIdx + 1));
+        if (!opts.suppressLog) {
+          var stageColor = stage.color || '#22A7F0';
+          var nameStr = c
+            ? (function(){var _ln=_getClientNames(c);return (_ln.fn+' '+_ln.ln).trim();})()
+            : clientId;
+          try { logActivity('Client <strong>' + nameStr + '</strong> moved to S' + (newStageIdx + 1) + ' — ' + stageName, stageColor); } catch(e) {}
+          try {
+            if (typeof addSystemNote === 'function') {
+              var prevName = (PIPELINE_STAGES[prevStage] && PIPELINE_STAGES[prevStage].name) || ('S' + (prevStage + 1));
+              addSystemNote(clientId, 'stage', 'Stage', 'Stage changed to ' + stageName,
+                'Moved from ' + prevName + ' to ' + stageName,
+                { stage: newStageIdx + 1, stageName: stageName, prevStage: prevStage + 1 });
+            }
+          } catch(e) {}
         }
-      } catch(e) {}
-    }
-
-    // 5. GHL pipeline sync
-    if (!opts.skipGhl) {
-      try {
-        var c2 = getClient(clientId);
-        var stageNm = (PIPELINE_STAGES[newStageIdx] && PIPELINE_STAGES[newStageIdx].name) || '';
-        if (c2 && typeof GHL !== 'undefined' && GHL && typeof GHL.syncStage === 'function') {
-          GHL.syncStage(c2, stageNm).catch(function(){});
-        } else if (c2 && typeof syncGHLPipelineStage === 'function') {
-          syncGHLPipelineStage(clientId, stageNm, c2).catch(function(){});
+        if (!opts.skipGhl) {
+          try {
+            if (c && typeof GHL !== 'undefined' && GHL && typeof GHL.syncStage === 'function') {
+              GHL.syncStage(c, stageName).catch(function(){});
+            } else if (c && typeof syncGHLPipelineStage === 'function') {
+              syncGHLPipelineStage(clientId, stageName, c).catch(function(){});
+            }
+          } catch(e) {}
         }
-      } catch(e) {}
+      }, 0);
     }
 
     return true;
