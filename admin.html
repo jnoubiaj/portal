@@ -1992,6 +1992,108 @@
   .ot-v2-cancel { height: 40px; padding: 0 18px; background: white; border: 1.5px solid var(--gray-200); border-radius: 9px; font-family: var(--font-h); font-size: 12.5px; font-weight: 700; color: var(--gray-600); cursor: pointer; transition: background 0.12s; }
   .ot-v2-cancel:hover { background: var(--gray-50); color: var(--navy); }
 
+  /* ── Smart Work Queue ───────────────────────────────────────────────
+     Overlays the admin app when "Start Working" is clicked. Shows a
+     prioritized list of clients the admin should work on next, with
+     per-card actions for Start / Skip / Complete-task. */
+  .wq-overlay { position: fixed; inset: 0; background: rgba(10,22,40,0.62); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: flex-start; justify-content: center; padding: 36px 16px 24px; overflow-y: auto; }
+  .wq-box { background: white; border-radius: 18px; width: 100%; max-width: 760px; box-shadow: 0 32px 96px rgba(0,0,0,0.32); overflow: hidden; }
+  .wq-hdr { padding: 20px 22px 14px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .wq-hdr-l { min-width: 0; }
+  .wq-title { font-family: var(--font-h); font-size: 18px; font-weight: 800; color: var(--navy); letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+  .wq-title-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); animation: wqPulse 1.6s ease-in-out infinite; }
+  @keyframes wqPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .wq-sub { font-size: 12px; color: var(--gray-500); margin-top: 3px; }
+  .wq-x { width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--gray-50); color: var(--gray-500); font-size: 18px; cursor: pointer; line-height: 1; flex-shrink: 0; transition: background 0.12s; }
+  .wq-x:hover { background: var(--gray-100); color: var(--navy); }
+
+  .wq-progress { padding: 0 22px; margin: 12px 0 4px; display: flex; align-items: center; gap: 10px; }
+  .wq-progress-bar { flex: 1; height: 6px; background: var(--gray-100); border-radius: 999px; overflow: hidden; }
+  .wq-progress-fill { height: 100%; background: linear-gradient(90deg, var(--blue), #1a8fd4); border-radius: 999px; transition: width 0.3s; }
+  .wq-progress-txt { font-size: 11px; font-weight: 700; color: var(--gray-500); white-space: nowrap; letter-spacing: 0.03em; }
+
+  .wq-filters { padding: 12px 22px 4px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .wq-filter { font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 999px; background: var(--gray-50); color: var(--gray-600); border: 1px solid var(--gray-100); cursor: pointer; font-family: var(--font-b); white-space: nowrap; transition: all 0.12s; }
+  .wq-filter:hover { background: var(--gray-100); color: var(--navy); }
+  .wq-filter.active { background: var(--navy); border-color: var(--navy); color: white; }
+
+  .wq-list { padding: 12px 16px 18px; max-height: 70vh; overflow-y: auto; }
+  .wq-empty { padding: 28px 16px; text-align: center; color: var(--gray-400); font-size: 13px; }
+  .wq-empty-sub { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
+
+  .wq-card { padding: 14px 16px; border: 1.5px solid var(--gray-100); border-radius: 12px; margin-bottom: 10px; transition: border-color 0.12s, box-shadow 0.12s; background: white; }
+  .wq-card:hover { border-color: var(--blue-light); box-shadow: 0 4px 16px rgba(34,167,240,0.08); }
+  .wq-card.urgent { border-color: rgba(239,68,68,0.25); background: linear-gradient(180deg, #fef2f2 0%, #ffffff 8%); }
+  .wq-card.skipped { opacity: 0.55; }
+  .wq-card.reviewed { opacity: 0.7; border-style: dashed; }
+
+  .wq-card-head { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 9px; }
+  .wq-avatar { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; color: white; font-family: var(--font-h); font-size: 13px; font-weight: 700; flex-shrink: 0; overflow: hidden; }
+  .wq-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .wq-card-id { flex: 1; min-width: 0; }
+  .wq-card-name { font-family: var(--font-h); font-size: 14px; font-weight: 800; color: var(--navy); display: flex; align-items: center; gap: 6px; }
+  .wq-card-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+  .wq-card-meta .sep { color: var(--gray-300); }
+  .wq-stage-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .wq-fico-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--blue-light); color: var(--blue-dark); }
+  .wq-rank { width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: white; font-family: var(--font-h); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  .wq-reason { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 7px; font-size: 11px; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.02em; }
+  .wq-reason.due-today { background: rgba(245,158,11,0.13); color: #b45309; }
+  .wq-reason.overdue   { background: rgba(239,68,68,0.13); color: #b91c1c; }
+  .wq-reason.critical  { background: rgba(239,68,68,0.18); color: #991b1b; }
+  .wq-reason.high      { background: rgba(245,158,11,0.13); color: #b45309; }
+  .wq-reason.idle      { background: rgba(139,92,246,0.13); color: #6d28d9; }
+  .wq-reason.app-followup { background: rgba(34,167,240,0.13); color: var(--blue-dark); }
+  .wq-reason.queue { background: var(--gray-100); color: var(--gray-600); }
+
+  .wq-next { font-size: 12px; color: var(--gray-700, #374151); line-height: 1.45; margin-bottom: 4px; }
+  .wq-next-lbl { font-size: 9.5px; font-weight: 800; color: var(--gray-400); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; }
+
+  .wq-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--gray-500); }
+  .wq-stat { display: flex; align-items: center; gap: 4px; }
+  .wq-stat strong { color: var(--navy); font-weight: 700; }
+
+  .wq-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--gray-100); }
+  .wq-btn { height: 30px; padding: 0 12px; border-radius: 7px; font-family: var(--font-h); font-size: 11px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--gray-200); background: white; color: var(--gray-600); transition: all 0.12s; letter-spacing: 0.02em; }
+  .wq-btn:hover { border-color: var(--navy); color: var(--navy); }
+  .wq-btn.primary { background: var(--navy); border-color: var(--navy); color: white; }
+  .wq-btn.primary:hover { opacity: 0.92; }
+  .wq-btn.complete { background: #10b981; border-color: #10b981; color: white; }
+  .wq-btn.complete:hover { background: #059669; border-color: #059669; }
+  .wq-btn.skip { color: var(--gray-500); }
+
+  .wq-footer { padding: 12px 22px 18px; border-top: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .wq-show-more { font-size: 12px; font-weight: 700; color: var(--blue); background: none; border: none; cursor: pointer; padding: 4px 8px; }
+  .wq-show-more:hover { text-decoration: underline; }
+  .wq-footer-hint { font-size: 11px; color: var(--gray-400); }
+
+  /* Start Working header button */
+  .a-cl-start-working {
+    display: flex; align-items: center; gap: 6px;
+    height: 30px; padding: 0 12px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--blue), #1a8fd4);
+    color: white; border: none; font-family: var(--font-h);
+    font-size: 11px; font-weight: 800; letter-spacing: 0.03em;
+    cursor: pointer; box-shadow: 0 2px 10px rgba(34,167,240,0.28);
+    transition: opacity 0.13s, transform 0.13s;
+  }
+  .a-cl-start-working:hover { opacity: 0.94; }
+  .a-cl-start-working:active { transform: scale(0.97); }
+
+  /* Recommended Next Client banner on the client workspace */
+  .wq-banner {
+    margin-bottom: 14px; padding: 11px 14px; border-radius: 11px;
+    background: linear-gradient(135deg, rgba(34,167,240,0.08), rgba(10,22,40,0.04));
+    border: 1px solid rgba(34,167,240,0.2);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .wq-banner-icon { width: 32px; height: 32px; border-radius: 9px; background: var(--blue); color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .wq-banner-body { flex: 1; min-width: 0; }
+  .wq-banner-title { font-family: var(--font-h); font-size: 11.5px; font-weight: 800; color: var(--blue-dark); letter-spacing: 0.04em; text-transform: uppercase; }
+  .wq-banner-text  { font-size: 12.5px; color: var(--navy); margin-top: 3px; }
+  .wq-banner-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
   /* ── Activity Timeline (legacy — kept for compat) ───────────────────── */
   .act-timeline { display: flex; flex-direction: column; }
   .act-item { display: flex; gap: 10px; padding: 7px 0; position: relative; }
@@ -2378,11 +2480,15 @@
                   </div>
                 </div>
               </div>
-              <div class="a-today-bar">
+              <div class="a-today-bar" style="display:flex;align-items:center;gap:8px;justify-content:space-between">
                 <div class="a-today-toggle">
                   <button class="a-today-btn active" id="today-btn-all" onclick="setTodayMode('all')">All Clients</button>
                   <button class="a-today-btn" id="today-btn-today" onclick="setTodayMode('today')">My Tasks Today</button>
                 </div>
+                <button class="a-cl-start-working" onclick="_wqOpen()" title="Open the prioritized work queue">
+                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h7v8l10-12h-7l0-8z"/></svg>
+                  Start Working
+                </button>
               </div>
               <div class="a-cl-search-wrap">
                 <div class="a-cl-search">
@@ -4721,6 +4827,10 @@
     loadClients(); // re-read from localStorage to pick up any client-side updates
     renderClientList();
     renderClientDetail(id);
+    // Re-attach the Smart Work Queue banner if this client is the active
+    // queue selection. renderClientDetail wipes the detail card innerHTML,
+    // so the banner has to be re-inserted after the render.
+    if (typeof _wqRenderBanner === 'function') setTimeout(_wqRenderBanner, 0);
     // Backfill profileData to Firestore once per session (avoids loop in renderClientDetail)
     if (!_profileBackfillDone[id]) {
       _profileBackfillDone[id] = true;
@@ -8816,6 +8926,425 @@
     refreshClientUI(clientId);
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // SMART WORK QUEUE
+  // ══════════════════════════════════════════════════════════════════════
+  // Engine + UI for the "Start Working" feature. Prioritizes clients by
+  // scoring tasks/dates/activity, surfaces the top 5 with the reason and
+  // next action, and lets the admin step through them sequentially.
+  //
+  // Data sources are all LIVE — getOpsTasks(), getClientTasks(),
+  // getDashData(), and the clients[] array. Nothing here writes to those
+  // stores; it only reads. The only persisted state is the daily review/
+  // skip set in cq_wq_state (resets at midnight).
+  //
+  // Scoring (per spec):
+  //   +50  task due today
+  //   +40  overdue task
+  //   +35  critical priority task pending
+  //   +25  high priority task pending
+  //   +20  no activity for 5+ days
+  //   +20  application follow-up needed
+  //    +1  per day in current stage
+  //   +0.5 per day in system
+
+  var _WQ_STATE_KEY = 'cq_wq_state';
+  var _wqQueueCache = null;   // last computed queue (for Next Client cycling)
+  var _wqShowAll = false;     // whether modal shows top-5 or full list
+  var _wqCurrentClientId = null; // client currently "being worked" — drives the banner
+  var _wqCurrentReason = null;   // reason that put them at the top of the queue
+
+  function _wqTodayStr() { return new Date().toISOString().split('T')[0]; }
+  function _wqDayMs() { return 86400000; }
+
+  function _wqGetState() {
+    try {
+      var s = JSON.parse(localStorage.getItem(_WQ_STATE_KEY) || '{}');
+      var today = _wqTodayStr();
+      if (s.date !== today) s = { date: today, skipped: {}, reviewed: {}, filter: 'all' };
+      if (!s.skipped) s.skipped = {};
+      if (!s.reviewed) s.reviewed = {};
+      if (!s.filter) s.filter = 'all';
+      return s;
+    } catch(e) { return { date: _wqTodayStr(), skipped: {}, reviewed: {}, filter: 'all' }; }
+  }
+  function _wqSaveState(s) {
+    try { localStorage.setItem(_WQ_STATE_KEY, JSON.stringify(s)); } catch(e) {}
+  }
+  function _wqMarkReviewed(clientId) {
+    var s = _wqGetState();
+    s.reviewed[clientId] = Date.now();
+    _wqSaveState(s);
+  }
+  function _wqToggleSkip(clientId) {
+    var s = _wqGetState();
+    if (s.skipped[clientId]) delete s.skipped[clientId]; else s.skipped[clientId] = Date.now();
+    _wqSaveState(s);
+  }
+  function _wqSetFilter(f) {
+    var s = _wqGetState();
+    s.filter = f;
+    _wqSaveState(s);
+  }
+
+  // Compute the prioritized queue. Returns an array of item objects sorted
+  // by score (highest first). Skipped clients drop to the bottom UNLESS
+  // they have a critical or overdue task (which forcibly re-elevates them).
+  function _wqCompute(filterOverride) {
+    var state = _wqGetState();
+    var filter = filterOverride || state.filter || 'all';
+    var today = _wqTodayStr();
+    var now = Date.now();
+    var DAY = _wqDayMs();
+
+    var pool = (typeof clients !== 'undefined' && Array.isArray(clients)) ? clients.slice() : [];
+    pool = pool.filter(function(c) {
+      if (!c || !c.id) return false;
+      if (c.archived) return false;
+      if (c.status === 'disqualified') return false;
+      return true;
+    });
+
+    var items = pool.map(function(c) {
+      var ops = (typeof getOpsTasks === 'function') ? getOpsTasks(c.id) : [];
+      var pending = ops.filter(function(t) { return t && t.status !== 'completed'; });
+      var dueToday = pending.filter(function(t) { return t.dueDate === today; });
+      var overdue  = pending.filter(function(t) {
+        if (!t.dueDate || t.dueDate === today) return false;
+        return t.dueDate < today;
+      });
+      var critical = pending.filter(function(t) { return t.priority === 'critical'; });
+      var high     = pending.filter(function(t) { return t.priority === 'high'; });
+
+      // Sort dueToday by time (earliest first)
+      dueToday.sort(function(a, b) {
+        var at = a.dueTime || '23:59'; var bt = b.dueTime || '23:59';
+        return at < bt ? -1 : at > bt ? 1 : 0;
+      });
+      // Sort overdue by earliest due date
+      overdue.sort(function(a, b) { return (a.dueDate || '') < (b.dueDate || '') ? -1 : 1; });
+
+      var ct = (typeof getClientTasks === 'function') ? getClientTasks(c.id) : null;
+      var stageIdx = (ct && typeof ct.stage === 'number') ? ct.stage : 0;
+      var stageStartedAt = (ct && ct.stageStartedAt && ct.stageStartedAt[stageIdx]) ? ct.stageStartedAt[stageIdx] : null;
+      var daysInStage = stageStartedAt ? Math.max(0, Math.floor((now - stageStartedAt) / DAY)) : 0;
+
+      var createdRaw = c.createdAt || c.addedAt || null;
+      var createdAtMs = null;
+      if (createdRaw) {
+        createdAtMs = (typeof createdRaw === 'number') ? createdRaw : new Date(createdRaw).getTime();
+        if (isNaN(createdAtMs)) createdAtMs = null;
+      }
+      var daysInSystem = createdAtMs ? Math.max(0, Math.floor((now - createdAtMs) / DAY)) : 0;
+
+      var d = (typeof getDashData === 'function') ? getDashData(c.id) : {};
+      var lastActivity = d.lastActivity || d.updatedAt || createdAtMs || 0;
+      var daysSinceActivity = lastActivity ? Math.max(0, Math.floor((now - lastActivity) / DAY)) : 0;
+
+      var pendingApps = (d.fundingRows || []).filter(function(r) {
+        return r && (r.status === 'pending' || r.status === 'submitted');
+      });
+      var needsAppFollowUp = pendingApps.length > 0 && daysSinceActivity >= 2;
+
+      // SCORING — per spec values
+      var score = 0;
+      var reasons = [];
+      if (dueToday.length > 0) { score += 50; reasons.push({ k: 'due-today', label: 'Task due today', detail: dueToday[0].title }); }
+      if (overdue.length > 0)  { score += 40; reasons.push({ k: 'overdue',   label: 'Overdue task',   detail: overdue[0].title }); }
+      if (critical.length > 0) { score += 35; reasons.push({ k: 'critical',  label: 'Critical task',  detail: critical[0].title }); }
+      if (high.length > 0)     { score += 25; reasons.push({ k: 'high',      label: 'High priority',  detail: high[0].title }); }
+      if (daysSinceActivity >= 5) { score += 20; reasons.push({ k: 'idle', label: 'No activity ' + daysSinceActivity + 'd' }); }
+      if (needsAppFollowUp)    { score += 20; reasons.push({ k: 'app-followup', label: 'Application follow-up' }); }
+      score += daysInStage * 1;
+      score += daysInSystem * 0.5;
+
+      // Top task — what the admin should actually do next
+      var topTask = dueToday[0] || overdue[0] || critical[0] || high[0] || pending[0] || null;
+
+      var fico = (typeof getClientScore === 'function') ? getClientScore(c.id) : null;
+      if (!fico) fico = c.fico || (d && d.creditScore) || null;
+
+      return {
+        clientId: c.id, client: c,
+        score: score,
+        reasons: reasons,
+        topReason: reasons[0] || { k: 'queue', label: 'In queue' },
+        topTask: topTask,
+        pendingCount: pending.length,
+        dueTodayCount: dueToday.length,
+        overdueCount: overdue.length,
+        stageIdx: stageIdx,
+        stageName: (PIPELINE_STAGES[stageIdx] && PIPELINE_STAGES[stageIdx].name) || 'Stage ' + (stageIdx + 1),
+        stageColor: (PIPELINE_STAGES[stageIdx] && PIPELINE_STAGES[stageIdx].color) || '#22A7F0',
+        stageLight: (PIPELINE_STAGES[stageIdx] && PIPELINE_STAGES[stageIdx].light) || '#e8f5fd',
+        daysInStage: daysInStage,
+        daysInSystem: daysInSystem,
+        daysSinceActivity: daysSinceActivity,
+        fico: fico,
+        isDueToday: dueToday.length > 0,
+        isOverdue: overdue.length > 0,
+        isCritical: critical.length > 0,
+        hasPendingApps: pendingApps.length > 0,
+        isSkipped: !!state.skipped[c.id],
+        isReviewed: !!state.reviewed[c.id]
+      };
+    });
+
+    // Apply filter
+    switch (filter) {
+      case 'urgent':    items = items.filter(function(x) { return x.isOverdue || x.isCritical || x.isDueToday; }); break;
+      case 'due-today': items = items.filter(function(x) { return x.isDueToday; }); break;
+      case 'overdue':   items = items.filter(function(x) { return x.isOverdue; }); break;
+      case 'stuck':     items = items.filter(function(x) { return x.daysInStage >= 7; }); break;
+      case 'funding':   items = items.filter(function(x) { return x.hasPendingApps; }); break;
+      case 'oldest':    items = items.filter(function(x) { return x.daysInSystem >= 14; }); break;
+      // 'all' — no filter
+    }
+
+    // Sort: skipped go to bottom UNLESS critical/overdue forces re-elevation
+    items.sort(function(a, b) {
+      var aForce = a.isOverdue || a.isCritical;
+      var bForce = b.isOverdue || b.isCritical;
+      if (a.isSkipped && !aForce && !(b.isSkipped && !bForce)) return 1;
+      if (b.isSkipped && !bForce && !(a.isSkipped && !aForce)) return -1;
+      // Reviewed-today drop slightly so unreviewed clients surface
+      if (a.isReviewed && !b.isReviewed) return 1;
+      if (b.isReviewed && !a.isReviewed) return -1;
+      return b.score - a.score;
+    });
+
+    return items;
+  }
+
+  // Public action helpers
+  function _wqStartWorking(clientId, reasonKey) {
+    var queue = _wqQueueCache || _wqCompute();
+    var item = queue.find(function(x) { return x.clientId === clientId; });
+    _wqCurrentClientId = clientId;
+    _wqCurrentReason = item ? item.topReason : { k: reasonKey || 'queue', label: 'Selected from queue' };
+    _wqMarkReviewed(clientId);
+    var modal = document.getElementById('wq-modal');
+    if (modal) modal.remove();
+    if (typeof selectClient === 'function') selectClient(clientId);
+    // The selected client's workspace will render a banner via _wqRenderBanner
+    // on the next refreshClientUI tick — see refreshClientUI hook.
+    setTimeout(function() { _wqRenderBanner(); }, 60);
+  }
+
+  function _wqNextClient() {
+    var queue = _wqCompute();
+    _wqQueueCache = queue;
+    var skip = _wqCurrentClientId;
+    var next = queue.find(function(x) { return x.clientId !== skip && !x.isReviewed; })
+            || queue.find(function(x) { return x.clientId !== skip; });
+    if (!next) {
+      alert('No more clients in the queue. Great work!');
+      return;
+    }
+    _wqStartWorking(next.clientId);
+  }
+
+  function _wqSkipForToday(clientId) {
+    _wqToggleSkip(clientId);
+    // Re-render whichever surface is visible
+    if (document.getElementById('wq-modal')) _wqRender();
+    if (clientId === _wqCurrentClientId) _wqNextClient();
+  }
+
+  function _wqCompleteTopTask(clientId) {
+    var queue = _wqQueueCache || _wqCompute();
+    var item = queue.find(function(x) { return x.clientId === clientId; });
+    if (!item || !item.topTask) {
+      alert('No pending task to complete for this client.');
+      return;
+    }
+    if (typeof completeOpsTask === 'function') {
+      completeOpsTask(clientId, item.topTask.id);
+      _wqQueueCache = null; // force recompute
+    }
+    if (document.getElementById('wq-modal')) _wqRender();
+    if (clientId === _wqCurrentClientId) _wqRenderBanner();
+  }
+
+  // ── WORK QUEUE MODAL ────────────────────────────────────────────────
+  function _wqOpen() {
+    var existing = document.getElementById('wq-modal');
+    if (existing) existing.remove();
+    _wqShowAll = false;
+    var el = document.createElement('div');
+    el.id = 'wq-modal';
+    el.className = 'wq-overlay';
+    el.onclick = function(e) { if (e.target === el) el.remove(); };
+    document.body.appendChild(el);
+    _wqRender();
+  }
+
+  function _wqRender() {
+    var modal = document.getElementById('wq-modal');
+    if (!modal) return;
+    var state = _wqGetState();
+    var queue = _wqCompute();
+    _wqQueueCache = queue;
+    var visible = _wqShowAll ? queue : queue.slice(0, 5);
+
+    var reviewedCount = queue.filter(function(x) { return x.isReviewed; }).length;
+    var totalCount = queue.length;
+    var pct = totalCount > 0 ? Math.round((reviewedCount / totalCount) * 100) : 0;
+
+    var filters = [
+      { k: 'all',       label: 'All' },
+      { k: 'urgent',    label: 'Urgent' },
+      { k: 'due-today', label: 'Due Today' },
+      { k: 'overdue',   label: 'Overdue' },
+      { k: 'stuck',     label: 'Stuck Clients' },
+      { k: 'funding',   label: 'Funding Follow-Ups' },
+      { k: 'oldest',    label: 'Oldest Clients' }
+    ];
+
+    var filtersHTML = filters.map(function(f) {
+      var sel = state.filter === f.k ? ' active' : '';
+      return '<button class="wq-filter' + sel + '" onclick="_wqSetFilter(\'' + f.k + '\');_wqRender()">' + f.label + '</button>';
+    }).join('');
+
+    var listHTML = '';
+    if (visible.length === 0) {
+      listHTML = '<div class="wq-empty">No clients match this filter.<div class="wq-empty-sub">Try a different filter or check back later.</div></div>';
+    } else {
+      listHTML = visible.map(function(item, idx) { return _wqCardHTML(item, idx + 1); }).join('');
+    }
+
+    var showMoreBtn = '';
+    if (!_wqShowAll && queue.length > 5) {
+      showMoreBtn = '<button class="wq-show-more" onclick="_wqShowAll=true;_wqRender()">Show all ' + queue.length + ' →</button>';
+    } else if (_wqShowAll && queue.length > 5) {
+      showMoreBtn = '<button class="wq-show-more" onclick="_wqShowAll=false;_wqRender()">Show top 5 only</button>';
+    }
+
+    modal.innerHTML =
+      '<div class="wq-box">'
+      + '<div class="wq-hdr">'
+        + '<div class="wq-hdr-l">'
+          + '<div class="wq-title"><span class="wq-title-dot"></span>Smart Work Queue</div>'
+          + '<div class="wq-sub">Top priority clients sorted by what needs attention now.</div>'
+        + '</div>'
+        + '<button class="wq-x" onclick="document.getElementById(\'wq-modal\').remove()" title="Close">&times;</button>'
+      + '</div>'
+      + '<div class="wq-progress">'
+        + '<div class="wq-progress-bar"><div class="wq-progress-fill" style="width:' + pct + '%"></div></div>'
+        + '<div class="wq-progress-txt">' + reviewedCount + ' of ' + totalCount + ' reviewed today</div>'
+      + '</div>'
+      + '<div class="wq-filters">' + filtersHTML + '</div>'
+      + '<div class="wq-list">' + listHTML + '</div>'
+      + '<div class="wq-footer">'
+        + (showMoreBtn || '<span></span>')
+        + '<span class="wq-footer-hint">Skipped clients return to the bottom unless they become critical.</span>'
+      + '</div>'
+    + '</div>';
+  }
+
+  function _wqCardHTML(item, rank) {
+    var c = item.client;
+    var first = c.fname || ''; var last = c.lname || '';
+    var initials = ((first[0] || '?') + (last[0] || '')).toUpperCase();
+    var avatarStyle = 'background:' + (c.color || '#22A7F0') + (c.photo ? ';padding:0' : '');
+    var avatar = '<div class="wq-avatar" style="' + avatarStyle + '">'
+               + (c.photo ? '<img src="' + c.photo + '" alt="" />' : initials)
+               + '</div>';
+
+    var stagePill = '<span class="wq-stage-pill" style="background:' + item.stageLight + ';color:' + item.stageColor + '">' + _escHtml(item.stageName) + '</span>';
+    var ficoPill  = item.fico ? '<span class="wq-fico-pill">' + item.fico + ' FICO</span>' : '';
+
+    var reasonCls = item.topReason.k || 'queue';
+    var reasonText = item.topReason.label + (item.topReason.detail ? ' — ' + _escHtml(item.topReason.detail) : '');
+    var reasonRow = '<div class="wq-reason ' + reasonCls + '">' + reasonText + '</div>';
+
+    var nextAction = '';
+    if (item.topTask) {
+      var due = item.topTask.dueDate ? (item.topTask.dueDate === _wqTodayStr() ? 'Due today' : 'Due ' + item.topTask.dueDate) : 'No due date';
+      nextAction = '<div class="wq-next-lbl">Next action</div>'
+                 + '<div class="wq-next">' + _escHtml(item.topTask.title || '') + ' <span style="color:var(--gray-400)">· ' + due + '</span></div>';
+    } else {
+      var fallbackAction = '';
+      if (item.daysInStage >= 7) fallbackAction = 'Review stage progress — ' + item.daysInStage + ' days in ' + item.stageName;
+      else if (item.daysSinceActivity >= 5) fallbackAction = 'Reach out — ' + item.daysSinceActivity + ' days since activity';
+      else fallbackAction = 'Review client status';
+      nextAction = '<div class="wq-next-lbl">Next action</div><div class="wq-next">' + fallbackAction + '</div>';
+    }
+
+    var stats = '<div class="wq-stats">'
+      + '<div class="wq-stat"><strong>' + item.daysInStage + 'd</strong> in stage</div>'
+      + '<div class="wq-stat"><strong>' + item.daysInSystem + 'd</strong> in system</div>'
+      + (item.pendingCount > 0 ? '<div class="wq-stat"><strong>' + item.pendingCount + '</strong> pending</div>' : '')
+      + (item.hasPendingApps ? '<div class="wq-stat" style="color:#1d4ed8"><strong>Apps in-flight</strong></div>' : '')
+    + '</div>';
+
+    var skipLabel = item.isSkipped ? 'Unskip' : 'Skip for Today';
+    var completeBtn = item.topTask
+      ? '<button class="wq-btn complete" onclick="_wqCompleteTopTask(\'' + item.clientId + '\')">&#10003; Complete Task</button>'
+      : '';
+
+    var actions = '<div class="wq-actions">'
+      + '<button class="wq-btn primary" onclick="_wqStartWorking(\'' + item.clientId + '\')">Start Working &rarr;</button>'
+      + completeBtn
+      + '<button class="wq-btn skip" onclick="_wqSkipForToday(\'' + item.clientId + '\')">' + skipLabel + '</button>'
+    + '</div>';
+
+    var cardCls = 'wq-card';
+    if (item.isOverdue || item.isCritical) cardCls += ' urgent';
+    if (item.isSkipped && !(item.isOverdue || item.isCritical)) cardCls += ' skipped';
+    else if (item.isReviewed) cardCls += ' reviewed';
+
+    return '<div class="' + cardCls + '">'
+      + '<div class="wq-card-head">'
+        + '<div class="wq-rank">' + rank + '</div>'
+        + avatar
+        + '<div class="wq-card-id">'
+          + '<div class="wq-card-name">' + _escHtml(first + ' ' + last) + (item.isReviewed ? ' <span style="font-size:9.5px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.06em;background:var(--gray-100);padding:1px 6px;border-radius:4px">reviewed</span>' : '') + '</div>'
+          + '<div class="wq-card-meta">' + stagePill + (ficoPill ? '<span class="sep">·</span>' + ficoPill : '') + '</div>'
+        + '</div>'
+      + '</div>'
+      + reasonRow
+      + nextAction
+      + stats
+      + actions
+    + '</div>';
+  }
+
+  // ── BANNER on the client workspace ────────────────────────────────
+  function _wqRenderBanner() {
+    var host = document.getElementById('a-detail-card');
+    if (!host) return;
+    var existing = document.getElementById('wq-banner');
+    if (existing) existing.remove();
+    if (!_wqCurrentClientId || _wqCurrentClientId !== selectedClientId) return;
+    var queue = _wqCompute();
+    _wqQueueCache = queue;
+    var item = queue.find(function(x) { return x.clientId === _wqCurrentClientId; });
+    if (!item) return;
+    var reasonText = item.topReason.label + (item.topReason.detail ? ' — ' + item.topReason.detail : '');
+    var nextLine = item.topTask
+      ? 'Next action: ' + item.topTask.title + (item.topTask.dueDate ? ' (' + (item.topTask.dueDate === _wqTodayStr() ? 'due today' : 'due ' + item.topTask.dueDate) + ')' : '')
+      : 'Review stage progress and confirm next milestone with client.';
+
+    var banner = document.createElement('div');
+    banner.id = 'wq-banner';
+    banner.className = 'wq-banner';
+    banner.innerHTML =
+      '<div class="wq-banner-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h7v8l10-12h-7l0-8z"/></svg></div>'
+      + '<div class="wq-banner-body">'
+        + '<div class="wq-banner-title">Recommended next client · ' + _escHtml(reasonText) + '</div>'
+        + '<div class="wq-banner-text">' + _escHtml(nextLine) + '</div>'
+      + '</div>'
+      + '<div class="wq-banner-actions">'
+        + (item.topTask ? '<button class="wq-btn complete" onclick="_wqCompleteTopTask(\'' + item.clientId + '\')">&#10003; Complete</button>' : '')
+        + '<button class="wq-btn" onclick="_wqSkipForToday(\'' + item.clientId + '\')">Skip</button>'
+        + '<button class="wq-btn primary" onclick="_wqNextClient()">Next Client &rarr;</button>'
+      + '</div>';
+    // Insert at the very top of the detail workspace so it sits above the
+    // client header without disrupting the two-column clients layout.
+    host.insertBefore(banner, host.firstChild);
+  }
+
   // ── REAL-TIME CLIENT UI REFRESH ─────────────────────────────────────────
   // Call after any mutation to keep all visible client UI in sync instantly
   function refreshClientUI(clientId) {
@@ -8825,6 +9354,7 @@
     refreshSidebarTasks(clientId);
     if (typeof refreshStageProgressCard === 'function') refreshStageProgressCard(clientId);
     if (typeof refreshNextStageBtn === 'function') refreshNextStageBtn(clientId);
+    if (typeof _wqRenderBanner === 'function') _wqRenderBanner();
     refreshFundingStrategy(clientId);
     renderClientList();
 
