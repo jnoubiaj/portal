@@ -765,8 +765,154 @@ window.GHL = (function () {
         out.bizZip     = addrMatch[4].trim();
       }
     }
+    if (out.street && !out.city) {
+      const homeMatch = out.street.match(/^(.+?),\s*([^,]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+      if (homeMatch) {
+        out.street    = homeMatch[1].trim();
+        out.city      = homeMatch[2].trim();
+        out.state     = homeMatch[3].trim();
+        out.zip       = homeMatch[4].trim();
+        out.homeCity  = out.homeCity  || out.city;
+        out.homeState = out.homeState || out.state;
+        out.homeZip   = out.homeZip   || out.zip;
+      }
+    }
+
+    // ── NORMALIZATION ──────────────────────────────────────────────────────
+    // Clean up raw GHL values to the canonical portal formats. The admin
+    // edit-profile inputs expect YYYY-MM-DD dates, digit-only phone/SSN/EIN,
+    // and numeric money/percentage. Without this pass an import of e.g.
+    // "03171976" lands as-is and the date input rejects it.
+    _normalizeMappedFields(out);
 
     return out;
+  }
+
+  // Phone: strip everything that isn't a digit. Tolerates +1 country code.
+  // Returns 10-digit string when possible, otherwise digits as-found.
+  function _normPhone(v) {
+    if (!v) return v;
+    const digits = String(v).replace(/\D/g, '');
+    if (digits.length === 11 && digits.charAt(0) === '1') return digits.slice(1);
+    return digits;
+  }
+
+  // SSN: strip non-digits, preserve leading zeros (string output).
+  function _normSsn(v) {
+    if (!v) return v;
+    return String(v).replace(/\D/g, '');
+  }
+
+  // EIN: digits only. ##-####### display formatting happens at render time.
+  function _normEin(v) {
+    if (!v) return v;
+    return String(v).replace(/\D/g, '');
+  }
+
+  // DOB: accept MMDDYYYY, MM/DD/YYYY, YYYY-MM-DD, MM-DD-YYYY, MM.DD.YYYY,
+  // ISO timestamps, or epoch numbers. Output in YYYY-MM-DD (HTML date input).
+  function _normDob(v) {
+    if (!v) return v;
+    const s = String(v).trim();
+    // ISO date string (with or without time)
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+    if (m) return m[1] + '-' + m[2] + '-' + m[3];
+    // 8-digit MMDDYYYY (no separators)
+    m = s.match(/^(\d{2})(\d{2})(\d{4})$/);
+    if (m) return m[3] + '-' + m[1] + '-' + m[2];
+    // MM/DD/YYYY or MM-DD-YYYY or MM.DD.YYYY
+    m = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+    if (m) {
+      let mm = m[1].padStart(2, '0');
+      let dd = m[2].padStart(2, '0');
+      let yy = m[3];
+      if (yy.length === 2) yy = (parseInt(yy, 10) > 30 ? '19' : '20') + yy;
+      return yy + '-' + mm + '-' + dd;
+    }
+    // Epoch millis
+    const num = Number(s);
+    if (!isNaN(num) && num > 31536000000) {
+      const d = new Date(num);
+      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+    }
+    return s;
+  }
+
+  // Money: strip $ , spaces, keep digits and decimal. Return numeric string.
+  function _normMoney(v) {
+    if (v === null || v === undefined || v === '') return v;
+    const cleaned = String(v).replace(/[^\d.\-]/g, '');
+    if (!cleaned) return '';
+    const num = parseFloat(cleaned);
+    if (isNaN(num)) return cleaned;
+    return String(Math.round(num));
+  }
+
+  // Ownership %: strip non-digits/decimals, clamp to 0–100.
+  function _normOwnership(v) {
+    if (v === null || v === undefined || v === '') return v;
+    const cleaned = String(v).replace(/[^\d.\-]/g, '');
+    if (!cleaned) return '';
+    let num = parseFloat(cleaned);
+    if (isNaN(num)) return cleaned;
+    if (num > 100) num = 100;
+    if (num < 0) num = 0;
+    return String(Math.round(num));
+  }
+
+  // Citizen: normalize various yes/no/true/false answers to "yes" or "no".
+  function _normCitizen(v) {
+    if (!v) return v;
+    const s = String(v).toLowerCase().trim();
+    if (['yes','y','true','1','us citizen','american','american citizen','u.s. citizen','us'].indexOf(s) >= 0) return 'yes';
+    if (['no','n','false','0','not a citizen'].indexOf(s) >= 0) return 'no';
+    return v;
+  }
+
+  // State abbreviation: if input is a full state name, return the two-letter
+  // code. Otherwise return the input upper-cased.
+  const _STATE_ABBR = {
+    'alabama':'AL','alaska':'AK','arizona':'AZ','arkansas':'AR','california':'CA',
+    'colorado':'CO','connecticut':'CT','delaware':'DE','district of columbia':'DC',
+    'florida':'FL','georgia':'GA','hawaii':'HI','idaho':'ID','illinois':'IL',
+    'indiana':'IN','iowa':'IA','kansas':'KS','kentucky':'KY','louisiana':'LA',
+    'maine':'ME','maryland':'MD','massachusetts':'MA','michigan':'MI','minnesota':'MN',
+    'mississippi':'MS','missouri':'MO','montana':'MT','nebraska':'NE','nevada':'NV',
+    'new hampshire':'NH','new jersey':'NJ','new mexico':'NM','new york':'NY',
+    'north carolina':'NC','north dakota':'ND','ohio':'OH','oklahoma':'OK','oregon':'OR',
+    'pennsylvania':'PA','rhode island':'RI','south carolina':'SC','south dakota':'SD',
+    'tennessee':'TN','texas':'TX','utah':'UT','vermont':'VT','virginia':'VA',
+    'washington':'WA','west virginia':'WV','wisconsin':'WI','wyoming':'WY'
+  };
+  function _normState(v) {
+    if (!v) return v;
+    const s = String(v).trim();
+    if (s.length === 2) return s.toUpperCase();
+    const code = _STATE_ABBR[s.toLowerCase()];
+    return code || s;
+  }
+
+  function _normalizeMappedFields(out) {
+    if (out.phone)        out.phone        = _normPhone(out.phone);
+    if (out.bizPhone)     out.bizPhone     = _normPhone(out.bizPhone);
+    if (out.ssn)          out.ssn          = _normSsn(out.ssn);
+    if (out.ein)          out.ein          = _normEin(out.ein);
+    if (out.dob)             out.dob             = _normDob(out.dob);
+    if (out.dateEstablished) out.dateEstablished = _normDob(out.dateEstablished);
+    if (out.signedDate)      out.signedDate      = _normDob(out.signedDate);
+    if (out.annualIncome) out.annualIncome = _normMoney(out.annualIncome);
+    if (out.monthlySales) out.monthlySales = _normMoney(out.monthlySales);
+    if (out.loanAmount)   out.loanAmount   = _normMoney(out.loanAmount);
+    if (out.ownership)    out.ownership    = _normOwnership(out.ownership);
+    if (out.citizen)      out.citizen      = _normCitizen(out.citizen);
+    if (out.state)        out.state        = _normState(out.state);
+    if (out.homeState)    out.homeState    = _normState(out.homeState);
+    if (out.bizState)     out.bizState     = _normState(out.bizState);
+    // Mirror home* back into city/state/zip after normalization in case the
+    // earlier mirror happened on raw values.
+    if (out.homeCity  && !out.city)  out.city  = out.homeCity;
+    if (out.homeState && !out.state) out.state = out.homeState;
+    if (out.homeZip   && !out.zip)   out.zip   = out.homeZip;
   }
 
   // Validate form ownership: compare portal client vs GHL contact.
