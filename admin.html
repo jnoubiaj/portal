@@ -3395,20 +3395,63 @@
     }
   })();
 
-  // Firebase Auth state — confirm or revoke fast-restore
+  // Firebase Auth state — confirm or revoke fast-restore.
+  //
+  // Critical: Firebase's onAuthStateChanged often fires with `null` IMMEDIATELY
+  // on page load while it's restoring the session from sessionStorage, then
+  // fires again with the real user a moment later. Showing the login screen
+  // on that first null fire is what causes the 1-second login flash on
+  // every refresh. To stop the flash:
+  //   • If we already showed the app from a cached admin session, treat a
+  //     null user as "Firebase still warming up" and wait a grace period.
+  //   • If a real user arrives during the grace window, cancel the timer
+  //     and the user never sees a flicker.
+  //   • If still null after the grace window, then confirm the sign-out
+  //     and reveal the login screen.
+  //
+  // Manual logout still works instantly because fsAuthSignOut() also calls
+  // location.reload(), which re-runs the fast-restore IIFE — and that IIFE
+  // sees an empty cache, so the login screen shows right away.
+  var _authLogoutTimer = null;
+  var _authGraceMs = 4000;
   fsAuthOnStateChange(function(user) {
     if (user && ADMIN_PROFILES[user.email]) {
+      if (_authLogoutTimer) { clearTimeout(_authLogoutTimer); _authLogoutTimer = null; }
       _showAdminApp(user);
-    } else {
-      // Not signed in, or signed in as a non-admin (e.g. a client on another tab).
-      // Do NOT call fsAuthSignOut() here — that would log out the client on their tab.
-      // Just clear the local admin session and show the login screen.
+      return;
+    }
+    // Null or non-admin user. Don't immediately wipe the cached admin session —
+    // give Firebase a moment to finish restoring auth state.
+    var _hasCached = false;
+    try { _hasCached = !!localStorage.getItem('cq_admin_user'); } catch(e) {}
+    var _showLoginNow = function() {
       try { localStorage.removeItem('cq_admin_user'); } catch(e) {}
       _adminAppInited = false;
       currentAdmin = null;
-      document.getElementById('admin-app').style.display = 'none';
-      document.getElementById('admin-login').style.display = 'flex';
+      var appEl   = document.getElementById('admin-app');
+      var loginEl = document.getElementById('admin-login');
+      if (appEl)   appEl.style.display   = 'none';
+      if (loginEl) loginEl.style.display = 'flex';
+    };
+    if (!_hasCached) {
+      // No cached admin session and Firebase has no user — login is the right
+      // screen, show it without waiting.
+      _showLoginNow();
+      return;
     }
+    // Cached session exists. Wait for Firebase to either confirm the user or
+    // confirm sign-out via a second fire. Re-check fsAuthCurrentUser() once
+    // the grace window elapses; if still empty, then revoke.
+    if (_authLogoutTimer) clearTimeout(_authLogoutTimer);
+    _authLogoutTimer = setTimeout(function() {
+      _authLogoutTimer = null;
+      var live = (typeof fsAuthCurrentUser === 'function') ? fsAuthCurrentUser() : null;
+      if (live && ADMIN_PROFILES[live.email]) {
+        _showAdminApp(live);
+      } else {
+        _showLoginNow();
+      }
+    }, _authGraceMs);
   });
 
   // Re-render overview once DOM is fully ready
