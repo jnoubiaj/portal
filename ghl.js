@@ -464,75 +464,232 @@ window.GHL = (function () {
     const map = {};
     (defs || []).forEach(f => {
       const name = (f.name || f.fieldKey || '').toLowerCase().trim();
-      map[f.id] = { name, orig: f.name, fieldKey: f.fieldKey };
+      // GHL exposes the merge-tag-friendly slug as `fieldKey` (e.g.
+      // "contact.business_name" or just "business_name"). Strip the
+      // "contact." prefix when present so merge-tag matching is uniform.
+      let fk = (f.fieldKey || '').trim();
+      const cleanKey = fk.replace(/^contact\./, '').toLowerCase();
+      map[f.id] = {
+        id: f.id,
+        name,                 // normalized label (lowercase, trimmed)
+        orig: f.name,         // original label (display)
+        fieldKey: cleanKey,   // internal slug (machine name)
+        mergeTag: cleanKey    // GHL merge tags use the fieldKey slug
+      };
     });
     return map;
   }
 
+  // Parsed shape (back-compat):
+  //   - Flat keys (name → value) are still populated so existing callers
+  //     that read e.g. parsedFields['business name'] keep working.
+  //   - A non-enumerable _entries array carries the FULL identifier
+  //     metadata for every value:
+  //       { id, fieldKey, mergeTag, name, value, source }
+  //     Use this for id/key/tag-based matching (more reliable than name).
   function _parseGhlFields (contact, fieldDefsMap, formSubmissions) {
-    const result = {};
+    const result  = {};
+    const entries = [];
+    const seen    = {}; // by composite key, prevents dup entries
+
+    function pushEntry (e) {
+      if (e.value == null || e.value === '') return;
+      const key = (e.id || '') + '|' + (e.fieldKey || '') + '|' + (e.name || '');
+      if (seen[key]) return;
+      seen[key] = true;
+      entries.push(e);
+      if (e.name) result[e.name] = e.value;
+    }
 
     // 1. Standard contact fields (always present on the contact object)
-    const contactDirectFields = {
-      'first name': contact.firstName, 'last name': contact.lastName,
-      'email': contact.email, 'phone': contact.phone,
-      'address': contact.address1, 'city': contact.city,
-      'state': contact.state, 'zip': contact.postalCode,
-      'company name': contact.companyName,
-    };
-    Object.entries(contactDirectFields).forEach(([k, v]) => { if (v != null && v !== '') result[k] = v; });
+    const STD = [
+      ['firstName',   'first name',  'first_name',    contact.firstName],
+      ['lastName',    'last name',   'last_name',     contact.lastName],
+      ['email',       'email',       'email',         contact.email],
+      ['phone',       'phone',       'phone',         contact.phone],
+      ['address1',    'address',     'address1',      contact.address1],
+      ['city',        'city',        'city',          contact.city],
+      ['state',       'state',       'state',         contact.state],
+      ['postalCode',  'zip',         'postal_code',   contact.postalCode],
+      ['companyName', 'company name','company_name',  contact.companyName]
+    ];
+    STD.forEach(row => {
+      pushEntry({
+        id:       null,
+        fieldKey: row[2],
+        mergeTag: row[2],
+        name:     row[1],
+        value:    row[3],
+        source:   'standard'
+      });
+    });
 
     // 2. Custom fields from contact object
     const customFields = contact.customFields || contact.customField || [];
     customFields.forEach(cf => {
-      const def = fieldDefsMap[cf.id];
-      const name = def ? def.name : ((cf.fieldKey || cf.id || '').toLowerCase().replace(/_/g,' ').trim());
-      if (name && cf.value != null && cf.value !== '') result[name] = cf.value;
+      const def = fieldDefsMap[cf.id] || null;
+      const fk  = (def && def.fieldKey) || (cf.fieldKey || '').replace(/^contact\./, '').toLowerCase();
+      const name = (def && def.name) || ((cf.fieldKey || cf.id || '').toLowerCase().replace(/_/g, ' ').trim());
+      pushEntry({
+        id:       cf.id || null,
+        fieldKey: fk,
+        mergeTag: fk,
+        name:     name,
+        value:    cf.value,
+        source:   'contact_custom'
+      });
     });
 
-    // 3. Form submission fields — GHL returns data in multiple formats:
-    //    a) sub.formFields = array of {id, value}
-    //    b) sub.data = array of {id/fieldId, value, name/fieldKey}
-    //    c) sub.data = plain object { fieldKey: value } (flat map)
+    // 3. Form submission fields — GHL returns data in multiple formats
     (formSubmissions || []).forEach(sub => {
       const rawData = sub.formFields || sub.data;
       if (Array.isArray(rawData)) {
         rawData.forEach(ff => {
-          const def  = fieldDefsMap[ff.id] || fieldDefsMap[ff.fieldId];
-          const name = def ? def.name : ((ff.name || ff.fieldKey || ff.id || '').toLowerCase().replace(/_/g,' ').trim());
+          const def  = fieldDefsMap[ff.id] || fieldDefsMap[ff.fieldId] || null;
+          const fk   = (def && def.fieldKey) || (ff.fieldKey || '').replace(/^contact\./, '').toLowerCase();
+          const name = (def && def.name) || ((ff.name || ff.fieldKey || ff.id || '').toLowerCase().replace(/_/g, ' ').trim());
           const val  = ff.value != null ? ff.value : ff.fieldValue;
-          if (name && val != null && val !== '') result[name] = val;
+          pushEntry({
+            id:       ff.id || ff.fieldId || null,
+            fieldKey: fk,
+            mergeTag: fk,
+            name:     name,
+            value:    val,
+            source:   'form_submission_array'
+          });
         });
       } else if (rawData && typeof rawData === 'object') {
-        // Flat key:value object — keys may be field names, fieldKeys, or UUIDs
         Object.entries(rawData).forEach(([k, v]) => {
-          const def  = fieldDefsMap[k];
-          const name = def ? def.name : k.toLowerCase().replace(/_/g,' ').replace(/-/g,' ').trim();
-          if (name && v != null && v !== '') result[name] = v;
+          // k may be: UUID (custom field ID), fieldKey, or label
+          const def  = fieldDefsMap[k] || null;
+          const fk   = (def && def.fieldKey) || k.replace(/^contact\./, '').toLowerCase();
+          const name = (def && def.name) || k.toLowerCase().replace(/[_-]/g, ' ').trim();
+          pushEntry({
+            id:       def ? def.id : (/^[0-9a-f-]{20,}$/i.test(k) ? k : null),
+            fieldKey: fk,
+            mergeTag: fk,
+            name:     name,
+            value:    v,
+            source:   'form_submission_object'
+          });
         });
       }
       // Also check top-level submission keys that might carry field values
       ['firstName','lastName','email','phone','companyName'].forEach(k => {
-        if (sub[k] != null && sub[k] !== '') result[k.toLowerCase()] = sub[k];
+        if (sub[k] != null && sub[k] !== '') {
+          pushEntry({
+            id:       null,
+            fieldKey: k.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, ''),
+            mergeTag: k.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, ''),
+            name:     k.toLowerCase(),
+            value:    sub[k],
+            source:   'submission_top'
+          });
+        }
       });
+    });
+
+    // Attach entries as a non-enumerable property so callers that
+    // JSON-stringify or iterate `result` don't see this metadata.
+    Object.defineProperty(result, '_entries', {
+      value: entries,
+      enumerable: false,
+      writable: true,
+      configurable: true
     });
 
     return result;
   }
 
+  // Load admin-defined GHL field overrides from localStorage. Lets the
+  // user pin a portal field to a specific GHL custom-field UUID or
+  // fieldKey when the fuzzy label match isn't reliable enough. Shape:
+  //   { portalKey: { id?: '<uuid>', key?: '<fieldKey>', tag?: '<merge tag>' } }
+  // Set via: localStorage.setItem('cq_ghl_field_overrides',
+  //   JSON.stringify({ bizName: { id: 'a1b2-...' }, dob: { key: 'date_of_birth' } }));
+  function _getFieldOverrides () {
+    try {
+      const raw = localStorage.getItem('cq_ghl_field_overrides');
+      const obj = raw ? JSON.parse(raw) : null;
+      return (obj && typeof obj === 'object') ? obj : {};
+    } catch (e) { return {}; }
+  }
+
   function mapGhlToPortalFields (contact, ghlFields) {
     const f = ghlFields || {};
+    const entries = (f && f._entries) || [];
+    const overrides = _getFieldOverrides();
     const out = {};
 
-    // Pick first non-empty match from a list of normalized field names
-    const pick = (...names) => {
-      for (const n of names) {
-        const v = f[n.toLowerCase().trim()];
-        if (v != null && v !== '') return String(v).trim();
+    // Pre-build lookup maps from the structured entries for fast id/key/tag
+    // resolution. The flat name map (f[...]) is still consulted as the
+    // final fallback for label-based matches.
+    const byId  = {}, byKey = {}, byTag = {};
+    entries.forEach(e => {
+      if (e.id       && byId[e.id]       == null) byId[e.id]      = e.value;
+      if (e.fieldKey && byKey[e.fieldKey] == null) byKey[e.fieldKey] = e.value;
+      if (e.mergeTag && byTag[e.mergeTag] == null) byTag[e.mergeTag] = e.value;
+    });
+
+    // Diagnostic log so the admin can copy the exact GHL identifiers for
+    // an override. Toggle off by setting localStorage.cq_ghl_quiet = '1'.
+    try {
+      if (entries.length && localStorage.getItem('cq_ghl_quiet') !== '1') {
+        console.groupCollapsed('[GHL] parsed ' + entries.length + ' fields — id / fieldKey / label');
+        entries.forEach(e => {
+          console.log(
+            '  ' + (e.id || '-').padEnd(40, ' '),
+            (e.fieldKey || '-').padEnd(36, ' '),
+            (e.name || '-').padEnd(36, ' '),
+            '= ' + JSON.stringify(e.value).slice(0, 60)
+          );
+        });
+        console.log('Tip: pin a portal field with localStorage.setItem(\'cq_ghl_field_overrides\', JSON.stringify({ portalKey: { id: \'<UUID>\' } }))');
+        console.groupEnd();
+      }
+    } catch (e) {}
+
+    // Pick first non-empty match from a list of identifiers. Each identifier
+    // may be prefixed:
+    //   'id:<UUID>'   → match by GHL custom-field ID (most stable)
+    //   'key:<slug>'  → match by GHL fieldKey
+    //   'tag:<slug>'  → match by merge tag (same as fieldKey in GHL)
+    // Unprefixed strings → fuzzy match against the normalized label
+    // (current behavior — preserved as the final fallback).
+    const pick = (...idents) => {
+      for (const raw of idents) {
+        if (!raw) continue;
+        const s = String(raw).trim();
+        let val;
+        if (s.indexOf('id:') === 0) {
+          val = byId[s.slice(3).trim()];
+        } else if (s.indexOf('key:') === 0) {
+          val = byKey[s.slice(4).trim().toLowerCase()];
+        } else if (s.indexOf('tag:') === 0) {
+          let t = s.slice(4).trim().toLowerCase().replace(/^contact\./, '');
+          val = byTag[t];
+        } else {
+          val = f[s.toLowerCase().trim()];
+        }
+        if (val != null && val !== '') return String(val).trim();
       }
       return null;
     };
-    const m = (key, ...names) => { const v = pick(...names); if (v) out[key] = v; };
+
+    // Convenience for the long list of label aliases below. Honors admin
+    // overrides first: if cq_ghl_field_overrides has an entry for the
+    // portal key, that identifier is tried before any label alias.
+    const m = (key, ...names) => {
+      const overlay = overrides[key];
+      const priority = [];
+      if (overlay) {
+        if (overlay.id)  priority.push('id:'  + overlay.id);
+        if (overlay.key) priority.push('key:' + overlay.key);
+        if (overlay.tag) priority.push('tag:' + overlay.tag);
+      }
+      const v = pick(...priority.concat(names));
+      if (v) out[key] = v;
+    };
 
     // ── CONTACT OBJECT (highest priority) ──────────────────────────────────
     if (contact.firstName)   out.firstName = contact.firstName;
