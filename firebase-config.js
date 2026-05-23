@@ -189,9 +189,19 @@ function fsListenMessages(clientId, callback) {
 // ── FIREBASE AUTH ─────────────────────────────────────────────────────────
 
 async function fsAuthSignIn(email, password) {
-  // SESSION persistence: auth token lives only in this tab's sessionStorage.
-  // Prevents admin and client tabs from sharing/clobbering each other's login.
-  try { await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION); } catch(e) {}
+  // LOCAL persistence: auth token lives in browser-scoped storage (IndexedDB
+  // by default) and survives refreshes, hard-reloads, and the tab being
+  // closed and reopened. SESSION persistence was used previously to prevent
+  // admin/client tab clobbering, but that came at the cost of admins being
+  // signed out on every refresh — which is the more common scenario by far.
+  //
+  // Tab-collision is still handled portal-side: admin.html validates
+  // ADMIN_PROFILES[user.email] before showing the admin app; dashboard.html
+  // identifies the active client via session.clientId in localStorage rather
+  // than the Firebase user email, so an admin token leaking into the client
+  // tab doesn't break the client portal. Phone-auth in login.html still
+  // overrides this persistence for client sign-in.
+  try { await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch(e) {}
   return firebase.auth().signInWithEmailAndPassword(email, password);
 }
 
