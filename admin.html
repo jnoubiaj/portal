@@ -3703,21 +3703,37 @@
                 } catch(e) {}
               }
             }
-            // Seed pipelineTasks — always apply Firestore as source of truth on initial load
+            // Seed pipelineTasks — only apply Firestore if it's at least as fresh
+            // as the local copy. A stale snapshot here is what made stage moves
+            // appear to revert on refresh.
             if (data.pipelineTasks) {
-              try { localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(data.pipelineTasks)); } catch(e) {}
+              try {
+                var _localTasks = JSON.parse(localStorage.getItem('cq_tasks_' + clientId) || 'null');
+                var _localTaskTs = (_localTasks && _localTasks._updatedAt) || 0;
+                var _remoteTs    = (data._updatedAt) || 0;
+                if (!_localTasks || _remoteTs >= _localTaskTs) {
+                  localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(data.pipelineTasks));
+                }
+              } catch(e) {}
             }
-            // Seed dashboard data fields from Firestore
+            // Seed dashboard data fields from Firestore — gated by _updatedAt
+            // so a stale snapshot can never roll back a freshly-saved currentStage,
+            // funding state, or score.
             if (data.currentStage !== undefined || data.fundingRows || data.applyingBanks || data.fundingApproved) {
               try {
                 var _exD = JSON.parse(localStorage.getItem('cq_dash_' + clientId) || '{}');
-                if (data.currentStage !== undefined) _exD.currentStage = data.currentStage;
-                if (data.fundingRows)    _exD.fundingRows    = data.fundingRows;
-                if (data.applyingBanks)  _exD.applyingBanks  = data.applyingBanks;
-                if (data.fundingApproved !== undefined) _exD.fundingApproved = data.fundingApproved;
-                if (data.fundingSecured  !== undefined) _exD.fundingSecured  = data.fundingSecured;
-                if (data.creditScore     !== undefined) _exD.creditScore     = data.creditScore;
-                localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exD));
+                var _exDTs = _exD._updatedAt || 0;
+                var _rTs   = data._updatedAt || 0;
+                if (_rTs >= _exDTs) {
+                  if (data.currentStage !== undefined) _exD.currentStage = data.currentStage;
+                  if (data.fundingRows)    _exD.fundingRows    = data.fundingRows;
+                  if (data.applyingBanks)  _exD.applyingBanks  = data.applyingBanks;
+                  if (data.fundingApproved !== undefined) _exD.fundingApproved = data.fundingApproved;
+                  if (data.fundingSecured  !== undefined) _exD.fundingSecured  = data.fundingSecured;
+                  if (data.creditScore     !== undefined) _exD.creditScore     = data.creditScore;
+                  _exD._updatedAt = _rTs;
+                  localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exD));
+                }
               } catch(e) {}
             }
             // Seed credit data
@@ -3783,20 +3799,36 @@
             addNotif('task', clientId, _notifClientName(clientId) + ' completed ' + newlyChecked.length + ' task' + (newlyChecked.length > 1 ? 's' : ''));
           }
 
-          // Keep local caches in sync with Firestore — Firestore is source of truth
+          // Keep local caches in sync with Firestore — but only if the incoming
+          // snapshot is at least as fresh as what we wrote locally. This is the
+          // critical guard that stops stale 'modified' events (e.g. echoes of a
+          // prior write arriving after a new local write) from reverting
+          // currentStage and pipelineTasks.
           if (data.pipelineTasks) {
-            try { localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(data.pipelineTasks)); } catch(e) {}
+            try {
+              var _localT = JSON.parse(localStorage.getItem('cq_tasks_' + clientId) || 'null');
+              var _ltTs   = (_localT && _localT._updatedAt) || 0;
+              var _rtTs   = data._updatedAt || 0;
+              if (!_localT || _rtTs >= _ltTs) {
+                localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(data.pipelineTasks));
+              }
+            } catch(e) {}
           }
           if (data.currentStage !== undefined || data.fundingRows || data.applyingBanks || data.fundingApproved) {
             try {
               var _exDm = JSON.parse(localStorage.getItem('cq_dash_' + clientId) || '{}');
-              if (data.currentStage !== undefined)    _exDm.currentStage   = data.currentStage;
-              if (data.fundingRows)                   _exDm.fundingRows    = data.fundingRows;
-              if (data.applyingBanks)                 _exDm.applyingBanks  = data.applyingBanks;
-              if (data.fundingApproved !== undefined)  _exDm.fundingApproved = data.fundingApproved;
-              if (data.fundingSecured  !== undefined)  _exDm.fundingSecured  = data.fundingSecured;
-              if (data.creditScore     !== undefined)  _exDm.creditScore     = data.creditScore;
-              localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exDm));
+              var _exDmTs = _exDm._updatedAt || 0;
+              var _rTsM   = data._updatedAt || 0;
+              if (_rTsM >= _exDmTs) {
+                if (data.currentStage !== undefined)    _exDm.currentStage   = data.currentStage;
+                if (data.fundingRows)                   _exDm.fundingRows    = data.fundingRows;
+                if (data.applyingBanks)                 _exDm.applyingBanks  = data.applyingBanks;
+                if (data.fundingApproved !== undefined)  _exDm.fundingApproved = data.fundingApproved;
+                if (data.fundingSecured  !== undefined)  _exDm.fundingSecured  = data.fundingSecured;
+                if (data.creditScore     !== undefined)  _exDm.creditScore     = data.creditScore;
+                _exDm._updatedAt = _rTsM;
+                localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exDm));
+              }
             } catch(e) {}
           }
           // Mirror Firestore creditData into local cache so getClientScore() sees
@@ -5094,9 +5126,19 @@
         }
       }
 
-      // Cache pipelineTasks from Firestore so getClientTasks() finds them on render
+      // Cache pipelineTasks from Firestore so getClientTasks() finds them on render —
+      // BUT only if the incoming snapshot is at least as fresh as the local copy.
+      // Without this guard, a Firestore listener fire that arrived AFTER a
+      // local stage-change save would clobber the new stage with the old one.
       if (fsDash && fsDash.pipelineTasks) {
-        try { localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(fsDash.pipelineTasks)); } catch(e) {}
+        try {
+          var _lt = JSON.parse(localStorage.getItem('cq_tasks_' + clientId) || 'null');
+          var _ltTs = (_lt && _lt._updatedAt) || 0;
+          var _rtTs = fsDash._updatedAt || 0;
+          if (!_lt || _rtTs >= _ltTs) {
+            localStorage.setItem('cq_tasks_' + clientId, JSON.stringify(fsDash.pipelineTasks));
+          }
+        } catch(e) {}
       }
 
       // Recover opsTasks (Next Actions) from Firestore when local is empty or stale.
@@ -12671,7 +12713,15 @@
     const _stripB64 = docs => (docs || []).map(d => ({
       ...d, url: (d.url && d.url.startsWith('data:')) ? null : d.url
     }));
-    const lsData = Object.assign({}, data, { adminDocs: _stripB64(data.adminDocs) });
+    // Stamp _updatedAt on the LOCAL payload too. Without this, the realtime
+    // listener has no way to tell that a local write is newer than an inbound
+    // Firestore snapshot — and stale snapshots silently revert just-saved
+    // fields like currentStage on the next refresh.
+    const _writeTs = Date.now();
+    const lsData = Object.assign({}, data, {
+      adminDocs: _stripB64(data.adminDocs),
+      _updatedAt: _writeTs
+    });
     try {
       localStorage.setItem('cq_dash_'+clientId, JSON.stringify(lsData));
       localStorage.setItem('cq_dash_data', JSON.stringify(lsData));
@@ -12679,9 +12729,11 @@
       if (c && c.email) localStorage.setItem('cq_dash_email_'+c.email.toLowerCase(), JSON.stringify(lsData));
     } catch(e) {}
     if (localOnly) return;
-    // Firestore write: keep Storage URLs (https://...), strip base64, delete field if empty
+    // Firestore write: keep Storage URLs (https://...), strip base64, delete field if empty.
+    // Use the same _writeTs as the local write so local and remote agree on
+    // "when this was written" — the listener relies on this to skip echoes.
     const fsData = Object.assign({}, data, {
-      _updatedAt: Date.now(),
+      _updatedAt: _writeTs,
       _updatedBy: (currentAdmin && currentAdmin.email) || 'admin'
     });
     if (fsData.adminDocs && fsData.adminDocs.length) {
@@ -15259,12 +15311,18 @@
     try { return JSON.parse(localStorage.getItem('cq_tasks_' + id) || 'null'); } catch(e) { return null; }
   }
   function saveClientTasks(id, data) {
+    // Stamp the same _updatedAt on local + Firestore so the listener can tell
+    // a local write apart from a stale echo. Without this guard, the realtime
+    // listener overwrites freshly-saved pipeline data (including stage)
+    // with whatever Firestore happens to return next — that's how stage
+    // moves silently reverted on refresh.
+    var _writeTs = Date.now();
+    data._updatedAt = _writeTs;
     localStorage.setItem('cq_tasks_' + id, JSON.stringify(data));
-    // Sync to Firebase so clients can read their tasks on the dashboard
     if (typeof fsSetDash === 'function') {
       fsSetDash(id, {
         pipelineTasks: data,
-        _updatedAt: Date.now(),
+        _updatedAt: _writeTs,
         _updatedBy: (currentAdmin && currentAdmin.email) || 'admin'
       }).catch(function(){});
     }
