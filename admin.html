@@ -4912,36 +4912,20 @@
         <!-- ══ RIGHT: CONTROL PANEL (sticky) ══ -->
         <div class="a-sp-right">
 
-          <!-- NEXT ACTIONS / TASKS (top) -->
+          <!-- NEXT ACTIONS / TASKS (top) — body is populated by refreshSidebarTasks
+               (ops tasks + current-stage pipeline tasks). Card is intentionally
+               empty here so we never flash legacy _d.tasks data on first paint or
+               after a stage change. -->
           <div class="a-card" id="sp-right-tasks-top">
             <div class="a-card-hdr">
               <div class="a-card-hdrl">
                 <div class="a-card-title">Next Actions</div>
-                ${(_d.tasks||[]).filter(t=>t.status!=='done').length > 0
-                  ? `<div class="a-card-sub">${(_d.tasks||[]).filter(t=>t.status!=='done').length} pending</div>`
-                  : (_d.tasks||[]).length > 0 ? '<div class="a-card-sub" style="color:#059669">All done</div>' : ''}
               </div>
               <div class="a-card-btns">
-                <button class="a-card-btn" onclick="openTaskModal('${id}')">+ Task</button>
+                <button class="a-card-btn" onclick="opsOpenCreate('${id}')">+ Task</button>
               </div>
             </div>
-            <div id="sp-right-tasks-body">
-            ${(_d.tasks||[]).length === 0
-              ? `<div style="font-size:12px;color:var(--gray-400);padding:2px 0;display:flex;align-items:center;gap:6px"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>No tasks yet</div>`
-              : ((_d.tasks||[]).filter(t => t.status !== 'done').map(t => `
-                  <div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0">
-                    <button onclick="sidebarToggleTask('${id}','${t.id}')" title="Mark done" style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--gray-300);background:white;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"></button>
-                    <div style="min-width:0"><div class="a-na-text">${t.text}</div>${t.desc ? `<div class="a-na-desc">${t.desc}</div>` : ''}</div>
-                  </div>`).join('')
-              + ((_d.tasks||[]).filter(t => t.status === 'done').length > 0 ? `
-                  <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">
-                    ${(_d.tasks||[]).filter(t => t.status === 'done').map(t => `
-                      <div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;opacity:0.55">
-                        <button onclick="sidebarToggleTask('${id}','${t.id}')" title="Mark undone" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #10b981;background:#10b981;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></button>
-                        <div class="a-na-text" style="text-decoration:line-through;color:var(--gray-400)">${t.text}</div>
-                      </div>`).join('')}
-                  </div>` : ''))}
-            </div>
+            <div id="sp-right-tasks-body"></div>
           </div>
 
           <!-- CLIENT SNAPSHOT -->
