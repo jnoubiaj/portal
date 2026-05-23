@@ -1941,6 +1941,53 @@
   .ot-cancel-btn { height: 38px; padding: 0 16px; background: white; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: var(--font-h); font-size: 13px; font-weight: 600; color: var(--gray-600); cursor: pointer; transition: background 0.12s; }
   .ot-cancel-btn:hover { background: var(--gray-50); }
 
+  /* ── New Task Modal v2 ──────────────────────────────────────────────
+     Sectioned, scannable, premium look. Layered on top of the existing
+     .ot-modal-* base — the older modal CSS is left intact for safety. */
+  .ot-v2 { max-width: 520px; padding: 22px 22px 18px; }
+  .ot-v2-hdr { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .ot-v2-title { font-family: var(--font-h); font-size: 17px; font-weight: 800; color: var(--navy); letter-spacing: -0.01em; }
+  .ot-v2-sub   { font-size: 11.5px; color: var(--gray-400); margin-top: 2px; }
+  .ot-v2-x { width: 28px; height: 28px; border-radius: 7px; border: none; background: var(--gray-50); color: var(--gray-500); font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.12s; flex-shrink: 0; line-height: 1; }
+  .ot-v2-x:hover { background: var(--gray-100); color: var(--navy); }
+
+  /* Quick template chips */
+  .ot-v2-chips-wrap { margin-bottom: 16px; }
+  .ot-v2-chips-lbl { font-size: 9.5px; font-weight: 700; color: var(--gray-400); margin-bottom: 6px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .ot-v2-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ot-v2-chip { font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 999px; background: var(--gray-50); color: var(--gray-600); border: 1px solid var(--gray-100); cursor: pointer; transition: all 0.12s; white-space: nowrap; font-family: var(--font-b); }
+  .ot-v2-chip:hover { background: rgba(34,167,240,0.08); color: var(--blue); border-color: rgba(34,167,240,0.25); }
+  .ot-v2-chip:active { transform: scale(0.97); }
+
+  /* Sections */
+  .ot-v2-sec { padding-top: 12px; border-top: 1px solid var(--gray-100); margin-top: 12px; }
+  .ot-v2-sec:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+  .ot-v2-sec-title { font-size: 10px; font-weight: 800; color: var(--gray-500); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 9px; display: flex; align-items: center; gap: 6px; }
+  .ot-v2-sec-title .ot-v2-sec-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--blue); }
+
+  /* Inputs (slight refinements over .ot-fg) */
+  .ot-v2-fg { margin-bottom: 10px; }
+  .ot-v2-fg:last-child { margin-bottom: 0; }
+  .ot-v2-fg label { display: block; font-size: 10px; font-weight: 700; color: var(--gray-500); margin-bottom: 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .ot-v2-fg input, .ot-v2-fg select, .ot-v2-fg textarea { width: 100%; padding: 0 10px; height: 36px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: var(--font-b); font-size: 12.5px; color: var(--navy); outline: none; background: white; box-sizing: border-box; transition: border-color 0.12s, box-shadow 0.12s; }
+  .ot-v2-fg textarea { height: auto; min-height: 56px; padding: 8px 10px; resize: vertical; line-height: 1.5; }
+  .ot-v2-fg input:focus, .ot-v2-fg select:focus, .ot-v2-fg textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(34,167,240,0.12); }
+  .ot-v2-fg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .ot-v2-fg-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+
+  /* Helper text under Type select */
+  .ot-v2-helper { font-size: 11px; color: var(--gray-500); margin-top: 6px; padding: 7px 10px; border-radius: 7px; background: var(--gray-50); display: flex; align-items: center; gap: 7px; line-height: 1.4; }
+  .ot-v2-helper.client { background: rgba(34,167,240,0.07); color: #0c4a6e; }
+  .ot-v2-helper svg { flex-shrink: 0; }
+
+  /* Action bar */
+  .ot-v2-acts { display: flex; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--gray-100); }
+  .ot-v2-save  { flex: 1; height: 40px; background: var(--navy); border: none; border-radius: 9px; font-family: var(--font-h); font-size: 12.5px; font-weight: 800; color: white; cursor: pointer; letter-spacing: 0.02em; transition: opacity 0.12s; }
+  .ot-v2-save:hover { opacity: 0.92; }
+  .ot-v2-save:active { transform: scale(0.99); }
+  .ot-v2-cancel { height: 40px; padding: 0 18px; background: white; border: 1.5px solid var(--gray-200); border-radius: 9px; font-family: var(--font-h); font-size: 12.5px; font-weight: 700; color: var(--gray-600); cursor: pointer; transition: background 0.12s; }
+  .ot-v2-cancel:hover { background: var(--gray-50); color: var(--navy); }
+
   /* ── Activity Timeline (legacy — kept for compat) ───────────────────── */
   .act-timeline { display: flex; flex-direction: column; }
   .act-item { display: flex; gap: 10px; padding: 7px 0; position: relative; }
@@ -17438,6 +17485,61 @@
     var task = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
     _renderOpsTaskModal(clientId, task || null);
   }
+  // Quick-task templates surfaced as chips at the top of the New Task modal.
+  // Clicking a chip pre-fills title/description and (when relevant) suggests
+  // priority + due-date offset. The user can still override any field.
+  var _OPS_TASK_TEMPLATES = [
+    { label: 'Follow up with client', title: 'Follow up with client',     description: 'Check in with the client on outstanding items and next steps.', priority: 'medium',   dueOffsetDays: 1 },
+    { label: 'Request documents',     title: 'Request documents',         description: 'Reach out to client for required documentation.',               priority: 'medium',   dueOffsetDays: 1 },
+    { label: 'Open bank account',     title: 'Open bank account',         description: 'Open a new business bank account per funding plan.',            priority: 'medium',   dueOffsetDays: 3 },
+    { label: 'Submit application',    title: 'Submit application',        description: 'Submit funding application to the target lender.',              priority: 'high',     dueOffsetDays: 2 },
+    { label: 'Call lender',           title: 'Call lender',               description: 'Call the lender — confirm status / handle reconsideration.',    priority: 'high',     dueOffsetDays: 0 },
+    { label: 'Check approval status', title: 'Check application status',  description: 'Follow up on pending application — confirm decision timeline.', priority: 'medium',   dueOffsetDays: 2 },
+    { label: 'Upload credit report',  title: 'Upload credit report',      description: 'Pull and upload the latest credit report for review.',          priority: 'medium',   dueOffsetDays: 1 },
+    { label: 'Review funding plan',   title: 'Review funding plan',       description: 'Review the funding strategy with the client and confirm targets.', priority: 'medium', dueOffsetDays: 2 }
+  ];
+
+  function _opsAdminOptions(selectedEmail, selectedName) {
+    // Build the Assigned To dropdown from the canonical ADMIN_PROFILES map.
+    // value is the admin email (stable id). selectedEmail wins; if a legacy
+    // task only has a free-text name, try to match by name; otherwise the
+    // logged-in admin is the default.
+    var opts = '';
+    var profiles = (typeof ADMIN_PROFILES !== 'undefined' && ADMIN_PROFILES) ? ADMIN_PROFILES : {};
+    var pickedEmail = '';
+    var matchedByName = false;
+    Object.keys(profiles).forEach(function(em) {
+      var prof = profiles[em];
+      if (!pickedEmail) {
+        if (selectedEmail && selectedEmail === em) pickedEmail = em;
+        else if (!selectedEmail && selectedName && prof.name === selectedName) {
+          pickedEmail = em;
+          matchedByName = true;
+        }
+      }
+    });
+    var hasGhost = false;
+    if (!pickedEmail && selectedName) {
+      // Legacy free-text assignee that doesn't match any current admin —
+      // preserve the value as a ghost option so saving doesn't silently
+      // reassign the task.
+      pickedEmail = '__legacy__';
+      hasGhost = true;
+    }
+    if (!pickedEmail) {
+      pickedEmail = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) ? currentAdmin.email : Object.keys(profiles)[0] || '';
+    }
+    if (hasGhost) {
+      opts += '<option value="__legacy__" data-name="' + _escHtml(selectedName) + '" selected>' + _escHtml(selectedName) + ' (legacy)</option>';
+    }
+    Object.keys(profiles).forEach(function(em) {
+      var prof = profiles[em];
+      var sel = (!hasGhost && em === pickedEmail) ? ' selected' : '';
+      opts += '<option value="' + em + '" data-name="' + _escHtml(prof.name || '') + '"' + sel + '>' + _escHtml(prof.name || em) + '</option>';
+    });
+    return opts;
+  }
+
   function _renderOpsTaskModal(clientId, task) {
     var old = document.getElementById('ot-modal-overlay');
     if (old) old.remove();
@@ -17446,59 +17548,181 @@
     var clientName = (names.fn + ' ' + names.ln).trim();
     var isEdit = !!task;
     var ct = getClientTasks(clientId);
-    var curStage = ct ? (typeof ct.stage === 'number' ? ct.stage : 0) : 0;
+    var d = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+    var curStage = ct ? (typeof ct.stage === 'number' ? ct.stage : 0) : Math.max(0, (d.currentStage || 1) - 1);
+    var todayStr = new Date().toISOString().split('T')[0];
+
     var stageOptions = PIPELINE_STAGES.map(function(s, i) {
       var sel = (isEdit ? task.stage : curStage) === i ? ' selected' : '';
       return '<option value="' + i + '"' + sel + '>S' + (i + 1) + ': ' + s.name + '</option>';
     }).join('');
     var selType = function(v) { return (isEdit ? task.type : 'admin') === v ? ' selected' : ''; };
     var selPri  = function(v) { return (isEdit ? task.priority : 'medium') === v ? ' selected' : ''; };
+    var assignedOpts = _opsAdminOptions(
+      isEdit ? (task.assignedAdminId || '') : '',
+      isEdit ? (task.assignedTo || task.assignedAdminName || '') : ''
+    );
+
+    // Quick templates only on Create (not on Edit, to avoid clobbering existing values)
+    var chipsHTML = '';
+    if (!isEdit) {
+      chipsHTML = '<div class="ot-v2-chips-wrap"><div class="ot-v2-chips-lbl">Quick templates</div><div class="ot-v2-chips">'
+        + _OPS_TASK_TEMPLATES.map(function(tpl, i) {
+            return '<button type="button" class="ot-v2-chip" onclick="_applyTaskTemplate(' + i + ')">' + _escHtml(tpl.label) + '</button>';
+          }).join('')
+        + '</div></div>';
+    }
+
+    var initialHelperCls = (isEdit ? task.type : 'admin') === 'client' ? 'client' : '';
+    var initialHelperTxt = (isEdit ? task.type : 'admin') === 'client'
+      ? 'Client will see this task in their portal.'
+      : 'Internal task only. Client will not see this.';
+
     var el = document.createElement('div');
     el.id = 'ot-modal-overlay';
     el.className = 'ot-modal-overlay';
     el.onclick = function(e) { if (e.target === el) el.remove(); };
-    el.innerHTML = '<div class="ot-modal-box">'
-      + '<div class="ot-modal-title">' + (isEdit ? 'Edit Task' : 'New Task &#8212; ' + _escHtml(clientName)) + '</div>'
-      + '<div class="ot-fg"><label>Title *</label><input id="otf-title" type="text" placeholder="Task title" value="' + _escHtml(isEdit ? task.title : '') + '" /></div>'
-      + '<div class="ot-fg"><label>Description</label><textarea id="otf-desc" placeholder="Optional details...">' + _escHtml(isEdit ? (task.description || '') : '') + '</textarea></div>'
-      + '<div class="ot-fg-row">'
-        + '<div class="ot-fg"><label>Type</label><select id="otf-type">'
-          + '<option value="admin"' + selType('admin') + '>Admin</option>'
-          + '<option value="client"' + selType('client') + '>Client</option>'
-          + '<option value="system"' + selType('system') + '>System</option>'
-        + '</select></div>'
-        + '<div class="ot-fg"><label>Priority</label><select id="otf-priority">'
-          + '<option value="low"' + selPri('low') + '>Low</option>'
-          + '<option value="medium"' + selPri('medium') + '>Medium</option>'
-          + '<option value="high"' + selPri('high') + '>High</option>'
-          + '<option value="critical"' + selPri('critical') + '>Critical</option>'
-        + '</select></div>'
+    el.innerHTML = '<div class="ot-modal-box ot-v2">'
+      + '<div class="ot-v2-hdr">'
+        + '<div>'
+          + '<div class="ot-v2-title">' + (isEdit ? 'Edit Task' : 'New Task') + '</div>'
+          + '<div class="ot-v2-sub">' + (clientName ? _escHtml(clientName) : 'Client task') + '</div>'
+        + '</div>'
+        + '<button class="ot-v2-x" onclick="document.getElementById(\'ot-modal-overlay\').remove()" title="Close">&times;</button>'
       + '</div>'
-      + '<div class="ot-fg"><label>Assigned To</label><input id="otf-assigned" type="text" placeholder="e.g. Sam" value="' + _escHtml(isEdit ? (task.assignedTo || 'Sam') : 'Sam') + '" /></div>'
-      + '<div class="ot-fg-row">'
-        + '<div class="ot-fg"><label>Due Date</label><input id="otf-duedate" type="date" value="' + _escHtml(isEdit ? (task.dueDate || '') : '') + '" /></div>'
-        + '<div class="ot-fg"><label>Due Time</label><input id="otf-duetime" type="time" value="' + _escHtml(isEdit ? (task.dueTime || '') : '') + '" /></div>'
+
+      + chipsHTML
+
+      + '<div class="ot-v2-sec">'
+        + '<div class="ot-v2-sec-title"><span class="ot-v2-sec-dot"></span>Task Details</div>'
+        + '<div class="ot-v2-fg"><label>Title *</label><input id="otf-title" type="text" placeholder="What needs to happen?" value="' + _escHtml(isEdit ? task.title : '') + '" /></div>'
+        + '<div class="ot-v2-fg"><label>Description</label><textarea id="otf-desc" placeholder="Optional details, context, links…">' + _escHtml(isEdit ? (task.description || '') : '') + '</textarea></div>'
       + '</div>'
-      + '<div class="ot-fg"><label>Stage</label><select id="otf-stage">' + stageOptions + '</select></div>'
-      + '<div class="ot-fg"><label>Notes / Impact</label><textarea id="otf-impact" placeholder="Funding impact or notes...">' + _escHtml(isEdit ? (task.fundingImpact || '') : '') + '</textarea></div>'
-      + '<div class="ot-modal-acts">'
-        + '<button class="ot-save-btn" onclick="_saveOpsTaskModal(\'' + clientId + '\',' + (isEdit ? '\'' + task.id + '\'' : 'null') + ')">'
+
+      + '<div class="ot-v2-sec">'
+        + '<div class="ot-v2-sec-title"><span class="ot-v2-sec-dot" style="background:#8b5cf6"></span>Assignment</div>'
+        + '<div class="ot-v2-fg-row-3">'
+          + '<div class="ot-v2-fg"><label>Type</label><select id="otf-type" onchange="_opsUpdateTypeHelper()">'
+            + '<option value="admin"' + selType('admin') + '>Admin</option>'
+            + '<option value="client"' + selType('client') + '>Client</option>'
+            + '<option value="system"' + selType('system') + '>System</option>'
+          + '</select></div>'
+          + '<div class="ot-v2-fg"><label>Priority</label><select id="otf-priority">'
+            + '<option value="low"' + selPri('low') + '>Low</option>'
+            + '<option value="medium"' + selPri('medium') + '>Medium</option>'
+            + '<option value="high"' + selPri('high') + '>High</option>'
+            + '<option value="critical"' + selPri('critical') + '>Critical</option>'
+          + '</select></div>'
+          + '<div class="ot-v2-fg"><label>Assigned To</label><select id="otf-assigned-id">' + assignedOpts + '</select></div>'
+        + '</div>'
+        + '<div class="ot-v2-helper ' + initialHelperCls + '" id="otf-type-helper">'
+          + '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+          + '<span>' + initialHelperTxt + '</span>'
+        + '</div>'
+      + '</div>'
+
+      + '<div class="ot-v2-sec">'
+        + '<div class="ot-v2-sec-title"><span class="ot-v2-sec-dot" style="background:#f59e0b"></span>Schedule</div>'
+        + '<div class="ot-v2-fg-row">'
+          + '<div class="ot-v2-fg"><label>Due Date</label><input id="otf-duedate" type="date" value="' + _escHtml(isEdit ? (task.dueDate || '') : todayStr) + '" /></div>'
+          + '<div class="ot-v2-fg"><label>Due Time</label><input id="otf-duetime" type="time" value="' + _escHtml(isEdit ? (task.dueTime || '') : '') + '" /></div>'
+        + '</div>'
+      + '</div>'
+
+      + '<div class="ot-v2-sec">'
+        + '<div class="ot-v2-sec-title"><span class="ot-v2-sec-dot" style="background:#10b981"></span>Context</div>'
+        + '<div class="ot-v2-fg"><label>Stage</label><select id="otf-stage">' + stageOptions + '</select></div>'
+        + '<div class="ot-v2-fg"><label>Notes / Funding Impact</label><textarea id="otf-impact" placeholder="Funding impact, lender notes, internal context…">' + _escHtml(isEdit ? (task.fundingImpact || '') : '') + '</textarea></div>'
+      + '</div>'
+
+      + '<div class="ot-v2-acts">'
+        + '<button class="ot-v2-cancel" onclick="document.getElementById(\'ot-modal-overlay\').remove()">Cancel</button>'
+        + '<button class="ot-v2-save" onclick="_saveOpsTaskModal(\'' + clientId + '\',' + (isEdit ? '\'' + task.id + '\'' : 'null') + ')">'
           + (isEdit ? 'Save Changes' : 'Create Task') + '</button>'
-        + '<button class="ot-cancel-btn" onclick="document.getElementById(\'ot-modal-overlay\').remove()">Cancel</button>'
       + '</div>'
     + '</div>';
     document.body.appendChild(el);
     setTimeout(function() { var ti = document.getElementById('otf-title'); if (ti) ti.focus(); }, 50);
   }
+
+  // Toggle the helper text under the Type select. Called on change.
+  function _opsUpdateTypeHelper() {
+    var typeEl = document.getElementById('otf-type');
+    var helper = document.getElementById('otf-type-helper');
+    if (!typeEl || !helper) return;
+    var v = typeEl.value || 'admin';
+    var span = helper.querySelector('span');
+    if (v === 'client') {
+      helper.classList.add('client');
+      if (span) span.textContent = 'Client will see this task in their portal.';
+    } else if (v === 'system') {
+      helper.classList.remove('client');
+      if (span) span.textContent = 'System task. Not shown to client. Used by automations.';
+    } else {
+      helper.classList.remove('client');
+      if (span) span.textContent = 'Internal task only. Client will not see this.';
+    }
+  }
+
+  // Apply a chip template — pre-fills title, description, priority, and
+  // computes a sensible due date offset. The user can still edit any field.
+  function _applyTaskTemplate(idx) {
+    var tpl = (typeof _OPS_TASK_TEMPLATES !== 'undefined' && _OPS_TASK_TEMPLATES[idx]) ? _OPS_TASK_TEMPLATES[idx] : null;
+    if (!tpl) return;
+    var titleEl = document.getElementById('otf-title');
+    var descEl  = document.getElementById('otf-desc');
+    var priEl   = document.getElementById('otf-priority');
+    var dateEl  = document.getElementById('otf-duedate');
+    if (titleEl) titleEl.value = tpl.title;
+    if (descEl && !descEl.value) descEl.value = tpl.description || '';
+    if (priEl && tpl.priority) priEl.value = tpl.priority;
+    if (dateEl && typeof tpl.dueOffsetDays === 'number') {
+      var dt = new Date();
+      dt.setDate(dt.getDate() + tpl.dueOffsetDays);
+      dateEl.value = dt.toISOString().split('T')[0];
+    }
+    if (titleEl) titleEl.focus();
+  }
   function _saveOpsTaskModal(clientId, taskId) {
     var title = (document.getElementById('otf-title') || {}).value || '';
     if (!title.trim()) { alert('Task title is required.'); return; }
+
+    // Assigned admin: new dropdown carries the email as value. Fall back to
+    // the legacy free-text field if present, then to a sensible default.
+    var assignedEl     = document.getElementById('otf-assigned-id');
+    var assignedLegacy = document.getElementById('otf-assigned');
+    var assignedEmail  = assignedEl ? (assignedEl.value || '') : '';
+    var assignedName   = '';
+    if (assignedEl && assignedEl.selectedOptions && assignedEl.selectedOptions[0]) {
+      assignedName = assignedEl.selectedOptions[0].getAttribute('data-name') || assignedEl.selectedOptions[0].textContent || '';
+    } else if (assignedLegacy) {
+      assignedName = assignedLegacy.value || '';
+    }
+    if (!assignedName && assignedEmail && typeof ADMIN_PROFILES !== 'undefined' && ADMIN_PROFILES[assignedEmail]) {
+      assignedName = ADMIN_PROFILES[assignedEmail].name || assignedEmail;
+    }
+    if (!assignedName) assignedName = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.name) || 'Sam';
+
+    if (!assignedEmail && assignedName && typeof ADMIN_PROFILES !== 'undefined') {
+      Object.keys(ADMIN_PROFILES).forEach(function(em) {
+        if (!assignedEmail && ADMIN_PROFILES[em].name === assignedName) assignedEmail = em;
+      });
+    }
+    // The "legacy" sentinel is just a UI placeholder — never persisted as an id.
+    if (assignedEmail === '__legacy__') assignedEmail = '';
+
     var fields = {
       title:         title.trim(),
       description:   (document.getElementById('otf-desc') || {}).value || '',
       type:          (document.getElementById('otf-type') || {}).value || 'admin',
       priority:      (document.getElementById('otf-priority') || {}).value || 'medium',
-      assignedTo:    (document.getElementById('otf-assigned') || {}).value || 'Sam',
+      // assignedTo kept as a string for reminder/scheduler backwards compat.
+      assignedTo:    assignedName,
+      // Canonical admin record (added in the v2 modal). Reminders can still
+      // read assignedTo by name; new code/automations can resolve the user
+      // by email-id without any free-text matching.
+      assignedAdminId:   assignedEmail || '',
+      assignedAdminName: assignedName,
       dueDate:       (document.getElementById('otf-duedate') || {}).value || '',
       dueTime:       (document.getElementById('otf-duetime') || {}).value || '',
       stage:         parseInt((document.getElementById('otf-stage') || {}).value || '0', 10),
