@@ -2084,6 +2084,20 @@
   .btn-continue:hover { background:#047857; }
   .btn-continue:active { transform:scale(0.98); }
 
+  /* Next-stage button — sits next to Continue Client in the top header.
+     Replaces the bulky "Stage Progress" workspace card. */
+  .btn-next-stage {
+    height:36px; padding:0 14px; border-radius:9px; border:1.5px solid var(--gray-200);
+    background:var(--white); font-family:var(--font-h); font-size:12px; font-weight:700;
+    color:var(--navy); cursor:pointer; display:flex; align-items:center; gap:6px;
+    transition:all 0.13s; white-space:nowrap;
+  }
+  .btn-next-stage:hover { border-color:var(--navy); background:var(--navy); color:white; }
+  .btn-next-stage:active { transform:scale(0.98); }
+  .btn-next-stage:disabled { opacity:0.4; cursor:not-allowed; }
+  .btn-next-stage:disabled:hover { background:var(--white); color:var(--navy); border-color:var(--gray-200); }
+  .btn-next-stage .a-ns-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
   /* More Actions dropdown */
   .a-more-wrap { position:relative; }
   .btn-more {
@@ -4739,6 +4753,18 @@
     const _crStatusCls = !creditData ? 'none' : _crBlock ? 'blocked' : _crCaution ? 'caution' : 'ready';
     const _daysInStage = plDaysInStage(id, Math.max(0, (_d.currentStage || 1) - 1));
     const _daysCls = _daysInStage <= 2 ? 'ok' : _daysInStage <= 5 ? 'warn' : 'hot';
+    // Next-stage button data — replaces the standalone Stage Progress card.
+    const _curStageIdx = Math.max(0, (typeof PIPELINE_STAGES !== 'undefined' && PIPELINE_STAGES) ? Math.min(PIPELINE_STAGES.length - 1, (_d.currentStage || 1) - 1) : 0);
+    const _nextStage   = (typeof PIPELINE_STAGES !== 'undefined' && PIPELINE_STAGES) ? PIPELINE_STAGES[_curStageIdx + 1] : null;
+    const _curStage    = (typeof PIPELINE_STAGES !== 'undefined' && PIPELINE_STAGES) ? PIPELINE_STAGES[_curStageIdx] : null;
+    let _nextStageBtnHTML = '';
+    if (!c.archived) {
+      if (_nextStage) {
+        _nextStageBtnHTML = `<button class="btn-next-stage" onclick="_applyStageChange('${id}',${_curStageIdx + 1})" title="Advance ${c.fname || ''} to ${_nextStage.name}"><span class="a-ns-dot" style="background:${_nextStage.color}"></span>Move to ${_nextStage.name} →</button>`;
+      } else if (_curStage) {
+        _nextStageBtnHTML = `<button class="btn-next-stage" onclick="plMarkFinalComplete('${id}')" title="Mark client funded &amp; archive" style="border-color:#10b981;color:#059669"><span class="a-ns-dot" style="background:#10b981"></span>Mark Funded</button>`;
+      }
+    }
 
     document.getElementById('a-detail-card').innerHTML = `
 
@@ -4767,6 +4793,7 @@
         </div>
 
         <div class="a-ch2-actions">
+          <span id="next-stage-wrap-${id}">${_nextStageBtnHTML}</span>
           <button class="btn-continue" onclick="continueClient('${id}')">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             Continue Client
@@ -4877,10 +4904,12 @@
             <div id="cmd-prog-hint-${id}" style="${_fundGoal > 0 || _totalFunded > 0 ? 'display:none' : 'font-size:11px;color:var(--gray-400);margin-top:4px'}">Set a funding goal and add applications to track progress.</div>
           </div>
 
-          <!-- STAGE PROGRESS WORKSPACE — inline replacement for the old pipeline-tasks modal -->
-          <div class="a-card" id="sp-stage-progress-${id}" style="margin-bottom:14px">
-            ${renderStageProgressCard(id)}
-          </div>
+          <!-- The Stage Progress workspace card was relocated into the top header
+               as a compact "Move to <next stage>" button. The renderStageProgressCard /
+               refreshStageProgressCard / opsToggleTaskFromStageCard / addStageTask /
+               plMarkFinalComplete helpers remain defined in source so the card can
+               be reinstated by re-inserting the div above. refreshStageProgressCard
+               no-ops when the sp-stage-progress-* element doesn't exist. -->
 
           <!-- Funding Applications (full-width) -->
           <div class="a-card" id="sp-dtab-funding" style="margin-bottom:14px">
@@ -8454,6 +8483,36 @@
     try { card.innerHTML = renderStageProgressCard(clientId); } catch(e) {}
   }
 
+  // Re-render the compact "Move to <next stage>" button in the top header so
+  // its label + onclick reflect the just-saved stage. Called from
+  // refreshClientUI; bails when the header isn't in the DOM or when a
+  // different client is now selected.
+  function refreshNextStageBtn(clientId) {
+    var wrap = document.getElementById('next-stage-wrap-' + clientId);
+    if (!wrap) return;
+    if (typeof selectedClientId !== 'undefined' && selectedClientId && clientId !== selectedClientId) return;
+    try {
+      var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+      if (!c || c.archived) { wrap.innerHTML = ''; return; }
+      var d = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+      var curIdx = Math.max(0, Math.min(PIPELINE_STAGES.length - 1, (d.currentStage || 1) - 1));
+      var next = PIPELINE_STAGES[curIdx + 1];
+      var html = '';
+      if (next) {
+        html = '<button class="btn-next-stage" onclick="_applyStageChange(\'' + clientId + '\',' + (curIdx + 1) + ')" title="Advance to ' + next.name + '">'
+          + '<span class="a-ns-dot" style="background:' + next.color + '"></span>'
+          + 'Move to ' + next.name + ' →'
+          + '</button>';
+      } else {
+        html = '<button class="btn-next-stage" onclick="plMarkFinalComplete(\'' + clientId + '\')" title="Mark client funded &amp; archive" style="border-color:#10b981;color:#059669">'
+          + '<span class="a-ns-dot" style="background:#10b981"></span>'
+          + 'Mark Funded'
+          + '</button>';
+      }
+      wrap.innerHTML = html;
+    } catch(e) {}
+  }
+
   // Toggle ops task done/undone from inside the stage progress card. Mirrors
   // opsCompleteTask but also un-completes if already done. Updates the card
   // and the right-sidebar Next Actions in sync.
@@ -8697,6 +8756,7 @@
     refreshFundingUI(clientId);
     refreshSidebarTasks(clientId);
     if (typeof refreshStageProgressCard === 'function') refreshStageProgressCard(clientId);
+    if (typeof refreshNextStageBtn === 'function') refreshNextStageBtn(clientId);
     refreshFundingStrategy(clientId);
     renderClientList();
 
