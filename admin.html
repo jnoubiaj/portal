@@ -10574,10 +10574,26 @@
       o._ghlImportHistory.push(importRecord);
       o._ghlLastImport = importRecord;
 
+      // Stamp _updatedAt on the onboarding object BEFORE every write. The
+      // realtime dashboards listener uses this to decide whether an
+      // incoming snapshot should overwrite the local cache. Without the
+      // stamp, the import's local writes have _updatedAt=0 and any
+      // listener fire that arrives with stale Firestore data wins the
+      // tie-break (>= 0) and silently reverts the imported values to
+      // empty. That's the "I imported but the form fields stayed empty"
+      // symptom. Stamping the value makes every subsequent listener
+      // fire either equal-or-newer (no-op echo of our write) or strictly
+      // older (skipped) — the imported values can't be reverted.
+      var _writeTs = Date.now();
+      o._updatedAt = _writeTs;
+
       // Persist
       try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o)); } catch(e) {}
       try { await fsSetOnboarding(clientId, o); } catch(e) {}
-      try { await fsSetDash(clientId, { profileData: o }); } catch(e) {}
+      // fsSetDash merges — pass profileData with the same timestamp AND a
+      // top-level _updatedAt so the dashboard listener's profileData
+      // branch + currentStage branch both see the fresh write.
+      try { await fsSetDash(clientId, { profileData: o, _updatedAt: _writeTs }); } catch(e) {}
 
       // Update client record for name / phone / email / biz / ghlContactId
       var allClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
