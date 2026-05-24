@@ -10559,10 +10559,24 @@
     try {
       var o = getOnboardDataForClient(clientId);
 
+      console.groupCollapsed('[GHL Import] applying ' + selectedKeys.length + ' fields to client ' + clientId);
+      console.log('  selectedKeys:', selectedKeys);
+      console.log('  mappedFields available keys:', Object.keys(mappedFields));
+      console.log('  o (before) _updatedAt:', o._updatedAt, '| current keys:', Object.keys(o).filter(k => k.charAt(0) !== '_'));
+
       // Apply selected fields
+      var _applied = 0, _skipped = [];
       selectedKeys.forEach(function(key) {
-        if (mappedFields[key] !== undefined) o[key] = mappedFields[key];
+        if (mappedFields[key] !== undefined && mappedFields[key] !== '') {
+          o[key] = mappedFields[key];
+          _applied++;
+        } else {
+          _skipped.push(key);
+        }
       });
+      console.log('  applied:', _applied, '| skipped (undefined/empty value):', _skipped);
+      console.log('  o (after) keys with values:', Object.keys(o).filter(k => k.charAt(0) !== '_' && o[k] !== '' && o[k] != null));
+      console.groupEnd();
 
       // Store import ownership metadata on onboarding record
       o._ghlImportHistory = o._ghlImportHistory || [];
@@ -10588,12 +10602,34 @@
       o._updatedAt = _writeTs;
 
       // Persist
-      try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o)); } catch(e) {}
-      try { await fsSetOnboarding(clientId, o); } catch(e) {}
+      try {
+        localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(o));
+        console.log('[GHL Import] ✓ localStorage cq_onboard_data_' + clientId + ' written, _updatedAt=' + _writeTs);
+        var _verify = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || '{}');
+        console.log('[GHL Import]   verify read-back: ein=' + _verify.ein + ' | bizName=' + _verify.bizName + ' | maidenName=' + _verify.maidenName + ' | annualIncome=' + _verify.annualIncome);
+      } catch(e) { console.error('[GHL Import] localStorage write FAILED:', e); }
+      try { await fsSetOnboarding(clientId, o); console.log('[GHL Import] ✓ Firestore onboarding/' + clientId + ' written'); } catch(e) { console.error('[GHL Import] Firestore onboarding write failed:', e); }
       // fsSetDash merges — pass profileData with the same timestamp AND a
       // top-level _updatedAt so the dashboard listener's profileData
       // branch + currentStage branch both see the fresh write.
-      try { await fsSetDash(clientId, { profileData: o, _updatedAt: _writeTs }); } catch(e) {}
+      try { await fsSetDash(clientId, { profileData: o, _updatedAt: _writeTs }); console.log('[GHL Import] ✓ Firestore dashboards/' + clientId + '.profileData written'); } catch(e) { console.error('[GHL Import] Firestore dashboards write failed:', e); }
+
+      // Watchdog: check localStorage 2 seconds later to detect any listener
+      // that silently reverted the save.
+      setTimeout(function() {
+        try {
+          var _check = JSON.parse(localStorage.getItem('cq_onboard_data_' + clientId) || '{}');
+          var _stillThere = (_check.ein === o.ein) && (_check.bizName === o.bizName);
+          if (_stillThere) {
+            console.log('[GHL Import] ✓ Watchdog +2s: localStorage values still present.');
+          } else {
+            console.error('[GHL Import] ✗ Watchdog +2s: localStorage values were REVERTED by another writer!');
+            console.error('  expected ein=' + o.ein + ' got ' + _check.ein);
+            console.error('  expected bizName=' + o.bizName + ' got ' + _check.bizName);
+            console.error('  _updatedAt: saved=' + _writeTs + ' now=' + _check._updatedAt);
+          }
+        } catch(e) {}
+      }, 2000);
 
       // Update client record for name / phone / email / biz / ghlContactId
       var allClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
