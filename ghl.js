@@ -473,8 +473,38 @@ window.GHL = (function () {
 
   async function getCustomFieldDefs () {
     const { locationId } = getSettings();
-    const d = await _fetch('GET', '/custom-fields/?locationId=' + locationId);
-    return d?.customFields || d?.fields || [];
+    // Try the canonical custom-fields endpoint first.
+    let defs = [];
+    try {
+      const d = await _fetch('GET', '/custom-fields/?locationId=' + locationId);
+      defs = d?.customFields || d?.fields || [];
+      try {
+        if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+          console.log('[GHL] /custom-fields/ →', defs.length, 'definitions');
+          if (defs.length) console.log('  sample def:', defs[0]);
+        }
+      } catch (e) {}
+    } catch (e) {
+      console.warn('[GHL] /custom-fields/ failed:', e.message);
+    }
+    // Fallback: V2 LeadConnector uses /locations/{id}/customFields
+    if (!defs.length) {
+      try {
+        const d2 = await _fetch('GET', '/locations/' + locationId + '/customFields');
+        defs = d2?.customFields || d2?.fields || [];
+        try {
+          if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+            console.log('[GHL] /locations/{id}/customFields →', defs.length, 'definitions');
+          }
+        } catch (e) {}
+      } catch (e) {
+        console.warn('[GHL] /locations/{id}/customFields failed:', e.message);
+      }
+    }
+    if (!defs.length) {
+      console.warn('[GHL] No custom-field definitions returned. Custom field values on the contact will only resolve by UUID, not by fieldKey or label — the resolver fuzzy-name match will fail for ALL custom fields. Check that the API key has read-access to custom fields, or paste the location custom-field list manually into localStorage.cq_ghl_field_defs.');
+    }
+    return defs;
   }
 
   async function getContactFormSubmissions (contactId) {
@@ -528,7 +558,68 @@ window.GHL = (function () {
         mergeTag: cleanKey    // GHL merge tags use the fieldKey slug
       };
     });
+
+    // Manual override: allow admin to paste a custom-field-definitions
+    // JSON blob into localStorage when the GHL API doesn't return defs.
+    // Shape: { [uuid]: { name, fieldKey } } or array of GHL def objects.
+    try {
+      const raw = localStorage.getItem('cq_ghl_field_defs');
+      if (raw) {
+        const extra = JSON.parse(raw);
+        if (Array.isArray(extra)) {
+          extra.forEach(f => {
+            if (f && f.id) {
+              const fk = (f.fieldKey || '').replace(/^contact\./, '').toLowerCase();
+              map[f.id] = {
+                id: f.id,
+                name: (f.name || f.fieldKey || '').toLowerCase().trim(),
+                orig: f.name,
+                fieldKey: fk,
+                mergeTag: fk
+              };
+            }
+          });
+        } else if (extra && typeof extra === 'object') {
+          Object.keys(extra).forEach(id => {
+            const f = extra[id];
+            const fk = (f.fieldKey || f.key || '').replace(/^contact\./, '').toLowerCase();
+            map[id] = {
+              id: id,
+              name: (f.name || f.label || f.fieldKey || '').toLowerCase().trim(),
+              orig: f.name || f.label,
+              fieldKey: fk,
+              mergeTag: fk
+            };
+          });
+        }
+      }
+    } catch (e) {}
+
     return map;
+  }
+
+  // Diagnostic: how many of the contact's customField entries actually
+  // resolved against the defs map? Anything unresolved becomes a raw-UUID
+  // entry the resolver can't match without an explicit override.
+  function _logCustomFieldCoverage (contact, fieldDefsMap) {
+    try {
+      if (localStorage.getItem('cq_ghl_quiet') === '1') return;
+      const cf = contact.customFields || contact.customField || [];
+      const defCount = Object.keys(fieldDefsMap).length;
+      const resolved = cf.filter(x => fieldDefsMap[x.id]);
+      const unresolved = cf.filter(x => !fieldDefsMap[x.id]);
+      console.log(
+        '[GHL] custom-field coverage: ' + resolved.length + '/' + cf.length +
+        ' contact values matched (' + defCount + ' defs in map, ' + unresolved.length + ' unresolved)'
+      );
+      if (unresolved.length) {
+        console.groupCollapsed('[GHL] ' + unresolved.length + ' unresolved customField IDs (no def found — values are raw UUIDs to the resolver)');
+        unresolved.forEach(x => console.log('  ', x.id, '=', JSON.stringify(x.value).slice(0, 60)));
+        console.log('Add these manually via localStorage.cq_ghl_field_defs as:');
+        console.log('  { "<uuid>": { "name": "Display Name", "fieldKey": "machine_slug" }, ... }');
+        console.groupEnd();
+      }
+    } catch (e) {}
   }
 
   // Parsed shape (back-compat):
@@ -1304,6 +1395,7 @@ window.GHL = (function () {
       ]);
 
       const fieldDefsMap = _buildFieldDefsMap(fieldDefs);
+      _logCustomFieldCoverage(contact, fieldDefsMap);
       const parsedFields = _parseGhlFields(contact, fieldDefsMap, formSubmissions);
       const mappedFields = mapGhlToPortalFields(contact, parsedFields);
       const matchInfo    = validateFormOwnership(portalClient, contact);
