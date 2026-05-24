@@ -784,7 +784,7 @@ window.GHL = (function () {
       monthlySales:   ['average_monthly_sales', 'monthly_sales', 'avg_monthly_sales', 'monthly_revenue'],
       maidenName:     ['mothers_maiden_name', 'mother_maiden_name', 'maiden_name'],
       citizen:        ['us_citizen', 'american_citizen', 'are_you_a_us_citizen', 'citizenship'],
-      annualIncome:   ['annual_income', 'personal_annual_income', 'yearly_income']
+      annualIncome:   ['personal_annual_income', 'annual_income', 'yearly_income']
     };
     Object.keys(GHL_KEY_MAP).forEach(portalKey => {
       if (out[portalKey]) return; // don't overwrite values already pulled from standard contact fields
