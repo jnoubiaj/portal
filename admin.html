@@ -10494,7 +10494,17 @@
               '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Fields Detected</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + fieldKeys.length + ' total <span style="font-weight:500;color:#64748b;font-size:11px">(' + ccfCount + ' custom on contact)</span></div></div>' +
             '</div>' +
             (ccfCount === 0 && submCount === 0 ?
-              '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:11.5px;color:#92400e;line-height:1.45"><strong>⚠ Nothing was returned from GHL beyond standard contact fields.</strong> The contact has no custom field values and no form/survey submissions. The onboarding form data may be stored as a Document/Proposal (not a Form), the API key may lack permission to read submissions, or the GHL form wasn\'t configured to write to the contact\'s custom fields. Check the browser console for the raw GHL response (look for the [GHL] log groups).</div>'
+              '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:11px 13px;margin-top:10px;font-size:11.5px;color:#92400e;line-height:1.5">'
+                + '<div style="font-weight:800;margin-bottom:5px">⚠ GHL has no custom-field data on this contact</div>'
+                + '<div>The form your client filled out is almost certainly a GHL <strong>Document/Proposal</strong> (the green "Completed" tag at the top of the form template confirms this). Documents store their field values inside the document itself — they DO NOT write the values back to the contact\'s custom fields unless a GHL Workflow is configured to do so.</div>'
+                + '<div style="margin-top:8px"><strong>To make these imports work going forward:</strong></div>'
+                + '<ul style="margin:4px 0 0 18px;padding:0">'
+                  + '<li>In GHL → <strong>Automation → Workflows</strong>, create a workflow with trigger <em>"Document Signed"</em> for the "0% Business Funding Onboarding" template.</li>'
+                  + '<li>Add an action <em>"Update Contact Field"</em> for each field that should sync (business_name, ein, date_of_birth, ssn, etc.). Map each to the matching custom field on the contact.</li>'
+                  + '<li>Future submissions will then write to the contact\'s custom fields automatically, and this import will pick them up.</li>'
+                + '</ul>'
+                + '<div style="margin-top:8px">For <strong>this</strong> client, you can either manually copy field values from the GHL document into the contact\'s custom fields (one-time fix), or fill the portal form below by hand. The portal will save normally.</div>'
+              + '</div>'
               : '') +
           '</div>' +
 

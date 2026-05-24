@@ -263,12 +263,55 @@ window.GHL = (function () {
   // and the original form-submission contact may not be the same record
   // that the portal first matched. Caller usually wants to aggregate
   // form submissions and customFields across every match.
+  //
+  // Tries several endpoint shapes because GHL has tightened the
+  // `/contacts/?email=X&limit=N` endpoint to limit=1 in some locations
+  // (returns 422 Unprocessable Entity for limit>1). Falls through
+  // gracefully:
+  //   1. /contacts/?query=email&limit=N  (broad query, multi-result)
+  //   2. /contacts/search (POST body, V2 API)
+  //   3. /contacts/?email=X (no limit)        — single-result default
+  //   4. /contacts/?email=X&limit=1           — explicit single match
+  // First successful response wins. Returns [] on any cascading failure.
   async function lookupContactsByEmail (email, limit) {
     if (!email) return [];
     const { locationId } = getSettings();
-    const lim = limit || 10;
+    const lim = Math.min(limit || 10, 25);
+    const enc = encodeURIComponent(email);
+
+    // Attempt 1: query param (broad match, accepts higher limit on most locations)
     try {
-      const d = await _fetch('GET', '/contacts/?locationId=' + locationId + '&email=' + encodeURIComponent(email) + '&limit=' + lim);
+      const d = await _fetch('GET', '/contacts/?locationId=' + locationId + '&query=' + enc + '&limit=' + lim);
+      const arr = (d && d.contacts) || [];
+      if (arr.length) {
+        return arr.filter(c => {
+          const e = (c.email || '').toLowerCase();
+          return e === email.toLowerCase();
+        });
+      }
+    } catch (e) { /* fall through */ }
+
+    // Attempt 2: V2 search endpoint (POST body)
+    try {
+      const d = await _fetch('POST', '/contacts/search', {
+        locationId: locationId,
+        pageLimit: lim,
+        filters: [{ field: 'email', operator: 'eq', value: email }]
+      });
+      const arr = (d && (d.contacts || d.results)) || [];
+      if (arr.length) return arr;
+    } catch (e) { /* fall through */ }
+
+    // Attempt 3: bare email query (no limit param)
+    try {
+      const d = await _fetch('GET', '/contacts/?locationId=' + locationId + '&email=' + enc);
+      const arr = (d && d.contacts) || [];
+      if (arr.length) return arr;
+    } catch (e) { /* fall through */ }
+
+    // Attempt 4: explicit single match (the original lookupContact path)
+    try {
+      const d = await _fetch('GET', '/contacts/?locationId=' + locationId + '&email=' + enc + '&limit=1');
       return (d && d.contacts) || [];
     } catch (e) {
       return [];
@@ -554,6 +597,35 @@ window.GHL = (function () {
     } catch (e) {
       // Surveys endpoint may not be enabled on the location — non-fatal.
       console.warn('[GHL] surveys/submissions failed (may not be enabled):', e.message);
+    }
+    // Also try the Documents/Proposals endpoint — GHL's Documents & Contracts
+    // product stores completed-document field values here, not under /forms
+    // or /surveys. Requires the `documents.readonly` scope on the integration
+    // and Documents/Proposals enabled on the location.
+    try {
+      const d3 = await _fetch('GET', '/documents/?locationId=' + locationId + '&contactId=' + contactId + '&limit=50');
+      const docs = (d3 && (d3.documents || d3.proposals)) || [];
+      docs.forEach(doc => {
+        // Each completed document has filled-in field values in either
+        // `fields`, `data`, or `formFields` depending on GHL version.
+        const subLike = {
+          _source: 'document',
+          _documentId: doc.id || doc._id,
+          _documentName: doc.name || doc.title,
+          _status: doc.status,
+          formFields: doc.fields || doc.formFields || doc.data || []
+        };
+        all.push(subLike);
+      });
+      try {
+        if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+          console.log('[GHL] documents/ →', docs.length, 'document(s)', docs.length ? docs : '');
+        }
+      } catch (e) {}
+    } catch (e) {
+      // Documents endpoint typically requires a separate scope. Non-fatal —
+      // many integrations don't have it enabled.
+      console.warn('[GHL] documents/ failed (likely missing documents.readonly scope or feature not enabled):', e.message);
     }
     return all;
   }
