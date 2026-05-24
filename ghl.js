@@ -204,7 +204,30 @@ window.GHL = (function () {
 
   async function getContact (contactId) {
     const d = await _fetch('GET', '/contacts/' + contactId);
-    return d?.contact || null;
+    const contact = d?.contact || null;
+    try {
+      if (contact && localStorage.getItem('cq_ghl_quiet') !== '1') {
+        const cf = contact.customFields || contact.customField || [];
+        console.groupCollapsed('[GHL] getContact raw response — ' + cf.length + ' customFields');
+        console.log('contact keys:', Object.keys(contact));
+        console.log('standard fields:', {
+          firstName: contact.firstName, lastName: contact.lastName,
+          email: contact.email, phone: contact.phone,
+          address1: contact.address1, city: contact.city,
+          state: contact.state, postalCode: contact.postalCode,
+          companyName: contact.companyName, dateOfBirth: contact.dateOfBirth
+        });
+        if (cf.length) {
+          console.log('customFields:');
+          cf.forEach(f => console.log('  ', f.id || '-', '=', JSON.stringify(f.value).slice(0, 80), f.fieldKey || '-'));
+        } else {
+          console.warn('customFields is empty — GHL returned no custom field values on this contact.');
+        }
+        console.log('full contact:', contact);
+        console.groupEnd();
+      }
+    } catch (e) {}
+    return contact;
   }
 
   async function createContact (data) {
@@ -456,8 +479,36 @@ window.GHL = (function () {
 
   async function getContactFormSubmissions (contactId) {
     const { locationId } = getSettings();
-    const d = await _fetch('GET', '/forms/submissions?locationId=' + locationId + '&contactId=' + contactId + '&limit=50');
-    return d?.submissions || [];
+    const all = [];
+    // Try the canonical Forms endpoint first.
+    try {
+      const d = await _fetch('GET', '/forms/submissions?locationId=' + locationId + '&contactId=' + contactId + '&limit=50');
+      const subs = (d && (d.submissions || d.formSubmissions)) || [];
+      subs.forEach(s => { all.push(Object.assign({ _source: 'form' }, s)); });
+      try {
+        if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+          console.log('[GHL] forms/submissions →', subs.length, 'submission(s)', subs.length ? subs : '');
+        }
+      } catch (e) {}
+    } catch (e) {
+      console.warn('[GHL] forms/submissions failed:', e.message);
+    }
+    // Also try the Surveys endpoint — GHL's newer "onboarding" / multi-step
+    // form builder stores submissions there, not under /forms.
+    try {
+      const d2 = await _fetch('GET', '/surveys/submissions?locationId=' + locationId + '&contactId=' + contactId + '&limit=50');
+      const subs2 = (d2 && (d2.submissions || d2.surveySubmissions)) || [];
+      subs2.forEach(s => { all.push(Object.assign({ _source: 'survey' }, s)); });
+      try {
+        if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+          console.log('[GHL] surveys/submissions →', subs2.length, 'submission(s)', subs2.length ? subs2 : '');
+        }
+      } catch (e) {}
+    } catch (e) {
+      // Surveys endpoint may not be enabled on the location — non-fatal.
+      console.warn('[GHL] surveys/submissions failed (may not be enabled):', e.message);
+    }
+    return all;
   }
 
   function _buildFieldDefsMap (defs) {
