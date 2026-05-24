@@ -781,7 +781,7 @@ window.GHL = (function () {
       // The following are likely on the form but the exact fieldKeys
       // weren't visible in the screenshot — add the slug variants here
       // once the admin pastes the real ones (see TODO at bottom).
-      monthlySales:   ['monthly_sales', 'average_monthly_sales', 'avg_monthly_sales', 'monthly_revenue'],
+      monthlySales:   ['average_monthly_sales', 'monthly_sales', 'avg_monthly_sales', 'monthly_revenue'],
       maidenName:     ['mothers_maiden_name', 'mother_maiden_name', 'maiden_name'],
       citizen:        ['us_citizen', 'american_citizen', 'are_you_a_us_citizen', 'citizenship'],
       annualIncome:   ['annual_income', 'personal_annual_income', 'yearly_income']
