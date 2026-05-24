@@ -755,6 +755,109 @@ window.GHL = (function () {
     if (contact.state)      out.homeState = contact.state;
     if (contact.postalCode) out.homeZip   = contact.postalCode;
 
+    // ── EXPLICIT GHL FIELDKEY MAPPINGS ─────────────────────────────────────
+    // Canonical merge-tag → portal-field map for the Business Credit Stacking
+    // Application form. These run BEFORE the fuzzy-label m() chain so the
+    // GHL fieldKey wins when present. The fuzzy aliases below still catch
+    // forms with different field names.
+    const GHL_KEY_MAP = {
+      bizName:        ['business_name', 'legal_business_name'],
+      dba:            ['dba_name'],
+      ein:            ['ein', 'business_ein', 'federal_ein'],
+      dateEstablished:['business_date_established', 'date_business_established'],
+      bizAddress:     ['business_street_address', 'business_address', 'business_address_line_1'],
+      bizPhone:       ['business_phone_number', 'business_phone'],
+      bizType:        ['business_type'],
+      industry:       ['industry', 'business_industry'],
+      employees:      ['employee_count', 'number_of_employees'],
+      ownership:      ['ownership', 'ownership_percent', 'ownership_percentage'],
+      loanAmount:     ['desired_loan_amount', 'loan_amount', 'desired_funding_amount'],
+      loanReason:     ['reason_for_loan', 'loan_purpose'],
+      bizCreditCards: ['current_business_credit_cards', 'business_credit_cards'],
+      bizBanks:       ['current_business_banking_relationships', 'business_banking_relationships'],
+      dob:            ['date_of_birth', 'dob'],
+      ssn:            ['social_security_number', 'ssn'],
+      personalBanks:  ['current_banking_relationships', 'current_personal_banking_relationships', 'personal_banking_relationships'],
+      // The following are likely on the form but the exact fieldKeys
+      // weren't visible in the screenshot — add the slug variants here
+      // once the admin pastes the real ones (see TODO at bottom).
+      monthlySales:   ['monthly_sales', 'average_monthly_sales', 'avg_monthly_sales', 'monthly_revenue'],
+      maidenName:     ['mothers_maiden_name', 'mother_maiden_name', 'maiden_name'],
+      citizen:        ['us_citizen', 'american_citizen', 'are_you_a_us_citizen', 'citizenship'],
+      annualIncome:   ['annual_income', 'personal_annual_income', 'yearly_income']
+    };
+    Object.keys(GHL_KEY_MAP).forEach(portalKey => {
+      if (out[portalKey]) return; // don't overwrite values already pulled from standard contact fields
+      for (const fk of GHL_KEY_MAP[portalKey]) {
+        const v = byKey[fk];
+        if (v != null && v !== '') { out[portalKey] = String(v).trim(); break; }
+      }
+    });
+
+    // ── COMPOUND FIELD SPLITTERS ───────────────────────────────────────────
+    // GHL custom values like "City, ST ZIP" or "Street, City, ST ZIP".
+    // Split into the portal's discrete city/state/zip slots.
+    function _splitCityStateZip(v) {
+      if (!v) return null;
+      const s = String(v).trim();
+      // "Herriman, UT 84096" or "Herriman, UT  84096"
+      let m = s.match(/^(.+?),\s*([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+      if (!m) m = s.match(/^(.+?)\s+([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+      if (!m) return null;
+      return { city: m[1].trim(), state: m[2].toUpperCase(), zip: m[3] };
+    }
+    function _splitFullAddress(v) {
+      if (!v) return null;
+      const s = String(v).trim();
+      // "5368 W Borglum Lane, Herriman, UT 84096"
+      const m = s.match(/^(.+?),\s*(.+?),\s*([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+      if (!m) return { street: s };
+      return { street: m[1].trim(), city: m[2].trim(), state: m[3].toUpperCase(), zip: m[4] };
+    }
+
+    const bizCsz = byKey['business_city_state_zip'];
+    if (bizCsz) {
+      const sp = _splitCityStateZip(bizCsz);
+      if (sp) {
+        if (!out.bizCity)  out.bizCity  = sp.city;
+        if (!out.bizState) out.bizState = sp.state;
+        if (!out.bizZip)   out.bizZip   = sp.zip;
+      }
+    }
+    const personalCsz = byKey['personal_city_state_zip'];
+    if (personalCsz) {
+      const sp = _splitCityStateZip(personalCsz);
+      if (sp) {
+        if (!out.city)      out.city      = sp.city;
+        if (!out.state)     out.state     = sp.state;
+        if (!out.zip)       out.zip       = sp.zip;
+        if (!out.homeCity)  out.homeCity  = sp.city;
+        if (!out.homeState) out.homeState = sp.state;
+        if (!out.homeZip)   out.homeZip   = sp.zip;
+      }
+    }
+    const fullAddr = byKey['full_address'];
+    if (fullAddr) {
+      const sp = _splitFullAddress(fullAddr);
+      if (sp) {
+        if (!out.street)    out.street    = sp.street;
+        if (sp.city  && !out.city)      out.city      = sp.city;
+        if (sp.state && !out.state)     out.state     = sp.state;
+        if (sp.zip   && !out.zip)       out.zip       = sp.zip;
+        if (sp.city  && !out.homeCity)  out.homeCity  = sp.city;
+        if (sp.state && !out.homeState) out.homeState = sp.state;
+        if (sp.zip   && !out.homeZip)   out.homeZip   = sp.zip;
+      }
+    }
+
+    // contact.name (full name) → split into firstName + lastName
+    const ghlName = byKey['name'] || byKey['full_name'] || byKey['contact_name'];
+    if (ghlName && !out.firstName) {
+      const parts = String(ghlName).trim().split(/\s+/);
+      out.firstName = parts[0];
+      if (parts.length > 1) out.lastName = parts.slice(1).join(' ');
+    }
+
     // ── FULL NAME SPLIT ────────────────────────────────────────────────────
     const fullName = pick(
       'full name','fullname','name','contact name','applicant name',
