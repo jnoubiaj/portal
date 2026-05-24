@@ -643,17 +643,22 @@ window.GHL = (function () {
       if (e.name) result[e.name] = e.value;
     }
 
-    // 1. Standard contact fields (always present on the contact object)
+    // 1. Standard contact fields (always present on the contact object).
+    // GHL stores DOB as a top-level contact field (dateOfBirth), NOT a
+    // custom field — it would never show up via customFields[] and was
+    // why imports left the portal's dob input empty even after the
+    // overall import worked.
     const STD = [
-      ['firstName',   'first name',  'first_name',    contact.firstName],
-      ['lastName',    'last name',   'last_name',     contact.lastName],
-      ['email',       'email',       'email',         contact.email],
-      ['phone',       'phone',       'phone',         contact.phone],
-      ['address1',    'address',     'address1',      contact.address1],
-      ['city',        'city',        'city',          contact.city],
-      ['state',       'state',       'state',         contact.state],
-      ['postalCode',  'zip',         'postal_code',   contact.postalCode],
-      ['companyName', 'company name','company_name',  contact.companyName]
+      ['firstName',    'first name',    'first_name',     contact.firstName],
+      ['lastName',     'last name',     'last_name',      contact.lastName],
+      ['email',        'email',         'email',          contact.email],
+      ['phone',        'phone',         'phone',          contact.phone],
+      ['dateOfBirth',  'date of birth', 'date_of_birth',  contact.dateOfBirth],
+      ['address1',     'address',       'address1',       contact.address1],
+      ['city',         'city',          'city',           contact.city],
+      ['state',        'state',         'state',          contact.state],
+      ['postalCode',   'zip',           'postal_code',    contact.postalCode],
+      ['companyName',  'company name',  'company_name',   contact.companyName]
     ];
     STD.forEach(row => {
       pushEntry({
@@ -839,6 +844,7 @@ window.GHL = (function () {
     if (contact.email)       out.email     = contact.email;
     if (contact.phone)       out.phone     = contact.phone;
     if (contact.companyName) out.bizName   = contact.companyName;
+    if (contact.dateOfBirth) out.dob       = contact.dateOfBirth;
 
     // Personal home address from contact object
     if (contact.address1)   out.street = contact.address1;
