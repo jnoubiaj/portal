@@ -258,6 +258,23 @@ window.GHL = (function () {
     return null;
   }
 
+  // Returns ALL GHL contacts that have the given email address. GHL allows
+  // duplicates (test contacts, multiple sign-ups with the same email, etc.)
+  // and the original form-submission contact may not be the same record
+  // that the portal first matched. Caller usually wants to aggregate
+  // form submissions and customFields across every match.
+  async function lookupContactsByEmail (email, limit) {
+    if (!email) return [];
+    const { locationId } = getSettings();
+    const lim = limit || 10;
+    try {
+      const d = await _fetch('GET', '/contacts/?locationId=' + locationId + '&email=' + encodeURIComponent(email) + '&limit=' + lim);
+      return (d && d.contacts) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   async function importAllContacts (onProgress) {
     const { locationId } = getSettings();
     let page = 1, all = [], total = null;
@@ -1373,6 +1390,7 @@ window.GHL = (function () {
   async function fetchOnboardingData (portalClient) {
     try {
       let contact = null, contactSource = null;
+      let extraContacts = [];
 
       // Priority 1: match by stored GHL contact ID
       if (portalClient.ghlContactId) {
@@ -1394,11 +1412,99 @@ window.GHL = (function () {
         return { error: 'No GHL contact found for this client. Link this client to GHL first, or ensure their email or phone matches a GHL contact.' };
       }
 
-      // Fetch field definitions + form submissions in parallel
-      const [fieldDefs, formSubmissions] = await Promise.all([
-        getCustomFieldDefs(),
-        getContactFormSubmissions(contact.id),
-      ]);
+      // ── EMAIL DUPLICATE FAN-OUT ─────────────────────────────────────────
+      // GHL allows multiple contacts to share the same email — form
+      // submissions sometimes attach to a DIFFERENT contact than the one
+      // we matched first (different name, different phone, test entries,
+      // etc.). Fetch every contact with the same email, hydrate each one
+      // fully (lean lookup doesn't include customFields), pick the
+      // richest as primary, and aggregate submissions + customFields
+      // across every match.
+      if (portalClient.email) {
+        try {
+          const allByEmail = await lookupContactsByEmail(portalClient.email, 10);
+          const otherIds = (allByEmail || [])
+            .map(c => c && c.id)
+            .filter(id => id && id !== contact.id);
+
+          if (otherIds.length) {
+            // Hydrate each duplicate so we have their customFields too.
+            const fullExtras = await Promise.all(
+              otherIds.map(id => getContact(id).catch(() => null))
+            );
+            extraContacts = fullExtras.filter(Boolean);
+
+            // Promote the contact with the MOST customFields to primary.
+            const allCandidates = [contact].concat(extraContacts);
+            let richest = contact;
+            let richestCnt = ((contact.customFields || contact.customField) || []).length;
+            allCandidates.forEach(c => {
+              const cnt = ((c && (c.customFields || c.customField)) || []).length;
+              if (cnt > richestCnt) { richest = c; richestCnt = cnt; }
+            });
+            if (richest && richest.id !== contact.id) {
+              extraContacts = allCandidates.filter(c => c.id !== richest.id);
+              contact = richest;
+              contactSource = contactSource + '+email-richest';
+            }
+
+            try {
+              if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+                console.log(
+                  '[GHL] email duplicates: ' + (extraContacts.length + 1) +
+                  ' contact(s) share ' + portalClient.email +
+                  '. Promoted contact ' + contact.id + ' as primary (' + richestCnt +
+                  ' customFields). Aggregating submissions + customFields from the other ' +
+                  extraContacts.length + '.'
+                );
+                extraContacts.forEach(c => {
+                  console.log(
+                    '  ↳ duplicate ' + c.id +
+                    ' — ' + (((c.customFields || c.customField) || []).length) +
+                    ' customFields'
+                  );
+                });
+              }
+            } catch (e) {}
+          }
+        } catch (e) {
+          console.warn('[GHL] email duplicate fan-out failed (non-fatal):', e.message);
+        }
+      }
+
+      // Fetch field definitions + form submissions for the primary contact
+      // AND each email-duplicate contact in parallel. Submissions get merged.
+      const submissionPromises = [getContactFormSubmissions(contact.id)].concat(
+        extraContacts.map(c => getContactFormSubmissions(c.id).catch(() => []))
+      );
+      const [fieldDefs, primarySubs, ...extraSubsArrays] = await Promise.all(
+        [getCustomFieldDefs(), submissionPromises[0]].concat(submissionPromises.slice(1))
+      );
+      const formSubmissions = (primarySubs || []).concat(
+        ...extraSubsArrays.map(arr => arr || [])
+      );
+
+      // Merge customFields from every email-matched contact into the primary.
+      // Some onboarding forms get split: e.g. the address fields land on one
+      // contact and the business fields on another (test contact submissions,
+      // duplicate sign-ups, etc.). Combining them gives the resolver the
+      // union of every field value GHL has for this email. Primary wins on
+      // ID conflicts.
+      if (extraContacts.length) {
+        const primaryCfs = (contact.customFields || contact.customField || []).slice();
+        const seenIds = {};
+        primaryCfs.forEach(cf => { if (cf && cf.id) seenIds[cf.id] = true; });
+        extraContacts.forEach(c => {
+          const cfs = (c && (c.customFields || c.customField)) || [];
+          cfs.forEach(cf => {
+            if (cf && cf.id && !seenIds[cf.id] && cf.value != null && cf.value !== '') {
+              primaryCfs.push(cf);
+              seenIds[cf.id] = true;
+            }
+          });
+        });
+        contact = Object.assign({}, contact, { customFields: primaryCfs });
+      }
 
       const fieldDefsMap = _buildFieldDefsMap(fieldDefs);
       _logCustomFieldCoverage(contact, fieldDefsMap);
@@ -1704,7 +1810,7 @@ window.GHL = (function () {
     getSettings, saveSettings,
     // Contacts
     searchContacts, getContact, createContact, updateContact,
-    lookupContact, importAllContacts,
+    lookupContact, lookupContactsByEmail, importAllContacts,
     clientToGHL, ghlToClient, findDuplicate,
     // Opportunities
     getPipeline, findOpportunity, createOpportunity, updateOpportunityStage,
