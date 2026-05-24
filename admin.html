@@ -3950,7 +3950,17 @@
                   var _lt = (_localO && _localO._updatedAt) || 0;
                   var _rt = (_pf && _pf._updatedAt) || 0;
                   if (_rt >= _lt) {
-                    localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_pf));
+                    // MERGE — never wipe local fields the snapshot doesn't
+                    // include. Without this, a partial profileData echo
+                    // from Firestore right after a GHL import nukes the
+                    // freshly-imported values back to empty.
+                    var _mergedO = Object.assign({}, _localO || {});
+                    Object.keys(_pf).forEach(function(_k) {
+                      var _v = _pf[_k];
+                      if (_v !== undefined && _v !== null && _v !== '') _mergedO[_k] = _v;
+                    });
+                    if (_pf._updatedAt) _mergedO._updatedAt = _pf._updatedAt;
+                    localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_mergedO));
                   }
                 } catch(e) {}
               }
@@ -4023,7 +4033,18 @@
                 var _lt2 = (_localO2 && _localO2._updatedAt) || 0;
                 var _rt2 = (_pf2 && _pf2._updatedAt) || 0;
                 if (_rt2 >= _lt2) {
-                  localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_pf2));
+                  // MERGE — same fix as the 'added' branch above.
+                  // Listener can only ADD or UPDATE fields from the
+                  // snapshot, never DELETE local fields the snapshot
+                  // lacks. This is what was reverting imported values
+                  // back to empty within ~2 seconds.
+                  var _mergedO2 = Object.assign({}, _localO2 || {});
+                  Object.keys(_pf2).forEach(function(_k) {
+                    var _v = _pf2[_k];
+                    if (_v !== undefined && _v !== null && _v !== '') _mergedO2[_k] = _v;
+                  });
+                  if (_pf2._updatedAt) _mergedO2._updatedAt = _pf2._updatedAt;
+                  localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(_mergedO2));
                 }
               } catch(e) {}
               renderClientList();
