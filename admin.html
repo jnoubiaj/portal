@@ -10134,6 +10134,7 @@
     if (!clientId) return;
     var queue = _wqCompute();
     var item = queue.find(function(x) { return x.clientId === clientId; });
+    var taskTitle = (item && item.topTask) ? item.topTask.title : 'Stage progress reviewed';
     if (item && item.topTask && typeof completeOpsTask === 'function') {
       completeOpsTask(clientId, item.topTask.id);
     }
@@ -10143,7 +10144,235 @@
       taskId: (item && item.topTask) ? item.topTask.id : null
     };
     _wsSaveSession(s);
-    _wsAdvance();
+    // Show the completion-confirmation modal instead of auto-advancing.
+    // The admin drives the next action: Move To Next Client, Stay, or View
+    // Suggestions. Auto-advance is preserved as the modal's primary action.
+    _wsShowCompletionModal(clientId, taskTitle, { fromSession: true });
+  }
+
+  // ── COMPLETION CONFIRMATION + SMART NEXT STEPS ─────────────────────────────
+  // Shown after a task is marked complete from anywhere (Start Working banner,
+  // Next Actions Complete button, task modal, etc.). The modal adapts to two
+  // contexts:
+  //   - Active Start Working session → buttons offer Move To Next Client / Stay
+  //     / View Suggestions, and if all of today's tasks for this client are
+  //     finished it nudges toward Next Client.
+  //   - No active session → simpler confirmation with View Suggestions / Close.
+  function _wsShowCompletionModal(clientId, taskTitle, opts) {
+    opts = opts || {};
+    var existing = document.getElementById('ws-complete-overlay');
+    if (existing) existing.remove();
+
+    var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+    var clientName = c ? ((c.fname || '') + ' ' + (c.lname || '')).trim() : 'Client';
+    if (!clientName) clientName = 'Client';
+
+    // Remaining work today for THIS client (overdue + due today only —
+    // future tasks don't count toward today's completion state).
+    var todayStr = _wsTodayStr();
+    var ops = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
+    var todayRemaining = ops.filter(function(t) {
+      if (!t || _isOpsTaskTerminal(t)) return false;
+      if (!t.dueDate) return false;
+      return t.dueDate <= todayStr;
+    });
+    var allDoneToday = todayRemaining.length === 0;
+
+    var session = _wsGetSession();
+    var hasSession = !!(session && session.active);
+    var queueRemaining = hasSession
+      ? session.queue.filter(function(id) {
+          return !session.completed[id] && !session.skipped[id] && id !== clientId;
+        }).length
+      : 0;
+
+    var titleText  = allDoneToday ? 'All work completed for today.' : 'Task Completed';
+    var iconColor  = allDoneToday ? '#10b981' : '#22a7f0';
+    var iconBg     = allDoneToday ? '#ecfdf5' : '#eff6ff';
+    var subText    = '<strong style="color:var(--navy)">' + _escHtml(clientName) + '</strong> · ' + _escHtml(taskTitle);
+
+    var remainingHTML = '';
+    if (!allDoneToday && todayRemaining.length > 0) {
+      var listItems = todayRemaining.slice(0, 4).map(function(t) {
+        var due = t.dueDate < todayStr ? '<span style="color:#dc2626;font-weight:700">overdue</span>'
+                : '<span style="color:var(--gray-500)">today</span>';
+        return '<li style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--gray-100);font-size:11.5px;color:var(--navy)"><span style="flex:1">' + _escHtml(t.title) + '</span>' + due + '</li>';
+      }).join('');
+      var more = todayRemaining.length > 4 ? '<div style="font-size:10.5px;color:var(--gray-400);margin-top:5px">+ ' + (todayRemaining.length - 4) + ' more</div>' : '';
+      remainingHTML =
+        '<div style="margin:14px 0 4px;text-align:left">'
+          + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:6px">Remaining Today · ' + todayRemaining.length + '</div>'
+          + '<ul style="list-style:none;margin:0;padding:0">' + listItems + '</ul>'
+          + more
+        + '</div>';
+    }
+
+    // Action buttons depend on context.
+    var actionsHTML = '<div style="display:flex;flex-direction:column;gap:7px;margin-top:14px">';
+    if (hasSession) {
+      if (allDoneToday) {
+        var nextLabel = queueRemaining > 0
+          ? 'Yes — Next Client (' + queueRemaining + ' remaining)'
+          : 'Finish Work Session';
+        actionsHTML += '<button onclick="document.getElementById(\'ws-complete-overlay\').remove();_wsAdvance()" style="height:42px;background:var(--navy);color:white;border:none;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:0.02em;cursor:pointer">' + nextLabel + '</button>';
+        actionsHTML += '<button onclick="document.getElementById(\'ws-complete-overlay\').remove()" style="height:36px;background:white;color:var(--gray-600);border:1.5px solid var(--gray-200);border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Stay Here</button>';
+      } else {
+        actionsHTML += '<button onclick="document.getElementById(\'ws-complete-overlay\').remove();_wsAdvance()" style="height:42px;background:var(--navy);color:white;border:none;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:0.02em;cursor:pointer">Move Anyway → Next Client</button>';
+        actionsHTML += '<button onclick="document.getElementById(\'ws-complete-overlay\').remove()" style="height:36px;background:white;color:var(--navy);border:1.5px solid var(--gray-200);border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Continue Working Here</button>';
+      }
+      actionsHTML += '<button onclick="_wsShowNextStepSuggestions(\'' + clientId + '\')" style="height:34px;background:transparent;color:var(--blue);border:none;border-radius:9px;font-family:var(--font-h);font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px">View Smart Next-Step Suggestions</button>';
+    } else {
+      actionsHTML += '<button onclick="_wsShowNextStepSuggestions(\'' + clientId + '\')" style="height:42px;background:var(--navy);color:white;border:none;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:0.02em;cursor:pointer">View Smart Next-Step Suggestions</button>';
+      actionsHTML += '<button onclick="document.getElementById(\'ws-complete-overlay\').remove()" style="height:36px;background:white;color:var(--gray-600);border:1.5px solid var(--gray-200);border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Close</button>';
+    }
+    actionsHTML += '</div>';
+
+    var overlay = document.createElement('div');
+    overlay.id = 'ws-complete-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.6);backdrop-filter:blur(4px);z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML =
+      '<div style="background:white;border-radius:14px;padding:24px 24px 20px;max-width:420px;width:100%;box-shadow:0 18px 64px rgba(0,0,0,0.28);text-align:center">'
+        + '<div style="width:48px;height:48px;border-radius:50%;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;margin:0 auto 10px">'
+          + '<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="' + iconColor + '" stroke-width="2.6"><path d="M5 13l4 4L19 7"/></svg>'
+        + '</div>'
+        + '<div style="font-family:var(--font-h);font-size:17px;font-weight:800;color:var(--navy);letter-spacing:-0.01em;margin-bottom:5px">' + titleText + '</div>'
+        + '<div style="font-size:12px;color:var(--gray-500);line-height:1.55">' + subText + '</div>'
+        + remainingHTML
+        + actionsHTML
+      + '</div>';
+    document.body.appendChild(overlay);
+  }
+
+  // Compute 3–5 smart next-step suggestions for the client. Reads from the
+  // FSG profile (credit, bureaus, derogs, stage), follow-up status, funding
+  // applications, and onboarding data. Returns [{title, reason, action}].
+  // Designed to be conservative — only suggests actions backed by real data.
+  function _wsComputeNextStepSuggestions(clientId) {
+    var out = [];
+    var add = function(title, reason) { out.push({ title: title, reason: reason }); };
+    try {
+      var c   = (typeof getClient === 'function') ? getClient(clientId) : null;
+      var d   = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+      var ob  = (typeof getOnboardDataForClient === 'function') ? getOnboardDataForClient(clientId) : {};
+      var cr  = (typeof getCreditData === 'function') ? getCreditData(clientId) : {};
+      var ct  = (typeof getClientTasks === 'function') ? getClientTasks(clientId) : null;
+      var stageIdx = (ct && typeof ct.stage === 'number') ? ct.stage : Math.max(0, (d.currentStage || 1) - 1);
+      var stageName = (typeof PIPELINE_STAGES !== 'undefined' && PIPELINE_STAGES[stageIdx]) ? PIPELINE_STAGES[stageIdx].name : 'Current Stage';
+      var fico = (typeof getClientScore === 'function') ? getClientScore(clientId) : (c && c.fico);
+      var util = Number((cr && cr.util) || 0);
+      var expInq = Number(d.experianInquiries != null ? d.experianInquiries : ((cr && cr.recentInquiries) || 0));
+      var tuInq  = Number(d.transUnionInquiries || 0);
+      var eqInq  = Number(d.equifaxInquiries   || 0);
+      var bankruptcy = !!(cr && (cr.bankruptcy || cr.pubRecords));
+      var derog = Number((cr && cr.late) || 0) + Number((cr && cr.collections) || 0);
+      var fuBucket = (typeof _fuStatusBucket === 'function') ? _fuStatusBucket(clientId) : null;
+      var fuDays   = (typeof _fuDaysSinceContact === 'function') ? _fuDaysSinceContact(clientId) : null;
+      var pendingApps = (d.fundingRows || []).filter(function(r){ return r && (r.status === 'pending' || r.status === 'submitted'); });
+      var approvedAmt = (d.fundingRows || [])
+        .filter(function(r){ return r && r.status === 'approved'; })
+        .reduce(function(s, r){ return s + (Number(r.amount) || 0); }, 0);
+      var goal = Number(d.fundingGoal) || 0;
+      var goalRemaining = Math.max(0, goal - approvedAmt);
+
+      // 1. Bureau-specific funding sequence rec when one bureau is over-pulled
+      //    or compromised by derogs.
+      if (bankruptcy) {
+        add('Build a TransUnion-led funding sequence',
+            'Bankruptcy on file — Experian-pulling lenders are more likely to deny. Lean on Elan + US Bank + BOA + BMO routes.');
+      } else if (expInq >= 6 && fico) {
+        add('Pause Experian applications · sequence TU / EQ first',
+            expInq + ' Experian inquiries in 24 months is high. Use Citizens, Flagstar, FNBO sparingly; lead with US Bank / Elan / BMO.');
+      } else if (tuInq >= 6) {
+        add('Build an Experian-first round',
+            tuInq + ' TransUnion inquiries — switch to Chase + AMEX + PNC + Wells before any more TU pulls.');
+      }
+      // 2. Utilization cleanup before next round
+      if (util >= 40) {
+        add('Pay personal cards down to under 9% utilization',
+            'Current utilization ' + util + '% — every 10% drop above 30% typically lifts FICO 5–15 points before the next bureau pull.');
+      }
+      // 3. Relationship banking — when no relationship is recorded but a
+      //    relationship-required bank is in the sequence (Chase/BOA/etc.)
+      if (ob && Array.isArray(ob.bankingRelationships) && ob.bankingRelationships.length === 0) {
+        add('Open Chase business checking + seed deposits',
+            'No banking relationships logged. Chase Ink Cash/Unlimited approvals depend on a 30–60 day checking relationship with consistent deposits.');
+      }
+      // 4. Application follow-up if any apps are aging
+      if (pendingApps.length > 0) {
+        var oldest = pendingApps.reduce(function(a, b){ return ((a.submittedAt || 0) < (b.submittedAt || 0)) ? a : b; });
+        var ageDays = oldest.submittedAt ? Math.floor((Date.now() - oldest.submittedAt) / 86400000) : null;
+        add('Follow up on ' + (oldest.bank || 'pending application'),
+            (ageDays != null ? ageDays + ' days since submission — ' : '') + 'call the lender / check reconsideration before it ages out.');
+      }
+      // 5. Funding-goal gap context (no pending apps + still gap)
+      if (goalRemaining > 0 && pendingApps.length === 0 && fico && fico >= 680) {
+        add('Generate next round in the Funding Generator',
+            '$' + goalRemaining.toLocaleString() + ' remaining toward goal of $' + goal.toLocaleString() + '. Profile supports another round.');
+      }
+      // 6. Cold contact follow-up
+      if (fuBucket === 'red') {
+        var dayStr = fuDays === Infinity ? 'on record' : (fuDays + 'd ago');
+        add('Schedule a client check-in this week',
+            'Last contact ' + dayStr + ' — keep the relationship warm before they shop another consultant.');
+      }
+      // 7. Credit re-pull / report refresh when nothing has been generated
+      //    and FICO is unknown
+      if (!fico) {
+        add('Import the latest credit report',
+            'No FICO on file — the Funding Generator needs current bureau data to rank Round 1.');
+      }
+      // 8. Stage-specific catch-all when nothing else triggered
+      if (out.length === 0) {
+        add('Advance ' + stageName,
+            'No urgent flags. Review profile, generate the next funding round, or queue a fresh round of applications.');
+      }
+    } catch(e) { console.warn('[NextSteps] suggest failed', e); }
+    return out.slice(0, 5);
+  }
+
+  function _wsShowNextStepSuggestions(clientId) {
+    var existing = document.getElementById('ws-complete-overlay');
+    if (existing) existing.remove();
+    var existingSugg = document.getElementById('ws-suggest-overlay');
+    if (existingSugg) existingSugg.remove();
+
+    var suggestions = _wsComputeNextStepSuggestions(clientId);
+    var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+    var clientName = c ? ((c.fname || '') + ' ' + (c.lname || '')).trim() : 'Client';
+
+    var listHTML = suggestions.map(function(s, i) {
+      return ''
+        + '<div style="padding:12px 14px;background:#f8fafc;border:1px solid var(--gray-100);border-radius:9px;margin-bottom:8px">'
+          + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px">'
+            + '<span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--navy);color:white;display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-size:11px;font-weight:800">' + (i + 1) + '</span>'
+            + '<div style="flex:1;font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy);line-height:1.35">' + _escHtml(s.title) + '</div>'
+          + '</div>'
+          + '<div style="font-size:11.5px;color:var(--gray-500);line-height:1.55;padding-left:30px"><strong style="color:var(--gray-600)">Why:</strong> ' + _escHtml(s.reason) + '</div>'
+        + '</div>';
+    }).join('');
+
+    var session = _wsGetSession();
+    var hasSession = !!(session && session.active);
+    var bottomActions = '<div style="display:flex;gap:8px;margin-top:6px">';
+    if (hasSession) {
+      bottomActions += '<button onclick="document.getElementById(\'ws-suggest-overlay\').remove();_wsAdvance()" style="flex:1;height:38px;background:var(--navy);color:white;border:none;border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:0.02em;cursor:pointer">Move To Next Client</button>';
+    }
+    bottomActions += '<button onclick="document.getElementById(\'ws-suggest-overlay\').remove()" style="flex:1;height:38px;background:white;color:var(--gray-600);border:1.5px solid var(--gray-200);border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Close</button>';
+    bottomActions += '</div>';
+
+    var overlay = document.createElement('div');
+    overlay.id = 'ws-suggest-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.6);backdrop-filter:blur(4px);z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML =
+      '<div style="background:white;border-radius:14px;padding:22px;max-width:500px;width:100%;box-shadow:0 18px 64px rgba(0,0,0,0.28);max-height:90vh;overflow-y:auto">'
+        + '<div style="font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray-400);margin-bottom:4px">Recommended Next Steps</div>'
+        + '<div style="font-family:var(--font-h);font-size:16px;font-weight:800;color:var(--navy);letter-spacing:-0.01em;margin-bottom:14px">' + _escHtml(clientName) + '</div>'
+        + (listHTML || '<div style="padding:14px;background:#f8fafc;border:1px dashed var(--gray-200);border-radius:9px;font-size:12px;color:var(--gray-500);text-align:center;margin-bottom:8px">No urgent flags right now — review profile or queue the next funding round.</div>')
+        + bottomActions
+      + '</div>';
+    document.body.appendChild(overlay);
   }
 
   function _wsSkipCurrentWithReason(reason, note) {
@@ -19752,8 +19981,30 @@
     refreshTaskUI(clientId);
   }
   function opsCompleteTask(clientId, taskId) {
+    var task = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
+    var title = task ? task.title : 'Task';
     completeOpsTask(clientId, taskId);
     refreshTaskUI(clientId);
+    // If we're inside an active Start Working session AND this client is the
+    // locked target, route through _wsCompleteCurrent so the session keeps
+    // its bookkeeping straight. Otherwise show the standalone confirmation.
+    try {
+      var session = (typeof _wsGetSession === 'function') ? _wsGetSession() : null;
+      var locked = session && session.active && session.queue[session.currentIdx];
+      if (session && session.active && locked === clientId) {
+        // The session may also call completeOpsTask above; record completion
+        // in the session ledger and show the session-aware modal.
+        session.completed[clientId] = {
+          at: Date.now(),
+          by: (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '',
+          taskId: taskId
+        };
+        _wsSaveSession(session);
+        _wsShowCompletionModal(clientId, title, { fromSession: true });
+      } else if (typeof _wsShowCompletionModal === 'function') {
+        _wsShowCompletionModal(clientId, title, { fromSession: false });
+      }
+    } catch(e) {}
   }
   function opsOpenExtend(clientId, taskId) {
     var task = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
