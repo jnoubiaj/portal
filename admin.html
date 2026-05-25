@@ -9193,6 +9193,26 @@
     setTimeout(function() { try { document.body.removeChild(t); } catch(e) {} }, 3000);
   }
 
+  // Resolve a GHL contactId for the logged-in admin so test emails land in
+  // the admin's inbox, not the client's. Result is cached on window so we
+  // don't refetch on every test send. If GHL can't find the admin by email,
+  // returns null and the caller alerts the admin with setup instructions.
+  function _fseResolveAdminContactId() {
+    var adminEmail = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
+    if (!adminEmail) return Promise.resolve(null);
+    if (window._fseAdminContactCache && window._fseAdminContactCache.email === adminEmail) {
+      return Promise.resolve(window._fseAdminContactCache.contactId);
+    }
+    if (typeof GHL === 'undefined' || typeof GHL.lookupContactsByEmail !== 'function') {
+      return Promise.resolve(null);
+    }
+    return GHL.lookupContactsByEmail(adminEmail, 1).then(function(list) {
+      var id = (Array.isArray(list) && list[0] && list[0].id) ? list[0].id : null;
+      window._fseAdminContactCache = { email: adminEmail, contactId: id };
+      return id;
+    }).catch(function() { return null; });
+  }
+
   function _fseSend(clientId, mode) {
     var draft = _fseCollectDraft(clientId);
     var data  = _fseGetSequenceData(clientId);
@@ -9200,36 +9220,58 @@
     var html  = _fseBuildEmailHTML(clientId, draft);
     var subject = draft.subject || 'Your Custom Business Funding Sequence';
 
-    // Test mode subject prefix so the admin can spot test copies in their
-    // inbox at a glance.
-    if (mode === 'test') subject = '[TEST] ' + subject;
-
-    // Resolve destination contactId. Both modes route through GHL — the
-    // primary requirement is "no manual HTML pasting." For tests, we send
-    // to the client's GHL contact too (same flow, just prefixed subject)
-    // so admin can verify rendering end-to-end without needing a separate
-    // admin-side GHL contact set up.
-    var contactId = data.ghlContactId;
-    if (!contactId) {
-      alert('This client is not linked to a GHL contact yet.\n\nClick the GHL link button on the client header (or the GHL settings tab) to connect a GHL contact, then try sending again. The portal will not require you to copy or paste HTML.');
-      return;
-    }
-    if (mode === 'client' && !data.clientEmail) {
-      alert('Client has no email on file. Add an email before sending.');
-      return;
-    }
     if (typeof GHL === 'undefined' || typeof GHL.sendMessage !== 'function') {
       alert('GHL integration is unavailable. Check the GHL settings tab and confirm the API key + location ID are saved.');
       return;
     }
-
-    _fseFlashToast('Sending via GHL…');
     var fromAddr = (GHL.getSettings && GHL.getSettings().defaultEmailAddress) || '';
-    GHL.sendMessage(contactId, html, 'Email', fromAddr, subject)
+
+    if (mode === 'test') {
+      // Test mode: deliver to the ADMIN's own GHL contact. We look up the
+      // logged-in admin's email in GHL — if they have a contact record,
+      // the test email goes to them and nowhere else. If they don't,
+      // surface a clear setup error rather than silently mailing the
+      // client (the previous behavior — what caused "I didn't get the
+      // test email").
+      var adminEmail = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
+      if (!adminEmail) {
+        alert('No admin email is on file for this session — sign in again, then re-try the test send.');
+        return;
+      }
+      var testSubject = '[TEST] ' + subject;
+      _fseFlashToast('Looking up your GHL contact for the test…');
+      _fseResolveAdminContactId().then(function(adminContactId) {
+        if (!adminContactId) {
+          alert('Test send needs your admin email (' + adminEmail + ') to exist as a contact in GHL.\n\n'
+              + 'Open GHL → Contacts → add a contact with this email, then try again. The portal does not have a non-GHL email path right now, so the test cannot bypass GHL.');
+          return;
+        }
+        GHL.sendMessage(adminContactId, html, 'Email', fromAddr, testSubject)
+          .then(function() {
+            _fseFlashToast('Test sent to ' + adminEmail + ' — check your inbox.');
+          })
+          .catch(function(err) {
+            var msg = (err && err.message) ? err.message : String(err);
+            alert('GHL send failed: ' + msg + '\n\nNothing was sent. Check the GHL sync log or proxy server status.');
+          });
+      });
+      return;
+    }
+
+    // Client send path — requires the client's GHL contactId.
+    var clientContactId = data.ghlContactId;
+    if (!clientContactId) {
+      alert('This client is not linked to a GHL contact yet.\n\nClick the GHL link button on the client header (or the GHL settings tab) to connect a GHL contact, then try sending again. The portal will not require you to copy or paste HTML.');
+      return;
+    }
+    if (!data.clientEmail) {
+      alert('Client has no email on file. Add an email before sending.');
+      return;
+    }
+    _fseFlashToast('Sending via GHL…');
+    GHL.sendMessage(clientContactId, html, 'Email', fromAddr, subject)
       .then(function() {
-        _fseFlashToast(mode === 'test'
-          ? 'Test funding-sequence email sent (subject prefixed [TEST]).'
-          : 'Funding sequence email sent successfully to client.');
+        _fseFlashToast('Funding sequence email sent successfully to client.');
         _fseAfterSend(clientId, mode, data.clientEmail, draft);
       })
       .catch(function(err) {
