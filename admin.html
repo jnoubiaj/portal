@@ -3547,6 +3547,20 @@
     } catch(e) {}
     // Start notification listeners
     try { initNotifListeners(); } catch(e) {}
+    // Cross-surface task broadcast — Next Actions, Start Working queue,
+    // dashboard counters, follow-up badges all refresh when any task
+    // mutates. Single listener so we don't double-fire on rapid updates.
+    if (!window._cqTasksBusInited) {
+      window._cqTasksBusInited = true;
+      window.addEventListener('cq:tasks-updated', function(ev) {
+        var cid = ev && ev.detail && ev.detail.clientId;
+        try { if (typeof _wqQueueCache !== 'undefined') _wqQueueCache = null; } catch(e) {}
+        try { if (cid && typeof refreshSidebarTasks === 'function') refreshSidebarTasks(cid); } catch(e) {}
+        try { if (cid && typeof refreshStageProgressCard === 'function') refreshStageProgressCard(cid); } catch(e) {}
+        try { if (cid && typeof refreshActivityTimeline === 'function') refreshActivityTimeline(cid); } catch(e) {}
+        try { if (typeof renderClientList === 'function') renderClientList(); } catch(e) {}
+      });
+    }
   }
   // Fast-restore: show admin immediately from localStorage while Firebase resolves
   (function() {
@@ -5564,29 +5578,63 @@
         } catch(e) {}
       }
 
-      // Recover opsTasks (Next Actions) from Firestore when local is empty or stale.
-      // Firestore is the source of truth across devices; localStorage can get
-      // wiped (incognito, cache clear, new browser) leaving the UI showing
-      // "no tasks" even though tasks exist remotely.
+      // Recover opsTasks (Next Actions) from Firestore — last-writer-wins
+      // PER TASK. Firestore is the source of truth across devices; localStorage
+      // can be wiped (incognito, cache clear, new browser) leaving the UI
+      // showing "no tasks" even though tasks exist remotely. Crucially, when
+      // BOTH sides have the same task ID we must pick the newer one by
+      // _updatedAt — otherwise a status='completed' write made elsewhere can
+      // be clobbered by a stale 'pending' local copy.
       if (fsDash && Array.isArray(fsDash.opsTasks)) {
         try {
           var _localOps = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
-          var _localIds = {};
-          _localOps.forEach(function(t) { if (t && t.id) _localIds[t.id] = t; });
-          var _merged = _localOps.slice();
-          var _added = 0;
-          fsDash.opsTasks.forEach(function(t) {
-            if (t && t.id && !_localIds[t.id]) {
-              _merged.push(t);
-              _added++;
+          if (!Array.isArray(_localOps)) _localOps = [];
+          var _byId = {};
+          _localOps.forEach(function(t) {
+            if (t && t.id) _byId[t.id] = t;
+          });
+          var _changed = false;
+          fsDash.opsTasks.forEach(function(rt) {
+            if (!rt || !rt.id) return;
+            var lt = _byId[rt.id];
+            if (!lt) {
+              _byId[rt.id] = rt;
+              _changed = true;
+              return;
+            }
+            // Both sides have this task. Prefer whichever was updated last;
+            // fall back to "completed wins" so a completion never resurrects
+            // (matches the user's invariant: completed/extended must persist).
+            var ltTs = Number(lt._updatedAt || lt.completedAt || 0);
+            var rtTs = Number(rt._updatedAt || rt.completedAt || 0);
+            var ltDone = (lt.status === 'completed' || lt.status === 'complete' || lt.status === 'done');
+            var rtDone = (rt.status === 'completed' || rt.status === 'complete' || rt.status === 'done');
+            if (rtTs > ltTs || (rtDone && !ltDone)) {
+              _byId[rt.id] = rt;
+              _changed = true;
             }
           });
-          if (_added > 0 || _localOps.length === 0) {
+          if (_changed || _localOps.length === 0) {
+            var _merged = Object.keys(_byId).map(function(k) { return _byId[k]; });
+            // Status normalization on recovery so any legacy 'complete'/'done'
+            // values coming back from Firestore stop slipping past status
+            // checks downstream.
+            _merged.forEach(function(t) {
+              if (t) t.status = (function(s) {
+                if (!s) return 'pending';
+                var v = String(s).toLowerCase().trim();
+                if (v === 'complete' || v === 'done' || v === 'finished') return 'completed';
+                return v;
+              })(t.status);
+            });
             localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(_merged));
-            console.log('[Tasks] Recovered from Firestore — clientId:', clientId, '| added:', _added, '| total:', _merged.length);
+            console.log('[Tasks] Recovered (last-writer-wins) — clientId:', clientId, '| total:', _merged.length);
             if (typeof refreshSidebarTasks === 'function') {
               try { refreshSidebarTasks(clientId); } catch(e) {}
             }
+            // Invalidate Start Working queue cache so the freshly-recovered
+            // state is reflected on the next render without a hard reload.
+            try { if (typeof _wqQueueCache !== 'undefined') _wqQueueCache = null; } catch(e) {}
           }
         } catch(e) { console.error('[Tasks] Recovery failed:', e); }
       }
@@ -9149,8 +9197,16 @@
     var opsTasks = getOpsTasks(clientId).filter(function(t){
       return !t.clientId || t.clientId === clientId;
     });
-    var activeOps = sortOpsTasks(opsTasks.filter(function(t){ return t.status !== 'completed'; }));
-    var doneOps   = opsTasks.filter(function(t){ return t.status === 'completed'; });
+    // Terminal statuses (completed/archived/cancelled/skipped) never appear in
+    // the "active" list. Without this guard a status='archived' task shows up
+    // as actionable in Next Actions and resurrects after refresh.
+    var _isTerminalOps = function(t) {
+      var s = t && t.status;
+      return s === 'completed' || s === 'complete' || s === 'done'
+          || s === 'archived'  || s === 'cancelled' || s === 'skipped';
+    };
+    var activeOps = sortOpsTasks(opsTasks.filter(function(t){ return !_isTerminalOps(t); }));
+    var doneOps   = opsTasks.filter(_isTerminalOps);
 
     // Pipeline tasks are intentionally NOT rendered in Next Actions.
     // Per-stage checklists still live in cq_tasks_${id} (used by the
@@ -9433,7 +9489,15 @@
 
     var items = pool.map(function(c) {
       var ops = (typeof getOpsTasks === 'function') ? getOpsTasks(c.id) : [];
-      var allPending = ops.filter(function(t) { return t && t.status !== 'completed'; });
+      // Exclude terminal statuses (completed/archived/cancelled/skipped).
+      // Without this filter an archived/cancelled task still scores as
+      // "pending" and resurrects clients into the Start Working queue.
+      var allPending = ops.filter(function(t) {
+        if (!t) return false;
+        var st = t.status;
+        return st !== 'completed' && st !== 'complete' && st !== 'done'
+            && st !== 'archived' && st !== 'cancelled' && st !== 'skipped';
+      });
       var dueToday   = allPending.filter(function(t) { return t.dueDate === today; });
       var overdue    = allPending.filter(function(t) {
         if (!t.dueDate || t.dueDate === today) return false;
@@ -19188,17 +19252,56 @@
     existing.replaceWith(fresh.firstChild);
   }
 
+  // Canonical task-status set. Anything outside this enum is normalized to
+  // 'pending' on read. Legacy values 'complete'/'done' are remapped to
+  // 'completed' so completion checks (status === 'completed') always work.
+  var _OPS_STATUS_ENUM = ['pending', 'active', 'completed', 'skipped', 'overdue', 'archived', 'cancelled'];
+  function _normalizeOpsStatus(s) {
+    if (!s) return 'pending';
+    var v = String(s).toLowerCase().trim();
+    if (v === 'complete' || v === 'done' || v === 'finished') return 'completed';
+    if (_OPS_STATUS_ENUM.indexOf(v) >= 0) return v;
+    return 'pending';
+  }
+  function _normalizeOpsTaskShape(t) {
+    if (!t || typeof t !== 'object') return null;
+    t.status = _normalizeOpsStatus(t.status);
+    if (t.status === 'completed' && !t.completedAt) t.completedAt = Date.now();
+    return t;
+  }
   function getOpsTasks(clientId) {
-    try { return JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]'); } catch(e) { return []; }
+    try {
+      var arr = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
+      if (!Array.isArray(arr)) return [];
+      // Normalize status on every read so all queue/filter logic agrees on
+      // 'completed' (not 'complete'/'done'). Cheap; no allocations beyond the
+      // existing parse.
+      return arr.map(_normalizeOpsTaskShape).filter(Boolean);
+    } catch(e) { return []; }
   }
   function _saveOpsTasks(clientId, tasks) {
+    var nowTs = Date.now();
+    // Stamp every task with _updatedAt so the Firestore→local recovery can
+    // pick "newest wins" instead of "first-seen wins". Without per-task
+    // timestamps, a completed task on one device could be silently overwritten
+    // by a stale pending copy from another device on refresh.
+    var stamped = (Array.isArray(tasks) ? tasks : []).map(function(t) {
+      if (!t) return t;
+      t.status = _normalizeOpsStatus(t.status);
+      // Only bump _updatedAt if the task object lacks one or this is a write.
+      // We always bump here — the caller mutated something.
+      t._updatedAt = nowTs;
+      return t;
+    });
     try {
-      localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(tasks));
-      console.log('[Tasks] Saved — clientId:', clientId, '| key: cq_ops_tasks_' + clientId, '| count:', tasks.length, '| titles:', tasks.map(function(t){return t.title;}));
+      localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(stamped));
+      console.log('[Tasks] Saved — clientId:', clientId, '| count:', stamped.length, '| ts:', nowTs);
     } catch(e) { console.error('[Tasks] Save failed:', e); }
-    // Persist to Firestore (primary source for Railway scheduler)
+    // Persist to Firestore (primary source for Railway scheduler).
+    // We send opsTasks + opsTasksUpdatedAt so the recovery merge has an
+    // array-level timestamp too.
     if (typeof fsSetDash === 'function') {
-      fsSetDash(clientId, { opsTasks: tasks }).catch(function(){});
+      fsSetDash(clientId, { opsTasks: stamped, opsTasksUpdatedAt: nowTs }).catch(function(){});
     }
     // Update schedulerData/live so Railway always has fresh task data
     _saveSchedulerData();
@@ -19206,9 +19309,15 @@
     fetch('http://localhost:3001/api/data/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId: clientId, tasks: tasks })
+      body: JSON.stringify({ clientId: clientId, tasks: stamped })
     }).catch(function(){});
-    _syncToRemoteScheduler('/api/data/tasks', { clientId: clientId, tasks: tasks });
+    _syncToRemoteScheduler('/api/data/tasks', { clientId: clientId, tasks: stamped });
+    // Broadcast — Next Actions, Start Working, dashboard counters, follow-up
+    // badges all listen for this and refresh themselves without a full
+    // page reload. See _wqInvalidateCache + refreshSidebarTasks etc.
+    try {
+      window.dispatchEvent(new CustomEvent('cq:tasks-updated', { detail: { clientId: clientId, ts: nowTs } }));
+    } catch(e) {}
   }
   function createOpsTask(clientId, fields) {
     var tasks = getOpsTasks(clientId);
@@ -19245,8 +19354,15 @@
   }
   function completeOpsTask(clientId, taskId) {
     var _t = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
-    var result = updateOpsTask(clientId, taskId, { status: 'completed', completedAt: Date.now(), completedBy: 'admin' });
-    if (_t) _logActivity(clientId, 'task_completed', _t.title);
+    if (!_t) return null;
+    if (_isOpsTaskTerminal(_t)) return _t; // idempotent — already completed
+    var by = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'admin';
+    var result = updateOpsTask(clientId, taskId, {
+      status: 'completed',
+      completedAt: Date.now(),
+      completedBy: by
+    });
+    _logActivity(clientId, 'task_completed', _t.title);
     return result;
   }
   function getAllOpsTasks() {
@@ -19254,19 +19370,26 @@
     clients.forEach(function(c) { all = all.concat(getOpsTasks(c.id)); });
     return all;
   }
+  function _isOpsTaskTerminal(t) {
+    var s = t && t.status;
+    return s === 'completed' || s === 'complete' || s === 'done'
+        || s === 'archived'  || s === 'cancelled' || s === 'skipped';
+  }
   function _isOpsTaskOverdue(task) {
-    if (!task.dueDate || task.status === 'completed') return false;
+    if (!task || !task.dueDate) return false;
+    if (_isOpsTaskTerminal(task)) return false;
     return new Date(task.dueDate + 'T' + (task.dueTime || '23:59')) < new Date();
   }
   function getOverdueOpsTasks(clientId) {
     return getOpsTasks(clientId).filter(function(t) {
-      return t.status === 'overdue' || (t.status !== 'completed' && _isOpsTaskOverdue(t));
+      if (_isOpsTaskTerminal(t)) return false;
+      return t.status === 'overdue' || _isOpsTaskOverdue(t);
     });
   }
   function getTasksDueToday(clientId) {
     var today = _todayStr();
     return getOpsTasks(clientId).filter(function(t) {
-      return t.status !== 'completed' && t.dueDate === today;
+      return !_isOpsTaskTerminal(t) && t.dueDate === today;
     });
   }
   function updateOverdueTaskStatuses(specificClientId) {
@@ -19277,7 +19400,8 @@
       var tasks = getOpsTasks(c.id);
       var changed = false;
       tasks.forEach(function(t) {
-        if (t.status !== 'completed' && t.status !== 'overdue' && _isOpsTaskOverdue(t)) {
+        if (_isOpsTaskTerminal(t)) return;
+        if (t.status !== 'overdue' && _isOpsTaskOverdue(t)) {
           t.status = 'overdue'; changed = true;
           _logActivity(c.id, 'task_overdue', t.title + (t.dueDate ? ' · was due ' + t.dueDate : ''));
         }
@@ -20046,12 +20170,21 @@
     if (!reason)  { alert('Reason for extension is required.'); return; }
     var task = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
     if (!task) return;
+    // Determine the right post-extend status. If the new due date is today
+    // or future, the task is plain 'pending'. If somehow it's in the past
+    // (admin extended to a past date by mistake), let updateOverdueTaskStatuses
+    // re-flag it on next refresh — meanwhile clear the stale overdue badge.
+    var by = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'admin';
     updateOpsTask(clientId, taskId, {
-      dueDate: newDate, dueTime: newTime, status: 'pending',
+      dueDate:    newDate,
+      dueTime:    newTime,
+      status:     'pending',
+      extendedAt: Date.now(),
+      extendedBy: by,
       extensionHistory: (task.extensionHistory || []).concat([{
         oldDueDate: task.dueDate, oldDueTime: task.dueTime,
         newDueDate: newDate,      newDueTime: newTime,
-        reason: reason,           extendedBy: 'admin',
+        reason: reason,           extendedBy: by,
         extendedAt: Date.now()
       }])
     });
@@ -20059,6 +20192,9 @@
     var el = document.getElementById('ot-extend-overlay');
     if (el) el.remove();
     refreshTaskUI(clientId);
+    // Invalidate Start Working cache so the extended task drops out of
+    // today's queue immediately if pushed to the future.
+    try { if (typeof _wqQueueCache !== 'undefined') _wqQueueCache = null; } catch(e) {}
   }
 
   // ══════════════════════════════════════════════════════════════════════════
