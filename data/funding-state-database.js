@@ -897,3 +897,378 @@ window.FUNDING_DATABASE = {
 
   } // end states
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EVERGREEN ENRICHMENT v3.1
+// ═══════════════════════════════════════════════════════════════════════════
+// Augments every state with:
+//   1. elanPartners[] — converts the existing elanBanks string list into
+//      full objects with bureau/issuer/card/notes/category. All Elan
+//      partners pull TU per the Evergreen Funding Sheet.
+//   2. otherBanks[] — the "Other:" non-Elan, non-major regional banks
+//      from the Evergreen state breakdown (Fifth Third, First Citizens,
+//      TD Bank, First Horizon, Synovus, Hancock Whitney, TCM partners,
+//      FNBO co-brands, credit unions, etc.). Each entry carries its own
+//      bureau so the bureau filter and per-state availability stay accurate.
+//
+// This is run at file-load time. The existing experian/transunion/equifax/
+// regional/elan/elanBanks arrays are LEFT UNTOUCHED so all existing
+// generator logic continues to work — these new fields are additive.
+
+(function() {
+  var db = window.FUNDING_DATABASE;
+  if (!db || !db.states) return;
+
+  // Each Elan partner gets the same standard metadata (TU pull, Elan
+  // Financial backing, standard product line, branch-or-portal application).
+  function _elanRecord(name) {
+    return {
+      name: name,
+      bureau: 'TU',
+      issuer: 'Elan Financial',
+      category: 'Elan Partner',
+      card: 'Elan Business Cash Rewards / Business Real Rewards',
+      notes: 'Apply via Elan partner portal or local branch. No docs / no account required. Recon: 1-866-552-8855.'
+    };
+  }
+
+  // "Other" banks from Evergreen state breakdown — non-Elan, non-major
+  // regional partners. Bureau is from the Evergreen sheet's EX/TU/EQ
+  // classification per state. Category notes the issuer relationship
+  // (TCM partner, FNBO co-brand, Regional, Credit Union, etc.).
+  var OTHER_BANKS = {
+    "AL": [
+      { name:"Central Bank of Calera", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Alabama One", bureau:"EQ", category:"Credit Union", card:"Business Card", notes:"Credit union — membership eligibility required." },
+      { name:"Alabama Central CU", bureau:"EQ", category:"Credit Union", card:"Business Card", notes:"Credit union — membership eligibility required." },
+      { name:"West Alabama Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Mid South Bank", bureau:"EQ", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program — apply through TCM Bank channel." },
+      { name:"First Horizon Bank", bureau:"TU", category:"Regional", card:"First Horizon Business Card", notes:"Regional bank — branch or BRM application." }
+    ],
+    "AK": [
+      { name:"Northrim Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Alaska regional — branch application preferred." }
+    ],
+    "AZ": [
+      { name:"National Bank of Arizona", bureau:"TU", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Arizona Central CU", bureau:"EQ", category:"Credit Union", card:"Business Card", notes:"Credit union — membership eligibility required." },
+      { name:"Canyon Community Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "AR": [
+      { name:"First Horizon Bank", bureau:"TU", category:"Regional", card:"First Horizon Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"FAB&T", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Cadence Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"First Arkansas Bank & Trust", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Relyance Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Armor Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"First Service Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Citizens Bank & Trust Company", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "CA": [
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." },
+      { name:"SCE CU", bureau:"TU", category:"Credit Union", card:"Business Card", notes:"Credit union — membership eligibility required." },
+      { name:"Bank of the West", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." },
+      { name:"First Foundation Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "CO": [
+      { name:"Bank of the West", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." },
+      { name:"ENT Credit Union", bureau:"EQ", category:"Credit Union", card:"Business Card", notes:"Credit union — membership eligibility required." },
+      { name:"The Bank of Denver", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "CT": [
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." }
+    ],
+    "DE": [
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Shore United Bank", bureau:"EX", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "FL": [
+      { name:"Fifth Third Bank", bureau:"EX", category:"Regional", card:"Fifth Third Business Card", notes:"Branch application preferred." },
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." },
+      { name:"New York Community Bank", bureau:"EX", category:"FNBO Co-brand", card:"NYCB Business Card", notes:"FNBO-backed co-brand." },
+      { name:"First Horizon Bank", bureau:"TU", category:"Regional", card:"First Horizon Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Suncoast CU", bureau:"EQ", category:"Credit Union", card:"Business Card", notes:"Credit union — membership eligibility required." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Synovus", bureau:"EQ", category:"Regional", card:"Synovus Business Card", notes:"Branch application preferred." },
+      { name:"Hancock Whitney Bank", bureau:"EQ", category:"Regional", card:"Hancock Whitney Business Card", notes:"Branch application preferred." }
+    ],
+    "GA": [
+      { name:"Fifth Third Bank", bureau:"EX", category:"Regional", card:"Fifth Third Business Card", notes:"Branch application preferred." },
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." },
+      { name:"Southeastern Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"First Carolina Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Cadence Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Queensborough National B&T", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Pinnacle Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"United Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"First Horizon Bank", bureau:"TU", category:"Regional", card:"First Horizon Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Woodforest National Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"South Georgia Banking Co", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Planters First Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"PeopleSouth Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"PrimeSouth Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"First National Bank of Griffin", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Heritage Southeast Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"First Chatham Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Georgia Community Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"The Piedmont Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"CoastalStates Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"First IC Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Great Oaks Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"F&M Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Farmers & Merchants Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"FSNB", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "HI": [
+      { name:"First Foundation Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "ID": [
+      { name:"The Bank of Commerce", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Bank of the West", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." }
+    ],
+    "IL": [
+      { name:"Peoples Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Fifth Third Bank", bureau:"EX", category:"Regional", card:"Fifth Third Business Card", notes:"Branch application preferred." },
+      { name:"Old National Bank", bureau:"EX", category:"FNBO Co-brand", card:"Old National Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Wintrust Bank", bureau:"EX", category:"FNBO Co-brand", card:"Wintrust Business Card", notes:"FNBO-backed co-brand." },
+      { name:"CNB Bank & Trust", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Old Plank Trail Community Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." }
+    ],
+    "IN": [
+      { name:"Fifth Third Bank", bureau:"EX", category:"Regional", card:"Fifth Third Business Card", notes:"Branch application preferred." }
+    ],
+    "IA": [
+      { name:"West Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Bank of the West", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." },
+      { name:"Farmers State Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "KS": [
+      { name:"Bank of the West", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." }
+    ],
+    "KY": [
+      { name:"Fifth Third Bank", bureau:"EX", category:"Regional", card:"Fifth Third Business Card", notes:"Branch application preferred." },
+      { name:"Heritage Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Stock Yards Bank & Trust", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"WesBanco Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Peoples Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Limestone Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"The Cecilian Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Our Heritage Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Traditional Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Old National Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"First & Farmers National Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "LA": [
+      { name:"Progressive Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"First Horizon Bank", bureau:"TU", category:"Regional", card:"First Horizon Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Home Federal Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "ME": [
+      { name:"Saco & Biddeford Savings Institution", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Machias Savings Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "MD": [
+      { name:"BayVanguard", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"First United Bank & Trust", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Woodsboro Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Shore United Bank", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Arundel Federal Savings Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "MA": [
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Northern Bank & Trust Company", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "MI": [
+      { name:"Fifth Third Bank", bureau:"EX", category:"Regional", card:"Fifth Third Business Card", notes:"Branch application preferred." },
+      { name:"West Shore Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Isabella Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Southern Michigan Bank & Trust", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "MN": [
+      { name:"Old National Bank", bureau:"EX", category:"FNBO Co-brand", card:"Old National Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Minnwest Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"HomeTown Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Gate City Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." }
+    ],
+    "MS": [],
+    "MO": [
+      { name:"First Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." }
+    ],
+    "MT": [
+      { name:"Opportunity Bank of Montana", bureau:"EX", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Manhattan Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Native American Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." }
+    ],
+    "NE": [
+      { name:"West Gate Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." }
+    ],
+    "NV": [
+      { name:"Pacific Premier Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Western Alliance Bank", bureau:"TU", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Bank of the West", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." },
+      { name:"Nevada State Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"WaFd Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Heritage Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Bank of Nevada", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "NH": [
+      { name:"Meredith Village Savings Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Ledyard National Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." }
+    ],
+    "NJ": [
+      { name:"New York Community Bank", bureau:"EX", category:"FNBO Co-brand", card:"NYCB Business Card", notes:"FNBO-backed co-brand." },
+      { name:"ConnectOne Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Newfield National Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Franklin Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." }
+    ],
+    "NM": [
+      { name:"Southwest Capital Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." }
+    ],
+    "NY": [
+      { name:"New York Community Bank", bureau:"EX", category:"FNBO Co-brand", card:"NYCB Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Evans Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Community Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Apple Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Signature Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Northfield Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Ballston Spa National Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." }
+    ],
+    "NC": [
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." },
+      { name:"Fifth Third Bank", bureau:"EX", category:"Regional", card:"Fifth Third Business Card", notes:"Branch application preferred." },
+      { name:"Piedmont Federal Savings Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"American National Bank & Trust", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Coastal Bank & Trust", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"First Horizon Bank", bureau:"TU", category:"Regional", card:"First Horizon Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"First Reliance Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Mechanics & Farmers Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Providence Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"First Carolina Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"BlueHarbor Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "ND": [
+      { name:"Gate City Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Choice Bank", bureau:"TU", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Bremer Bank", bureau:"TU", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "OH": [
+      { name:"Fifth Third Bank", bureau:"EX", category:"Regional", card:"Fifth Third Business Card", notes:"Branch application preferred." },
+      { name:"New York Community Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"The Community Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"1st National Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Greenville National Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." }
+    ],
+    "OK": [
+      { name:"IBC Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"NBC Oklahoma", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Spirit Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Bank of the West", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." }
+    ],
+    "OR": [
+      { name:"Pacific Premier Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." }
+    ],
+    "PA": [
+      { name:"First Citizens Community Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Mauch Chunk Trust Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." }
+    ],
+    "RI": [
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." }
+    ],
+    "SC": [
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." },
+      { name:"First Reliance Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"First Community Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Farmers & Merchants Bank of SC", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"The Bank of South Carolina", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"CoastalStates Bank", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." }
+    ],
+    "SD": [
+      { name:"Minnwest Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Bank of the West", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." },
+      { name:"Dacotah Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "TN": [
+      { name:"Fifth Third Bank", bureau:"EX", category:"Regional", card:"Fifth Third Business Card", notes:"Branch application preferred." },
+      { name:"First Horizon Bank", bureau:"TU", category:"Regional", card:"First Horizon Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"FirstBank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"CapStar Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "TX": [
+      { name:"IBC Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Stellar Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"American National Bank of TX", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"City Bank", bureau:"EX", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"Smart Financial CU", bureau:"EQ", category:"Credit Union", card:"Business Card", notes:"Credit union — membership eligibility required." },
+      { name:"Frost Bank", bureau:"EQ", category:"Regional", card:"Frost Business Card", notes:"Branch application preferred." },
+      { name:"Austin Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "UT": [
+      { name:"Bank of the West", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." }
+    ],
+    "VT": [
+      { name:"Union Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Community Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Passumpsic Savings Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Brattleboro Savings & Loan", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Ledyard National Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Community National Bank & Trust", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." }
+    ],
+    "VA": [
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." },
+      { name:"Primis Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Burke & Herbert Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"American National Bank & Trust", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Old Point National Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Citizens Bank & Trust Company", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Southern Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "WA": [
+      { name:"Pacific Premier Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." }
+    ],
+    "WV": [
+      { name:"First United Bank & Trust", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"First Exchange Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Citizens Bank of WV", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Bank of Charles Town", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Fifth Third Bank", bureau:"EX", category:"Regional", card:"Fifth Third Business Card", notes:"Branch application preferred." },
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." },
+      { name:"TD Bank", bureau:"EQ", category:"Regional", card:"TD Business Card", notes:"Regional bank — branch or BRM application." },
+      { name:"Citizens Bank & Trust Company", bureau:"EQ", category:"Local", card:"Business Card", notes:"Local relationship preferred." },
+      { name:"Southern Bank", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "WI": [
+      { name:"Old National Bank", bureau:"EX", category:"FNBO Co-brand", card:"Old National Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Town Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"First Citizens Bank", bureau:"EX", category:"Regional", card:"First Citizens Business Card", notes:"Regional bank — branch or online application." },
+      { name:"Associated Bank", bureau:"TU", category:"Regional", card:"Business Card", notes:"Branch application preferred." },
+      { name:"National Exchange Bank and Trust", bureau:"EQ", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "WY": [
+      { name:"Western States Bank", bureau:"EX", category:"FNBO Co-brand", card:"Business Card", notes:"FNBO-backed co-brand." },
+      { name:"Farmers State Bank", bureau:"EX", category:"TCM Partner", card:"TCM Business Card", notes:"TCM-backed program." },
+      { name:"Bank of the West", bureau:"TU", category:"Regional", card:"Business Card", notes:"Regional bank — branch application preferred." },
+      { name:"First Interstate Bank", bureau:"TU", category:"Regional", card:"Business Card", notes:"Branch application preferred." }
+    ],
+    "DC": []
+  };
+
+  Object.keys(db.states).forEach(function(stateKey) {
+    var s = db.states[stateKey];
+    s.elanPartners = Array.isArray(s.elanBanks)
+      ? s.elanBanks.map(_elanRecord)
+      : [];
+    s.otherBanks = OTHER_BANKS[stateKey] || [];
+  });
+})();

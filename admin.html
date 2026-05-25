@@ -6898,12 +6898,34 @@
         return Object.assign({ id: id }, banks[id] || { name: id, card: '', bureau: '', revenue: 0, income: 0, monthlySpend: 0, requirements: '', notes: '' });
       });
     };
+    // Evergreen detailed inventory: Elan partner banks and "Other" non-major
+    // regional banks per state, each carrying its own bureau/issuer/card/notes
+    // metadata. Synthesized at file-load time by the enrichment IIFE at the
+    // bottom of funding-state-database.js — both arrays default to [] for
+    // states the sheet doesn't cover. id field is derived for chip stability.
+    var asInventory = function(arr) {
+      return (arr || []).map(function(r) {
+        var slug = (r.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        return {
+          id:       'detail-' + slug,
+          name:     r.name || '',
+          bureau:   r.bureau || '',
+          issuer:   r.issuer || '',
+          card:     r.card || '',
+          category: r.category || '',
+          notes:    r.notes || '',
+          requirements: r.requirements || ''
+        };
+      });
+    };
     return {
-      experian:   expand(sd.experian),
-      transunion: expand(sd.transunion),
-      equifax:    expand(sd.equifax),
-      regional:   expand(sd.regional),
-      elan:       expand(sd.elan)
+      experian:     expand(sd.experian),
+      transunion:   expand(sd.transunion),
+      equifax:      expand(sd.equifax),
+      regional:     expand(sd.regional),
+      elan:         expand(sd.elan),
+      elanPartners: asInventory(sd.elanPartners),
+      otherBanks:   asInventory(sd.otherBanks)
     };
   }
 
@@ -8136,6 +8158,84 @@
         html += '</div></div></div>';
       });
       html += '</div>';
+    }
+
+    // ── Detailed Bank Inventory (Evergreen v3.1) ──────────────────────────
+    // Full metadata view for Elan partner banks + non-major regional ("Other")
+    // banks per state from the Evergreen Funding Sheet. Filterable by bureau
+    // when the bureau filter is active. Existing chip view above is left
+    // intact so legacy generator logic is undisturbed; this is additive.
+    if (s.banksByState && (s.banksByState.elanPartners || s.banksByState.otherBanks)) {
+      var _bf = s.bureauFilter ? _fsgNormalizeBureau(s.bureauFilter) : null;
+      var _matchesBureau = function(b) {
+        if (!_bf) return true;
+        var bb = (b.bureau || '').toUpperCase();
+        return bb === _bf;
+      };
+      var elanList  = (s.banksByState.elanPartners || []).filter(_matchesBureau);
+      var otherList = (s.banksByState.otherBanks   || []).filter(_matchesBureau);
+
+      if (elanList.length || otherList.length) {
+        html += '<div class="fsg-section">';
+        html += '<div class="fsg-section-title">Detailed Bank Inventory — ' + (s.state || 'State');
+        if (_bf) {
+          var _bfLabel = { EX: 'Experian', TU: 'TransUnion', EQ: 'Equifax' }[_bf] || _bf;
+          html += ' <span style="font-weight:600;color:var(--gray-400);text-transform:none;letter-spacing:0;margin-left:4px">· ' + _bfLabel + ' pulls only</span>';
+        }
+        html += '</div>';
+
+        var _bureauCls = function(b) {
+          var u = (b || '').toUpperCase();
+          if (u === 'EX') return 'ex';
+          if (u === 'TU') return 'tu';
+          if (u === 'EQ') return 'eq';
+          return 'eq';
+        };
+
+        var _renderBankCard = function(b) {
+          var used = s.isUsed(b), approved = s.isApproved(b), denied = s.isDenied(b);
+          var borderColor = approved ? '#10b981' : denied ? '#ef4444' : 'var(--gray-200)';
+          var bgColor     = approved ? '#ecfdf5' : denied ? '#fef2f2' : '#fff';
+          var nameStyle   = used && !approved && !denied ? 'opacity:0.55;text-decoration:line-through' : '';
+          var statusIcon  = approved ? ' <span style="color:#059669;font-weight:800">✓</span>'
+                          : denied   ? ' <span style="color:#dc2626;font-weight:800">✗</span>' : '';
+          var row = '';
+          row += '<div style="display:flex;flex-direction:column;gap:5px;padding:9px 11px;border:1px solid ' + borderColor + ';border-radius:8px;background:' + bgColor + '">';
+          row += '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">';
+          row += '<span class="fsg-bureau-badge ' + _bureauCls(b.bureau) + '">' + (b.bureau || '—') + '</span>';
+          row += '<span style="font-size:12px;font-weight:700;color:var(--navy);' + nameStyle + '">' + (b.name || '—') + statusIcon + '</span>';
+          if (b.category) row += '<span style="font-size:9px;font-weight:700;color:var(--gray-500);background:var(--gray-50);border:1px solid var(--gray-200);border-radius:4px;padding:2px 6px;text-transform:uppercase;letter-spacing:0.05em">' + b.category + '</span>';
+          row += '</div>';
+          var meta = [];
+          if (b.issuer) meta.push('<strong style="color:var(--gray-600)">Issuer:</strong> ' + b.issuer);
+          if (b.card)   meta.push('<strong style="color:var(--gray-600)">Card:</strong> ' + b.card);
+          if (meta.length) row += '<div style="font-size:10.5px;color:var(--gray-500);line-height:1.5">' + meta.join(' &nbsp;·&nbsp; ') + '</div>';
+          if (b.notes)  row += '<div style="font-size:10px;color:var(--gray-500);line-height:1.45;font-style:italic">' + b.notes + '</div>';
+          row += '</div>';
+          return row;
+        };
+
+        if (elanList.length) {
+          html += '<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:6px">Elan Partner Banks <span style="font-weight:600;color:var(--gray-400)">· ' + elanList.length + '</span></div>';
+          html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px">';
+          elanList.forEach(function(b) { html += _renderBankCard(b); });
+          html += '</div></div>';
+        }
+        if (otherList.length) {
+          html += '<div><div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:6px">Other Regional & Local Banks <span style="font-weight:600;color:var(--gray-400)">· ' + otherList.length + '</span></div>';
+          html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px">';
+          otherList.forEach(function(b) { html += _renderBankCard(b); });
+          html += '</div></div>';
+        }
+        html += '</div>';
+      } else if (_bf) {
+        // Bureau filter is active and zeroed out the detail inventory.
+        // Show a subtle hint so the user knows full data exists for Any.
+        html += '<div class="fsg-section">';
+        html += '<div class="fsg-section-title">Detailed Bank Inventory — ' + (s.state || 'State') + '</div>';
+        html += '<div style="padding:10px 12px;background:#f8fafc;border:1px dashed var(--gray-200);border-radius:8px;font-size:11.5px;color:var(--gray-500)">No detailed regional or Elan partner banks match the current bureau filter. Switch to <strong>Any</strong> to see the full state inventory.</div>';
+        html += '</div>';
+      }
     }
 
     // ── Recommended Funding Sequence ──────────────────────────────────────
