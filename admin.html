@@ -3616,6 +3616,12 @@
       // Ops task overdue detection — run once on load, then every 60 seconds
       try { updateOverdueTaskStatuses(); } catch(e) {}
       setInterval(function() { try { updateOverdueTaskStatuses(); } catch(e) {} }, 60000);
+      // Auto follow-up creator — runs on page load + hourly. Creates a
+      // CRITICAL "Follow Up With Client" task on Mon/Wed/Fri for any
+      // client we haven't contacted since the previous required touchpoint.
+      // De-duped: never creates two open follow-ups for the same client.
+      try { if (typeof _fuRunAutoCreator === 'function') _fuRunAutoCreator(); } catch(e) {}
+      setInterval(function() { try { if (typeof _fuRunAutoCreator === 'function') _fuRunAutoCreator(); } catch(e) {} }, 3600000);
       // Polling fallback — re-fetch open client dashboard every 15s in case Firestore listener misses an update
       // Uses targeted update only — never does a full re-render
       setInterval(function() {
@@ -5396,6 +5402,7 @@
               ${_ob.loanAmount ? `<div class="a-qi-row"><span class="a-qi-label">Loan Ask</span><span class="a-qi-val">${_fmtMoney(Number(_ob.loanAmount))}</span></div>` : ''}
               ${_ob.ein ? `<div class="a-qi-row"><span class="a-qi-label">EIN</span><span class="a-qi-val">${_ob.ein}</span></div>` : ''}`
             : `<div style="font-size:12px;color:var(--gray-400);margin-bottom:10px">Onboarding not submitted yet.</div>`}
+            ${typeof _fuSnapshotBlockHTML === 'function' ? _fuSnapshotBlockHTML(id) : ''}
             <button onclick="showClientFullProfile('${id}')" style="width:100%;margin-top:10px;height:30px;border-radius:7px;border:1.5px solid var(--navy);background:transparent;font-family:var(--font-h);font-size:11px;font-weight:700;color:var(--navy);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--navy)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">View Full Profile</button>
           </div>
 
@@ -9324,10 +9331,19 @@
       // SCORING — per spec values
       var score = 0;
       var reasons = [];
+      // Follow-up overdue check — boosts the Smart Work Queue rank so
+      // clients who've been cold the longest float to the top.
+      var _fuBucket = (typeof _fuStatusBucket === 'function') ? _fuStatusBucket(c.id) : null;
+      var _fuOpenCount = pending.filter(function(t){ return t && t.source === 'auto_followup'; }).length;
+      var _fuDays = (typeof _fuDaysSinceContact === 'function') ? _fuDaysSinceContact(c.id) : Infinity;
+
       if (dueToday.length > 0) { score += 50; reasons.push({ k: 'due-today', label: 'Task due today', detail: dueToday[0].title }); }
       if (overdue.length > 0)  { score += 40; reasons.push({ k: 'overdue',   label: 'Overdue task',   detail: overdue[0].title }); }
+      if (_fuBucket === 'red'  && _fuOpenCount > 0) { score += 45; reasons.push({ k: 'followup-overdue', label: 'Overdue follow-up' }); }
+      if (_fuBucket === 'red'  && _fuOpenCount === 0) { score += 30; reasons.push({ k: 'followup-cold',   label: 'No contact ' + (_fuDays === Infinity ? 'on record' : _fuDays + 'd') }); }
       if (critical.length > 0) { score += 35; reasons.push({ k: 'critical',  label: 'Critical task',  detail: critical[0].title }); }
       if (high.length > 0)     { score += 25; reasons.push({ k: 'high',      label: 'High priority',  detail: high[0].title }); }
+      if (_fuBucket === 'yellow') { score += 15; reasons.push({ k: 'followup-due', label: 'Follow-up due' }); }
       if (daysSinceActivity >= 5) { score += 20; reasons.push({ k: 'idle', label: 'No activity ' + daysSinceActivity + 'd' }); }
       if (needsAppFollowUp)    { score += 20; reasons.push({ k: 'app-followup', label: 'Application follow-up' }); }
       score += daysInStage * 1;
@@ -12470,6 +12486,8 @@
     // Update message count in card header
     const hdr = el && el.closest('.a-card') && el.closest('.a-card').querySelector('.a-card-sub');
     if (hdr) hdr.textContent = msgs.length + ' total';
+    // Bump last-contact timestamp — sending a message counts as contact
+    try { if (typeof _fuMarkContacted === 'function') _fuMarkContacted(clientId, 'message'); } catch(e) {}
   }
 
   // ── MESSAGES SECTION ──────────────────────────────────────────────────
@@ -18570,6 +18588,259 @@
     catch(e) { return dateStr; }
   }
   function _todayStr() { return new Date().toISOString().split('T')[0]; }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // AUTO FOLLOW-UP SYSTEM
+  // ══════════════════════════════════════════════════════════════════════
+  // Tracks the last time we contacted each client and auto-creates a
+  // CRITICAL "Follow Up With Client" task on Mon/Wed/Fri when the last
+  // contact is older than the previous required touchpoint.
+  //
+  // Storage: cq_last_contact_{clientId} → { at: <ms>, source: 'message' |
+  //          'note' | 'manual' | 'ghl' | 'phone' | 'email' }
+  // Mirror:  Firestore dashboards/{id}.lastContact (same shape) — kept in
+  //          sync via fsSetDash so other admin sessions see updates.
+  // Auto-task tag: ops task with source: 'auto_followup' — de-duped so we
+  //          never create two open follow-ups at the same time.
+
+  var _FU_REQUIRED_DAYS = [1, 3, 5]; // Monday, Wednesday, Friday (0 = Sunday)
+  var _FU_TASK_SOURCE   = 'auto_followup';
+
+  function _fuStartOfDay(d) {
+    var dt = new Date(d);
+    dt.setHours(0, 0, 0, 0);
+    return dt.getTime();
+  }
+
+  // Find the most recent required-touchpoint day (Mon/Wed/Fri) that is on
+  // or BEFORE today. Returns the start-of-day timestamp of that day.
+  // If today is Tue, returns Mon. If today is Sat/Sun, returns Fri.
+  function _fuPrevTouchpointStart(nowMs) {
+    var d = new Date(nowMs);
+    for (var i = 0; i < 14; i++) {
+      var probe = new Date(d.getTime() - i * 86400000);
+      if (_FU_REQUIRED_DAYS.indexOf(probe.getDay()) >= 0) {
+        return _fuStartOfDay(probe);
+      }
+    }
+    return _fuStartOfDay(nowMs - 7 * 86400000);
+  }
+
+  // Find the touchpoint BEFORE the most recent one. Used to evaluate
+  // "has the client been contacted since the previous required check-in?"
+  function _fuPrevPrevTouchpointStart(nowMs) {
+    var last = _fuPrevTouchpointStart(nowMs);
+    var d = new Date(last - 86400000);
+    for (var i = 0; i < 14; i++) {
+      var probe = new Date(d.getTime() - i * 86400000);
+      if (_FU_REQUIRED_DAYS.indexOf(probe.getDay()) >= 0) {
+        return _fuStartOfDay(probe);
+      }
+    }
+    return last - 7 * 86400000;
+  }
+
+  function _fuIsRequiredToday() {
+    return _FU_REQUIRED_DAYS.indexOf(new Date().getDay()) >= 0;
+  }
+
+  function getLastContact(clientId) {
+    try {
+      var raw = localStorage.getItem('cq_last_contact_' + clientId);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    // Firestore fallback — dashboards.lastContact (loaded by initial dash listener)
+    try {
+      if (typeof getDashData === 'function') {
+        var d = getDashData(clientId);
+        if (d && d.lastContact && d.lastContact.at) return d.lastContact;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  // Central "client was contacted" tracker. Call from every contact path:
+  // sendMsg, GHL outbound, addSystemNote(category='Message'), "Mark
+  // Contacted" button, phone call log, etc. Persists to localStorage +
+  // Firestore + auto-completes any open follow-up task.
+  function _fuMarkContacted(clientId, source) {
+    if (!clientId) return;
+    var record = {
+      at: Date.now(),
+      source: source || 'manual',
+      by: (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || ''
+    };
+    try { localStorage.setItem('cq_last_contact_' + clientId, JSON.stringify(record)); } catch (e) {}
+    if (typeof fsSetDash === 'function') {
+      fsSetDash(clientId, { lastContact: record }).catch(function () {});
+    }
+    // Auto-close any open follow-up task — the action is now satisfied.
+    try { _fuCloseOpenFollowUps(clientId, source); } catch (e) {}
+    // Refresh visible surfaces
+    try { _fuRenderSnapshotBadge(clientId); } catch (e) {}
+    try { if (typeof refreshSidebarTasks === 'function') refreshSidebarTasks(clientId); } catch (e) {}
+    try { if (typeof _wqRenderBanner === 'function') _wqRenderBanner(); } catch (e) {}
+  }
+
+  function _fuCloseOpenFollowUps(clientId, source) {
+    var tasks = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
+    var changed = false;
+    tasks.forEach(function (t) {
+      if (t && t.source === _FU_TASK_SOURCE && t.status !== 'completed') {
+        t.status = 'completed';
+        t.completedAt = Date.now();
+        t.completedBy = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'auto';
+        t.autoClosedBy = source || 'contact';
+        changed = true;
+      }
+    });
+    if (changed && typeof _saveOpsTasks === 'function') {
+      _saveOpsTasks(clientId, tasks);
+    }
+  }
+
+  // Days since last contact (Infinity if never contacted)
+  function _fuDaysSinceContact(clientId) {
+    var rec = getLastContact(clientId);
+    if (!rec || !rec.at) return Infinity;
+    var diffMs = Date.now() - rec.at;
+    return Math.floor(diffMs / 86400000);
+  }
+
+  // Status bucket for the snapshot badge: green / yellow / red.
+  function _fuStatusBucket(clientId) {
+    var rec = getLastContact(clientId);
+    if (!rec || !rec.at) return 'red'; // never contacted
+    var prev = _fuPrevTouchpointStart(Date.now());
+    if (rec.at >= prev) return 'green';            // contacted on/after most recent touchpoint
+    var prevPrev = _fuPrevPrevTouchpointStart(Date.now());
+    if (rec.at >= prevPrev) return 'yellow';       // contacted since the touchpoint before
+    return 'red';                                  // older than 2 touchpoints ago
+  }
+
+  // Should we create a follow-up task for this client right now?
+  // YES when:
+  //   - today is Mon/Wed/Fri
+  //   - client not archived / not disqualified
+  //   - no existing OPEN follow-up task (de-dupe)
+  //   - last contact is BEFORE the most recent touchpoint's start of day
+  function _fuShouldCreateTask(clientId) {
+    if (!_fuIsRequiredToday()) return false;
+    var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+    if (!c) return false;
+    if (c.archived) return false;
+    if (c.status === 'disqualified') return false;
+
+    // De-dupe — open follow-up task exists?
+    var tasks = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
+    var hasOpen = tasks.some(function (t) {
+      return t && t.source === _FU_TASK_SOURCE && t.status !== 'completed';
+    });
+    if (hasOpen) return false;
+
+    var rec = getLastContact(clientId);
+    var touchpointStart = _fuPrevTouchpointStart(Date.now());
+    if (!rec || !rec.at) return true;          // never contacted
+    return rec.at < touchpointStart;
+  }
+
+  function _fuCreateTaskForClient(clientId) {
+    if (typeof createOpsTask !== 'function') return null;
+    var c = getClient(clientId);
+    var rec = getLastContact(clientId);
+    var since = rec ? new Date(rec.at).toLocaleDateString('en-US', { month:'short', day:'numeric' }) : 'never';
+    var task = createOpsTask(clientId, {
+      title: 'Follow Up With Client',
+      description: 'No contact made since last required check-in (last contact: ' + since + ').',
+      type: 'admin',
+      priority: 'critical',
+      status: 'pending',
+      dueDate: _todayStr(),
+      stage: (function () {
+        var d = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+        return (d && d.currentStage) ? Math.max(0, d.currentStage - 1) : 0;
+      })(),
+      source: _FU_TASK_SOURCE,
+      fundingImpact: 'Keeping client warm — 3 touchpoints/week (Mon/Wed/Fri).'
+    });
+    return task;
+  }
+
+  // Scan every active client and create follow-up tasks where needed.
+  // Safe to call repeatedly — de-dupe inside _fuShouldCreateTask.
+  function _fuRunAutoCreator() {
+    try {
+      if (typeof clients === 'undefined' || !Array.isArray(clients)) return 0;
+      if (!_fuIsRequiredToday()) return 0;
+      var created = 0;
+      clients.forEach(function (c) {
+        if (_fuShouldCreateTask(c.id)) {
+          var task = _fuCreateTaskForClient(c.id);
+          if (task) created++;
+        }
+      });
+      if (created > 0) {
+        console.log('[FollowUp] Created ' + created + ' auto follow-up task(s) for Mon/Wed/Fri touchpoint.');
+        // Refresh visible surfaces
+        try { if (typeof renderClientList === 'function') renderClientList(); } catch (e) {}
+        try { if (typeof selectedClientId !== 'undefined' && selectedClientId && typeof refreshSidebarTasks === 'function') refreshSidebarTasks(selectedClientId); } catch (e) {}
+      }
+      return created;
+    } catch (e) {
+      console.warn('[FollowUp] Auto-creator failed:', e.message);
+      return 0;
+    }
+  }
+
+  // ── UI HELPERS ────────────────────────────────────────────────────────
+  function _fuFormatRelativeContact(clientId) {
+    var rec = getLastContact(clientId);
+    if (!rec || !rec.at) return { label: 'Never contacted', days: Infinity, bucket: 'red' };
+    var days = _fuDaysSinceContact(clientId);
+    var dateStr = new Date(rec.at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    var label;
+    if (days === 0)      label = 'Today';
+    else if (days === 1) label = 'Yesterday';
+    else                 label = days + ' days ago';
+    return { label: label, dateStr: dateStr, days: days, bucket: _fuStatusBucket(clientId), source: rec.source };
+  }
+
+  function _fuBadgeHTML(bucket) {
+    var map = {
+      green:  { bg:'#ecfdf5', fg:'#059669', dot:'#10b981', text:'Contacted Recently' },
+      yellow: { bg:'#fffbeb', fg:'#b45309', dot:'#f59e0b', text:'Follow Up Due' },
+      red:    { bg:'#fef2f2', fg:'#b91c1c', dot:'#ef4444', text:'Overdue Contact' }
+    };
+    var c = map[bucket] || map.red;
+    return '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;background:' + c.bg + ';color:' + c.fg + ';font-size:10px;font-weight:800;letter-spacing:0.03em;text-transform:uppercase">'
+      + '<span style="width:6px;height:6px;border-radius:50%;background:' + c.dot + '"></span>' + c.text + '</span>';
+  }
+
+  // Renders the "Last Contact" block into the snapshot. Called on render +
+  // after any _fuMarkContacted bump.
+  function _fuSnapshotBlockHTML(clientId) {
+    var info = _fuFormatRelativeContact(clientId);
+    var badge = _fuBadgeHTML(info.bucket);
+    var subText = (info.days === Infinity)
+      ? '<span style="color:var(--gray-400)">No contact on record</span>'
+      : '<span style="color:var(--gray-500)">' + info.dateStr + ' · ' + info.label + '</span>';
+    return '<div id="fu-snapshot-' + clientId + '" style="margin-top:8px;padding:9px 11px;border:1px solid var(--gray-100);border-radius:9px;background:var(--gray-50)">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
+        + '<div style="font-family:var(--font-h);font-size:10px;font-weight:800;color:var(--gray-500);letter-spacing:0.08em;text-transform:uppercase">Last Contact</div>'
+        + badge
+      + '</div>'
+      + '<div style="font-size:12px;color:var(--navy);margin-top:3px">' + subText + '</div>'
+      + '<button onclick="_fuMarkContacted(\'' + clientId + '\', \'manual\')" style="margin-top:8px;height:28px;width:100%;background:var(--navy);color:white;border:none;border-radius:7px;font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:0.02em;cursor:pointer;transition:opacity 0.12s" onmouseover="this.style.opacity=\'0.92\'" onmouseout="this.style.opacity=\'1\'">&#10003; Mark Contacted</button>'
+    + '</div>';
+  }
+
+  function _fuRenderSnapshotBadge(clientId) {
+    var existing = document.getElementById('fu-snapshot-' + clientId);
+    if (!existing) return;
+    var fresh = document.createElement('div');
+    fresh.innerHTML = _fuSnapshotBlockHTML(clientId);
+    existing.replaceWith(fresh.firstChild);
+  }
 
   function getOpsTasks(clientId) {
     try { return JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]'); } catch(e) { return []; }
