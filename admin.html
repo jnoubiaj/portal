@@ -8494,13 +8494,40 @@
   // Source: only client-safe fields — no internal admin notes are exposed.
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Map round number → friendly client copy (no admin jargon).
+  // Map round key → friendly client copy (no admin jargon). Numeric keys
+  // 1–4 are the standard rounds; 'pre' and 'custom' are admin-assignable
+  // labels that don't participate in auto-renumber.
   var _FSE_ROUND_META = {
-    1: { name: 'Round 1 — Primary Banks',     timing: 'Apply same day within this round.', why: 'Highest-priority banks for your profile — these tend to issue the strongest starting limits.' },
-    2: { name: 'Round 2 — Secondary Banks',   timing: 'Apply 2–4 weeks after Round 1 approvals settle.', why: 'Regional banks where a banking relationship can unlock higher limits.' },
-    3: { name: 'Round 3 — Expansion',         timing: 'Apply 2–4 weeks after Round 2 approvals settle.', why: 'State-specific community banks and Elan partners to round out the sequence.' },
-    4: { name: 'Round 4 — Backup',            timing: 'Only if Round 1–3 doesn’t hit the funding goal.', why: 'Backup options — used last because they pull all three bureaus.' }
+    1:        { name: 'Round 1 — Primary Banks',   timing: 'Apply same day within this round.', why: 'Highest-priority banks for your profile — these tend to issue the strongest starting limits.', sortKey: 1 },
+    2:        { name: 'Round 2 — Secondary Banks', timing: 'Apply 2–4 weeks after Round 1 approvals settle.', why: 'Regional banks where a banking relationship can unlock higher limits.', sortKey: 2 },
+    3:        { name: 'Round 3 — Expansion',       timing: 'Apply 2–4 weeks after Round 2 approvals settle.', why: 'State-specific community banks and Elan partners to round out the sequence.', sortKey: 3 },
+    4:        { name: 'Round 4 — Backup',          timing: 'Only if Round 1–3 doesn’t hit the funding goal.', why: 'Backup options — used last because they pull all three bureaus.', sortKey: 4 },
+    'pre':    { name: 'Pre-Application Pulls',     timing: 'Complete these before the first round.', why: 'Bureau pulls, credit-line increases, and credit-prep steps that go before any new applications.', sortKey: 0 },
+    'custom': { name: 'Custom',                    timing: '',                                       why: 'Custom block — your CapitalQuest team has instructions for these.', sortKey: 999 }
   };
+
+  // 2-letter state code → full name. Used to render the State line per bank
+  // in the email body. Built once, on demand.
+  var _FSE_STATE_NAME_MAP = null;
+  function _fseStateName(code) {
+    if (!_FSE_STATE_NAME_MAP) {
+      _FSE_STATE_NAME_MAP = {
+        AL:'Alabama', AK:'Alaska', AZ:'Arizona', AR:'Arkansas', CA:'California',
+        CO:'Colorado', CT:'Connecticut', DE:'Delaware', DC:'District of Columbia',
+        FL:'Florida', GA:'Georgia', HI:'Hawaii', ID:'Idaho', IL:'Illinois',
+        IN:'Indiana', IA:'Iowa', KS:'Kansas', KY:'Kentucky', LA:'Louisiana',
+        ME:'Maine', MD:'Maryland', MA:'Massachusetts', MI:'Michigan',
+        MN:'Minnesota', MS:'Mississippi', MO:'Missouri', MT:'Montana',
+        NE:'Nebraska', NV:'Nevada', NH:'New Hampshire', NJ:'New Jersey',
+        NM:'New Mexico', NY:'New York', NC:'North Carolina', ND:'North Dakota',
+        OH:'Ohio', OK:'Oklahoma', OR:'Oregon', PA:'Pennsylvania',
+        RI:'Rhode Island', SC:'South Carolina', SD:'South Dakota',
+        TN:'Tennessee', TX:'Texas', UT:'Utah', VT:'Vermont', VA:'Virginia',
+        WA:'Washington', WV:'West Virginia', WI:'Wisconsin', WY:'Wyoming'
+      };
+    }
+    return _FSE_STATE_NAME_MAP[String(code || '').toUpperCase()] || code || '';
+  }
 
   function _fseEstimatedRange(b) {
     // Use the bank's recorded range if present; otherwise fall back to a
@@ -8529,6 +8556,68 @@
     return safe.join(' ');
   }
 
+  // Convert any bureau value (EX/TU/EQ, ex/tu/eq, experian, transunion, equifax,
+  // mixed case, full word) into the canonical 2-letter code + full client-safe
+  // display name. Used in both modal checkboxes and the email body so clients
+  // always see "TransUnion" not "TU" or "TRANSUNION".
+  function _fseNormalizeBureau(raw) {
+    var v = String(raw || '').toLowerCase().trim();
+    if (v === 'ex' || v.indexOf('experian')  === 0) return { code: 'EX', label: 'Experian' };
+    if (v === 'tu' || v.indexOf('transunion') === 0 || v.indexOf('trans union') === 0) return { code: 'TU', label: 'TransUnion' };
+    if (v === 'eq' || v.indexOf('equifax')   === 0) return { code: 'EQ', label: 'Equifax' };
+    return { code: '', label: raw || '—' };
+  }
+
+  // Expand the generic 'elan' bank entry into one row per actual Elan
+  // PARTNER bank for the client's state (Sandy Spring Bank, EagleBank,
+  // WesBanco, etc.). Pulls names + bureau + card + notes from the Evergreen
+  // dataset's state.elanPartners[]. If the state has no Elan partners
+  // recorded, we keep the original entry as a single fallback row so the
+  // email never just disappears mid-round.
+  function _fseExpandElanForRound(banks, stateKey, roundNum) {
+    if (!Array.isArray(banks) || !banks.length) return banks || [];
+    var db = (typeof window !== 'undefined') ? window.FUNDING_DATABASE : null;
+    var stateData = (db && db.states && stateKey) ? db.states[stateKey] : null;
+    var partners  = (stateData && Array.isArray(stateData.elanPartners)) ? stateData.elanPartners : [];
+
+    var out = [];
+    banks.forEach(function(b) {
+      var isElan = b && (b.isElan === true || b.id === 'elan' || /^elan/i.test(b.id || ''));
+      if (!isElan) { out.push(b); return; }
+      if (!partners.length) {
+        // Fallback — keep the original (rare; only when no state partners
+        // are recorded in the Evergreen dataset). Display name still
+        // gets a friendlier "— Elan Partner" suffix below.
+        out.push(Object.assign({}, b, {
+          _fseDisplayName: (b.name || 'Elan Financial') + ' — Elan Partner',
+          _fseIsElanPartner: true
+        }));
+        return;
+      }
+      partners.forEach(function(p) {
+        var slug = (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        out.push({
+          // ID is derived per partner so each gets its own modal checkbox.
+          id:                 'elan-' + slug,
+          name:               p.name,
+          bankName:           p.name,
+          card:               p.card || 'Elan Business Cash Rewards / Business Real Rewards',
+          bureau:             p.bureau || 'TU',
+          ev_bureau:          p.bureau || 'TU',
+          notes:              p.notes || '',
+          requirements:       '',
+          issuer:             p.issuer || 'Elan Financial',
+          category:           p.category || 'Elan Partner',
+          ev_round:           roundNum,
+          isElan:             true,
+          _fseIsElanPartner:  true,
+          _fseDisplayName:    p.name + ' — Elan Partner'
+        });
+      });
+    });
+    return out;
+  }
+
   function _fseGetSequenceData(clientId) {
     var cached = _fsgStrategyCache && _fsgStrategyCache[clientId];
     if (!cached) {
@@ -8547,12 +8636,22 @@
     var stageName = (typeof PIPELINE_STAGES !== 'undefined' && PIPELINE_STAGES[stageIdx])
       ? PIPELINE_STAGES[stageIdx].name : 'Funding Sequence';
 
+    // Normalize state to its 2-letter key for Evergreen lookup. cached.state
+    // may already be 2-letter; fall back to client profile if blank.
+    var stateRaw = cached.state || (cached.profile && cached.profile.state) || '';
+    var stateKey = (typeof _normalizeState === 'function')
+      ? _normalizeState(stateRaw)
+      : String(stateRaw || '').toUpperCase().slice(0, 2);
+
     // Estimated approval range: derived from rounds × $15k midpoint.
+    // Elan banks are EXPANDED into per-state partners so the client email
+    // shows the actual local bank names (Sandy Spring, EagleBank, etc.)
+    // instead of the generic "Elan Financial" placeholder.
     var rounds = [
-      { num: 1, banks: cached.round1 || [] },
-      { num: 2, banks: cached.round2 || [] },
-      { num: 3, banks: cached.round3 || [] },
-      { num: 4, banks: cached.round4 || [] }
+      { num: 1, banks: _fseExpandElanForRound(cached.round1 || [], stateKey, 1) },
+      { num: 2, banks: _fseExpandElanForRound(cached.round2 || [], stateKey, 2) },
+      { num: 3, banks: _fseExpandElanForRound(cached.round3 || [], stateKey, 3) },
+      { num: 4, banks: _fseExpandElanForRound(cached.round4 || [], stateKey, 4) }
     ].filter(function(r) { return r.banks.length > 0; });
 
     var totalBanks = rounds.reduce(function(s, r) { return s + r.banks.length; }, 0);
@@ -8576,29 +8675,63 @@
     };
   }
 
-  // Render bank row in client email (sanitized fields only)
-  function _fseRenderBankBlock(b, roundNum, idx) {
-    var bureau = (b.bureau || b.ev_bureau || '—').toUpperCase();
-    var bureauName = ({ EX: 'Experian', TU: 'TransUnion', EQ: 'Equifax' })[bureau] || bureau;
-    var name = b.bankName || b.name || b.id || 'Bank';
-    var card = b.card || 'Business Card';
-    var safe = _fseClientSafeNote(b);
+  // Render bank row in client email (sanitized fields only).
+  // Elan partner banks get their actual state-specific name + "Elan Partner"
+  // tag, the Elan card line, and an Elan-specific apply-path note instead of
+  // a generic "Elan Financial" row.
+  function _fseRenderBankBlock(b, roundNum, idx, stateName) {
+    var bureauInfo = _fseNormalizeBureau(b.bureau || b.ev_bureau);
+    var bureauLabel = bureauInfo.label;
+    var isElanPartner = !!(b._fseIsElanPartner || b.isElan);
+    var name = b._fseDisplayName || (isElanPartner ? ((b.bankName || b.name) + ' — Elan Partner') : (b.bankName || b.name || b.id || 'Bank'));
+    var card = b.card || (isElanPartner ? 'Elan Business Cash Rewards / Business Real Rewards' : 'Business Card');
     var range = _fseEstimatedRange(b);
-    var pullType = 'Hard pull (' + bureauName + ')';
+    var pullType = 'Hard Pull (' + bureauLabel + ')';
+
+    // Why-selected copy: client-friendly reasoning per category. No internal
+    // strategy fields are referenced.
+    var whyText;
+    if (isElanPartner) {
+      whyText = 'Strong ' + bureauLabel + ' option' + (stateName ? ' for ' + stateName + ' clients' : '') + ' with regional approval advantages through the Elan partner network.';
+    } else if (b.category && /credit union/i.test(b.category)) {
+      whyText = 'Credit-union option' + (stateName ? ' available in ' + stateName : '') + ' — membership eligibility unlocks competitive limits.';
+    } else if (b.category && /tcm/i.test(b.category)) {
+      whyText = 'TCM-backed community bank with consistent approval behavior on the ' + bureauLabel + ' bureau.';
+    } else if (b.category && /fnbo/i.test(b.category)) {
+      whyText = 'FNBO co-brand — strong fit for ' + bureauLabel + '-pulling profiles.';
+    } else if (b.ev_round === 1 || roundNum === 1) {
+      whyText = 'Highest-priority bank for your profile — typically issues the strongest starting limits.';
+    } else {
+      whyText = 'Solid ' + bureauLabel + ' option that complements the rest of your sequence.';
+    }
+
+    // Before-applying note. Elan partners get a clean, client-safe apply-path
+    // sentence; non-Elan banks pull from the sanitized helper so we never
+    // surface "inquiry wipe" / "recon" / "underwriting" tactics.
+    var beforeNote;
+    if (isElanPartner) {
+      beforeNote = 'Apply through your local branch or the Elan partner application portal. No prior account required.';
+    } else {
+      beforeNote = _fseClientSafeNote(b);
+    }
+
     var nextStep = (b.requirements && /checking/i.test(b.requirements))
       ? 'Confirm or open business checking with the bank before applying.'
-      : 'Apply per the schedule in this email — we’ll confirm timing.';
+      : 'We will guide you through the application timing — watch for our outreach.';
+
     return ''
       + '<tr><td style="padding:0">'
         + '<div style="background:#ffffff;border:1px solid #e5e9f0;border-left:3px solid #22a7f0;border-radius:8px;padding:14px 16px;margin:0 0 10px 0">'
           + '<div style="font-family:Georgia,serif;font-size:15px;font-weight:700;color:#0A1628;line-height:1.3;margin:0 0 4px 0">' + (idx + 1) + '. ' + _escHtml(name) + '</div>'
-          + '<div style="font-size:12px;color:#475569;margin:0 0 10px 0">' + _escHtml(card) + '</div>'
+          + '<div style="font-size:12px;color:#475569;margin:0 0 10px 0"><strong style="color:#0A1628">Product:</strong> ' + _escHtml(card) + '</div>'
           + '<div style="display:block;font-size:11px;color:#475569;line-height:1.65">'
-            + '<div style="margin:2px 0"><strong style="color:#0A1628">Bureau pulled:</strong> ' + _escHtml(bureauName) + '</div>'
-            + '<div style="margin:2px 0"><strong style="color:#0A1628">Pull type:</strong> ' + _escHtml(pullType) + '</div>'
-            + '<div style="margin:2px 0"><strong style="color:#0A1628">Estimated approval range:</strong> ' + _escHtml(range) + '</div>'
-            + (safe ? '<div style="margin:6px 0 2px 0;padding:8px 10px;background:#f5f8fb;border-radius:6px;color:#334155"><strong style="color:#0A1628">Before applying:</strong> ' + _escHtml(safe) + '</div>' : '')
-            + '<div style="margin:6px 0 0 0"><strong style="color:#0A1628">Next step:</strong> ' + _escHtml(nextStep) + '</div>'
+            + (stateName ? '<div style="margin:2px 0"><strong style="color:#0A1628">State:</strong> ' + _escHtml(stateName) + '</div>' : '')
+            + '<div style="margin:2px 0"><strong style="color:#0A1628">Bureau Pulled:</strong> ' + _escHtml(bureauLabel) + '</div>'
+            + '<div style="margin:2px 0"><strong style="color:#0A1628">Pull Type:</strong> ' + _escHtml(pullType) + '</div>'
+            + '<div style="margin:2px 0"><strong style="color:#0A1628">Estimated Approval Range:</strong> ' + _escHtml(range) + '</div>'
+            + '<div style="margin:6px 0 2px 0;padding:8px 10px;background:#f5f8fb;border-radius:6px;color:#334155"><strong style="color:#0A1628">Why Selected:</strong> ' + _escHtml(whyText) + '</div>'
+            + (beforeNote ? '<div style="margin:6px 0 2px 0"><strong style="color:#0A1628">Before Applying:</strong> ' + _escHtml(beforeNote) + '</div>' : '')
+            + '<div style="margin:6px 0 0 0"><strong style="color:#0A1628">Next Step:</strong> ' + _escHtml(nextStep) + '</div>'
           + '</div>'
         + '</div>'
       + '</td></tr>';
@@ -8609,25 +8742,100 @@
     var data = _fseGetSequenceData(clientId);
     if (!data) return '';
     var excluded = opts.excluded || {};
+    var roundOverrides = opts.roundOverrides || {};
+    var orderOverride  = Array.isArray(opts.order) ? opts.order : null;
+    var autoRenumber   = opts.autoRenumber !== false; // default ON
+
     var intro = opts.intro || ('Hi ' + (data.firstName || 'there') + ',\n\nBased on your credit profile, business information, state, funding goal, and bank relationships, we built a custom funding sequence for you. Each round below tells you which banks to target, why, and what to do before applying.');
     var introHTML = _escHtml(intro).replace(/\n/g, '<br>');
 
-    // Build rounds HTML
-    var roundsHTML = '';
-    data.rounds.forEach(function(r) {
-      var visibleBanks = r.banks.filter(function(b) {
-        return !excluded[b.id || b.name];
+    // Resolve full state name for the per-bank "State" line.
+    var stateRaw  = data.state || '';
+    var stateName = _fseStateName(stateRaw) || stateRaw || '';
+
+    // Flatten all banks across rounds, applying:
+    //   1. Excluded — drop the bank entirely.
+    //   2. Round override — admin reassigned this bank to a different round.
+    //   3. Order override — admin reordered banks; ones in the order array
+    //      sort by their position, others fall back to original sequence.
+    var flat = [];
+    data.rounds.forEach(function(r, ri) {
+      r.banks.forEach(function(b, bi) {
+        var bId = b.id || b.name;
+        if (excluded[bId]) return;
+        var rawKey = roundOverrides[bId];
+        if (rawKey === undefined || rawKey === null || rawKey === '') rawKey = r.num;
+        var rk = (rawKey === 'pre' || rawKey === 'custom') ? rawKey : Number(rawKey) || r.num;
+        flat.push({ bank: b, roundKey: rk, srcIdx: ri * 1000 + bi });
       });
-      if (!visibleBanks.length) return;
-      var meta = _FSE_ROUND_META[r.num] || { name: 'Round ' + r.num, timing: '', why: '' };
+    });
+    // (When flat.length === 0 we still render the email shell with an empty-
+    //  state placeholder, handled by the `if (!roundsHTML)` fallback below.)
+
+    // Apply order override
+    if (orderOverride && orderOverride.length) {
+      var orderIdx = {};
+      orderOverride.forEach(function(id, i) { orderIdx[id] = i; });
+      flat.sort(function(a, b) {
+        var ai = orderIdx[a.bank.id || a.bank.name];
+        var bi = orderIdx[b.bank.id || b.bank.name];
+        if (ai != null && bi != null) return ai - bi;
+        if (ai != null) return -1;
+        if (bi != null) return 1;
+        return a.srcIdx - b.srcIdx;
+      });
+    } else {
+      flat.sort(function(a, b) { return a.srcIdx - b.srcIdx; });
+    }
+
+    // Group by round, preserving the order each round first appears.
+    var groupedOrder = [];
+    var groupedMap   = {};
+    flat.forEach(function(x) {
+      var k = String(x.roundKey);
+      if (!groupedMap[k]) {
+        groupedMap[k] = { roundKey: x.roundKey, banks: [] };
+        groupedOrder.push(k);
+      }
+      groupedMap[k].banks.push(x.bank);
+    });
+
+    // Sort groups: 'pre' first, then numeric rounds in order they appear or
+    // numeric ascending (auto-renumber), then 'custom' last.
+    groupedOrder.sort(function(aK, bK) {
+      var ag = groupedMap[aK], bg = groupedMap[bK];
+      var aMeta = _FSE_ROUND_META[ag.roundKey] || { sortKey: Number(ag.roundKey) || 99 };
+      var bMeta = _FSE_ROUND_META[bg.roundKey] || { sortKey: Number(bg.roundKey) || 99 };
+      return aMeta.sortKey - bMeta.sortKey;
+    });
+
+    // Renumber standard (numeric) rounds when auto-renumber is ON. The first
+    // numeric group becomes Round 1, the next Round 2, etc. 'pre' and
+    // 'custom' keep their labels untouched.
+    var renumberMap = {};
+    if (autoRenumber) {
+      var n = 0;
+      groupedOrder.forEach(function(k) {
+        var g = groupedMap[k];
+        if (g.roundKey === 'pre' || g.roundKey === 'custom') return;
+        n++;
+        renumberMap[k] = n;
+      });
+    }
+
+    var roundsHTML = '';
+    groupedOrder.forEach(function(k) {
+      var g = groupedMap[k];
+      var effectiveKey = (autoRenumber && renumberMap[k]) ? renumberMap[k] : g.roundKey;
+      var meta = _FSE_ROUND_META[effectiveKey] || _FSE_ROUND_META[g.roundKey] || { name: 'Round ' + effectiveKey, timing: '', why: '' };
       roundsHTML += ''
         + '<tr><td style="padding:18px 0 6px 0">'
           + '<div style="font-family:Georgia,serif;font-size:18px;font-weight:700;color:#0A1628;letter-spacing:-0.01em;margin:0 0 4px 0">' + _escHtml(meta.name) + '</div>'
           + (meta.why    ? '<div style="font-size:12px;color:#475569;line-height:1.55;margin:0 0 4px 0">' + _escHtml(meta.why) + '</div>' : '')
           + (meta.timing ? '<div style="font-size:11px;color:#22a7f0;font-weight:700;margin:0 0 10px 0">' + _escHtml(meta.timing) + '</div>' : '')
         + '</td></tr>';
-      visibleBanks.forEach(function(b, i) {
-        roundsHTML += _fseRenderBankBlock(b, r.num, i);
+      g.banks.forEach(function(b, i) {
+        roundsHTML += _fseRenderBankBlock(b, effectiveKey, i, stateName);
       });
     });
     if (!roundsHTML) {
@@ -8709,37 +8917,159 @@
     try { localStorage.setItem(_fseDraftKey(cid), JSON.stringify(draft)); } catch(e) {}
   }
 
+  // Build a single bank row in the modal. Includes:
+  //   - Up/Down reorder buttons
+  //   - Include checkbox
+  //   - Bank name (Elan partners show "{name} — Elan Partner")
+  //   - Round dropdown (1–4, Pre-Application Pulls, Custom)
+  //   - Bureau pill (full name)
+  function _fseBankRowHTML(b, draft) {
+    var bId = b.id || b.name;
+    var safeBid = String(bId).replace(/'/g, "\\'");
+    var isExcluded = !!(draft.excluded && draft.excluded[bId]);
+    var roundVal = (draft.roundOverrides && draft.roundOverrides[bId] != null) ? draft.roundOverrides[bId] : (b._fseDefaultRound != null ? b._fseDefaultRound : (b.ev_round || 1));
+    var isElanP = !!(b._fseIsElanPartner || b.isElan);
+    var displayName = isElanP ? ((b.bankName || b.name) + ' — Elan Partner') : (b.bankName || b.name || bId);
+    var bureauLabel = _fseNormalizeBureau(b.bureau || b.ev_bureau).label;
+    var card = b.card || '';
+
+    var roundOpts = [
+      { v: 1,        l: 'Round 1' },
+      { v: 2,        l: 'Round 2' },
+      { v: 3,        l: 'Round 3' },
+      { v: 4,        l: 'Round 4' },
+      { v: 'pre',    l: 'Pre-Application Pulls' },
+      { v: 'custom', l: 'Custom' }
+    ];
+    var roundSelect = '<select data-fse-round-bid="' + _escHtml(bId) + '" style="height:24px;padding:0 6px;border:1px solid var(--gray-200);border-radius:5px;font-family:var(--font-b);font-size:10.5px;color:var(--navy);background:white;cursor:pointer">';
+    roundOpts.forEach(function(o) {
+      var selected = String(o.v) === String(roundVal);
+      roundSelect += '<option value="' + o.v + '"' + (selected ? ' selected' : '') + '>' + o.l + '</option>';
+    });
+    roundSelect += '</select>';
+
+    return ''
+      + '<div data-fse-bank-row="' + _escHtml(bId) + '" style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--gray-100);border-radius:8px;margin-bottom:6px;background:white">'
+        + '<div style="display:flex;flex-direction:column;gap:1px;flex-shrink:0">'
+          + '<button type="button" onclick="_fseMoveBank(\'' + safeBid + '\',-1)" style="width:18px;height:14px;line-height:1;padding:0;background:white;border:1px solid var(--gray-200);border-radius:3px;color:var(--gray-500);font-size:10px;cursor:pointer" title="Move up">▲</button>'
+          + '<button type="button" onclick="_fseMoveBank(\'' + safeBid + '\',1)"  style="width:18px;height:14px;line-height:1;padding:0;background:white;border:1px solid var(--gray-200);border-radius:3px;color:var(--gray-500);font-size:10px;cursor:pointer" title="Move down">▼</button>'
+        + '</div>'
+        + '<input type="checkbox" data-bid="' + _escHtml(bId) + '" ' + (isExcluded ? '' : 'checked') + ' style="margin:0;flex-shrink:0">'
+        + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _escHtml(displayName) + '</div>'
+          + (card ? '<div style="font-size:10px;color:var(--gray-500);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _escHtml(card) + '</div>' : '')
+        + '</div>'
+        + roundSelect
+        + '<span style="font-size:9px;font-weight:800;color:var(--gray-500);background:var(--gray-50);border:1px solid var(--gray-100);border-radius:4px;padding:2px 6px;flex-shrink:0">' + _escHtml(bureauLabel) + '</span>'
+      + '</div>';
+  }
+
+  // Maintain a session-scoped order map of bank IDs for the active modal so
+  // the up/down buttons can move banks within and across rounds.
+  var _fseOrderCache = null;
+  function _fseGetOrderedBanks(clientId) {
+    var data = _fseGetSequenceData(clientId);
+    if (!data) return [];
+    var ordered = [];
+    data.rounds.forEach(function(r) {
+      r.banks.forEach(function(b) {
+        b._fseDefaultRound = r.num;
+        ordered.push(b);
+      });
+    });
+    return ordered;
+  }
+  function _fseEnsureOrder(clientId, draft) {
+    if (_fseOrderCache && _fseOrderCache.clientId === clientId) return _fseOrderCache.order;
+    var ordered = _fseGetOrderedBanks(clientId).map(function(b) { return b.id || b.name; });
+    if (Array.isArray(draft.order) && draft.order.length) {
+      // Reconcile: keep saved order, append any new banks
+      var seen = {};
+      var out = [];
+      draft.order.forEach(function(id) { if (ordered.indexOf(id) >= 0 && !seen[id]) { out.push(id); seen[id] = true; } });
+      ordered.forEach(function(id) { if (!seen[id]) { out.push(id); seen[id] = true; } });
+      ordered = out;
+    }
+    _fseOrderCache = { clientId: clientId, order: ordered };
+    return ordered;
+  }
+  function _fseMoveBank(bId, delta) {
+    if (!_fseOrderCache) return;
+    var clientId = _fseOrderCache.clientId;
+    // Snapshot live form state from the DOM BEFORE the cache reorder so
+    // checkboxes / round dropdowns survive the rebuild. We pass this draft
+    // straight into the rebuild instead of re-reading the DOM (which still
+    // has the pre-move order at this point and would overwrite the cache).
+    var liveDraft = _fseCollectDraft(clientId);
+    var arr = _fseOrderCache.order;
+    var i = arr.indexOf(bId);
+    if (i < 0) return;
+    var j = i + delta;
+    if (j < 0 || j >= arr.length) return;
+    arr.splice(j, 0, arr.splice(i, 1)[0]);
+    // Reflect the cache change into the draft we pass to the rebuild so
+    // the saved order stays consistent with what's shown.
+    liveDraft.order = arr.slice();
+    _fseSaveDraft(clientId, liveDraft);
+    _fseRebuildBankList(clientId, liveDraft);
+    _fseRefreshPreview(clientId);
+  }
+  function _fseRebuildBankList(clientId, draftOverride) {
+    // Read from the cache + supplied draft only — never from the (stale) DOM.
+    var draft = draftOverride || _fseLoadDraft(clientId) || {};
+    if (!_fseOrderCache || _fseOrderCache.clientId !== clientId) {
+      _fseEnsureOrder(clientId, draft);
+    }
+    var ordered = (_fseOrderCache && _fseOrderCache.order) || [];
+    var banksById = {};
+    _fseGetOrderedBanks(clientId).forEach(function(b) { banksById[b.id || b.name] = b; });
+    var html = '';
+    ordered.forEach(function(id) {
+      var b = banksById[id];
+      if (b) html += _fseBankRowHTML(b, draft);
+    });
+    var wrap = document.getElementById('fse-banks');
+    if (wrap) wrap.innerHTML = html;
+  }
+
   function _fseOpenPreview(clientId) {
     var data = _fseGetSequenceData(clientId);
     if (!data) { alert('Generate the funding strategy first so we have rounds to email.'); return; }
     var draft = _fseLoadDraft(clientId) || {};
+    if (draft.autoRenumber == null) draft.autoRenumber = true;
     var existing = document.getElementById('fse-overlay');
     if (existing) existing.remove();
+    _fseOrderCache = null;
 
     var defaultSubject = 'Your Custom Business Funding Sequence';
     var defaultIntro   = 'Hi ' + (data.firstName || 'there') + ',\n\nBased on your credit profile, business information, state, funding goal, and bank relationships, we built a custom funding sequence for you. Each round below tells you which banks to target, why, and what to do before applying.';
 
-    // Bank list with remove checkboxes
+    // Build initial bank rows from the cached strategy + draft order.
+    var ordered = _fseEnsureOrder(clientId, draft);
+    var banksById = {};
+    _fseGetOrderedBanks(clientId).forEach(function(b) { banksById[b.id || b.name] = b; });
     var bankRowsHTML = '';
-    data.rounds.forEach(function(r) {
-      bankRowsHTML += '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin:10px 0 4px 0">Round ' + r.num + ' · ' + r.banks.length + ' banks</div>';
-      r.banks.forEach(function(b) {
-        var bId = b.id || b.name;
-        var isExcluded = !!(draft.excluded && draft.excluded[bId]);
-        bankRowsHTML += '<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--gray-100);border-radius:7px;margin-bottom:5px;font-size:12px;color:var(--navy);cursor:pointer">';
-        bankRowsHTML += '<input type="checkbox" data-bid="' + _escHtml(bId) + '" ' + (isExcluded ? '' : 'checked') + ' style="margin:0">';
-        bankRowsHTML += '<span style="flex:1"><strong>' + _escHtml(b.bankName || b.name) + '</strong> <span style="color:var(--gray-500);font-weight:500">' + _escHtml(b.card || '') + '</span></span>';
-        bankRowsHTML += '<span style="font-size:9px;font-weight:800;color:var(--gray-500);background:var(--gray-50);border-radius:4px;padding:2px 6px">' + _escHtml((b.bureau || b.ev_bureau || '—').toUpperCase()) + '</span>';
-        bankRowsHTML += '</label>';
-      });
+    ordered.forEach(function(id) {
+      var b = banksById[id];
+      if (b) bankRowsHTML += _fseBankRowHTML(b, draft);
     });
+
+    var canSendToClient = !!(data.clientEmail && data.ghlContactId);
+    var statusLine = '';
+    if (!data.clientEmail) {
+      statusLine = '<strong style="color:#b91c1c">No client email on file</strong> — add an email before sending.';
+    } else if (!data.ghlContactId) {
+      statusLine = '<strong style="color:#b45309">GHL contact not linked</strong> — link this client to GHL to enable Send To Client.';
+    } else {
+      statusLine = 'Sends via GHL email to <strong style="color:var(--navy)">' + _escHtml(data.clientEmail) + '</strong>';
+    }
 
     var overlay = document.createElement('div');
     overlay.id = 'fse-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.65);backdrop-filter:blur(4px);z-index:10010;display:flex;align-items:center;justify-content:center;padding:14px;overflow-y:auto';
     overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
     overlay.innerHTML =
-      '<div style="background:white;border-radius:14px;max-width:1080px;width:100%;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.32)">'
+      '<div style="background:white;border-radius:14px;max-width:1180px;width:100%;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.32)">'
         + '<div style="padding:18px 22px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between">'
           + '<div>'
             + '<div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--navy);letter-spacing:-0.01em">Send Funding Sequence Email</div>'
@@ -8747,14 +9077,21 @@
           + '</div>'
           + '<button onclick="document.getElementById(\'fse-overlay\').remove()" style="height:30px;width:30px;background:transparent;border:none;border-radius:6px;cursor:pointer;color:var(--gray-400);font-size:18px">✕</button>'
         + '</div>'
-        + '<div style="flex:1;display:grid;grid-template-columns:340px 1fr;gap:0;overflow:hidden">'
+        + '<div style="flex:1;display:grid;grid-template-columns:400px 1fr;gap:0;overflow:hidden">'
           // Left: edit panel
           + '<div id="fse-edit-pane" style="padding:18px 18px;border-right:1px solid var(--gray-100);overflow-y:auto">'
             + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:5px">Subject</div>'
             + '<input id="fse-subject" type="text" value="' + _escHtml(draft.subject || defaultSubject) + '" style="width:100%;height:36px;padding:0 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-family:var(--font-b);font-size:12.5px;color:var(--navy);box-sizing:border-box;margin-bottom:12px">'
             + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:5px">Intro Message</div>'
-            + '<textarea id="fse-intro" rows="6" style="width:100%;padding:9px 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-family:var(--font-b);font-size:12.5px;color:var(--navy);box-sizing:border-box;resize:vertical;margin-bottom:12px">' + _escHtml(draft.intro || defaultIntro) + '</textarea>'
-            + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:5px">Banks to Include</div>'
+            + '<textarea id="fse-intro" rows="5" style="width:100%;padding:9px 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-family:var(--font-b);font-size:12.5px;color:var(--navy);box-sizing:border-box;resize:vertical;margin-bottom:12px">' + _escHtml(draft.intro || defaultIntro) + '</textarea>'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+              + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500)">Banks · Order · Round</div>'
+              + '<label style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--gray-600);cursor:pointer;user-select:none">'
+                + '<input id="fse-autorenum" type="checkbox" ' + (draft.autoRenumber ? 'checked' : '') + ' style="margin:0">'
+                + 'Auto-renumber'
+              + '</label>'
+            + '</div>'
+            + '<div style="font-size:10.5px;color:var(--gray-400);line-height:1.45;margin-bottom:8px">Uncheck to remove. Pick the round each bank belongs to. Use ▲▼ to reorder.</div>'
             + '<div id="fse-banks">' + bankRowsHTML + '</div>'
           + '</div>'
           // Right: live preview
@@ -8763,33 +9100,60 @@
           + '</div>'
         + '</div>'
         + '<div style="padding:14px 22px;border-top:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
-          + '<div style="font-size:11px;color:var(--gray-400)">Sends via GHL email to ' + (data.clientEmail ? _escHtml(data.clientEmail) : '<strong style="color:#b45309">no email on file</strong>') + (data.ghlContactId ? '' : ' · <strong style="color:#b45309">GHL contact not linked</strong>') + '</div>'
+          + '<div style="font-size:11px;color:var(--gray-400);max-width:540px">' + statusLine + '</div>'
           + '<div style="display:flex;gap:8px">'
-            + '<button onclick="_fseCopyHTML(\'' + clientId + '\')" style="height:36px;padding:0 14px;background:white;color:var(--navy);border:1.5px solid var(--gray-200);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Copy HTML</button>'
+            + '<button onclick="_fseCopyHTML(\'' + clientId + '\')" style="height:36px;padding:0 14px;background:white;color:var(--navy);border:1.5px solid var(--gray-200);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer" title="Admin use only — copy raw HTML">Copy Template Code</button>'
             + '<button onclick="_fseSend(\'' + clientId + '\', \'test\')" style="height:36px;padding:0 14px;background:white;color:var(--navy);border:1.5px solid var(--gray-200);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Send Test To Me</button>'
-            + '<button onclick="_fseSend(\'' + clientId + '\', \'client\')" style="height:36px;padding:0 18px;background:var(--navy);color:white;border:none;border-radius:8px;font-family:var(--font-h);font-size:12.5px;font-weight:800;letter-spacing:0.02em;cursor:pointer">Send To Client →</button>'
+            + '<button onclick="_fseSend(\'' + clientId + '\', \'client\')" ' + (canSendToClient ? '' : 'disabled') + ' style="height:36px;padding:0 18px;background:' + (canSendToClient ? 'var(--navy)' : 'var(--gray-200)') + ';color:' + (canSendToClient ? 'white' : 'var(--gray-400)') + ';border:none;border-radius:8px;font-family:var(--font-h);font-size:12.5px;font-weight:800;letter-spacing:0.02em;cursor:' + (canSendToClient ? 'pointer' : 'not-allowed') + '">Send To Client →</button>'
           + '</div>'
         + '</div>'
       + '</div>';
     document.body.appendChild(overlay);
     _fseRefreshPreview(clientId);
-    // Live preview: rebuild when subject/intro/bank-toggles change
+    // Live preview: rebuild on any change in the left pane.
     ['fse-subject', 'fse-intro'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener('input', function() { _fseRefreshPreview(clientId); });
     });
     var banksWrap = document.getElementById('fse-banks');
     if (banksWrap) banksWrap.addEventListener('change', function() { _fseRefreshPreview(clientId); });
+    var autoCb = document.getElementById('fse-autorenum');
+    if (autoCb) autoCb.addEventListener('change', function() { _fseRefreshPreview(clientId); });
   }
 
-  function _fseCollectDraft(clientId) {
+  function _fseCollectDraft(clientId, opts) {
+    opts = opts || {};
     var subject = (document.getElementById('fse-subject') || {}).value || 'Your Custom Business Funding Sequence';
     var intro   = (document.getElementById('fse-intro')   || {}).value || '';
     var excluded = {};
     document.querySelectorAll('#fse-banks input[type=checkbox]').forEach(function(cb) {
       if (!cb.checked) excluded[cb.getAttribute('data-bid')] = true;
     });
-    var draft = { subject: subject, intro: intro, excluded: excluded };
+    var roundOverrides = {};
+    document.querySelectorAll('#fse-banks [data-fse-round-bid]').forEach(function(sel) {
+      var v = sel.value;
+      var bid = sel.getAttribute('data-fse-round-bid');
+      if (v === 'pre' || v === 'custom') roundOverrides[bid] = v;
+      else roundOverrides[bid] = Number(v) || 1;
+    });
+    var order = [];
+    document.querySelectorAll('#fse-banks [data-fse-bank-row]').forEach(function(row) {
+      order.push(row.getAttribute('data-fse-bank-row'));
+    });
+    if (order.length && _fseOrderCache && _fseOrderCache.clientId === clientId) {
+      _fseOrderCache.order = order;
+    }
+    var autoRenumber = true;
+    var autoEl = document.getElementById('fse-autorenum');
+    if (autoEl) autoRenumber = !!autoEl.checked;
+
+    var draft = {
+      subject: subject, intro: intro,
+      excluded: excluded,
+      roundOverrides: roundOverrides,
+      order: order,
+      autoRenumber: autoRenumber
+    };
     _fseSaveDraft(clientId, draft);
     return draft;
   }
@@ -8836,48 +9200,72 @@
     var html  = _fseBuildEmailHTML(clientId, draft);
     var subject = draft.subject || 'Your Custom Business Funding Sequence';
 
-    // Resolve target
-    var toEmail = '', contactId = '';
-    if (mode === 'test') {
-      toEmail = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
-      if (!toEmail) { alert('No admin email on file — sign in to send a test.'); return; }
-    } else {
-      toEmail   = data.clientEmail;
-      contactId = data.ghlContactId;
-      if (!toEmail)   { alert('Client has no email on file. Add an email before sending.'); return; }
-      if (!contactId) {
-        if (!confirm('This client is not linked to a GHL contact yet. Send anyway via fallback (copy + open mail app)?')) return;
-      }
+    // Test mode subject prefix so the admin can spot test copies in their
+    // inbox at a glance.
+    if (mode === 'test') subject = '[TEST] ' + subject;
+
+    // Resolve destination contactId. Both modes route through GHL — the
+    // primary requirement is "no manual HTML pasting." For tests, we send
+    // to the client's GHL contact too (same flow, just prefixed subject)
+    // so admin can verify rendering end-to-end without needing a separate
+    // admin-side GHL contact set up.
+    var contactId = data.ghlContactId;
+    if (!contactId) {
+      alert('This client is not linked to a GHL contact yet.\n\nClick the GHL link button on the client header (or the GHL settings tab) to connect a GHL contact, then try sending again. The portal will not require you to copy or paste HTML.');
+      return;
+    }
+    if (mode === 'client' && !data.clientEmail) {
+      alert('Client has no email on file. Add an email before sending.');
+      return;
+    }
+    if (typeof GHL === 'undefined' || typeof GHL.sendMessage !== 'function') {
+      alert('GHL integration is unavailable. Check the GHL settings tab and confirm the API key + location ID are saved.');
+      return;
     }
 
-    if (contactId && typeof GHL !== 'undefined' && typeof GHL.sendMessage === 'function') {
-      _fseFlashToast('Sending via GHL…');
-      var fromAddr = (GHL.getSettings && GHL.getSettings().defaultEmailAddress) || '';
-      GHL.sendMessage(contactId, html, 'Email', fromAddr, subject)
-        .then(function() {
-          _fseFlashToast(mode === 'test' ? 'Test email sent' : 'Funding sequence email sent');
-          _fseAfterSend(clientId, mode, toEmail);
-        })
-        .catch(function(err) {
-          alert('GHL send failed: ' + (err && err.message ? err.message : err));
-        });
-    } else {
-      // Fallback: open default mail client with prefilled subject + plain
-      // notice that HTML is on clipboard.
-      _fseCopyHTML(clientId);
-      var mailto = 'mailto:' + encodeURIComponent(toEmail) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent('The HTML email is on your clipboard — paste it into your email client.');
-      try { window.location.href = mailto; } catch(e) {}
-      _fseAfterSend(clientId, mode, toEmail);
-    }
+    _fseFlashToast('Sending via GHL…');
+    var fromAddr = (GHL.getSettings && GHL.getSettings().defaultEmailAddress) || '';
+    GHL.sendMessage(contactId, html, 'Email', fromAddr, subject)
+      .then(function() {
+        _fseFlashToast(mode === 'test'
+          ? 'Test funding-sequence email sent (subject prefixed [TEST]).'
+          : 'Funding sequence email sent successfully to client.');
+        _fseAfterSend(clientId, mode, data.clientEmail, draft);
+      })
+      .catch(function(err) {
+        var msg = (err && err.message) ? err.message : String(err);
+        alert('GHL send failed: ' + msg + '\n\nNothing was sent. Check the GHL sync log or proxy server status.');
+      });
   }
 
-  function _fseAfterSend(clientId, mode, toEmail) {
+  function _fseAfterSend(clientId, mode, toEmail, draft) {
     if (mode === 'test') return; // tests don't log against the client
     var ts = Date.now();
     var by = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'admin';
+
+    // Build a banks-included summary for the activity log so the admin can
+    // see at a glance which banks the client received.
+    var bankSummary = '';
+    try {
+      var data = _fseGetSequenceData(clientId);
+      var excluded = (draft && draft.excluded) || {};
+      var picked = [];
+      (data ? data.rounds : []).forEach(function(r) {
+        r.banks.forEach(function(b) {
+          var bId = b.id || b.name;
+          if (!excluded[bId]) picked.push(b.bankName || b.name || bId);
+        });
+      });
+      if (picked.length) bankSummary = ' — ' + picked.length + ' banks (' + picked.slice(0, 4).join(', ') + (picked.length > 4 ? ', …' : '') + ')';
+    } catch(e) {}
+
     try { localStorage.setItem('cq_fse_sent_' + clientId, JSON.stringify({ at: ts, by: by, to: toEmail })); } catch(e) {}
-    try { _logActivity(clientId, 'message', 'Funding sequence email sent to ' + toEmail); } catch(e) {}
-    try { addSystemNote(clientId, 'message', 'Message', 'Funding Sequence Email Sent', 'Sent custom funding sequence email to ' + toEmail + '.', { sentBy: by, at: ts }); } catch(e) {}
+    try { _logActivity(clientId, 'message', 'Funding sequence email sent to ' + toEmail + bankSummary); } catch(e) {}
+    try {
+      addSystemNote(clientId, 'message', 'Message', 'Funding Sequence Email Sent',
+        'Sent custom funding sequence email to ' + toEmail + bankSummary + '.',
+        { sentBy: by, at: ts });
+    } catch(e) {}
     // Mark a "Send funding sequence to client" ops task complete if one exists
     try {
       var ops = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
