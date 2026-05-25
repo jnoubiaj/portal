@@ -8352,6 +8352,22 @@
         html += '</div></div>';
       }
       html += '</div>';
+
+      // ── Send Funding Sequence Email (client-facing) ───────────────────────
+      // Appears once at least one round has banks. Opens an editable preview
+      // modal; admin can tweak subject/intro, remove banks, and send via GHL
+      // (or copy the HTML if no GHL link is set on the client).
+      html += '<div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">';
+      html += '<button onclick="_fseOpenPreview(\'' + clientId + '\')" style="height:38px;padding:0 16px;background:var(--navy);color:white;border:none;border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:0.02em;cursor:pointer;display:inline-flex;align-items:center;gap:8px">';
+      html += '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>';
+      html += 'Send Funding Sequence Email';
+      html += '</button>';
+      var _fseSent = (function() { try { return JSON.parse(localStorage.getItem('cq_fse_sent_' + clientId) || 'null'); } catch(e) { return null; } })();
+      if (_fseSent && _fseSent.at) {
+        var _sentDate = new Date(_fseSent.at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+        html += '<span style="font-size:10.5px;color:var(--gray-500)">Last sent <strong style="color:var(--navy)">' + _sentDate + '</strong>' + (_fseSent.by ? ' by ' + _escHtml(_fseSent.by) : '') + '</span>';
+      }
+      html += '</div>';
     }
 
     html += '<div style="font-size:10px;color:var(--gray-400);padding:6px 0 2px;border-top:1px solid var(--gray-100);margin-top:2px">Revenue · Income · Monthly Spend shown are recommended minimums. Requirements listed per bank above.</div>';
@@ -8467,6 +8483,411 @@
       if (cached && cached.optimization) noteBody += ' ' + cached.optimization.warnings.length + ' optimization warnings detected.';
       addSystemNote(clientId, 'funding', 'Funding', 'Funding Strategy Generated', noteBody, {});
     });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FUNDING SEQUENCE EMAIL (client-facing)
+  // ─────────────────────────────────────────────────────────────────────────
+  // Builds a CapitalQuest-branded HTML email from the cached strategy
+  // (rounds, selected banks, profile context) and opens a preview/edit
+  // modal so admin can tweak subject/intro/banks before sending via GHL.
+  // Source: only client-safe fields — no internal admin notes are exposed.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Map round number → friendly client copy (no admin jargon).
+  var _FSE_ROUND_META = {
+    1: { name: 'Round 1 — Primary Banks',     timing: 'Apply same day within this round.', why: 'Highest-priority banks for your profile — these tend to issue the strongest starting limits.' },
+    2: { name: 'Round 2 — Secondary Banks',   timing: 'Apply 2–4 weeks after Round 1 approvals settle.', why: 'Regional banks where a banking relationship can unlock higher limits.' },
+    3: { name: 'Round 3 — Expansion',         timing: 'Apply 2–4 weeks after Round 2 approvals settle.', why: 'State-specific community banks and Elan partners to round out the sequence.' },
+    4: { name: 'Round 4 — Backup',            timing: 'Only if Round 1–3 doesn’t hit the funding goal.', why: 'Backup options — used last because they pull all three bureaus.' }
+  };
+
+  function _fseEstimatedRange(b) {
+    // Use the bank's recorded range if present; otherwise fall back to a
+    // conservative client-friendly range based on round.
+    if (b && b.estimatedRange) return b.estimatedRange;
+    if (b && b.creditLimitRange) return b.creditLimitRange;
+    var round = b && (b.ev_round || b.round) || 1;
+    if (round === 1) return '$10,000 – $50,000 per card';
+    if (round === 2) return '$5,000 – $25,000 per card';
+    if (round === 3) return '$3,000 – $15,000 per card';
+    return '$2,000 – $10,000 per card';
+  }
+
+  function _fseClientSafeNote(b) {
+    // Strip anything that looks like internal strategy. Surface only
+    // application-path text. Bank metadata fields we trust to be client-safe:
+    //   - b.card (product name)
+    //   - b.notes when category is Elan/Regional (apply path)
+    var safe = [];
+    if (b && b.requirements && /\b(business checking|seasoning|relationship)\b/i.test(b.requirements)) {
+      safe.push(b.requirements.replace(/[\r\n]+/g, ' ').slice(0, 200));
+    }
+    if (b && b.notes && !/inquiry|wipe|backend|recon|underwriting/i.test(b.notes)) {
+      safe.push(b.notes.replace(/[\r\n]+/g, ' ').slice(0, 200));
+    }
+    return safe.join(' ');
+  }
+
+  function _fseGetSequenceData(clientId) {
+    var cached = _fsgStrategyCache && _fsgStrategyCache[clientId];
+    if (!cached) {
+      try { renderFundingStrategy(clientId); } catch(e) {}
+      cached = _fsgStrategyCache && _fsgStrategyCache[clientId];
+    }
+    if (!cached) return null;
+    var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+    var d = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+    var firstName = (c && (c.fname || c.firstName)) || '';
+    var fullName  = c ? ((c.fname || '') + ' ' + (c.lname || '')).trim() : '';
+    var fundingGoal = Number(d.fundingGoal) || 0;
+    var stageIdx = (typeof PIPELINE_STAGES !== 'undefined' && cached.profile)
+      ? (Math.max(0, (d.currentStage || 1) - 1))
+      : 0;
+    var stageName = (typeof PIPELINE_STAGES !== 'undefined' && PIPELINE_STAGES[stageIdx])
+      ? PIPELINE_STAGES[stageIdx].name : 'Funding Sequence';
+
+    // Estimated approval range: derived from rounds × $15k midpoint.
+    var rounds = [
+      { num: 1, banks: cached.round1 || [] },
+      { num: 2, banks: cached.round2 || [] },
+      { num: 3, banks: cached.round3 || [] },
+      { num: 4, banks: cached.round4 || [] }
+    ].filter(function(r) { return r.banks.length > 0; });
+
+    var totalBanks = rounds.reduce(function(s, r) { return s + r.banks.length; }, 0);
+    var lo = Math.max(0, totalBanks * 5000);
+    var hi = totalBanks * 20000;
+    var estimatedRange = totalBanks > 0
+      ? '$' + lo.toLocaleString() + ' – $' + hi.toLocaleString()
+      : 'Pending';
+
+    return {
+      clientId:        clientId,
+      clientEmail:     (c && c.email) || '',
+      firstName:       firstName,
+      fullName:        fullName,
+      fundingGoal:     fundingGoal,
+      stageName:       stageName,
+      estimatedRange:  estimatedRange,
+      state:           cached.state || '',
+      rounds:          rounds,
+      ghlContactId:    (c && c.ghlContactId) || ''
+    };
+  }
+
+  // Render bank row in client email (sanitized fields only)
+  function _fseRenderBankBlock(b, roundNum, idx) {
+    var bureau = (b.bureau || b.ev_bureau || '—').toUpperCase();
+    var bureauName = ({ EX: 'Experian', TU: 'TransUnion', EQ: 'Equifax' })[bureau] || bureau;
+    var name = b.bankName || b.name || b.id || 'Bank';
+    var card = b.card || 'Business Card';
+    var safe = _fseClientSafeNote(b);
+    var range = _fseEstimatedRange(b);
+    var pullType = 'Hard pull (' + bureauName + ')';
+    var nextStep = (b.requirements && /checking/i.test(b.requirements))
+      ? 'Confirm or open business checking with the bank before applying.'
+      : 'Apply per the schedule in this email — we’ll confirm timing.';
+    return ''
+      + '<tr><td style="padding:0">'
+        + '<div style="background:#ffffff;border:1px solid #e5e9f0;border-left:3px solid #22a7f0;border-radius:8px;padding:14px 16px;margin:0 0 10px 0">'
+          + '<div style="font-family:Georgia,serif;font-size:15px;font-weight:700;color:#0A1628;line-height:1.3;margin:0 0 4px 0">' + (idx + 1) + '. ' + _escHtml(name) + '</div>'
+          + '<div style="font-size:12px;color:#475569;margin:0 0 10px 0">' + _escHtml(card) + '</div>'
+          + '<div style="display:block;font-size:11px;color:#475569;line-height:1.65">'
+            + '<div style="margin:2px 0"><strong style="color:#0A1628">Bureau pulled:</strong> ' + _escHtml(bureauName) + '</div>'
+            + '<div style="margin:2px 0"><strong style="color:#0A1628">Pull type:</strong> ' + _escHtml(pullType) + '</div>'
+            + '<div style="margin:2px 0"><strong style="color:#0A1628">Estimated approval range:</strong> ' + _escHtml(range) + '</div>'
+            + (safe ? '<div style="margin:6px 0 2px 0;padding:8px 10px;background:#f5f8fb;border-radius:6px;color:#334155"><strong style="color:#0A1628">Before applying:</strong> ' + _escHtml(safe) + '</div>' : '')
+            + '<div style="margin:6px 0 0 0"><strong style="color:#0A1628">Next step:</strong> ' + _escHtml(nextStep) + '</div>'
+          + '</div>'
+        + '</div>'
+      + '</td></tr>';
+  }
+
+  function _fseBuildEmailHTML(clientId, opts) {
+    opts = opts || {};
+    var data = _fseGetSequenceData(clientId);
+    if (!data) return '';
+    var excluded = opts.excluded || {};
+    var intro = opts.intro || ('Hi ' + (data.firstName || 'there') + ',\n\nBased on your credit profile, business information, state, funding goal, and bank relationships, we built a custom funding sequence for you. Each round below tells you which banks to target, why, and what to do before applying.');
+    var introHTML = _escHtml(intro).replace(/\n/g, '<br>');
+
+    // Build rounds HTML
+    var roundsHTML = '';
+    data.rounds.forEach(function(r) {
+      var visibleBanks = r.banks.filter(function(b) {
+        return !excluded[b.id || b.name];
+      });
+      if (!visibleBanks.length) return;
+      var meta = _FSE_ROUND_META[r.num] || { name: 'Round ' + r.num, timing: '', why: '' };
+      roundsHTML += ''
+        + '<tr><td style="padding:18px 0 6px 0">'
+          + '<div style="font-family:Georgia,serif;font-size:18px;font-weight:700;color:#0A1628;letter-spacing:-0.01em;margin:0 0 4px 0">' + _escHtml(meta.name) + '</div>'
+          + (meta.why    ? '<div style="font-size:12px;color:#475569;line-height:1.55;margin:0 0 4px 0">' + _escHtml(meta.why) + '</div>' : '')
+          + (meta.timing ? '<div style="font-size:11px;color:#22a7f0;font-weight:700;margin:0 0 10px 0">' + _escHtml(meta.timing) + '</div>' : '')
+        + '</td></tr>';
+      visibleBanks.forEach(function(b, i) {
+        roundsHTML += _fseRenderBankBlock(b, r.num, i);
+      });
+    });
+    if (!roundsHTML) {
+      roundsHTML = '<tr><td style="padding:16px;background:#f5f8fb;border-radius:8px;text-align:center;font-size:12px;color:#475569">Your funding sequence is being finalized — your CapitalQuest team will follow up with the bank list shortly.</td></tr>';
+    }
+
+    // Full HTML email — inline styles, table layout for max email-client
+    // compatibility (Gmail, Outlook, Apple Mail).
+    return ''
+      + '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your Custom Business Funding Sequence</title></head>'
+      + '<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;color:#0A1628;-webkit-font-smoothing:antialiased">'
+        + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0">'
+          + '<tr><td align="center">'
+            + '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 28px rgba(10,22,40,0.08)">'
+              // Brand header
+              + '<tr><td style="background:#0A1628;padding:24px 28px;text-align:left">'
+                + '<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.01em">CapitalQuest</div>'
+                + '<div style="font-size:11px;color:#22a7f0;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px">Business Funding Sequence</div>'
+              + '</td></tr>'
+              // Body
+              + '<tr><td style="padding:28px 28px 8px 28px">'
+                + '<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#0A1628;letter-spacing:-0.01em;margin:0 0 14px 0;line-height:1.25">Your Custom Funding Sequence</div>'
+                + '<div style="font-size:13px;color:#334155;line-height:1.6;margin:0 0 18px 0">' + introHTML + '</div>'
+                // Snapshot card
+                + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f8fb;border-radius:10px;padding:14px 16px;margin:0 0 8px 0">'
+                  + '<tr>'
+                    + '<td style="font-size:10px;color:#64748b;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding-bottom:4px;width:50%">Funding Goal</td>'
+                    + '<td style="font-size:10px;color:#64748b;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding-bottom:4px;width:50%">Estimated Approval Range</td>'
+                  + '</tr>'
+                  + '<tr>'
+                    + '<td style="font-family:Georgia,serif;font-size:18px;font-weight:700;color:#0A1628;padding-bottom:10px">' + (data.fundingGoal ? '$' + data.fundingGoal.toLocaleString() : '—') + '</td>'
+                    + '<td style="font-family:Georgia,serif;font-size:18px;font-weight:700;color:#0A1628;padding-bottom:10px">' + _escHtml(data.estimatedRange) + '</td>'
+                  + '</tr>'
+                  + '<tr>'
+                    + '<td colspan="2" style="font-size:10px;color:#64748b;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding-top:6px">Current Stage</td>'
+                  + '</tr>'
+                  + '<tr>'
+                    + '<td colspan="2" style="font-family:Georgia,serif;font-size:15px;font-weight:700;color:#22a7f0">' + _escHtml(data.stageName) + '</td>'
+                  + '</tr>'
+                + '</table>'
+              + '</td></tr>'
+              // Rounds
+              + '<tr><td style="padding:0 28px 12px 28px">'
+                + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' + roundsHTML + '</table>'
+              + '</td></tr>'
+              // Next steps
+              + '<tr><td style="padding:8px 28px 22px 28px">'
+                + '<div style="font-family:Georgia,serif;font-size:16px;font-weight:700;color:#0A1628;margin:0 0 8px 0">Your Next Steps</div>'
+                + '<ol style="margin:0;padding:0 0 0 20px;font-size:12.5px;color:#334155;line-height:1.7">'
+                  + '<li>Complete any required bank-relationship setup (business checking, deposits, seasoning).</li>'
+                  + '<li>Keep credit-card utilization low — ideally under 9% across the board.</li>'
+                  + '<li>Don’t apply for other credit without checking with us first.</li>'
+                  + '<li>Watch for application timing instructions from your CapitalQuest team.</li>'
+                  + '<li>If a bank asks for verification, respond quickly so the file doesn’t stall.</li>'
+                + '</ol>'
+              + '</td></tr>'
+              // Disclaimer
+              + '<tr><td style="padding:0 28px 26px 28px">'
+                + '<div style="background:#fffbeb;border-left:3px solid #f59e0b;border-radius:6px;padding:12px 14px;font-size:11px;color:#78350f;line-height:1.55">'
+                  + '<strong style="color:#92400e">Important:</strong> Funding approvals are not guaranteed. Final approval amounts depend on lender underwriting, credit profile, income, business profile, bank relationship, and verification requirements.'
+                + '</div>'
+              + '</td></tr>'
+              // Footer
+              + '<tr><td style="background:#0A1628;padding:18px 28px;text-align:center">'
+                + '<div style="font-size:11px;color:#94a3b8;line-height:1.6">CapitalQuest Funding Team · <a href="mailto:sam@capitalquestfunding.com" style="color:#22a7f0;text-decoration:none">sam@capitalquestfunding.com</a></div>'
+              + '</td></tr>'
+            + '</table>'
+          + '</td></tr>'
+        + '</table>'
+      + '</body></html>';
+  }
+
+  // ── Preview / edit modal ─────────────────────────────────────────────────
+  var _fseDraftKey = function(cid) { return 'cq_fse_draft_' + cid; };
+  function _fseLoadDraft(cid) {
+    try { return JSON.parse(localStorage.getItem(_fseDraftKey(cid)) || 'null'); } catch(e) { return null; }
+  }
+  function _fseSaveDraft(cid, draft) {
+    try { localStorage.setItem(_fseDraftKey(cid), JSON.stringify(draft)); } catch(e) {}
+  }
+
+  function _fseOpenPreview(clientId) {
+    var data = _fseGetSequenceData(clientId);
+    if (!data) { alert('Generate the funding strategy first so we have rounds to email.'); return; }
+    var draft = _fseLoadDraft(clientId) || {};
+    var existing = document.getElementById('fse-overlay');
+    if (existing) existing.remove();
+
+    var defaultSubject = 'Your Custom Business Funding Sequence';
+    var defaultIntro   = 'Hi ' + (data.firstName || 'there') + ',\n\nBased on your credit profile, business information, state, funding goal, and bank relationships, we built a custom funding sequence for you. Each round below tells you which banks to target, why, and what to do before applying.';
+
+    // Bank list with remove checkboxes
+    var bankRowsHTML = '';
+    data.rounds.forEach(function(r) {
+      bankRowsHTML += '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin:10px 0 4px 0">Round ' + r.num + ' · ' + r.banks.length + ' banks</div>';
+      r.banks.forEach(function(b) {
+        var bId = b.id || b.name;
+        var isExcluded = !!(draft.excluded && draft.excluded[bId]);
+        bankRowsHTML += '<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--gray-100);border-radius:7px;margin-bottom:5px;font-size:12px;color:var(--navy);cursor:pointer">';
+        bankRowsHTML += '<input type="checkbox" data-bid="' + _escHtml(bId) + '" ' + (isExcluded ? '' : 'checked') + ' style="margin:0">';
+        bankRowsHTML += '<span style="flex:1"><strong>' + _escHtml(b.bankName || b.name) + '</strong> <span style="color:var(--gray-500);font-weight:500">' + _escHtml(b.card || '') + '</span></span>';
+        bankRowsHTML += '<span style="font-size:9px;font-weight:800;color:var(--gray-500);background:var(--gray-50);border-radius:4px;padding:2px 6px">' + _escHtml((b.bureau || b.ev_bureau || '—').toUpperCase()) + '</span>';
+        bankRowsHTML += '</label>';
+      });
+    });
+
+    var overlay = document.createElement('div');
+    overlay.id = 'fse-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.65);backdrop-filter:blur(4px);z-index:10010;display:flex;align-items:center;justify-content:center;padding:14px;overflow-y:auto';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML =
+      '<div style="background:white;border-radius:14px;max-width:1080px;width:100%;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.32)">'
+        + '<div style="padding:18px 22px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between">'
+          + '<div>'
+            + '<div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--navy);letter-spacing:-0.01em">Send Funding Sequence Email</div>'
+            + '<div style="font-size:11.5px;color:var(--gray-500);margin-top:2px">' + _escHtml(data.fullName || 'Client') + (data.clientEmail ? ' · ' + _escHtml(data.clientEmail) : '') + '</div>'
+          + '</div>'
+          + '<button onclick="document.getElementById(\'fse-overlay\').remove()" style="height:30px;width:30px;background:transparent;border:none;border-radius:6px;cursor:pointer;color:var(--gray-400);font-size:18px">✕</button>'
+        + '</div>'
+        + '<div style="flex:1;display:grid;grid-template-columns:340px 1fr;gap:0;overflow:hidden">'
+          // Left: edit panel
+          + '<div id="fse-edit-pane" style="padding:18px 18px;border-right:1px solid var(--gray-100);overflow-y:auto">'
+            + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:5px">Subject</div>'
+            + '<input id="fse-subject" type="text" value="' + _escHtml(draft.subject || defaultSubject) + '" style="width:100%;height:36px;padding:0 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-family:var(--font-b);font-size:12.5px;color:var(--navy);box-sizing:border-box;margin-bottom:12px">'
+            + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:5px">Intro Message</div>'
+            + '<textarea id="fse-intro" rows="6" style="width:100%;padding:9px 11px;border:1.5px solid var(--gray-200);border-radius:8px;font-family:var(--font-b);font-size:12.5px;color:var(--navy);box-sizing:border-box;resize:vertical;margin-bottom:12px">' + _escHtml(draft.intro || defaultIntro) + '</textarea>'
+            + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:5px">Banks to Include</div>'
+            + '<div id="fse-banks">' + bankRowsHTML + '</div>'
+          + '</div>'
+          // Right: live preview
+          + '<div style="background:#f1f5f9;overflow-y:auto;padding:0">'
+            + '<iframe id="fse-preview-frame" style="width:100%;height:100%;border:none;background:#f1f5f9" sandbox="allow-same-origin"></iframe>'
+          + '</div>'
+        + '</div>'
+        + '<div style="padding:14px 22px;border-top:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+          + '<div style="font-size:11px;color:var(--gray-400)">Sends via GHL email to ' + (data.clientEmail ? _escHtml(data.clientEmail) : '<strong style="color:#b45309">no email on file</strong>') + (data.ghlContactId ? '' : ' · <strong style="color:#b45309">GHL contact not linked</strong>') + '</div>'
+          + '<div style="display:flex;gap:8px">'
+            + '<button onclick="_fseCopyHTML(\'' + clientId + '\')" style="height:36px;padding:0 14px;background:white;color:var(--navy);border:1.5px solid var(--gray-200);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Copy HTML</button>'
+            + '<button onclick="_fseSend(\'' + clientId + '\', \'test\')" style="height:36px;padding:0 14px;background:white;color:var(--navy);border:1.5px solid var(--gray-200);border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Send Test To Me</button>'
+            + '<button onclick="_fseSend(\'' + clientId + '\', \'client\')" style="height:36px;padding:0 18px;background:var(--navy);color:white;border:none;border-radius:8px;font-family:var(--font-h);font-size:12.5px;font-weight:800;letter-spacing:0.02em;cursor:pointer">Send To Client →</button>'
+          + '</div>'
+        + '</div>'
+      + '</div>';
+    document.body.appendChild(overlay);
+    _fseRefreshPreview(clientId);
+    // Live preview: rebuild when subject/intro/bank-toggles change
+    ['fse-subject', 'fse-intro'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', function() { _fseRefreshPreview(clientId); });
+    });
+    var banksWrap = document.getElementById('fse-banks');
+    if (banksWrap) banksWrap.addEventListener('change', function() { _fseRefreshPreview(clientId); });
+  }
+
+  function _fseCollectDraft(clientId) {
+    var subject = (document.getElementById('fse-subject') || {}).value || 'Your Custom Business Funding Sequence';
+    var intro   = (document.getElementById('fse-intro')   || {}).value || '';
+    var excluded = {};
+    document.querySelectorAll('#fse-banks input[type=checkbox]').forEach(function(cb) {
+      if (!cb.checked) excluded[cb.getAttribute('data-bid')] = true;
+    });
+    var draft = { subject: subject, intro: intro, excluded: excluded };
+    _fseSaveDraft(clientId, draft);
+    return draft;
+  }
+
+  function _fseRefreshPreview(clientId) {
+    var draft = _fseCollectDraft(clientId);
+    var html  = _fseBuildEmailHTML(clientId, draft);
+    var iframe = document.getElementById('fse-preview-frame');
+    if (!iframe) return;
+    try {
+      var doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open(); doc.write(html); doc.close();
+    } catch(e) {}
+  }
+
+  function _fseCopyHTML(clientId) {
+    var draft = _fseCollectDraft(clientId);
+    var html  = _fseBuildEmailHTML(clientId, draft);
+    try {
+      navigator.clipboard.writeText(html).then(function() {
+        _fseFlashToast('HTML copied to clipboard');
+      });
+    } catch(e) {
+      var ta = document.createElement('textarea');
+      ta.value = html; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); _fseFlashToast('HTML copied'); } catch(_) {}
+      document.body.removeChild(ta);
+    }
+  }
+
+  function _fseFlashToast(msg) {
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0A1628;color:white;padding:10px 18px;border-radius:10px;font-family:var(--font-h);font-size:12px;font-weight:700;z-index:10020;box-shadow:0 8px 24px rgba(0,0,0,0.25)';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity 0.35s'; }, 2400);
+    setTimeout(function() { try { document.body.removeChild(t); } catch(e) {} }, 3000);
+  }
+
+  function _fseSend(clientId, mode) {
+    var draft = _fseCollectDraft(clientId);
+    var data  = _fseGetSequenceData(clientId);
+    if (!data) return;
+    var html  = _fseBuildEmailHTML(clientId, draft);
+    var subject = draft.subject || 'Your Custom Business Funding Sequence';
+
+    // Resolve target
+    var toEmail = '', contactId = '';
+    if (mode === 'test') {
+      toEmail = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
+      if (!toEmail) { alert('No admin email on file — sign in to send a test.'); return; }
+    } else {
+      toEmail   = data.clientEmail;
+      contactId = data.ghlContactId;
+      if (!toEmail)   { alert('Client has no email on file. Add an email before sending.'); return; }
+      if (!contactId) {
+        if (!confirm('This client is not linked to a GHL contact yet. Send anyway via fallback (copy + open mail app)?')) return;
+      }
+    }
+
+    if (contactId && typeof GHL !== 'undefined' && typeof GHL.sendMessage === 'function') {
+      _fseFlashToast('Sending via GHL…');
+      var fromAddr = (GHL.getSettings && GHL.getSettings().defaultEmailAddress) || '';
+      GHL.sendMessage(contactId, html, 'Email', fromAddr, subject)
+        .then(function() {
+          _fseFlashToast(mode === 'test' ? 'Test email sent' : 'Funding sequence email sent');
+          _fseAfterSend(clientId, mode, toEmail);
+        })
+        .catch(function(err) {
+          alert('GHL send failed: ' + (err && err.message ? err.message : err));
+        });
+    } else {
+      // Fallback: open default mail client with prefilled subject + plain
+      // notice that HTML is on clipboard.
+      _fseCopyHTML(clientId);
+      var mailto = 'mailto:' + encodeURIComponent(toEmail) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent('The HTML email is on your clipboard — paste it into your email client.');
+      try { window.location.href = mailto; } catch(e) {}
+      _fseAfterSend(clientId, mode, toEmail);
+    }
+  }
+
+  function _fseAfterSend(clientId, mode, toEmail) {
+    if (mode === 'test') return; // tests don't log against the client
+    var ts = Date.now();
+    var by = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'admin';
+    try { localStorage.setItem('cq_fse_sent_' + clientId, JSON.stringify({ at: ts, by: by, to: toEmail })); } catch(e) {}
+    try { _logActivity(clientId, 'message', 'Funding sequence email sent to ' + toEmail); } catch(e) {}
+    try { addSystemNote(clientId, 'message', 'Message', 'Funding Sequence Email Sent', 'Sent custom funding sequence email to ' + toEmail + '.', { sentBy: by, at: ts }); } catch(e) {}
+    // Mark a "Send funding sequence to client" ops task complete if one exists
+    try {
+      var ops = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
+      var t = ops.find(function(x) { return x && /funding\s+sequence/i.test(x.title || '') && /send|email/i.test(x.title || '') && !_isOpsTaskTerminal(x); });
+      if (t) completeOpsTask(clientId, t.id);
+    } catch(e) {}
+    // Close modal + refresh strategy view so the "Last sent" stamp shows
+    var ov = document.getElementById('fse-overlay');
+    if (ov) ov.remove();
+    try { if (typeof renderFundingStrategy === 'function') renderFundingStrategy(clientId); } catch(e) {}
   }
 
   // Auto-generate admin tasks from optimization engine recommendations
