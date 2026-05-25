@@ -6720,6 +6720,83 @@
     return allIds.indexOf(bankId) !== -1;
   }
 
+  // ── BUREAU FILTER ──────────────────────────────────────────────────────
+  // Optional Funding Generator filter — admin picks a bureau (EX/TU/EQ) and
+  // the generator keeps only banks/cards that pull that bureau in the
+  // client's state. Default value 'Any' preserves the existing behavior
+  // (no filtering). Accepts EX/TU/EQ short codes OR full names (case-
+  // insensitive) and normalizes them.
+  function _fsgNormalizeBureau(b) {
+    if (!b) return null;
+    var s = String(b).toLowerCase().trim();
+    if (s === 'any' || s === '' || s === 'all') return null;
+    if (s === 'ex' || s === 'experian'   || s === 'exp')               return 'EX';
+    if (s === 'tu' || s === 'transunion' || s === 'trans union' || s === 'transunion®') return 'TU';
+    if (s === 'eq' || s === 'equifax'    || s === 'equ')               return 'EQ';
+    return null;
+  }
+
+  // Returns true if a bank should be included for the given bureau filter.
+  // Priority:
+  //   1. STATE database (banksByState.experian / .transunion / .equifax)
+  //      — if the bank is listed there, that's the authoritative pull
+  //        bureau in this client's state.
+  //   2. Bank metadata (bank.bureau + bank.bureauSecondary + ev_bureau)
+  //      — fallback for banks that aren't in the state's bureau lists
+  //        (national fallback banks, regional banks without state-level
+  //        bureau classification).
+  // Banks can match multiple bureaus (Chase = EX/TU, Elan partners = TU);
+  // any match wins.
+  function isBankMatchesBureauFilter(bank, profile, bureauFilter) {
+    var target = _fsgNormalizeBureau(bureauFilter);
+    if (!target) return true; // 'Any' — keep everything
+    var bankId = bank && (bank.id || bank.bankId);
+    if (!bankId) return true; // fail open
+
+    // 1. State-database lookup
+    var bs = profile && profile.banksByState;
+    if (bs) {
+      var inEx = (bs.experian   || []).some(function(b){ return (b.id || b) === bankId; });
+      var inTu = (bs.transunion || []).some(function(b){ return (b.id || b) === bankId; });
+      var inEq = (bs.equifax    || []).some(function(b){ return (b.id || b) === bankId; });
+      // If the bank appears in ANY state-bureau list, those are the
+      // bureaus it pulls in this state. Otherwise fall through to
+      // bank-level metadata.
+      if (inEx || inTu || inEq) {
+        if (target === 'EX' && inEx) return true;
+        if (target === 'TU' && inTu) return true;
+        if (target === 'EQ' && inEq) return true;
+        return false;
+      }
+    }
+
+    // 2. Bank-level metadata (FSG_PRIMARY_SEQUENCE + enriched fields)
+    var bureaus = [];
+    if (bank.bureau)          bureaus.push(_fsgNormalizeBureau(bank.bureau));
+    if (bank.bureauSecondary) bureaus.push(_fsgNormalizeBureau(bank.bureauSecondary));
+    if (bank.ev_bureau)       bureaus.push(_fsgNormalizeBureau(bank.ev_bureau));
+    if (Array.isArray(bank.bureauPulls)) bank.bureauPulls.forEach(function(b){ bureaus.push(_fsgNormalizeBureau(b)); });
+    if (!bureaus.length) return true; // unknown — fail open
+    return bureaus.indexOf(target) >= 0;
+  }
+
+  // Per-client persisted bureau filter selection. Reads from localStorage.
+  // Returns null (= 'Any') when nothing is saved or invalid.
+  function _fsgGetBureauFilter(clientId) {
+    try {
+      var raw = localStorage.getItem('cq_fsg_bureau_filter_' + clientId);
+      var n = _fsgNormalizeBureau(raw);
+      return n; // 'EX'/'TU'/'EQ'/null
+    } catch (e) { return null; }
+  }
+  function _fsgSetBureauFilter(clientId, value) {
+    try {
+      var n = _fsgNormalizeBureau(value);
+      if (n) localStorage.setItem('cq_fsg_bureau_filter_' + clientId, n);
+      else   localStorage.removeItem('cq_fsg_bureau_filter_' + clientId);
+    } catch (e) {}
+  }
+
   function _fsgValidateDatabase(db) {
     if (!db || !db.banks || !db.states) return false;
     var stateCount = Object.keys(db.states).length;
@@ -7333,9 +7410,10 @@
   // Round 2: Primary banks 5–8 (BofA, Wells Fargo, PNC, Truist) + regional w/ relationship
   // Round 3: Primary bank 9 (Flagstar) + Elan + remaining regional
   // Round 4: Empty — Evergreen sequence is complete at Round 3. No non-Evergreen backup banks.
-  function generateFundingRounds(profile) {
+  function generateFundingRounds(profile, bureauFilter) {
     var db = _fsgDatabase || FSG_NATIONAL_FALLBACK;
     var dbBanks = Object.assign({}, FSG_NATIONAL_FALLBACK.banks, db.banks || {});
+    var resolvedBureauFilter = _fsgNormalizeBureau(bureauFilter);
 
     // Detect weak national relationships — fewer than 2 primary banks where client has a relationship
     var primaryNatRels = FSG_PRIMARY_SEQUENCE.filter(function(e) { return profile.hasRelationship(e.id); }).length;
@@ -7400,10 +7478,23 @@
       return a.ev_priority - b.ev_priority;
     });
 
-    var round1 = allBanks.filter(function(b) { return b.ev_round === 1; });
-    var round2 = allBanks.filter(function(b) { return b.ev_round === 2; });
-    var round3 = allBanks.filter(function(b) { return b.ev_round === 3; });
-    var round4 = allBanks.filter(function(b) { return b.ev_round === 4; });
+    // ── Optional bureau filter ────────────────────────────────────────────
+    // When set ('EX'/'TU'/'EQ'), keep only banks that pull the selected
+    // bureau in the client's state. 'Any'/null leaves the sequence
+    // untouched — preserving every existing behavior. Applied AFTER
+    // enrichment + dedup so relationships/score gates have already been
+    // honored and we're just narrowing the surface.
+    var allBanksFiltered = allBanks;
+    if (resolvedBureauFilter) {
+      allBanksFiltered = allBanks.filter(function(b) {
+        return isBankMatchesBureauFilter(b, profile, resolvedBureauFilter);
+      });
+    }
+
+    var round1 = allBanksFiltered.filter(function(b) { return b.ev_round === 1; });
+    var round2 = allBanksFiltered.filter(function(b) { return b.ev_round === 2; });
+    var round3 = allBanksFiltered.filter(function(b) { return b.ev_round === 3; });
+    var round4 = allBanksFiltered.filter(function(b) { return b.ev_round === 4; });
 
     var r1Avail = round1.filter(function(b) { return !b.isUsed; });
     var r2Avail = round2.filter(function(b) { return !b.isUsed; });
@@ -7425,7 +7516,10 @@
 
     return { round1:round1, round2:round2, round3:round3, round4:round4,
       r1Avail:r1Avail, r2Avail:r2Avail, r3Avail:r3Avail, r4Avail:r4Avail,
-      activeRound:activeRound, sequence:allBanks };
+      activeRound:activeRound, sequence:allBanks,
+      bureauFilter: resolvedBureauFilter || null,
+      bureauFilterApplied: !!resolvedBureauFilter,
+      preFilterCount: allBanks.length, postFilterCount: allBanksFiltered.length };
   }
 
   // ── ENGINE STEP 6: Generate next best action ──────────────────────────────
@@ -7516,11 +7610,22 @@
   }
 
   // ── ENGINE ORCHESTRATOR ───────────────────────────────────────────────────
-  function generateFundingStrategy(clientId) {
+  function generateFundingStrategy(clientId, bureauFilter) {
+    // bureauFilter: 'EX' | 'TU' | 'EQ' | null/'Any'. When null/Any, the
+    // generator behaves identically to the un-filtered version — no
+    // existing behavior changes. When set, banks/cards are restricted
+    // to those pulling the selected bureau in the client's state
+    // (see isBankMatchesBureauFilter for resolution order).
+    var resolvedFilter = _fsgNormalizeBureau(bureauFilter);
+    if (resolvedFilter === null && bureauFilter === undefined) {
+      // No explicit param — fall back to per-client persisted choice.
+      resolvedFilter = _fsgGetBureauFilter(clientId);
+    }
+
     var profile  = fsgBuildClientProfile(clientId);
     var gap      = calculateFundingGap(profile);
     var ready    = checkFundingReadiness(profile);
-    var rounds   = generateFundingRounds(profile);
+    var rounds   = generateFundingRounds(profile, resolvedFilter);
     var nba      = generateNextBestAction(profile, ready, rounds, gap);
 
     // ── Apply manual overrides ─────────────────────────────────────────────
@@ -7589,7 +7694,13 @@
       apps:        profile.apps,
       isUsed:      profile.isBankUsed,
       isApproved:  profile.isBankApproved,
-      isDenied:    profile.isBankDenied
+      isDenied:    profile.isBankDenied,
+      // Bureau filter state — surfaced so the renderer can show the
+      // current selection in the dropdown + a 'Filtered by …' banner.
+      bureauFilter:        rounds.bureauFilter || null,
+      bureauFilterApplied: !!rounds.bureauFilterApplied,
+      bureauFilterPreCount:  rounds.preFilterCount,
+      bureauFilterPostCount: rounds.postFilterCount
     };
 
     // Store per-client — prevents cross-client strategy leakage
@@ -7958,6 +8069,40 @@
       html += '</div></div>';
     }
 
+    // ── Advanced Filters ──────────────────────────────────────────────────
+    // Optional bureau filter. When set, the rounds above were already
+    // narrowed to banks that pull this bureau in the client's state.
+    // Default 'Any' = no filter, behaves identically to before.
+    var _curBureau = s.bureauFilter || '';
+    var _bureauOpt = function(v, lbl) {
+      return '<option value="' + v + '"' + (_curBureau === v ? ' selected' : '') + '>' + lbl + '</option>';
+    };
+    html += '<div class="fsg-section" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:14px">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">';
+    html += '<div>';
+    html += '<div style="font-size:9.5px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray-500);margin-bottom:2px">Advanced Filters</div>';
+    html += '<div style="font-size:12px;color:var(--gray-600)"><strong style="color:var(--navy)">State:</strong> ' + (s.state || '—') + '</div>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;gap:8px">';
+    html += '<label for="fsg-bureau-' + clientId + '" style="font-size:11px;font-weight:700;color:var(--gray-600)">Bureau Pull</label>';
+    html += '<select id="fsg-bureau-' + clientId + '" onchange="generateAndRenderFSG(\'' + clientId + '\', this.value)" style="height:30px;padding:0 10px;border:1.5px solid var(--gray-200);border-radius:7px;font-family:var(--font-b);font-size:12px;color:var(--navy);background:white;outline:none;cursor:pointer">';
+    html += _bureauOpt('',   'Any');
+    html += _bureauOpt('EX', 'Experian');
+    html += _bureauOpt('TU', 'TransUnion');
+    html += _bureauOpt('EQ', 'Equifax');
+    html += '</select>';
+    html += '</div>';
+    html += '</div>';
+    if (s.bureauFilterApplied) {
+      var _filterLabel = { EX: 'Experian', TU: 'TransUnion', EQ: 'Equifax' }[s.bureauFilter] || s.bureauFilter;
+      html += '<div style="margin-top:9px;padding:8px 10px;background:rgba(34,167,240,0.08);border:1px solid rgba(34,167,240,0.2);border-radius:7px;font-size:11.5px;color:var(--navy);display:flex;align-items:center;gap:6px">';
+      html += '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="var(--blue)" stroke-width="2.2"><path d="M3 4h18l-7 8v5l-4 2v-7L3 4z"/></svg>';
+      html += '<span><strong>Filtered by:</strong> ' + (s.state || 'State') + ' + ' + _filterLabel + ' pulls only · ';
+      html += '<span style="color:var(--gray-500)">' + s.bureauFilterPostCount + ' of ' + s.bureauFilterPreCount + ' banks match</span></span>';
+      html += '</div>';
+    }
+    html += '</div>';
+
     // ── Available Banks ───────────────────────────────────────────────────
     if (s.banksByState) {
       html += '<div class="fsg-section">';
@@ -7997,6 +8142,19 @@
       { num: 3, banks: s.round3, avail: s.r3Avail, label: 'Round 3 — Elan + Regional Expansion', sub: _roundSub(s.round3, 'State-specific community banks'), color: '#1d4ed8' }
     ];
     var hasAnyRound = roundDefs.some(function(r) { return r.banks.length > 0; }) || (s.round4 && s.round4.length > 0);
+
+    // No-results state — bureau filter is active but nothing matched.
+    if (!hasAnyRound && s.bureauFilterApplied) {
+      var _noMatchBureau = { EX: 'Experian', TU: 'TransUnion', EQ: 'Equifax' }[s.bureauFilter] || s.bureauFilter;
+      html += '<div class="fsg-section">';
+      html += '<div class="fsg-section-title">Recommended Funding Sequence' + (s.state ? ' — ' + s.state : '') + '</div>';
+      html += '<div style="padding:18px;border:1.5px dashed var(--gray-200);border-radius:10px;text-align:center;background:#f8fafc">';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px">No matching banks found for ' + (s.state || 'this state') + ' pulling ' + _noMatchBureau + '.</div>';
+      html += '<div style="font-size:11.5px;color:var(--gray-500);line-height:1.55;margin-bottom:12px">Try switching the bureau filter to <strong>Any</strong> to see the full sequence, or pick a different bureau.</div>';
+      html += '<button onclick="generateAndRenderFSG(\'' + clientId + '\', \'Any\')" style="height:32px;padding:0 14px;background:var(--navy);color:white;border:none;border-radius:8px;font-family:var(--font-h);font-size:11.5px;font-weight:700;cursor:pointer">Reset filter to Any</button>';
+      html += '</div></div>';
+    }
+
     if (hasAnyRound) {
       html += '<div class="fsg-section">';
       html += '<div class="fsg-section-title">Recommended Funding Sequence' + (s.state ? ' — ' + s.state : '') + '</div>';
@@ -8101,7 +8259,14 @@
     }
   }
 
-  function generateAndRenderFSG(clientId) {
+  // Optional bureauFilter param: 'EX' | 'TU' | 'EQ' | 'Any' | undefined.
+  // When set, persists the choice so refresh + Generate Strategy clicks
+  // keep using it. Pass undefined to use the persisted value. Pass 'Any'
+  // or empty to clear the filter entirely.
+  function generateAndRenderFSG(clientId, bureauFilter) {
+    if (bureauFilter !== undefined) {
+      _fsgSetBureauFilter(clientId, bureauFilter);
+    }
     var body = document.getElementById('fsg-body-' + clientId);
     if (body) body.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray-400);padding:8px 0"><div style="width:14px;height:14px;border:2px solid var(--blue-light);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>Analyzing profile and building strategy…</div>';
     // Clear stale cached strategy for this client so we always get fresh data
