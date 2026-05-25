@@ -9243,12 +9243,16 @@
     try {
       var s = JSON.parse(localStorage.getItem(_WQ_STATE_KEY) || '{}');
       var today = _wqTodayStr();
-      if (s.date !== today) s = { date: today, skipped: {}, reviewed: {}, filter: 'all' };
+      if (s.date !== today) s = { date: today, skipped: {}, reviewed: {}, filter: 'all', includeFuture: 'off', cooldown: {} };
       if (!s.skipped) s.skipped = {};
       if (!s.reviewed) s.reviewed = {};
       if (!s.filter) s.filter = 'all';
+      // includeFuture: 'off' (default, today-only) | '3d' | '7d' | '14d'
+      if (!s.includeFuture) s.includeFuture = 'off';
+      // cooldown: clientId → unix-ms expiry; "Skip For Later Today"
+      if (!s.cooldown) s.cooldown = {};
       return s;
-    } catch(e) { return { date: _wqTodayStr(), skipped: {}, reviewed: {}, filter: 'all' }; }
+    } catch(e) { return { date: _wqTodayStr(), skipped: {}, reviewed: {}, filter: 'all', includeFuture: 'off', cooldown: {} }; }
   }
   function _wqSaveState(s) {
     try { localStorage.setItem(_WQ_STATE_KEY, JSON.stringify(s)); } catch(e) {}
@@ -9267,6 +9271,30 @@
     var s = _wqGetState();
     s.filter = f;
     _wqSaveState(s);
+  }
+  // 'off' (default today-only) | '3d' | '7d' | '14d'
+  function _wqSetIncludeFuture(v) {
+    var s = _wqGetState();
+    s.includeFuture = (['off','3d','7d','14d'].indexOf(v) >= 0) ? v : 'off';
+    _wqSaveState(s);
+  }
+  // Skip For Later Today — hides a client for N hours (default 2). After
+  // expiry the client reappears automatically in the next compute.
+  function _wqSetCooldown(clientId, hours) {
+    var s = _wqGetState();
+    var h = parseFloat(hours);
+    if (!h || h <= 0) h = 2;
+    var endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
+    var until = Math.min(Date.now() + h * 3600000, endOfDay.getTime());
+    s.cooldown[clientId] = until;
+    _wqSaveState(s);
+  }
+  function _wqClearCooldown(clientId) {
+    var s = _wqGetState();
+    if (s.cooldown && s.cooldown[clientId]) {
+      delete s.cooldown[clientId];
+      _wqSaveState(s);
+    }
   }
 
   // Compute the prioritized queue. Returns an array of item objects sorted
@@ -9287,24 +9315,59 @@
       return true;
     });
 
+    // Eligibility window — by default the queue is TODAY-ONLY (overdue +
+    // due today + no-due-date critical). When the admin opts into future
+    // mode (state.includeFuture = '3d' | '7d' | '14d'), tasks within that
+    // window also count. Future tasks are NEVER ranked above today
+    // tasks — only used as a fallback for ranking after the today pool
+    // is exhausted.
+    var futureMode = state.includeFuture || 'off';
+    var futureWindowDays = { '3d': 3, '7d': 7, '14d': 14 }[futureMode] || 0;
+    var futureCutoff = null;
+    if (futureWindowDays > 0) {
+      var cd = new Date();
+      cd.setHours(0, 0, 0, 0);
+      cd.setDate(cd.getDate() + futureWindowDays);
+      futureCutoff = cd.toISOString().split('T')[0];
+    }
+
     var items = pool.map(function(c) {
       var ops = (typeof getOpsTasks === 'function') ? getOpsTasks(c.id) : [];
-      var pending = ops.filter(function(t) { return t && t.status !== 'completed'; });
-      var dueToday = pending.filter(function(t) { return t.dueDate === today; });
-      var overdue  = pending.filter(function(t) {
+      var allPending = ops.filter(function(t) { return t && t.status !== 'completed'; });
+      var dueToday   = allPending.filter(function(t) { return t.dueDate === today; });
+      var overdue    = allPending.filter(function(t) {
         if (!t.dueDate || t.dueDate === today) return false;
         return t.dueDate < today;
       });
-      var critical = pending.filter(function(t) { return t.priority === 'critical'; });
-      var high     = pending.filter(function(t) { return t.priority === 'high'; });
+      var future     = allPending.filter(function(t) { return t.dueDate && t.dueDate > today; });
+      var noDueDate  = allPending.filter(function(t) { return !t.dueDate; });
 
-      // Sort dueToday by time (earliest first)
+      // Sort dueToday by time (earliest first) per priority spec
       dueToday.sort(function(a, b) {
         var at = a.dueTime || '23:59'; var bt = b.dueTime || '23:59';
         return at < bt ? -1 : at > bt ? 1 : 0;
       });
-      // Sort overdue by earliest due date
+      // Sort overdue by earliest due date (most overdue first)
       overdue.sort(function(a, b) { return (a.dueDate || '') < (b.dueDate || '') ? -1 : 1; });
+
+      // Today-eligible pool — what Start Working defaults to looking at.
+      // Future tasks are EXCLUDED here even when the admin opted in;
+      // they're tracked separately and only used for ranking fallback
+      // so future-only clients never beat today-only clients.
+      var pending = overdue.concat(dueToday);
+
+      // Future window — only banked when the admin explicitly opted in.
+      var futureInWindow = (futureMode !== 'off' && futureCutoff)
+        ? future.filter(function(t) { return t.dueDate <= futureCutoff; })
+        : [];
+      // No-due-date tasks: keep them silently — they don't trigger ranking
+      // boosts but they show in pending counts so admins know they exist.
+
+      // Critical / high — restricted to TODAY+overdue only (per spec).
+      // "Critical tasks due today" / "High priority tasks due today" —
+      // a critical task due May 30 must NOT appear in today's session.
+      var critical = pending.filter(function(t) { return t.priority === 'critical'; });
+      var high     = pending.filter(function(t) { return t.priority === 'high'; });
 
       var ct = (typeof getClientTasks === 'function') ? getClientTasks(c.id) : null;
       var stageIdx = (ct && typeof ct.stage === 'number') ? ct.stage : 0;
@@ -9337,23 +9400,54 @@
       var _fuOpenCount = pending.filter(function(t){ return t && t.source === 'auto_followup'; }).length;
       var _fuDays = (typeof _fuDaysSinceContact === 'function') ? _fuDaysSinceContact(c.id) : Infinity;
 
+      // Scoring priority per spec (today/overdue only — never future):
+      //   1. overdue tasks
+      //   2. critical tasks due today
+      //   3. tasks due today (sorted earliest-first elsewhere)
+      //   4. high priority tasks due today
+      //   5. follow-up tasks due today
+      //   6. longest waiting / stuck client ONLY when no due tasks exist
+      // Future tasks never outrank today work; they only contribute via
+      // a small bonus when futureMode is on AND no today tasks exist.
+      if (overdue.length > 0)  { score += 60; reasons.push({ k: 'overdue',   label: 'Overdue task',   detail: overdue[0].title }); }
+      if (critical.length > 0) { score += 55; reasons.push({ k: 'critical',  label: 'Critical due today', detail: critical[0].title }); }
       if (dueToday.length > 0) { score += 50; reasons.push({ k: 'due-today', label: 'Task due today', detail: dueToday[0].title }); }
-      if (overdue.length > 0)  { score += 40; reasons.push({ k: 'overdue',   label: 'Overdue task',   detail: overdue[0].title }); }
-      if (_fuBucket === 'red'  && _fuOpenCount > 0) { score += 45; reasons.push({ k: 'followup-overdue', label: 'Overdue follow-up' }); }
-      if (_fuBucket === 'red'  && _fuOpenCount === 0) { score += 30; reasons.push({ k: 'followup-cold',   label: 'No contact ' + (_fuDays === Infinity ? 'on record' : _fuDays + 'd') }); }
-      if (critical.length > 0) { score += 35; reasons.push({ k: 'critical',  label: 'Critical task',  detail: critical[0].title }); }
-      if (high.length > 0)     { score += 25; reasons.push({ k: 'high',      label: 'High priority',  detail: high[0].title }); }
+      if (high.length > 0)     { score += 30; reasons.push({ k: 'high',      label: 'High priority due today', detail: high[0].title }); }
+      if (_fuBucket === 'red'  && _fuOpenCount > 0)  { score += 45; reasons.push({ k: 'followup-overdue', label: 'Overdue follow-up' }); }
+      if (_fuBucket === 'red'  && _fuOpenCount === 0) { score += 25; reasons.push({ k: 'followup-cold',   label: 'No contact ' + (_fuDays === Infinity ? 'on record' : _fuDays + 'd') }); }
       if (_fuBucket === 'yellow') { score += 15; reasons.push({ k: 'followup-due', label: 'Follow-up due' }); }
-      if (daysSinceActivity >= 5) { score += 20; reasons.push({ k: 'idle', label: 'No activity ' + daysSinceActivity + 'd' }); }
       if (needsAppFollowUp)    { score += 20; reasons.push({ k: 'app-followup', label: 'Application follow-up' }); }
-      score += daysInStage * 1;
-      score += daysInSystem * 0.5;
+      // Bucket 6 — only when no due tasks: stuck-stage / idle fallback
+      if (pending.length === 0) {
+        if (daysSinceActivity >= 5) { score += 10; reasons.push({ k: 'idle', label: 'No activity ' + daysSinceActivity + 'd' }); }
+        score += daysInStage * 0.5;
+        score += daysInSystem * 0.25;
+        // Future-mode bonus — small, never enough to outrank today work
+        if (futureInWindow.length > 0) {
+          score += 5;
+          reasons.push({ k: 'future', label: 'Upcoming task in ' + futureWindowDays + 'd', detail: futureInWindow[0].title });
+        }
+      }
 
-      // Top task — what the admin should actually do next
-      var topTask = dueToday[0] || overdue[0] || critical[0] || high[0] || pending[0] || null;
+      // Top task — strict priority: overdue → critical-today → due-today
+      // by earliest time → high-today → follow-up-today → future (only if
+      // future mode is on AND there are no today tasks).
+      var topTask = overdue[0]
+                 || (critical.length ? critical[0] : null)
+                 || dueToday[0]
+                 || (high.length ? high[0] : null)
+                 || (pending.length === 0 && futureInWindow[0]) // future only if no today work
+                 || null;
 
       var fico = (typeof getClientScore === 'function') ? getClientScore(c.id) : null;
       if (!fico) fico = c.fico || (d && d.creditScore) || null;
+
+      // Cooldown — "Skip For Later Today" hides a client until N hours
+      // pass. Until then they're filtered out of the eligible queue
+      // even if they have overdue/critical work. After cooldown lapses
+      // they reappear automatically on the next compute call.
+      var cooldownUntil = (state.cooldown && state.cooldown[c.id]) || 0;
+      var inCooldown = cooldownUntil > now;
 
       return {
         clientId: c.id, client: c,
@@ -9361,9 +9455,12 @@
         reasons: reasons,
         topReason: reasons[0] || { k: 'queue', label: 'In queue' },
         topTask: topTask,
-        pendingCount: pending.length,
+        pendingCount: pending.length,                // today + overdue only
+        allPendingCount: allPending.length,          // ANY pending (incl. future)
         dueTodayCount: dueToday.length,
         overdueCount: overdue.length,
+        futureCount: future.length,
+        futureWindowCount: futureInWindow.length,
         stageIdx: stageIdx,
         stageName: (PIPELINE_STAGES[stageIdx] && PIPELINE_STAGES[stageIdx].name) || 'Stage ' + (stageIdx + 1),
         stageColor: (PIPELINE_STAGES[stageIdx] && PIPELINE_STAGES[stageIdx].color) || '#22A7F0',
@@ -9377,7 +9474,14 @@
         isCritical: critical.length > 0,
         hasPendingApps: pendingApps.length > 0,
         isSkipped: !!state.skipped[c.id],
-        isReviewed: !!state.reviewed[c.id]
+        isReviewed: !!state.reviewed[c.id],
+        cooldownUntil: cooldownUntil,
+        inCooldown: inCooldown,
+        // hasTodayWork = client has any actionable task TODAY. Drives the
+        // default-mode eligibility filter below.
+        hasTodayWork: pending.length > 0
+                   || (_fuBucket === 'red' || _fuBucket === 'yellow')
+                   || needsAppFollowUp
       };
     });
 
@@ -9392,13 +9496,24 @@
       // 'all' — no filter
     }
 
-    // Sort: skipped go to bottom UNLESS critical/overdue forces re-elevation
+    // TODAY-ONLY DEFAULT: when futureMode is off, drop clients with no
+    // today-eligible work. This is the fix for "tasks due May 26
+    // showing in today's session" — future-only clients no longer
+    // appear unless the admin opts in via the future-tasks toggle.
+    if (futureMode === 'off') {
+      items = items.filter(function(x) { return x.hasTodayWork; });
+    }
+
+    // Sort: cooldown → bottom; skipped → bottom UNLESS critical/overdue
+    // forces re-elevation; reviewed clients drop slightly so fresh ones
+    // surface.
     items.sort(function(a, b) {
+      if (a.inCooldown && !b.inCooldown) return 1;
+      if (b.inCooldown && !a.inCooldown) return -1;
       var aForce = a.isOverdue || a.isCritical;
       var bForce = b.isOverdue || b.isCritical;
       if (a.isSkipped && !aForce && !(b.isSkipped && !bForce)) return 1;
       if (b.isSkipped && !bForce && !(a.isSkipped && !aForce)) return -1;
-      // Reviewed-today drop slightly so unreviewed clients surface
       if (a.isReviewed && !b.isReviewed) return 1;
       if (b.isReviewed && !a.isReviewed) return -1;
       return b.score - a.score;
@@ -9438,6 +9553,50 @@
   function _wqSkipForToday(clientId) {
     _wqToggleSkip(clientId);
     // Re-render whichever surface is visible
+    if (document.getElementById('wq-modal')) _wqRender();
+    if (clientId === _wqCurrentClientId) _wqNextClient();
+  }
+
+  // Skip For Later Today — temporary, cooldown-based. Default 2h. Pops a
+  // small menu so the admin can pick the cooldown window. After expiry
+  // the client returns to the queue automatically.
+  function _wqOpenLaterMenu(clientId, evt) {
+    if (evt && evt.stopPropagation) evt.stopPropagation();
+    // Remove any existing later-menu first
+    var existing = document.getElementById('wq-later-menu');
+    if (existing) existing.remove();
+    var btn = evt && (evt.currentTarget || evt.target);
+    var rect = btn && btn.getBoundingClientRect ? btn.getBoundingClientRect() : { left: 100, bottom: 100 };
+    var menu = document.createElement('div');
+    menu.id = 'wq-later-menu';
+    menu.style.cssText = 'position:fixed;top:' + (rect.bottom + 6) + 'px;left:' + rect.left + 'px;background:white;border:1.5px solid var(--gray-100);border-radius:10px;box-shadow:0 12px 32px rgba(10,22,40,0.18);z-index:10001;overflow:hidden;min-width:170px';
+    var options = [
+      { label: '1 hour',  h: 1 },
+      { label: '2 hours · default', h: 2 },
+      { label: '4 hours', h: 4 },
+      { label: 'End of day', h: 24 }
+    ];
+    menu.innerHTML =
+      '<div style="padding:9px 12px;font-size:10px;font-weight:800;color:var(--gray-500);letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid var(--gray-100)">Hide for…</div>'
+      + options.map(function(o) {
+          return '<button onclick="_wqApplyCooldown(\'' + clientId + '\',' + o.h + ')" style="width:100%;text-align:left;padding:9px 12px;background:white;border:none;font-family:var(--font-b);font-size:12px;color:var(--navy);cursor:pointer;transition:background 0.1s" onmouseover="this.style.background=\'var(--gray-50)\'" onmouseout="this.style.background=\'white\'">' + o.label + '</button>';
+        }).join('');
+    document.body.appendChild(menu);
+    // Close on next outside click
+    setTimeout(function() {
+      var closer = function(e) {
+        if (!menu.contains(e.target)) {
+          menu.remove();
+          document.removeEventListener('click', closer);
+        }
+      };
+      document.addEventListener('click', closer);
+    }, 0);
+  }
+  function _wqApplyCooldown(clientId, hours) {
+    _wqSetCooldown(clientId, hours);
+    var existing = document.getElementById('wq-later-menu');
+    if (existing) existing.remove();
     if (document.getElementById('wq-modal')) _wqRender();
     if (clientId === _wqCurrentClientId) _wqNextClient();
   }
@@ -9522,9 +9681,39 @@
       return '<button class="wq-filter' + sel + '" onclick="_wqSetFilter(\'' + f.k + '\');_wqRender()">' + f.label + '</button>';
     }).join('');
 
+    // Include-future-tasks dropdown — default OFF (today-only). When set,
+    // queue includes tasks due within the selected window as a tie-break
+    // fallback; today work still ranks first.
+    var futureSelHTML =
+      '<span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:11px;color:var(--gray-600);font-weight:600">'
+      + 'Include future tasks'
+      + '<select onchange="_wqSetIncludeFuture(this.value);_wqRender()" style="height:26px;padding:0 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-family:var(--font-b);font-size:11px;color:var(--navy);background:white;cursor:pointer">'
+      +   '<option value="off"' + (state.includeFuture === 'off' ? ' selected' : '') + '>Off (today only)</option>'
+      +   '<option value="3d"'  + (state.includeFuture === '3d'  ? ' selected' : '') + '>Next 3 days</option>'
+      +   '<option value="7d"'  + (state.includeFuture === '7d'  ? ' selected' : '') + '>Next 7 days</option>'
+      +   '<option value="14d"' + (state.includeFuture === '14d' ? ' selected' : '') + '>Next 14 days</option>'
+      + '</select>'
+      + '</span>';
+
+    // "All caught up" — when today-only mode has zero work left,
+    // celebrate and offer a Restart Work Session button that recomputes
+    // (picks up any tasks created since the last open).
+    var allCaughtUp = (state.includeFuture === 'off' && totalCount === 0);
+
     var listHTML = '';
-    if (visible.length === 0) {
-      listHTML = '<div class="wq-empty">No clients match this filter.<div class="wq-empty-sub">Try a different filter or check back later.</div></div>';
+    if (allCaughtUp) {
+      listHTML =
+        '<div class="wq-empty" style="padding:34px 16px">'
+        + '<div style="font-size:38px;line-height:1;margin-bottom:10px">&#127881;</div>'
+        + '<div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:4px">All caught up for today.</div>'
+        + '<div class="wq-empty-sub" style="margin-bottom:14px">No overdue or due-today work remaining.</div>'
+        + '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'
+          + '<button class="wq-btn primary" onclick="_wqRender()">Restart Work Session</button>'
+          + '<button class="wq-btn" onclick="_wqSetIncludeFuture(\'3d\');_wqRender()">Show next 3 days</button>'
+        + '</div>'
+        + '</div>';
+    } else if (visible.length === 0) {
+      listHTML = '<div class="wq-empty">No clients match this filter.<div class="wq-empty-sub">Try a different filter or toggle Include future tasks on.</div></div>';
     } else {
       listHTML = visible.map(function(item, idx) { return _wqCardHTML(item, idx + 1); }).join('');
     }
@@ -9556,7 +9745,7 @@
         + '<div class="wq-progress-bar"><div class="wq-progress-fill" style="width:' + pct + '%"></div></div>'
         + '<div class="wq-progress-txt">' + reviewedCount + ' of ' + totalCount + ' reviewed today</div>'
       + '</div>'
-      + '<div class="wq-filters">' + filtersHTML + '</div>'
+      + '<div class="wq-filters" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">' + filtersHTML + futureSelHTML + '</div>'
       + '<div class="wq-list">' + listHTML + '</div>'
       + '<div class="wq-footer">'
         + (showMoreBtn || '<span></span>')
@@ -9601,15 +9790,25 @@
       + (item.hasPendingApps ? '<div class="wq-stat" style="color:#1d4ed8"><strong>Apps in-flight</strong></div>' : '')
     + '</div>';
 
-    var skipLabel = item.isSkipped ? 'Unskip' : 'Skip for Today';
+    var skipLabel = item.isSkipped ? 'Unskip' : 'Skip with Reason';
     var completeBtn = item.topTask
       ? '<button class="wq-btn complete" onclick="_wqCompleteTopTask(\'' + item.clientId + '\')">&#10003; Complete Task</button>'
       : '';
 
+    // Cooldown indicator — when client is hidden by Skip For Later
+    var cooldownNote = '';
+    if (item.inCooldown) {
+      var minsLeft = Math.max(1, Math.round((item.cooldownUntil - Date.now()) / 60000));
+      var hLabel = minsLeft >= 60 ? Math.round(minsLeft / 60) + 'h' : minsLeft + 'm';
+      cooldownNote = '<span style="font-size:10px;font-weight:700;color:var(--gray-500);background:var(--gray-100);padding:2px 7px;border-radius:5px;letter-spacing:0.04em">⏳ Hidden ' + hLabel + '</span>';
+    }
+
     var actions = '<div class="wq-actions">'
       + '<button class="wq-btn primary" onclick="_wsStartSession(\'' + item.clientId + '\')">Start Working &rarr;</button>'
       + completeBtn
+      + '<button class="wq-btn" onclick="_wqOpenLaterMenu(\'' + item.clientId + '\', event)" title="Skip for later today (cooldown)">Later Today &darr;</button>'
       + '<button class="wq-btn skip" onclick="_wqSkipForToday(\'' + item.clientId + '\')">' + skipLabel + '</button>'
+      + cooldownNote
     + '</div>';
 
     var cardCls = 'wq-card';
@@ -9713,20 +9912,43 @@
   function _wsAdvance() {
     var s = _wsGetSession();
     if (!s) return;
-    // Recompute ordering inside the snapshot — push any newly-skipped
-    // items down, but only WITHIN the original queue. New clients are
-    // not added mid-session.
+    // Skip past completed, skipped, AND cooldown'd clients inside the
+    // session snapshot. Cooldown'd ones may come back later if the user
+    // resumes the session after the cooldown expires.
+    var wqState = _wqGetState();
+    function _isHidden(id) {
+      var cooldownUntil = (wqState.cooldown && wqState.cooldown[id]) || 0;
+      return s.completed[id] || s.skipped[id] || cooldownUntil > Date.now();
+    }
     var idx = s.currentIdx + 1;
     while (idx < s.queue.length) {
-      var id = s.queue[idx];
-      if (!s.completed[id] && !s.skipped[id]) break;
+      if (!_isHidden(s.queue[idx])) break;
       idx++;
     }
     if (idx >= s.queue.length) {
-      // Wrap around to pick up anything still pending (skipped that
-      // weren't critical/overdue could come back here if user revisits)
-      var pending = s.queue.filter(function(id) { return !s.completed[id] && !s.skipped[id]; });
+      // Wrap around — anything still eligible (not completed, not skipped,
+      // not in cooldown)?
+      var pending = s.queue.filter(function(id) { return !_isHidden(id); });
       if (!pending.length) {
+        // ── Look beyond the original snapshot ───────────────────────────
+        // Pick up any clients that became eligible AFTER the session
+        // started — e.g. new auto-followup tasks or tasks created
+        // mid-session. We never permanently lock the workflow.
+        var freshQueue = _wqCompute();
+        var freshIds = freshQueue
+          .filter(function(x) { return !_isHidden(x.clientId) && s.queue.indexOf(x.clientId) === -1; })
+          .map(function(x) { return x.clientId; });
+        if (freshIds.length) {
+          // Append fresh clients to the snapshot and continue
+          s.queue = s.queue.concat(freshIds);
+          s.currentIdx = s.queue.length - freshIds.length;
+          _wsSaveSession(s);
+          var nextFresh = s.queue[s.currentIdx];
+          _wqCurrentClientId = nextFresh;
+          if (typeof selectClient === 'function') selectClient(nextFresh);
+          setTimeout(function() { _wqRenderBanner(); }, 60);
+          return;
+        }
         _wsFinishSession();
         return;
       }
@@ -9827,13 +10049,36 @@
 
   function _wsFinishSession() {
     var s = _wsGetSession();
-    if (s) {
-      var completedCount = Object.keys(s.completed).length;
-      var skippedCount   = Object.keys(s.skipped).length;
-      try { if (typeof logActivity === 'function') logActivity('Work session complete — ' + completedCount + ' done, ' + skippedCount + ' skipped', '#10b981'); } catch(e) {}
-      alert('Work session complete!\n\n' + completedCount + ' client(s) handled\n' + skippedCount + ' skipped');
-    }
+    var completedCount = s ? Object.keys(s.completed).length : 0;
+    var skippedCount   = s ? Object.keys(s.skipped).length : 0;
+    try { if (typeof logActivity === 'function') logActivity('Work session complete — ' + completedCount + ' done, ' + skippedCount + ' skipped', '#10b981'); } catch(e) {}
     _wsEndSession(true);
+
+    // "All caught up" modal — replaces the old blocking alert(). Lets the
+    // admin either restart immediately (picks up any tasks created since
+    // the session began, plus any clients whose cooldown has expired) or
+    // close the panel. Workflow never gets permanently locked.
+    var existing = document.getElementById('ws-allcaught-overlay');
+    if (existing) existing.remove();
+    var overlay = document.createElement('div');
+    overlay.id = 'ws-allcaught-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.65);backdrop-filter:blur(4px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML =
+      '<div style="background:white;border-radius:16px;padding:28px 28px 22px;max-width:440px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,0.32);text-align:center">'
+      + '<div style="font-size:44px;line-height:1;margin-bottom:10px">&#127881;</div>'
+      + '<div style="font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--navy);margin-bottom:6px;letter-spacing:-0.01em">All caught up for today.</div>'
+      + '<div style="font-size:12.5px;color:var(--gray-500);line-height:1.55;margin-bottom:18px">'
+        + '<strong style="color:var(--navy)">' + completedCount + '</strong> client' + (completedCount === 1 ? '' : 's') + ' handled · '
+        + '<strong style="color:var(--navy)">' + skippedCount + '</strong> skipped<br>'
+        + 'New tasks created today will reappear when you restart.'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:7px">'
+        + '<button onclick="document.getElementById(\'ws-allcaught-overlay\').remove();_wqOpen()" style="height:40px;background:var(--navy);color:white;border:none;border-radius:9px;font-family:var(--font-h);font-size:12.5px;font-weight:800;letter-spacing:0.02em;cursor:pointer">Restart Work Session</button>'
+        + '<button onclick="document.getElementById(\'ws-allcaught-overlay\').remove()" style="height:36px;background:white;color:var(--gray-600);border:1.5px solid var(--gray-200);border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Close</button>'
+      + '</div>'
+      + '</div>';
+    document.body.appendChild(overlay);
   }
 
   // Reflect session state on the Start Working button (visual cue)
@@ -9963,6 +10208,7 @@
           + '</div>'
           + '<div class="ws-banner-actions">'
             + (item.topTask ? '<button class="ws-btn complete" onclick="_wsCompleteCurrent()">&#10003; Complete Task</button>' : '<button class="ws-btn complete" onclick="_wsCompleteCurrent()">&#10003; Mark Done</button>')
+            + '<button class="ws-btn" onclick="_wqOpenLaterMenu(\'' + clientId + '\', event)" title="Hide this client for 1–24 hours">Skip For Later Today</button>'
             + '<button class="ws-btn" onclick="_wsOpenSkipModal()">Skip With Reason</button>'
             + '<button class="ws-btn" onclick="_wsPauseSession()">Pause Session</button>'
             + '<button class="ws-btn danger" onclick="if(confirm(\'End the current work session?\')) _wsEndSession()">End</button>'
