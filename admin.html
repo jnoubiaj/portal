@@ -10,6 +10,21 @@
   <title>Admin — CapitalQuest</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- BEFORE-PAINT auth probe.
+       Runs synchronously before any HTML body is parsed, so the very
+       first frame the browser paints already knows whether to show the
+       splash or skip straight to the admin-app shell. Without this, the
+       blue splash appears for a flash even when a valid admin session
+       is cached, because the fast-restore IIFE lives ~20k lines below
+       in the script block and the browser paints once before getting
+       there. CSS uses the `auth-cached` class to suppress the splash
+       and reveal #admin-app immediately. -->
+  <script>
+    try {
+      var _c = JSON.parse(localStorage.getItem('cq_admin_user') || 'null');
+      if (_c && _c.email) document.documentElement.classList.add('auth-cached');
+    } catch(e) {}
+  </script>
   <script src="ghl.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -83,6 +98,13 @@
       transition: opacity 0.18s ease;
     }
     #admin-splash.hide { opacity: 0; pointer-events: none; }
+    /* Cached session detected before paint → suppress the splash entirely
+       and reveal the admin-app shell immediately. The fast-restore IIFE
+       still confirms the cached session, populates the sidebar avatar/name,
+       and kicks off initAdminApp(); it just doesn't need to fade anything
+       in. No blue flash on refresh when you're already signed in. */
+    html.auth-cached #admin-splash { display: none !important; }
+    html.auth-cached #admin-app    { display: block; }
     #admin-splash img { height: 30px; opacity: 0.92; }
     .admin-splash-spinner {
       width: 22px; height: 22px;
