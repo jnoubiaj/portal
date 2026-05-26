@@ -5014,34 +5014,12 @@
       return;
     }
 
-    // Resolve canonical stage index for a client. Self-healing: takes the
-    // HIGHER of cq_tasks_.stage (0-indexed) and cq_dash_.currentStage-1
-    // (also 0-indexed once normalised). Stages only advance forward, so if
-    // the two stores disagree it means one is stale — the higher value is
-    // the user's last intent.
-    //
-    // When drift is detected, also write the higher value back to the lower
-    // store so the discrepancy can't reassert itself on the next render.
-    // This is the "fix it forward" guard for any client that ended up with
-    // split state from a pre-timestamp-guard listener echo.
-    function _resolveStageIdx(clientId) {
-      var t = getClientTasks(clientId);
-      var tStage = (t && typeof t.stage === 'number') ? t.stage : -1;
-      var dStage = -1;
-      try {
-        var d = getDashData(clientId);
-        if (d && typeof d.currentStage === 'number') {
-          dStage = Math.max(0, d.currentStage - 1);
-        }
-      } catch(e) {}
-      var best = Math.max(tStage, dStage);
-      if (best < 0) return -1;
-      // Self-heal: if either store is behind, push the higher value into it
-      if (tStage !== best || dStage !== best) {
-        try { _reconcileClientStage(clientId, best); } catch(e) {}
-      }
-      return best;
-    }
+    // Stage resolver — delegates to the global getCanonicalStage helper
+    // so renderClientList shares the same self-healing logic as every
+    // other read site (Overview, Start Working, FSG profile, follow-up
+    // bucket detection, etc.). Local alias kept so the existing call
+    // sites below don't churn.
+    function _resolveStageIdx(clientId) { return getCanonicalStage(clientId); }
 
     // Reconcile both stores to the same stage index. Always deferred — never
     // runs synchronously inside a render call, otherwise renderClientList →
@@ -16132,6 +16110,40 @@
       return d;
     }
   }
+
+  // ── CANONICAL STAGE READ ────────────────────────────────────────────────
+  // The portal has historically tracked stage in two stores:
+  //   - cq_tasks_.stage         (0-indexed)  — set by pipeline checklist UI
+  //   - cq_dash_.currentStage   (1-indexed)  — set by header "Move to Next"
+  // Both are written from different code paths. When they drift, the higher
+  // value is the user's last intent (stages only advance forward). This
+  // helper returns the canonical 0-indexed stage and queues a deferred
+  // reconcile via _reconcileClientStage when it detects drift.
+  //
+  // Every read site should prefer this helper over reading d.currentStage
+  // or t.stage directly. The local _resolveStageIdx inside renderClientList
+  // delegates here so the self-healing logic is in one place.
+  function getCanonicalStage(clientId) {
+    if (!clientId) return -1;
+    var t = (typeof getClientTasks === 'function') ? getClientTasks(clientId) : null;
+    var tStage = (t && typeof t.stage === 'number') ? t.stage : -1;
+    var dStage = -1;
+    try {
+      var d = getDashData(clientId);
+      if (d && typeof d.currentStage === 'number') {
+        dStage = Math.max(0, d.currentStage - 1);
+      }
+    } catch(e) {}
+    var best = Math.max(tStage, dStage);
+    if (best < 0) return -1;
+    if ((tStage !== best || dStage !== best) && typeof _reconcileClientStage === 'function') {
+      try { _reconcileClientStage(clientId, best); } catch(e) {}
+    }
+    return best;
+  }
+  // Expose globally for cross-script access (Start Working, follow-up
+  // automation, GHL sync, anywhere that imports a client snapshot).
+  try { window.getCanonicalStage = getCanonicalStage; } catch(e) {}
   function saveDashData(clientId, data, localOnly) {
     // Strip base64 URLs from adminDocs before writing to localStorage.
     // Base64 strings can be 1-2 MB each — leaving them in causes JSON.stringify to
