@@ -5377,7 +5377,12 @@
     const _fundingApproved = _d.fundingApproved ? '$' + Number(_d.fundingApproved).toLocaleString() : '';
     const _statusCls = { new:'s-new', pending:'s-pending', progress:'s-progress', approved:'s-approved', disqualified:'s-disqualified' }[c.status] || 's-new';
     const _statusLabel = { new:'New', pending:'Pending', progress:'In Progress', approved:'Approved', disqualified:'Disqualified' }[c.status] || 'New';
-    const _nextTask = (_d.tasks || []).find(t => t.status !== 'done');
+    // Unified open-tasks read — pulls from BOTH legacy d.tasks and v2 opsTasks
+    // so the "Next Task" sidebar surface reflects anything the admin sees in
+    // Next Actions / My Tasks Today. Without this, opsTask-only clients
+    // looked like they had no upcoming work in the client snapshot card.
+    const _openTasks = (typeof getOpenClientTasks === 'function') ? getOpenClientTasks(id) : ((_d.tasks || []).filter(t => t.status !== 'done'));
+    const _nextTask = _openTasks[0];
 
     const _apps = (_d.fundingRows || []);
     const _appApproved  = _apps.filter(a => a.status === 'approved').length;
@@ -5390,8 +5395,10 @@
 
     const _fundGap = _fundGoal > 0 ? Math.max(0, _fundGoal - _totalFunded) : 0;
     const _nextAction = (function() {
-      const t = (_d.tasks || []).find(function(x) { return x.status !== 'done'; });
-      if (t) return t.text;
+      // Reuse the unified _openTasks list computed above so the "Next Action"
+      // string stays consistent with the "Next Task" indicator.
+      const t = _openTasks[0];
+      if (t) return t.text || t.title || '';
       if (_apps.length === 0) return 'Add first bank application to begin funding';
       if (_appPending > 0) return _appPending + ' application' + (_appPending !== 1 ? 's' : '') + ' pending — follow up with lenders';
       if (_appDenied > 0 && _appApproved === 0) return 'All applications denied — rebuild strategy with client';
@@ -11872,12 +11879,13 @@
       }
     }
 
-    // Subtitle — next task
+    // Subtitle — next task (unified across legacy + v2)
     var subEl = document.getElementById('csh-sub-' + clientId);
     var cl = getClient(clientId);
     if (subEl && cl) {
-      var nextTask = (d.tasks || []).find(function(t){ return t.status !== 'done'; });
-      subEl.textContent = cl.email + (nextTask ? ' · Next: ' + nextTask.text : '');
+      var _open = (typeof getOpenClientTasks === 'function') ? getOpenClientTasks(clientId) : ((d.tasks || []).filter(function(t){ return t && t.status !== 'done'; }));
+      var nextTask = _open[0];
+      subEl.textContent = cl.email + (nextTask ? ' · Next: ' + (nextTask.text || nextTask.title || '') : '');
     }
   }
 
@@ -16174,6 +16182,68 @@
   // Expose globally for cross-script access (Start Working, follow-up
   // automation, GHL sync, anywhere that imports a client snapshot).
   try { window.getCanonicalStage = getCanonicalStage; } catch(e) {}
+
+  // ── UNIFIED OPEN TASKS ──────────────────────────────────────────────────
+  // Returns an array of open tasks for a client, merged from BOTH legacy
+  // d.tasks and canonical opsTasks. Each entry is normalized to the
+  // {id, text, desc, status, dueDate, priority, _source} shape so existing
+  // callers that read t.text / t.status === 'todo' keep working. Used to
+  // power: client header "Next Task" subtitle, Client Snapshot next-task
+  // line, recalcSubtitle's pending count.
+  //
+  // Sort order: opsTasks by priority (critical → low) then dueDate, then
+  // legacy d.tasks appended in their original order.
+  function getOpenClientTasks(clientId) {
+    if (!clientId) return [];
+    var legacy = [];
+    try {
+      var d = getDashData(clientId);
+      legacy = (d.tasks || []).filter(function(t){ return t && t.status !== 'done'; });
+    } catch(e) {}
+    var ops = [];
+    try {
+      var raw = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
+      var pri = { critical: 0, high: 1, medium: 2, low: 3 };
+      ops = raw
+        .filter(function(t) {
+          if (!t) return false;
+          var s = t.status;
+          if (s === 'completed' || s === 'complete' || s === 'done') return false;
+          if (s === 'archived' || s === 'cancelled' || s === 'skipped') return false;
+          return true;
+        })
+        .map(function(t) {
+          return {
+            id:       t.id,
+            text:     t.title || '',
+            title:    t.title || '',
+            desc:     t.description || '',
+            status:   'todo',
+            priority: t.priority || 'medium',
+            dueDate:  t.dueDate || '',
+            _source:  'ops'
+          };
+        })
+        .sort(function(a, b) {
+          var ap = pri[a.priority] != null ? pri[a.priority] : 2;
+          var bp = pri[b.priority] != null ? pri[b.priority] : 2;
+          if (ap !== bp) return ap - bp;
+          return (a.dueDate || '￿') < (b.dueDate || '￿') ? -1 : 1;
+        });
+    } catch(e) {}
+    // De-dup defensively by id (different namespaces so it should not collide)
+    var seen = {};
+    var merged = [];
+    ops.concat(legacy).forEach(function(t) {
+      if (!t) return;
+      var k = t.id || ('t-' + Math.random().toString(36).slice(2));
+      if (seen[k]) return;
+      seen[k] = true;
+      merged.push(t);
+    });
+    return merged;
+  }
+  try { window.getOpenClientTasks = getOpenClientTasks; } catch(e) {}
   function saveDashData(clientId, data, localOnly) {
     // Strip base64 URLs from adminDocs before writing to localStorage.
     // Base64 strings can be 1-2 MB each — leaving them in causes JSON.stringify to
@@ -16370,7 +16440,18 @@
   }
 
   function recalcSubtitle(d) {
-    const pending = d.tasks.filter(t => t.status !== 'done').length;
+    // Count both legacy d.tasks and v2 opsTasks (when the dash data is
+    // for a known client) so the client portal subtitle reflects the
+    // full pending picture, not just the legacy slice.
+    var legacyPending = (d.tasks || []).filter(function(t){ return t && t.status !== 'done'; }).length;
+    var opsPending = 0;
+    try {
+      var cid = d && d._clientId;
+      if (cid && typeof getOpenClientTasks === 'function') {
+        opsPending = getOpenClientTasks(cid).filter(function(t){ return t._source === 'ops'; }).length;
+      }
+    } catch(e) {}
+    var pending = legacyPending + opsPending;
     d.subtitle = pending > 0
       ? 'Your funding journey is in progress. ' + pending + ' task' + (pending !== 1 ? 's' : '') + ' need attention.'
       : 'Your funding journey is in progress.';
