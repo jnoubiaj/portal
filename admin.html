@@ -62,6 +62,36 @@
                         radial-gradient(ellipse at 80% 20%, rgba(26,58,107,0.4) 0%, transparent 50%);
     }
     #admin-login.show { display: flex; }
+
+    /* ── AUTH SPLASH ───────────────────────────────────
+       Shown immediately on page load (display:flex by default).
+       Stays up while authStatus === 'checking' so the user never
+       sees a login flash before Firebase Auth resolves. Hidden by
+       _setAuthStatus once we know whether the user is authed or not.
+       Background and brand mark mirror the login screen so the visual
+       jump from splash → admin-app (or splash → login) is seamless. */
+    #admin-splash {
+      position: fixed; inset: 0;
+      display: flex;
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
+      background: var(--navy);
+      background-image: radial-gradient(ellipse at 20% 50%, rgba(34,167,240,0.12) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 20%, rgba(26,58,107,0.4) 0%, transparent 50%);
+      z-index: 9999;
+      opacity: 1;
+      transition: opacity 0.18s ease;
+    }
+    #admin-splash.hide { opacity: 0; pointer-events: none; }
+    #admin-splash img { height: 30px; opacity: 0.92; }
+    .admin-splash-spinner {
+      width: 22px; height: 22px;
+      border: 2.5px solid rgba(255,255,255,0.18);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: admin-splash-spin 0.8s linear infinite;
+    }
+    @keyframes admin-splash-spin { to { transform: rotate(360deg); } }
     .login-box {
       background: var(--white);
       border-radius: 20px;
@@ -2374,6 +2404,16 @@
 </head>
 <body>
 
+<!-- ── AUTH SPLASH ──────────────────────────────────────────────────
+     Shown immediately on first paint (display:flex via CSS) so the user
+     never sees a login flash before Firebase Auth resolves. The
+     _setAuthStatus state machine hides this once we know whether to
+     reveal admin-app or admin-login. -->
+<div id="admin-splash">
+  <img src="Brand_assets/CapitalQuest%20Consulting-R-02.png" alt="CapitalQuest" />
+  <div class="admin-splash-spinner"></div>
+</div>
+
 <!-- ── LOGIN ─────────────────────────────────────────────────────────
      Hidden by default via CSS (display:none). Only revealed by adding the
      `.show` class — set from the auth handler when login is genuinely needed. -->
@@ -3222,15 +3262,45 @@
     }
   }
 
+  // ── AUTH STATE MACHINE ─────────────────────────────────────────────────
+  // Three states drive what's visible on screen:
+  //   'checking'        → splash (default on first paint)
+  //   'authenticated'   → admin app shell
+  //   'unauthenticated' → login form
+  // Defaulting to 'checking' is the whole point — never assume signed-out
+  // before we've actually asked Firebase. That's what produced the login
+  // flash on refresh.
+  var _authStatus = 'checking';
+  function _setAuthStatus(next) {
+    if (next === _authStatus) return;
+    _authStatus = next;
+    var splash = document.getElementById('admin-splash');
+    var login  = document.getElementById('admin-login');
+    var app    = document.getElementById('admin-app');
+    if (next === 'authenticated') {
+      if (login) login.classList.remove('show');
+      if (app)   app.style.display = 'block';
+      if (splash) { splash.classList.add('hide'); setTimeout(function(){ splash && (splash.style.display = 'none'); }, 220); }
+    } else if (next === 'unauthenticated') {
+      if (app)   app.style.display = 'none';
+      if (login) login.classList.add('show');
+      if (splash) { splash.classList.add('hide'); setTimeout(function(){ splash && (splash.style.display = 'none'); }, 220); }
+    } else {
+      // 'checking' — keep splash visible, hide the others
+      if (login) login.classList.remove('show');
+      if (app)   app.style.display = 'none';
+      if (splash) { splash.style.display = 'flex'; splash.classList.remove('hide'); }
+    }
+  }
+
   var _adminAppInited = false;
   function _showAdminApp(user) {
     const profile = ADMIN_PROFILES[user.email] || { name: user.email, initials: user.email[0].toUpperCase() };
     currentAdmin = { email: user.email, ...profile };
     try { localStorage.setItem('cq_admin_user', JSON.stringify({ email: user.email })); } catch(e) {}
-    document.getElementById('admin-login').classList.remove('show');
-    document.getElementById('admin-app').style.display = 'block';
-    document.getElementById('sb-avatar').textContent = profile.initials;
-    document.getElementById('sb-name').textContent = profile.name;
+    _setAuthStatus('authenticated');
+    var sbAv = document.getElementById('sb-avatar'); if (sbAv) sbAv.textContent = profile.initials;
+    var sbNm = document.getElementById('sb-name');   if (sbNm) sbNm.textContent = profile.name;
     if (!_adminAppInited) { _adminAppInited = true; if (typeof initAdminApp === 'function') initAdminApp(); }
     // Always re-init notification listeners once Firebase auth is confirmed
     // (fast-restore runs before auth is ready, so listeners may have failed silently)
@@ -3562,7 +3632,12 @@
       });
     }
   }
-  // Fast-restore: show admin immediately from localStorage while Firebase resolves
+  // Fast-restore: show admin IMMEDIATELY from localStorage when a cached
+  // session exists. When no cache exists we deliberately stay on the
+  // 'checking' splash and wait for Firebase Auth — that's the fix for the
+  // login flash. The old code showed login as soon as cache missed, then
+  // swapped to admin-app the moment Firebase confirmed a user. Now login
+  // only appears after Firebase resolves to "definitely no user".
   (function() {
     try {
       var _cached = JSON.parse(localStorage.getItem('cq_admin_user') || 'null');
@@ -3570,50 +3645,69 @@
         var _profile = ADMIN_PROFILES[_cached.email];
         currentAdmin = { email: _cached.email, name: _profile.name, initials: _profile.initials };
         _adminAppInited = true;
-        document.getElementById('admin-login').classList.remove('show');
-        document.getElementById('admin-app').style.display = 'block';
-        document.getElementById('sb-avatar').textContent = _profile.initials;
-        document.getElementById('sb-name').textContent = _profile.name;
+        _setAuthStatus('authenticated');
+        var sbAv = document.getElementById('sb-avatar'); if (sbAv) sbAv.textContent = _profile.initials;
+        var sbNm = document.getElementById('sb-name');   if (sbNm) sbNm.textContent = _profile.name;
         if (typeof initAdminApp === 'function') initAdminApp();
         setTimeout(function() { try { if (typeof _ghlInit === 'function') _ghlInit(); } catch(e) {} }, 500);
-      } else {
-        document.getElementById('admin-login').classList.add('show');
       }
+      // No cache → leave _authStatus at 'checking' (splash visible). The
+      // fsAuthOnStateChange handler below resolves it to authenticated or
+      // unauthenticated once Firebase reports back.
     } catch(e) {
-      document.getElementById('admin-login').classList.add('show');
+      // If localStorage is wedged we still don't render login here. Wait for
+      // Firebase to confirm — the timeout below will fall through to login
+      // if nothing arrives.
     }
   })();
 
-  // Firebase Auth state — confirm fast-restore.
+  // Firebase Auth state — drives the final authStatus resolution.
   //
-  // IMPORTANT: This handler NEVER auto-hides the admin app, never auto-shows
-  // the login screen, and never auto-clears the cached admin session. The
-  // only ways the login screen ever appears are:
-  //   1. The page loads with NO cached admin in localStorage (fast-restore's
-  //      else branch).
-  //   2. The user explicitly clicks Sign Out (adminLogout) — which clears the
-  //      cache, signs out from Firebase, and calls location.reload(). After
-  //      reload, fast-restore takes the no-cache branch and shows login.
+  // The handler distinguishes between the "Firebase just warming up" null
+  // and a "definitely signed out" null by only acting on null when we're
+  // still in the 'checking' state AND no localStorage cache exists. If a
+  // cache exists we trust it (mirrors the prior behavior that fixed the
+  // mid-session auto-revoke bug).
   //
-  // Earlier attempts had this handler revoke the cached session when Firebase
-  // fired with a null user (with a short grace window). That was unreliable:
-  // Firebase routinely fires null first while warming up and the real user
-  // arrives later — sometimes >4 seconds later on slower connections. When
-  // the grace expired prematurely, the cache was wiped and every subsequent
-  // refresh started cold on the login screen. The handler now just confirms
-  // the user when Firebase fires with one and otherwise stays out of the way.
-  // The cached UI continues to display from localStorage; Firestore writes
-  // either succeed (token still valid / auto-refreshed) or fail silently
-  // until the user manually re-signs-in.
+  // The hard timeout below ensures the splash never spins forever — if
+  // Firebase doesn't respond within 4 seconds AND there's no cache, fall
+  // through to the login form so users without a session can sign in.
+  var _firebaseAuthResolved = false;
   fsAuthOnStateChange(function(user) {
     if (user && ADMIN_PROFILES[user.email]) {
+      _firebaseAuthResolved = true;
       _showAdminApp(user);
+      return;
     }
-    // Null / non-admin user: deliberately no UI action. The fast-restore
-    // IIFE already chose between login and admin-app based on the cached
-    // session. Don't fight that choice — let the user explicitly sign out
-    // if they need a fresh session.
+    // Null or non-admin user.
+    if (user === null) {
+      _firebaseAuthResolved = true;
+      // If we already showed the admin app from a cached session, don't
+      // forcibly sign the user out — token may have expired but the cached
+      // session is still meaningful (same behavior as before). They can
+      // explicitly Sign Out if they need a fresh login.
+      if (_authStatus === 'checking') {
+        try {
+          var hasCache = !!JSON.parse(localStorage.getItem('cq_admin_user') || 'null');
+          if (!hasCache) _setAuthStatus('unauthenticated');
+        } catch(e) { _setAuthStatus('unauthenticated'); }
+      }
+    }
   });
+
+  // Splash watchdog — guard against the case where Firebase Auth never fires
+  // (offline, blocked, network hiccup). 4s is enough to feel responsive but
+  // long enough to avoid racing the cold Firebase init on slow connections.
+  setTimeout(function() {
+    if (_authStatus === 'checking') {
+      try {
+        var hasCache = !!JSON.parse(localStorage.getItem('cq_admin_user') || 'null');
+        // Cache exists but Firebase never responded — the cache decision
+        // already wins via fast-restore; nothing to do here.
+        if (!hasCache) _setAuthStatus('unauthenticated');
+      } catch(e) { _setAuthStatus('unauthenticated'); }
+    }
+  }, 4000);
 
   // Re-render overview once DOM is fully ready
   document.addEventListener('DOMContentLoaded', function() {
