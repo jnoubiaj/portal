@@ -22004,14 +22004,12 @@
     setTimeout(function() { _ghlCheckProxy(); }, 300);
   }
 
-  // ── AUTO-LOGOUT AFTER 10 MIN INACTIVITY ─────────────────────────────────
+  // ── AUTO-LOGOUT AFTER 5 MIN INACTIVITY ──────────────────────────────────
   // Mirrors the client-portal inactivity guard (dashboard.html). Admin
-  // sessions get a longer 10-minute timeout since admins typically have
-  // longer think/read pauses between actions (reading credit reports,
-  // composing notes, reviewing the funding generator) than clients do.
-  // 30-second warning banner gives a chance to extend without losing work.
+  // sessions get a 5-minute timeout. 30-second warning banner gives a
+  // chance to extend without losing work.
   (function() {
-    var TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+    var TIMEOUT_MS = 5 * 60 * 1000;  // 5 minutes
     var WARNING_MS = 30 * 1000;      // warn 30s before logout
     var logoutTimer, warnTimer, tickInterval;
 
