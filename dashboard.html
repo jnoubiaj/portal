@@ -2653,7 +2653,7 @@
     .tc-due.overdue { background: var(--danger-bg); color: var(--danger); }
     .tc-due.soon    { background: var(--warning-bg); color: var(--warning); }
     .tc-due.ok      { background: var(--success-bg); color: var(--success); }
-    .tc-actions { margin-top: 6px; }
+    .tc-actions { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
     .tc-upload-btn {
       font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 7px;
       border: 1.5px solid var(--blue); color: var(--blue); background: transparent;
@@ -2661,6 +2661,18 @@
       transition: background .15s, color .15s;
     }
     .tc-upload-btn:hover { background: var(--blue); color: #fff; }
+    .tc-complete-btn {
+      font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 7px;
+      border: none; color: #fff; background: var(--navy);
+      cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+      transition: opacity .15s;
+    }
+    .tc-complete-btn:hover { opacity: 0.9; }
+    .tc-complete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .tc-assigned-by {
+      margin-top: 4px; font-size: 10.5px; color: var(--gray-400);
+      font-weight: 600; letter-spacing: 0.02em;
+    }
     /* Stage group within workspace */
     .tw-stage-group { border-top: 1px solid var(--gray-100); }
     .tw-stage-group:first-child { border-top: none; }
@@ -4068,6 +4080,44 @@
 
     const base = Object.assign({}, DEFAULT_DASH, saved || {});
 
+    // ── Merge client-visible ops tasks from the admin's task system ─────────
+    // The admin v2 task modal writes to dashboards.opsTasks (separate from
+    // the legacy d.tasks array). Without this merge, any task the admin
+    // creates with Type=Client never reaches the client dashboard — which
+    // is the "I added a task but the client side still says No tasks
+    // assigned yet" bug. We map the admin shape into the legacy shape so
+    // every downstream renderer (My Tasks, Action Center, badges, counts)
+    // picks them up without further changes.
+    try {
+      const _opsRaw = Array.isArray(base.opsTasks) ? base.opsTasks : [];
+      const _existingIds = {};
+      (base.tasks || []).forEach(t => { if (t && t.id) _existingIds[t.id] = true; });
+      const _isTerminal = s => s === 'completed' || s === 'complete' || s === 'done'
+        || s === 'archived' || s === 'cancelled' || s === 'skipped';
+      const _mappedOps = _opsRaw
+        .filter(t => t && t.type === 'client') // visibility filter
+        .filter(t => !_existingIds[t.id])
+        .map(t => ({
+          id:            t.id,
+          text:          t.title || '',
+          title:         t.title || '',
+          desc:          t.description || '',
+          status:        _isTerminal(t.status) ? 'done' : 'todo',
+          dueDate:       t.dueDate || '',
+          dueTime:       t.dueTime || '',
+          priority:      t.priority || 'medium',
+          stageIndex:    (typeof t.stage === 'number') ? t.stage : undefined,
+          clientVisible: true,
+          source:        'ops',
+          assignedBy:    t.assignedAdminName || 'CapitalQuest Team',
+          completedAt:   t.completedAt || null,
+          _opsStatus:    t.status || 'pending'
+        }));
+      if (_mappedOps.length) {
+        base.tasks = (base.tasks || []).concat(_mappedOps);
+      }
+    } catch(e) { console.warn('[Dashboard] opsTasks merge failed:', e); }
+
     // Auto-fill clientName / lastName from onboarding data or admin record
     let lastName = '';
     if (clientId) {
@@ -4823,6 +4873,46 @@
     }, 400);
   }
 
+  // Complete an admin-assigned (ops) task from the client side. Writes the
+  // updated opsTasks array back to Firestore so the admin pipeline picks it
+  // up on its next snapshot. Updates the local cache + re-renders immediately
+  // so the client sees the task disappear without a refresh.
+  async function _dashCompleteOpsTask(taskId) {
+    if (!taskId) return;
+    const session = getClientSession();
+    if (!session || !session.clientId) return;
+    const cache = window._fsDashCache || {};
+    const ops = Array.isArray(cache.opsTasks) ? cache.opsTasks.slice() : [];
+    const idx = ops.findIndex(t => t && t.id === taskId);
+    if (idx < 0) return;
+    const now = Date.now();
+    ops[idx] = Object.assign({}, ops[idx], {
+      status:      'completed',
+      completedAt: now,
+      completedBy: session.email || 'client',
+      _updatedAt:  now
+    });
+    // Update in-memory cache so the re-render reflects the change immediately
+    window._fsDashCache = Object.assign({}, cache, {
+      opsTasks: ops,
+      opsTasksUpdatedAt: now
+    });
+    try {
+      localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(window._fsDashCache));
+    } catch(e) {}
+    // Re-render with merged tasks (the merge in getDashData picks up the
+    // new completed status and drops the task from the open list).
+    try { loadDashboardData(); } catch(e) {}
+    // Persist to Firestore — admin's listener picks this up automatically.
+    if (typeof fsSetDash === 'function') {
+      try {
+        await fsSetDash(session.clientId, { opsTasks: ops, opsTasksUpdatedAt: now });
+      } catch(e) { console.warn('[Dashboard] task complete sync failed:', e); }
+    }
+  }
+  // Expose for inline onclick handlers
+  window._dashCompleteOpsTask = _dashCompleteOpsTask;
+
   // ── CLIENT UPDATES TIMELINE ───────────────────────────────────────────────────
 
   const UPDATE_ICONS = {
@@ -5080,12 +5170,22 @@
       const dueHtml = due && !isDone ? `<span class="tc-due ${due.cls}">${due.text}</span>` : '';
       const descHtml = (t.desc||t.notes||t.instructions) ? `<div class="tc-desc">${t.desc||t.notes||t.instructions}</div>` : '';
       const uploadBtn = t.uploadRequired && !isDone ? `<button class="tc-upload-btn" onclick="rmUploadForTask('${t.id||''}')"><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg> Upload File</button>` : '';
+      // Mark Complete — only on admin-created ops tasks (source === 'ops')
+      // that haven't been completed yet. Writes back to Firestore opsTasks
+      // so the admin sees the completion in their pipeline.
+      const completeBtn = (t.source === 'ops' && !isDone && t.id)
+        ? `<button class="tc-complete-btn" onclick="_dashCompleteOpsTask('${t.id}')"><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.8"><path d="M5 13l4 4L19 7"/></svg> Mark Complete</button>`
+        : '';
+      const assignedTag = (t.source === 'ops' && t.assignedBy)
+        ? `<div class="tc-assigned-by">Assigned by ${t.assignedBy}</div>`
+        : '';
+      const actionsRow = (uploadBtn || completeBtn) ? `<div class="tc-actions">${uploadBtn}${completeBtn}</div>` : '';
       return `<div class="tc-card ${isDone ? 'tc-done' : ''}">
         <div class="tc-check ${isDone ? 'done' : isProg ? 'prog' : isWait ? 'wait' : 'todo'}">${isDone ? '✓' : isProg ? '→' : isWait ? '⏳' : ''}</div>
         <div class="tc-body">
           <div class="tc-top"><div class="tc-title ${isDone ? 'done-text' : ''}">${t.text||t.title||''}</div>
           <div class="tc-badges">${stageBadge}${priBadge}${dueHtml}</div></div>
-          ${descHtml}${uploadBtn ? `<div class="tc-actions">${uploadBtn}</div>` : ''}
+          ${descHtml}${assignedTag}${actionsRow}
         </div>
       </div>`;
     };
@@ -5236,7 +5336,12 @@
         });
       }
     } catch(e) {}
-    var _activeTasks = _pipelineTasks.length ? _pipelineTasks : (d.tasks || []);
+    // MERGE — never let stage-checklist pipeline tasks shadow admin-created
+    // client tasks. Previous behavior was a hard substitution: pipeline first,
+    // d.tasks fallback. That meant any task the admin created with Type=Client
+    // got hidden the moment the pipeline checklist had even one item. Now we
+    // concat both so the client sees the full picture.
+    var _activeTasks = (d.tasks || []).concat(_pipelineTasks);
     window._dashActiveTasks = _activeTasks; // shared with Action Center + stage panel
     const openTasks = _activeTasks.filter(t => t.status !== 'done').length;
     const st = document.getElementById('s-tasks'); if(st) st.textContent = _activeTasks.length ? openTasks : '—';
