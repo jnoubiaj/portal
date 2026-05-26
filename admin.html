@@ -3640,10 +3640,13 @@
     // Start notification listeners
     try { initNotifListeners(); } catch(e) {}
     // Cross-surface task broadcast — Next Actions, Start Working queue,
-    // dashboard counters, follow-up badges all refresh when any task
-    // mutates. Single listener so we don't double-fire on rapid updates.
+    // dashboard counters, follow-up badges, Overview KPI + Next Actions
+    // panel all refresh when any task mutates. Single listener so we don't
+    // double-fire on rapid updates. Overview re-renders are debounced
+    // (250ms) to avoid hammering the DOM during a burst of completions.
     if (!window._cqTasksBusInited) {
       window._cqTasksBusInited = true;
+      var _ovRefreshTimer = null;
       window.addEventListener('cq:tasks-updated', function(ev) {
         var cid = ev && ev.detail && ev.detail.clientId;
         try { if (typeof _wqQueueCache !== 'undefined') _wqQueueCache = null; } catch(e) {}
@@ -3651,6 +3654,16 @@
         try { if (cid && typeof refreshStageProgressCard === 'function') refreshStageProgressCard(cid); } catch(e) {}
         try { if (cid && typeof refreshActivityTimeline === 'function') refreshActivityTimeline(cid); } catch(e) {}
         try { if (typeof renderClientList === 'function') renderClientList(); } catch(e) {}
+        // Overview KPI cards + Next Actions panel sit on the Overview page
+        // and read across every client. Refresh them on a debounce so a
+        // bulk completion doesn't repaint the whole overview N times.
+        if (_ovRefreshTimer) clearTimeout(_ovRefreshTimer);
+        _ovRefreshTimer = setTimeout(function() {
+          _ovRefreshTimer = null;
+          try { if (typeof renderOvCards === 'function') renderOvCards(); } catch(e) {}
+          try { if (typeof renderOvClientTasks === 'function') renderOvClientTasks(); } catch(e) {}
+          try { if (typeof renderOvTaskTable === 'function') renderOvTaskTable(); } catch(e) {}
+        }, 250);
       });
     }
   }
@@ -4487,20 +4500,33 @@
       return lastAct < cutoff48;
     }).length;
 
-    // Pending tasks: all unchecked assigned tasks across active clients
+    // Pending tasks: all unchecked assigned tasks across active clients.
+    // Sums BOTH the legacy pipeline checklist (per-stage iassigned / assigned
+    // / customTasks indexes) and the canonical opsTasks store so the KPI
+    // reflects the same total an admin sees in Next Actions + Start Working.
+    // Without the opsTasks half, the KPI counted only stage-checklist items
+    // and ignored every v2-modal task — so the number on the overview card
+    // disagreed with the per-client Next Actions count.
     var pendingTasks = 0;
     active.forEach(function(c) {
       var t = getClientTasks(c.id);
-      if (!t) return;
-      var si = t.stage;
-      var stage = PIPELINE_STAGES[si];
-      var iassigned = (t.iassigned && t.iassigned[si]) || [];
-      var assigned  = (t.assigned  && t.assigned[si])  || [];
-      var cs = (t.customTasks && t.customTasks[si]) || {};
-      iassigned.forEach(function(idx){ if (!t.checked['s'+si+'i'+idx]) pendingTasks++; });
-      assigned.forEach(function(ti){  if (!t.checked['s'+si+'c'+ti])  pendingTasks++; });
-      (cs.i||[]).forEach(function(_,i){ if (!t.checked['s'+si+'xi'+i]) pendingTasks++; });
-      (cs.c||[]).forEach(function(_,i){ if (!t.checked['s'+si+'xc'+i]) pendingTasks++; });
+      if (t) {
+        var si = t.stage;
+        var iassigned = (t.iassigned && t.iassigned[si]) || [];
+        var assigned  = (t.assigned  && t.assigned[si])  || [];
+        var cs = (t.customTasks && t.customTasks[si]) || {};
+        iassigned.forEach(function(idx){ if (!t.checked['s'+si+'i'+idx]) pendingTasks++; });
+        assigned.forEach(function(ti){  if (!t.checked['s'+si+'c'+ti])  pendingTasks++; });
+        (cs.i||[]).forEach(function(_,i){ if (!t.checked['s'+si+'xi'+i]) pendingTasks++; });
+        (cs.c||[]).forEach(function(_,i){ if (!t.checked['s'+si+'xc'+i]) pendingTasks++; });
+      }
+      // Add open opsTasks for this client (uses the same unified read that
+      // powers the Next Actions panel and My Tasks Today filter).
+      try {
+        if (typeof getOpenClientTasks === 'function') {
+          pendingTasks += getOpenClientTasks(c.id).filter(function(x){ return x._source === 'ops'; }).length;
+        }
+      } catch(e) {}
     });
 
     var kpiDefs = [
@@ -19537,6 +19563,40 @@
         var norm = _fsgNormalizeTask(task);
         addTask('s'+si+'xc'+i, norm.label, norm.dueDate ? _fsgDateToTs(norm.dueDate) : null, norm.priority);
       });
+
+      // ── Include canonical opsTasks ─────────────────────────────────────
+      // Tasks created via the v2 modal were invisible in this Overview
+      // Next Actions panel because the loop only walked the legacy
+      // pipeline-checklist arrays. Now we also pull from opsTasks and
+      // mark each item with _source:'ops' + opsId so the click-to-complete
+      // handler can route to opsCompleteTask instead of ovPlToggle.
+      try {
+        var _opsRaw = (typeof getOpsTasks === 'function') ? getOpsTasks(c.id) : [];
+        _opsRaw.forEach(function(ot) {
+          if (!ot) return;
+          var s = ot.status;
+          if (s === 'completed' || s === 'complete' || s === 'done' ||
+              s === 'archived' || s === 'cancelled' || s === 'skipped') return;
+          var label = ot.title || '(untitled task)';
+          var dueTs = null;
+          if (ot.dueDate) {
+            try {
+              var _t = ot.dueDate + (ot.dueTime ? 'T' + ot.dueTime : 'T23:59:59');
+              dueTs = new Date(_t).getTime();
+              if (isNaN(dueTs)) dueTs = null;
+            } catch(e) {}
+          }
+          var item = {
+            clientId: c.id, client: c, key: 'ops_' + ot.id, label: label,
+            stage: stage, si: si, dueTs: dueTs, priority: ot.priority || 'medium',
+            _source: 'ops', _opsId: ot.id
+          };
+          if (!dueTs) { upcomingTasks.push(item); return; }
+          if (dueTs < todayStart.getTime()) overdueTasks.push(item);
+          else if (dueTs <= todayEnd.getTime()) todayTasks.push(item);
+          else upcomingTasks.push(item);
+        });
+      } catch(e) { console.warn('[OvTasks] ops merge failed for', c.id, e); }
     });
 
     overdueTasks.sort(function(a,b){ return a.dueTs - b.dueTs; });
@@ -19567,7 +19627,10 @@
       var _n = _getClientNames(item.client);
       var assignedTo = item.client.assignedTo || '';
       var bgColor = isOver ? '#fff5f5' : '';
-      return '<div class="ov-na-item" style="' + (bgColor ? 'background:' + bgColor + ';' : '') + '" onclick="ovPlToggle(\'' + item.clientId + '\',\'' + item.key + '\',' + item.si + ')">'
+      var _clickAttr = item._source === 'ops'
+        ? 'opsCompleteTask(\'' + item.clientId + '\',\'' + (item._opsId || '') + '\')'
+        : 'ovPlToggle(\'' + item.clientId + '\',\'' + item.key + '\',' + item.si + ')';
+      return '<div class="ov-na-item" style="' + (bgColor ? 'background:' + bgColor + ';' : '') + '" onclick="' + _clickAttr + '">'
         + '<div class="ov-na-check"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>'
         + '<div class="ov-na-itembody">'
         + '<div class="ov-na-task">' + item.label + '</div>'
@@ -19594,7 +19657,10 @@
       var assignedTo = item.client.assignedTo || '';
       var focusBg = isOver ? '#fff0f0' : '';
       var extraClass = rank < 3 ? ' ov-na-item-focus' : '';
-      return '<div class="ov-na-item' + extraClass + '" style="' + (focusBg ? 'background:' + focusBg + ';' : '') + '" onclick="ovPlToggle(\'' + item.clientId + '\',\'' + item.key + '\',' + item.si + ')">'
+      var _clickAttr2 = item._source === 'ops'
+        ? 'opsCompleteTask(\'' + item.clientId + '\',\'' + (item._opsId || '') + '\')'
+        : 'ovPlToggle(\'' + item.clientId + '\',\'' + item.key + '\',' + item.si + ')';
+      return '<div class="ov-na-item' + extraClass + '" style="' + (focusBg ? 'background:' + focusBg + ';' : '') + '" onclick="' + _clickAttr2 + '">'
         + '<div class="ov-na-check"><svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>'
         + '<div class="ov-na-itembody">'
         + '<div class="ov-na-task" style="' + (rank < 3 ? 'font-size:12px;' : '') + '">' + item.label
