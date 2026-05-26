@@ -2276,6 +2276,103 @@
     }
 
     /* ══════════════════════════════════════════════════════
+       MOBILE POLISH — applies on top of the 768px + 480px
+       blocks above. Targets recently-added components (Current
+       Status card, Mark Complete button, Funding Sequence state
+       bar) and enforces WCAG-friendly 44px tap targets across
+       the client portal so every interactive element is reachable
+       on phones without zooming.
+       ══════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      /* Funding Strategy state bar — 4 stat cells on one row gets cramped
+         under 640px. Wrap the stats below the title with smaller text. */
+      .fs-state-bar {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 10px 12px;
+      }
+      .fs-state-bar-left { flex: 1 1 100%; min-width: 0; }
+      .fs-state-stats {
+        flex: 1 1 100%;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .fs-state-stat { text-align: left; min-width: 0; }
+      .fs-state-stat-val { font-size: 15px; }
+      .fs-state-stat-lbl { font-size: 10px; }
+
+      /* Funding Sequence summary — 4-col stat grid → 2×2 */
+      .fsp-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+      /* Current Status card — already collapses meta row at 640px via
+         the dedicated rule. Soften padding on phones so it doesn't feel
+         walled off. */
+      .cq-status-card { padding: 18px 18px; }
+      .cq-status-name { font-size: 19px; }
+      .cq-status-meta-row { padding: 14px; gap: 12px; }
+      .cq-status-next-body { font-size: 12.5px; line-height: 1.55; }
+
+      /* Tasks — tap targets. Mark Complete + Upload buttons were 28px;
+         bump to a comfortable 40px so phone users can hit them. */
+      .tc-actions { margin-top: 8px; gap: 8px; }
+      .tc-upload-btn,
+      .tc-complete-btn {
+        min-height: 40px;
+        padding: 0 14px;
+        font-size: 12px;
+      }
+      .tc-card { padding: 12px 14px; }
+      .tc-title { font-size: 13.5px; line-height: 1.4; }
+      .tc-desc { font-size: 12px; line-height: 1.5; }
+      .tc-assigned-by { font-size: 11px; margin-top: 6px; }
+
+      /* Workspace task progress ring + section heads */
+      .tw-progress-card { padding: 14px 16px; gap: 12px; flex-wrap: wrap; }
+      .tw-progress-title { font-size: 13px; }
+      .tw-progress-sub { font-size: 11px; }
+      .tw-section-head { padding: 10px 14px; gap: 8px; }
+      .tw-section-title { font-size: 12.5px; }
+
+      /* Sidebar nav drawer items — bigger tap targets on phones */
+      .nav-item { min-height: 44px; }
+    }
+
+    @media (max-width: 480px) {
+      /* Stats row → 2×2 already; keep 2 cols even on the smallest phones
+         instead of stacking, so the dashboard feels dense and scannable. */
+      .stats-row { gap: 8px; }
+      .stat-card { padding: 12px 11px; border-left-width: 3px; }
+      .stat-value { font-size: 20px; }
+
+      /* Current Status — tighter on tiny screens */
+      .cq-status-card { padding: 16px 14px; }
+      .cq-status-name { font-size: 17px; }
+      .cq-status-top { gap: 10px; }
+      .cq-status-pill { padding: 5px 10px; font-size: 10px; }
+      .cq-status-meta-row { padding: 12px; }
+      .cq-status-meta-val { font-size: 13px; }
+      .cq-status-next { padding: 9px 12px; }
+
+      /* Welcome banner — let the funding amount wrap below the greeting
+         when there isn't room side-by-side instead of overflowing. */
+      .welcome-banner { flex-wrap: wrap; gap: 8px 14px; }
+      .welcome-text h2 { white-space: normal; }
+
+      /* Funding Strategy stats — 2×2 instead of 4 across on tiny phones */
+      .fs-state-stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .fs-state-stat-val { font-size: 14px; }
+
+      /* Buttons that double as primary CTAs — 44px minimum tap target */
+      .tc-upload-btn,
+      .tc-complete-btn { min-height: 44px; width: 100%; justify-content: center; }
+      .tc-actions { flex-direction: column; }
+
+      /* Latest documents rows — denser */
+      .doc-list { gap: 8px; }
+    }
+
+    /* ══════════════════════════════════════════════════════
        FUNDING ROADMAP
     ══════════════════════════════════════════════════════ */
     .rm-hero {
