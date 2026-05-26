@@ -4159,6 +4159,16 @@
             if (data.fsgOverrides && !localStorage.getItem('cq_fsg_overrides_' + clientId)) {
               try { localStorage.setItem('cq_fsg_overrides_' + clientId, JSON.stringify(data.fsgOverrides)); } catch(e) {}
             }
+            // Seed funding-sequence-email "last sent" stamp on first load
+            if (data.fseSent && data.fseSent.at) {
+              try {
+                var _existingFse = JSON.parse(localStorage.getItem('cq_fse_sent_' + clientId) || 'null');
+                var _exFseTs = (_existingFse && _existingFse.at) || 0;
+                if (data.fseSent.at >= _exFseTs) {
+                  localStorage.setItem('cq_fse_sent_' + clientId, JSON.stringify(data.fseSent));
+                }
+              } catch(e) {}
+            }
             // Seed opsTasks on first load — last-writer-wins per task ID
             // so a cold-loading admin picks up every other admin's writes
             // without losing locally-pending edits. Mirrors the 'modified'
@@ -4295,6 +4305,18 @@
           }
           if (data.fsgOverrides) {
             try { localStorage.setItem('cq_fsg_overrides_' + clientId, JSON.stringify(data.fsgOverrides)); } catch(e) {}
+          }
+          // Funding-sequence email "last sent" stamp — mirror Firestore into
+          // local so the Funding Strategy panel button shows the correct
+          // timestamp across admins. Newer Firestore stamp wins.
+          if (data.fseSent && data.fseSent.at) {
+            try {
+              var _localFse = JSON.parse(localStorage.getItem('cq_fse_sent_' + clientId) || 'null');
+              var _localFseTs = (_localFse && _localFse.at) || 0;
+              if (data.fseSent.at >= _localFseTs) {
+                localStorage.setItem('cq_fse_sent_' + clientId, JSON.stringify(data.fseSent));
+              }
+            } catch(e) {}
           }
 
           // ── Cross-admin opsTasks sync ────────────────────────────────────
@@ -9668,7 +9690,17 @@
       if (picked.length) bankSummary = ' — ' + picked.length + ' banks (' + picked.slice(0, 4).join(', ') + (picked.length > 4 ? ', …' : '') + ')';
     } catch(e) {}
 
-    try { localStorage.setItem('cq_fse_sent_' + clientId, JSON.stringify({ at: ts, by: by, to: toEmail })); } catch(e) {}
+    var _sentStamp = { at: ts, by: by, to: toEmail };
+    try { localStorage.setItem('cq_fse_sent_' + clientId, JSON.stringify(_sentStamp)); } catch(e) {}
+    // Mirror the "last sent" stamp into Firestore so other admins see the
+    // timestamp on the Funding Strategy panel button without waiting for
+    // their local cache to catch up. The dashboards listener picks this
+    // up and seeds the local cq_fse_sent_ key on every other admin.
+    try {
+      if (typeof fsSetDash === 'function') {
+        fsSetDash(clientId, { fseSent: _sentStamp }).catch(function(){});
+      }
+    } catch(e) {}
     try { _logActivity(clientId, 'message', 'Funding sequence email sent to ' + toEmail + bankSummary); } catch(e) {}
     try {
       addSystemNote(clientId, 'message', 'Message', 'Funding Sequence Email Sent',
