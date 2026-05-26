@@ -10552,7 +10552,30 @@
     // 2. Update Next Actions / Tasks card (targeted — never touches messages)
     try { refreshSidebarTasks(clientId); } catch(e) {}
 
-    // 3. Update pipeline + overview list (not the sidebar)
+    // 3. Update funding applications table. When another admin adds, edits,
+    // or status-changes a funding row, the dashboards listener writes the
+    // new fundingRows into local cache but the visible table in the
+    // currently-open client doesn't repaint until something else triggers
+    // a render. This keeps Sam and Ali looking at the same funding picture.
+    try {
+      var faRows = document.getElementById('fa-rows-' + clientId);
+      if (faRows && typeof renderFundingRowsAdmin === 'function') {
+        faRows.innerHTML = renderFundingRowsAdmin(clientId, _d.fundingRows || []);
+      }
+    } catch(e) {}
+
+    // 4. Funding strategy panel — funding row status changes can affect
+    // round eligibility and remaining-to-goal math. Invalidate the cached
+    // strategy first so generateFundingStrategy rebuilds against the
+    // freshly-synced fundingRows / approvedAmount.
+    try {
+      if (typeof _fsgStrategyCache !== 'undefined') { delete _fsgStrategyCache[clientId]; }
+      if (document.getElementById('fsg-body-' + clientId) && typeof renderFundingStrategy === 'function') {
+        renderFundingStrategy(clientId);
+      }
+    } catch(e) {}
+
+    // 5. Update pipeline + overview list (not the sidebar)
     try { renderPipeline(); } catch(e) {}
     try { renderOvClientTasks(); } catch(e) {}
   }
