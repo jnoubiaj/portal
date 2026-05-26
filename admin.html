@@ -4146,6 +4146,33 @@
             if (data.fsgOverrides && !localStorage.getItem('cq_fsg_overrides_' + clientId)) {
               try { localStorage.setItem('cq_fsg_overrides_' + clientId, JSON.stringify(data.fsgOverrides)); } catch(e) {}
             }
+            // Seed opsTasks on first load — last-writer-wins per task ID
+            // so a cold-loading admin picks up every other admin's writes
+            // without losing locally-pending edits. Mirrors the 'modified'
+            // branch logic so initial load and live update behave the same.
+            if (Array.isArray(data.opsTasks)) {
+              try {
+                var _aLocal = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
+                if (!Array.isArray(_aLocal)) _aLocal = [];
+                var _aById = {};
+                _aLocal.forEach(function(t) { if (t && t.id) _aById[t.id] = t; });
+                var _aChanged = false;
+                data.opsTasks.forEach(function(rt) {
+                  if (!rt || !rt.id) return;
+                  var lt = _aById[rt.id];
+                  if (!lt) { _aById[rt.id] = rt; _aChanged = true; return; }
+                  var ltTs = Number(lt._updatedAt || lt.completedAt || 0);
+                  var rtTs = Number(rt._updatedAt || rt.completedAt || 0);
+                  var ltDone = (lt.status === 'completed' || lt.status === 'complete' || lt.status === 'done');
+                  var rtDone = (rt.status === 'completed' || rt.status === 'complete' || rt.status === 'done');
+                  if (rtTs > ltTs || (rtDone && !ltDone)) { _aById[rt.id] = rt; _aChanged = true; }
+                });
+                if (_aChanged || !_aLocal.length) {
+                  var _aMerged = Object.keys(_aById).map(function(k) { return _aById[k]; });
+                  localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(_aMerged));
+                }
+              } catch(e) {}
+            }
             return;
           }
 
@@ -4256,6 +4283,65 @@
           if (data.fsgOverrides) {
             try { localStorage.setItem('cq_fsg_overrides_' + clientId, JSON.stringify(data.fsgOverrides)); } catch(e) {}
           }
+
+          // ── Cross-admin opsTasks sync ────────────────────────────────────
+          // Mirror Firestore opsTasks into the local cq_ops_tasks_{id} cache
+          // for EVERY client (not just the currently selected one). Without
+          // this, when Sam completes / creates a task on client A while Ali
+          // is viewing client B, Ali's My Tasks Today and Start Working
+          // queue stay stale until Ali either selects client A or refreshes.
+          //
+          // Last-writer-wins per task ID — same merge contract the
+          // loadClientDocsFromFirestore selected-client path uses. Keeps
+          // local pending edits safe while pulling in remote completions.
+          if (Array.isArray(data.opsTasks)) {
+            try {
+              var _localOpsAll = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
+              if (!Array.isArray(_localOpsAll)) _localOpsAll = [];
+              var _opsById = {};
+              _localOpsAll.forEach(function(t) { if (t && t.id) _opsById[t.id] = t; });
+              var _opsChanged = false;
+              data.opsTasks.forEach(function(rt) {
+                if (!rt || !rt.id) return;
+                var lt = _opsById[rt.id];
+                if (!lt) {
+                  _opsById[rt.id] = rt;
+                  _opsChanged = true;
+                  return;
+                }
+                var ltTs = Number(lt._updatedAt || lt.completedAt || 0);
+                var rtTs = Number(rt._updatedAt || rt.completedAt || 0);
+                var ltDone = (lt.status === 'completed' || lt.status === 'complete' || lt.status === 'done');
+                var rtDone = (rt.status === 'completed' || rt.status === 'complete' || rt.status === 'done');
+                if (rtTs > ltTs || (rtDone && !ltDone)) {
+                  _opsById[rt.id] = rt;
+                  _opsChanged = true;
+                }
+              });
+              if (_opsChanged) {
+                var _opsMerged = Object.keys(_opsById).map(function(k) { return _opsById[k]; });
+                _opsMerged.forEach(function(t) {
+                  if (t) t.status = (function(s) {
+                    if (!s) return 'pending';
+                    var v = String(s).toLowerCase().trim();
+                    if (v === 'complete' || v === 'done' || v === 'finished') return 'completed';
+                    return v;
+                  })(t.status);
+                });
+                localStorage.setItem('cq_ops_tasks_' + clientId, JSON.stringify(_opsMerged));
+                // Invalidate Start Working / queue caches and broadcast so
+                // Next Actions, My Tasks Today, Start Working banner all
+                // re-render with the synced state — no manual refresh.
+                try { if (typeof _wqQueueCache !== 'undefined') _wqQueueCache = null; } catch(e) {}
+                try {
+                  window.dispatchEvent(new CustomEvent('cq:tasks-updated', {
+                    detail: { clientId: clientId, ts: Date.now(), source: 'firestore-sync' }
+                  }));
+                } catch(e) {}
+              }
+            } catch(e) { console.warn('[Sync] opsTasks merge failed for', clientId, e); }
+          }
+
           // Targeted sidebar update — avoids full re-render and Firestore write loop
           _syncUpdateOpenClient(clientId, 'dashboard-snapshot');
           // Overview pipeline list
@@ -4287,35 +4373,89 @@
     } catch(e) {}
 
     // ── Client data change listener ───────────────
+    // Cross-admin sync for the clients collection. Previously the 'added'
+    // branch was a no-op (just recorded clientPrev) which meant when Sam
+    // created a new client, Ali only saw it after a manual refresh. Same
+    // for deletions. Now adds and removes propagate live to every admin's
+    // sidebar + pipeline view.
     try {
       var clientPrev = {};
       var clientUnsub = db.collection('clients').onSnapshot(function(snap) {
+        var listChanged = false;
         snap.docChanges().forEach(function(change) {
-          if (change.type === 'added') { clientPrev[change.doc.id] = change.doc.data(); return; }
-          if (change.type === 'removed') return;
           var clientId = change.doc.id;
           var data = change.doc.data();
+
+          if (change.type === 'added') {
+            // Real-time add: append to local roster if not already there.
+            // Initial snapshot fires 'added' for every existing doc, so we
+            // only act when the doc isn't already in our local clients[].
+            var existingIdx = clients.findIndex(function(cl){ return cl.id === clientId; });
+            if (existingIdx < 0) {
+              clients.push(data);
+              try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+              listChanged = true;
+              // Only show the notification if this client truly arrived
+              // mid-session (after the initial snapshot completed).
+              if (Date.now() - _notifInitTs > 8000) {
+                try {
+                  var nm = ((data.fname || '') + ' ' + (data.lname || '')).trim() || data.email || 'New client';
+                  addNotif('client', clientId, nm + ' was added to the portal');
+                } catch(e) {}
+              }
+            } else {
+              // Doc already in roster — merge in case it has fields the
+              // local copy doesn't (e.g. ghlContactId set by another admin).
+              clients[existingIdx] = Object.assign({}, clients[existingIdx], data);
+              try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+            }
+            clientPrev[clientId] = data;
+            return;
+          }
+
+          if (change.type === 'removed') {
+            // Real-time delete: drop from local roster + clean up the
+            // companion caches so a stale stage badge or task list can't
+            // resurface for an admin who never refreshed.
+            var rmIdx = clients.findIndex(function(cl){ return cl.id === clientId; });
+            if (rmIdx >= 0) {
+              clients.splice(rmIdx, 1);
+              try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
+              listChanged = true;
+              if (selectedClientId === clientId) {
+                selectedClientId = null;
+                try { document.getElementById('a-detail-card').innerHTML = ''; } catch(e) {}
+              }
+            }
+            delete clientPrev[clientId];
+            return;
+          }
+
+          // 'modified' — original behavior, lightly cleaned up.
           var prev = clientPrev[clientId] || {};
-          // Only notify meaningful changes (status, fico)
           if (prev.status && data.status && prev.status !== data.status) {
             addNotif('client', clientId, _notifClientName(clientId) + '\'s status changed to ' + (data.status || 'unknown'));
           } else if (prev.fico !== undefined && data.fico && prev.fico !== data.fico &&
                      Date.now() - _notifInitTs > 8000) {
             addNotif('client', clientId, _notifClientName(clientId) + '\'s FICO updated to ' + data.fico);
           }
-          // Apply updated client data to local array so all admins see it
           var _cci = clients.findIndex(function(cl){ return cl.id === clientId; });
           if (_cci >= 0) {
-            // Merge: keep local-only fields, overlay Firestore fields
             clients[_cci] = Object.assign({}, clients[_cci], data);
             try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
-            try { renderClientList(); } catch(e) {}
-            try { renderPipeline(); } catch(e) {}
+            listChanged = true;
             _syncUpdateOpenClient(clientId, 'client-record');
             console.log('[Sync] client modified | clientId:', clientId, '| by:', data.updatedBy||'?', '| at:', data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString() : '?');
           }
           clientPrev[clientId] = data;
         });
+        // Single coalesced re-render after the whole batch — avoids
+        // hammering renderClientList N times for an initial snapshot of
+        // 50+ clients.
+        if (listChanged) {
+          try { renderClientList(); } catch(e) {}
+          try { renderPipeline(); } catch(e) {}
+        }
       }, function(){});
       _notifUnsubs.push(clientUnsub);
     } catch(e) {}
