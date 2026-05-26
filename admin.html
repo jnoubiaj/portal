@@ -3244,13 +3244,13 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-<script src="firebase-config.js?v=2"></script>
+<script src="firebase-config.js?v=3"></script>
 <!-- Funding state database — loaded synchronously, no fetch required -->
-<script src="./data/funding-state-database.js?v=2"></script>
+<script src="./data/funding-state-database.js?v=3"></script>
 <!-- Funding Optimization Engine scripts — all loaded synchronously -->
-<script src="./data/bankBureauPullRules.js?v=2"></script>
-<script src="./data/bankRelationshipRules.js?v=2"></script>
-<script src="./data/optimizationEngine.js?v=2"></script>
+<script src="./data/bankBureauPullRules.js?v=3"></script>
+<script src="./data/bankRelationshipRules.js?v=3"></script>
+<script src="./data/optimizationEngine.js?v=3"></script>
 
 <script>
   // ── AUTH ──────────────────────────────────────────────────────────────
@@ -4724,10 +4724,40 @@
   function renderOvTaskTable() {
     const members = [...new Set(clients.map(c => c.assignedTo).filter(Boolean))];
 
-    // Build per-client task list from dashboard data
+    // Unified task list — merges legacy d.tasks with canonical opsTasks so
+    // tasks created via the v2 modal show up in this Overview table too.
+    // Without this, every modern task was invisible here (opsTasks lives
+    // in its own store; d.tasks only carries the older inline-added items).
+    //
+    // Normalization: opsTasks use {title, description, status:'completed'}
+    // while legacy uses {text, desc, status:'done'}. We map opsTasks into
+    // the legacy shape so the existing render code below keeps working.
+    const _toLegacyShape = function(t) {
+      var legacyStatus = t.status;
+      if (legacyStatus === 'completed' || legacyStatus === 'complete') legacyStatus = 'done';
+      else if (legacyStatus === 'overdue' || legacyStatus === 'pending') legacyStatus = 'todo';
+      else if (legacyStatus === 'archived' || legacyStatus === 'cancelled' || legacyStatus === 'skipped') return null;
+      return {
+        id:       t.id,
+        text:     t.title || t.text || '',
+        desc:     t.description || t.desc || '',
+        status:   legacyStatus,
+        priority: t.priority || 'medium',
+        dueDate:  t.dueDate || '',
+        _source:  'ops'
+      };
+    };
+
     const groupedClients = clients.map(c => {
       const d = getDashData(c.id);
-      const tasks = (d.tasks || []).filter(t => {
+      const legacy = (d.tasks || []);
+      const ops    = (typeof getOpsTasks === 'function') ? getOpsTasks(c.id) : [];
+      const seenIds = {};
+      legacy.forEach(function(t) { if (t && t.id) seenIds[t.id] = true; });
+      const mappedOps = ops.map(_toLegacyShape).filter(function(t) { return t && !seenIds[t.id]; });
+      const all = legacy.concat(mappedOps);
+
+      const tasks = all.filter(t => {
         const matchMember = ovTaskFilterMember === 'all' || c.assignedTo === ovTaskFilterMember;
         const statusKey = t.status === 'progress' ? 'in-progress' : t.status === 'todo' ? 'to-do' : t.status;
         const matchStatus = ovTaskFilterStatus === 'all' || statusKey === ovTaskFilterStatus || t.status === ovTaskFilterStatus;
