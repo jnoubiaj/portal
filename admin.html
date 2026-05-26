@@ -21982,6 +21982,102 @@
     setTimeout(function() { _ghlCheckProxy(); }, 300);
   }
 
+  // ── AUTO-LOGOUT AFTER 10 MIN INACTIVITY ─────────────────────────────────
+  // Mirrors the client-portal inactivity guard (dashboard.html). Admin
+  // sessions get a longer 10-minute timeout since admins typically have
+  // longer think/read pauses between actions (reading credit reports,
+  // composing notes, reviewing the funding generator) than clients do.
+  // 30-second warning banner gives a chance to extend without losing work.
+  (function() {
+    var TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+    var WARNING_MS = 30 * 1000;      // warn 30s before logout
+    var logoutTimer, warnTimer, tickInterval;
+
+    var banner = document.createElement('div');
+    banner.id = 'admin-inactivity-banner';
+    banner.style.cssText = ''
+      + 'display:none;position:fixed;bottom:24px;left:16px;right:16px;max-width:480px;'
+      + 'margin:0 auto;background:#0A1628;color:#fff;'
+      + 'font-family:var(--font-b),Inter,sans-serif;font-size:13px;font-weight:500;'
+      + 'padding:12px 16px;border-radius:12px;z-index:10050;'
+      + 'box-shadow:0 8px 32px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);'
+      + 'align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;';
+    banner.innerHTML = ''
+      + '<span style="flex:1;min-width:0">'
+      +   '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2.4" style="display:inline-block;vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
+      +   'You will be signed out in <strong id="admin-inact-cd">30</strong>s due to inactivity.'
+      + '</span>'
+      + '<button id="admin-inact-stay" style="background:#22A7F0;border:none;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:7px;cursor:pointer;white-space:nowrap;flex-shrink:0">Stay Signed In</button>';
+
+    function attachBanner() {
+      if (!banner.parentNode) document.body.appendChild(banner);
+      var stayBtn = document.getElementById('admin-inact-stay');
+      if (stayBtn) stayBtn.onclick = reset;
+    }
+
+    function showWarning() {
+      attachBanner();
+      banner.style.display = 'flex';
+      var secs = 30;
+      var cd = document.getElementById('admin-inact-cd');
+      if (cd) cd.textContent = secs;
+      clearInterval(tickInterval);
+      tickInterval = setInterval(function() {
+        secs--;
+        var el = document.getElementById('admin-inact-cd');
+        if (el) el.textContent = secs;
+        if (secs <= 0) clearInterval(tickInterval);
+      }, 1000);
+    }
+
+    function doLogout() {
+      banner.style.display = 'none';
+      clearInterval(tickInterval);
+      // Use the same path as the manual Sign Out button: clears the cached
+      // admin session, signs out of Firebase, then reloads. After reload,
+      // fast-restore sees no cache and the authStatus state machine resolves
+      // to 'unauthenticated' → login form. No flash because the splash holds
+      // the navy background during the brief auth check.
+      if (typeof adminLogout === 'function') {
+        try { adminLogout(); return; } catch(e) {}
+      }
+      // Fallback if adminLogout isn't available for some reason
+      try { localStorage.removeItem('cq_admin_user'); } catch(e) {}
+      try { if (typeof fsAuthSignOut === 'function') fsAuthSignOut(); } catch(e) {}
+      location.reload();
+    }
+
+    function reset() {
+      // Only arm the timer while the admin is actually signed in. If we're
+      // on the splash or login screen there is nothing to sign out OF.
+      var authedNow = (typeof _authStatus !== 'undefined') && _authStatus === 'authenticated';
+      banner.style.display = 'none';
+      clearTimeout(logoutTimer);
+      clearTimeout(warnTimer);
+      clearInterval(tickInterval);
+      if (!authedNow) return;
+      attachBanner();
+      warnTimer   = setTimeout(showWarning, TIMEOUT_MS - WARNING_MS);
+      logoutTimer = setTimeout(doLogout,    TIMEOUT_MS);
+    }
+
+    // Expose for any other code that wants to extend the timer programmatically
+    window._resetAdminInactivity = reset;
+
+    // Activity sources — same set the client portal listens for. Passive so
+    // we don't get in the way of scroll/touch performance on long client
+    // detail pages.
+    var EVENTS = ['touchstart','click','scroll','keydown','mousemove'];
+    EVENTS.forEach(function(ev) { document.addEventListener(ev, reset, { passive: true }); });
+
+    // Defer first arm until after the auth state machine has had a chance to
+    // resolve. If we arm before _showAdminApp runs the timer will skip
+    // (authedNow=false). Re-arm shortly after to catch the post-restore
+    // 'authenticated' transition without waiting for any other input.
+    setTimeout(reset, 600);
+    setTimeout(reset, 2500);
+  })();
+
 </script>
 </body>
 </html>
