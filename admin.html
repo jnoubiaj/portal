@@ -10729,9 +10729,24 @@
   // Compute the prioritized queue. Returns an array of item objects sorted
   // by score (highest first). Skipped clients drop to the bottom UNLESS
   // they have a critical or overdue task (which forcibly re-elevates them).
-  function _wqCompute(filterOverride) {
+  //
+  // mode (3rd arg) controls the eligibility filter:
+  //   'tasks'  (default) — strict: only clients with a pending task due
+  //                        today or overdue. A client whose only "pending"
+  //                        signal is a red/yellow follow-up bucket or an
+  //                        aging application is NOT included here. Matches
+  //                        the user spec "client should not re-enter
+  //                        workflow until their next task is due".
+  //   'review'           — INVERSE: only clients with NO open tasks AND
+  //                        no future tasks within the future window. Used
+  //                        by the "Review Clients Without Tasks" mode so
+  //                        the admin walks the otherwise-quiet roster.
+  //   'all'              — every active client, regardless of task state.
+  //                        Used by "All Active Clients Review".
+  function _wqCompute(filterOverride, mode) {
     var state = _wqGetState();
     var filter = filterOverride || state.filter || 'all';
+    if (!mode) mode = 'tasks';
     var today = _wqTodayStr();
     var now = Date.now();
     var DAY = _wqDayMs();
@@ -10914,15 +10929,28 @@
         isReviewed: !!state.reviewed[c.id],
         cooldownUntil: cooldownUntil,
         inCooldown: inCooldown,
-        // hasTodayWork = client has any actionable task TODAY. Drives the
-        // default-mode eligibility filter below.
-        hasTodayWork: pending.length > 0
-                   || (_fuBucket === 'red' || _fuBucket === 'yellow')
+        // STRICT inclusion: only clients with an actionable task today.
+        // Follow-up "cold contact" buckets and aging apps no longer pull
+        // clients in by themselves — those are surfaced through the
+        // dedicated Review Clients Without Tasks mode instead. (Spec:
+        // "client should not re-enter workflow until next task is due".)
+        hasTodayTasks: pending.length > 0,
+        // Soft "review-worthy" signal — feeds the Review mode banner so
+        // the admin sees WHY a quiet client deserves attention.
+        needsReview: (_fuBucket === 'red' || _fuBucket === 'yellow')
                    || needsAppFollowUp
+                   || (typeof daysSinceActivity === 'number' && daysSinceActivity >= 7),
+        // Legacy alias — kept for any code outside this file that may
+        // have been reading it. Strict-mode value matches the new
+        // hasTodayTasks; doesn't include the looser buckets anymore.
+        hasTodayWork: pending.length > 0,
+        futurePending: future.length,
+        futureInWindowCount: futureInWindow.length,
+        lastContactAt: (function(){ try { var r = getLastContact ? getLastContact(c.id) : null; return (r && r.at) || 0; } catch(e){ return 0; } })()
       };
     });
 
-    // Apply filter
+    // Apply filter (named filters — independent of mode)
     switch (filter) {
       case 'urgent':    items = items.filter(function(x) { return x.isOverdue || x.isCritical || x.isDueToday; }); break;
       case 'due-today': items = items.filter(function(x) { return x.isDueToday; }); break;
@@ -10933,13 +10961,35 @@
       // 'all' — no filter
     }
 
-    // TODAY-ONLY DEFAULT: when futureMode is off, drop clients with no
-    // today-eligible work. This is the fix for "tasks due May 26
-    // showing in today's session" — future-only clients no longer
-    // appear unless the admin opts in via the future-tasks toggle.
-    if (futureMode === 'off') {
-      items = items.filter(function(x) { return x.hasTodayWork; });
+    // Mode-driven eligibility — independent of the named filters above.
+    if (mode === 'tasks') {
+      // Strict: only clients with overdue + due-today opsTasks.
+      // futureMode === 'off' is still honored so future-only clients
+      // never sneak in via the futureInWindow ranking path.
+      if (futureMode === 'off') {
+        items = items.filter(function(x) { return x.hasTodayTasks; });
+      } else {
+        // Admin opted into future window — include clients with tasks
+        // inside that window too, even if nothing is due today yet.
+        items = items.filter(function(x) { return x.hasTodayTasks || x.futureInWindowCount > 0; });
+      }
+    } else if (mode === 'review') {
+      // Inverse: clients with NO open tasks and no future tasks. Sort by
+      // "needs the most attention" — longest since contact + longest in
+      // stage + longest in system.
+      items = items.filter(function(x) {
+        return !x.hasTodayTasks && x.allPendingCount === 0;
+      });
+      // Score override in review mode — re-rank by neglect signals.
+      items.forEach(function(x) {
+        var daysSinceContact = x.lastContactAt
+          ? Math.floor((now - x.lastContactAt) / DAY)
+          : (x.daysInSystem || 0);
+        x.score = (daysSinceContact * 3) + (x.daysInStage * 1.5) + (x.daysInSystem * 0.5);
+        x.topReason = { k: 'review', label: 'No open tasks — review check', detail: daysSinceContact + 'd since contact' };
+      });
     }
+    // mode === 'all' → no eligibility filter; every active client is in scope.
 
     // Sort: cooldown → bottom; skipped → bottom UNLESS critical/overdue
     // forces re-elevation; reviewed clients drop slightly so fresh ones
@@ -11075,7 +11125,83 @@
       }
       return;
     }
-    _wqOpen();
+    _wsOpenModeMenu();
+  }
+
+  // Mode picker — shown when Start Working is clicked with no active session.
+  // Lets the admin choose between Today's Tasks (default strict tasks-only),
+  // Overdue Tasks, Review Clients Without Tasks, and All Active Clients Review.
+  function _wsOpenModeMenu() {
+    var existing = document.getElementById('ws-mode-menu');
+    if (existing) { existing.remove(); return; }
+
+    // Pre-count each mode so the admin sees how much work each option has.
+    var nTasks  = 0, nReview = 0, nOverdue = 0, nAll = 0;
+    try {
+      var taskItems  = _wqCompute(undefined, 'tasks');
+      var allItems   = _wqCompute(undefined, 'all');
+      var revItems   = _wqCompute(undefined, 'review');
+      nTasks   = taskItems.length;
+      nOverdue = taskItems.filter(function(x){ return x.isOverdue; }).length;
+      nReview  = revItems.length;
+      nAll     = allItems.length;
+    } catch(e) {}
+
+    var anchor = document.querySelector('.a-cl-start-working');
+    var rect = anchor ? anchor.getBoundingClientRect() : { top: 60, left: 16, width: 160, height: 36 };
+    var menu = document.createElement('div');
+    menu.id = 'ws-mode-menu';
+    menu.style.cssText = 'position:fixed;top:' + (rect.bottom + 6) + 'px;left:' + rect.left + 'px;'
+      + 'min-width:280px;background:white;border:1px solid var(--gray-100);border-radius:12px;'
+      + 'box-shadow:0 12px 36px rgba(10,22,40,0.2);padding:8px;z-index:9500;'
+      + 'font-family:var(--font-b)';
+    var mkItem = function(modeArg, title, sub, count, accent) {
+      return '<button class="ws-mode-item" onclick="_wsStartSessionFromMenu(\'' + modeArg + '\')" '
+        + 'style="display:flex;width:100%;align-items:center;gap:10px;padding:10px 12px;background:none;border:none;border-radius:8px;cursor:pointer;text-align:left;transition:background 0.12s" '
+        + 'onmouseover="this.style.background=\'var(--gray-50)\'" onmouseout="this.style.background=\'\'">'
+        + '<span style="width:8px;height:8px;border-radius:50%;background:' + accent + ';flex-shrink:0"></span>'
+        + '<span style="flex:1;min-width:0">'
+        +   '<div style="font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--navy)">' + title + '</div>'
+        +   '<div style="font-size:11px;color:var(--gray-500);margin-top:1px">' + sub + '</div>'
+        + '</span>'
+        + '<span style="font-size:11px;font-weight:700;color:var(--gray-500);background:var(--gray-50);border-radius:999px;padding:3px 9px;flex-shrink:0">' + count + '</span>'
+        + '</button>';
+    };
+    menu.innerHTML = ''
+      + '<div style="padding:6px 10px 4px;font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400)">Start Working</div>'
+      + mkItem('tasks',       'Today\'s Tasks',                 'Overdue + due-today opsTasks only',           nTasks,   '#10b981')
+      + mkItem('overdue',     'Overdue Tasks Only',             'Skip today, focus on overdue work',           nOverdue, '#ef4444')
+      + mkItem('review',      'Review Clients Without Tasks',   'Walk quiet clients to check in',              nReview,  '#22A7F0')
+      + mkItem('all-active',  'All Active Clients Review',      'Walk every active client regardless of tasks', nAll,    '#8b5cf6')
+      + '<button onclick="document.getElementById(\'ws-mode-menu\').remove()" style="display:block;width:100%;padding:8px 12px;margin-top:4px;background:none;border:none;border-top:1px solid var(--gray-100);font-family:var(--font-b);font-size:11.5px;color:var(--gray-400);cursor:pointer">Cancel</button>';
+    document.body.appendChild(menu);
+    // Click-outside closes the menu
+    setTimeout(function() {
+      function _close(ev) {
+        if (!menu.contains(ev.target) && (!anchor || !anchor.contains(ev.target))) {
+          menu.remove();
+          document.removeEventListener('click', _close, true);
+        }
+      }
+      document.addEventListener('click', _close, true);
+    }, 60);
+  }
+
+  function _wsStartSessionFromMenu(mode) {
+    var menu = document.getElementById('ws-mode-menu');
+    if (menu) menu.remove();
+    if (mode === 'overdue') {
+      // Use the existing filter system for overdue-only — strict tasks mode
+      // and let the named filter narrow further.
+      var prev = _wqGetState();
+      _wqSetFilter('overdue');
+      _wsStartSession(null, 'tasks');
+      // Restore previous filter so the work-queue modal isn't stuck on
+      // overdue next time the admin opens it.
+      _wqSetFilter(prev.filter || 'all');
+      return;
+    }
+    _wsStartSession(null, mode);
   }
 
   // ── WORK QUEUE MODAL ────────────────────────────────────────────────
@@ -11319,9 +11445,21 @@
   // Optional firstClientId: if provided, that client is moved to index 0
   // of the queue so the session starts on them (used when the admin clicks
   // Start Working on a specific card rather than just the rank-1 client).
-  function _wsStartSession(firstClientId) {
-    var ranked = _wqCompute('all');
-    if (!ranked.length) { alert('Nothing in the queue right now.'); return; }
+  function _wsStartSession(firstClientId, mode) {
+    mode = mode || 'tasks';
+    // 'tasks' uses the standard filter ('all' inside _wqCompute so any
+    // pending-task client qualifies). 'review' walks the no-task pool.
+    // 'all-active' walks every active client regardless of task state.
+    var computeFilter = mode === 'review' ? 'all' : 'all';
+    var computeMode   = (mode === 'review') ? 'review' : (mode === 'all-active' ? 'all' : 'tasks');
+    var ranked = _wqCompute(computeFilter, computeMode);
+    if (!ranked.length) {
+      var emptyMsg = mode === 'review'
+        ? 'Every active client has open tasks. There is nothing to review without tasks right now — switch to Today\'s Tasks instead.'
+        : (mode === 'all-active' ? 'No active clients to walk through.' : 'No tasks due today or overdue. Try Review Clients Without Tasks instead.');
+      alert(emptyMsg);
+      return;
+    }
     var queue = ranked.map(function(x) { return x.clientId; });
     if (firstClientId && queue.indexOf(firstClientId) >= 0) {
       queue = [firstClientId].concat(queue.filter(function(id) { return id !== firstClientId; }));
@@ -11330,10 +11468,12 @@
       date: _wsTodayStr(),
       active: true,
       paused: false,
+      mode: mode,
       queue: queue,
       currentIdx: 0,
       completed: {},
       skipped: {},
+      reviewed: {},
       startedAt: Date.now(),
       startedBy: (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || ''
     };
@@ -11341,6 +11481,8 @@
     var firstId = queue[0];
     var modal = document.getElementById('wq-modal');
     if (modal) modal.remove();
+    var menu = document.getElementById('ws-mode-menu');
+    if (menu) menu.remove();
     _wqCurrentClientId = firstId;
     if (typeof selectClient === 'function') selectClient(firstId);
     setTimeout(function() { _wqRenderBanner(); _wsUpdateStartBtn(); }, 60);
@@ -11349,13 +11491,14 @@
   function _wsAdvance() {
     var s = _wsGetSession();
     if (!s) return;
-    // Skip past completed, skipped, AND cooldown'd clients inside the
-    // session snapshot. Cooldown'd ones may come back later if the user
+    var sessionMode = s.mode || 'tasks';
+    // Skip past completed, reviewed, skipped, AND cooldown'd clients inside
+    // the session snapshot. Cooldown'd ones may come back later if the user
     // resumes the session after the cooldown expires.
     var wqState = _wqGetState();
     function _isHidden(id) {
       var cooldownUntil = (wqState.cooldown && wqState.cooldown[id]) || 0;
-      return s.completed[id] || s.skipped[id] || cooldownUntil > Date.now();
+      return s.completed[id] || (s.reviewed && s.reviewed[id]) || s.skipped[id] || cooldownUntil > Date.now();
     }
     var idx = s.currentIdx + 1;
     while (idx < s.queue.length) {
@@ -11371,7 +11514,12 @@
         // Pick up any clients that became eligible AFTER the session
         // started — e.g. new auto-followup tasks or tasks created
         // mid-session. We never permanently lock the workflow.
-        var freshQueue = _wqCompute();
+        // Honor the session's mode so a review session only pulls in
+        // newly-quiet clients and a tasks session only pulls in clients
+        // with newly-due tasks.
+        var freshComputeMode = sessionMode === 'review' ? 'review'
+                            : (sessionMode === 'all-active' ? 'all' : 'tasks');
+        var freshQueue = _wqCompute(undefined, freshComputeMode);
         var freshIds = freshQueue
           .filter(function(x) { return !_isHidden(x.clientId) && s.queue.indexOf(x.clientId) === -1; })
           .map(function(x) { return x.clientId; });
@@ -11421,6 +11569,42 @@
     // The admin drives the next action: Move To Next Client, Stay, or View
     // Suggestions. Auto-advance is preserved as the modal's primary action.
     _wsShowCompletionModal(clientId, taskTitle, { fromSession: true });
+  }
+
+  // Mark Reviewed — used by Review Clients Without Tasks mode. Records that
+  // the admin walked this client during the session, drops them out of the
+  // queue snapshot, and writes a system note for the activity timeline.
+  // No task is mutated (there were none — that's the point of review mode).
+  function _wsMarkReviewedCurrent() {
+    var s = _wsGetSession();
+    if (!s) return;
+    var clientId = s.queue[s.currentIdx];
+    if (!clientId) return;
+    var now = Date.now();
+    var by = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'admin';
+    if (!s.reviewed) s.reviewed = {};
+    s.reviewed[clientId] = { at: now, by: by };
+    _wsSaveSession(s);
+    // Mirror onto the wq state for the daily reviewed set (rendered as a
+    // soft sort-down in the All Clients queue).
+    try { _wqMarkReviewed(clientId); } catch(e) {}
+    // Activity log entry so the timeline shows the review.
+    try {
+      var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+      var nm = c ? ((c.fname || '') + ' ' + (c.lname || '')).trim() : clientId;
+      if (typeof addSystemNote === 'function') {
+        addSystemNote(clientId, 'workflow', 'Note', 'Client reviewed',
+          'Reviewed via Start Working — no task needed.',
+          { reviewedBy: by, at: now, fromSession: true, mode: s.mode || 'review' });
+      }
+      if (typeof logActivity === 'function') {
+        logActivity('Reviewed <strong>' + _escHtml(nm) + '</strong> — no task needed', '#22A7F0');
+      }
+    } catch(e) {}
+    // Move on. Review mode doesn't show the completion-confirmation modal
+    // since there was no task to celebrate — just advance to the next quiet
+    // client.
+    _wsAdvance();
   }
 
   // ── COMPLETION CONFIRMATION + SMART NEXT STEPS ─────────────────────────────
@@ -11715,9 +11899,19 @@
 
   function _wsFinishSession() {
     var s = _wsGetSession();
-    var completedCount = s ? Object.keys(s.completed).length : 0;
-    var skippedCount   = s ? Object.keys(s.skipped).length : 0;
-    try { if (typeof logActivity === 'function') logActivity('Work session complete — ' + completedCount + ' done, ' + skippedCount + ' skipped', '#10b981'); } catch(e) {}
+    var completedCount = s ? Object.keys(s.completed || {}).length : 0;
+    var reviewedCount  = s ? Object.keys(s.reviewed  || {}).length : 0;
+    var skippedCount   = s ? Object.keys(s.skipped   || {}).length : 0;
+    var sessionMode    = (s && s.mode) || 'tasks';
+    var doneCount      = completedCount + reviewedCount;
+    try {
+      if (typeof logActivity === 'function') {
+        var msg = sessionMode === 'review'
+          ? 'Review session complete — ' + reviewedCount + ' reviewed, ' + skippedCount + ' skipped'
+          : 'Work session complete — ' + doneCount + ' done, ' + skippedCount + ' skipped';
+        logActivity(msg, '#10b981');
+      }
+    } catch(e) {}
     _wsEndSession(true);
 
     // "All caught up" modal — replaces the old blocking alert(). Lets the
@@ -11839,49 +12033,92 @@
       // the lightweight recommendation banner.
       var clientId = session.queue[session.currentIdx];
       if (!clientId || clientId !== selectedClientId) return;
-      var queue = _wqCompute();
+      // Compute the live queue against the session's own mode so a tasks
+      // session keeps showing today-task signals and a review session
+      // keeps showing review signals.
+      var sessionMode  = session.mode || 'tasks';
+      var bannerComputeMode = sessionMode === 'review' ? 'review'
+                            : (sessionMode === 'all-active' ? 'all' : 'tasks');
+      var queue = _wqCompute(undefined, bannerComputeMode);
       _wqQueueCache = queue;
       var item = queue.find(function(x) { return x.clientId === clientId; });
+      // Don't auto-end the session just because the live queue no longer
+      // includes the locked client. That used to happen when the only
+      // pending task was completed mid-session — Mark Contacted side-
+      // effect closed it, queue went empty, banner saw no item, called
+      // _wsEndSession. Now we fall back to a minimal placeholder item so
+      // the banner stays up and the admin drives the next action.
       if (!item) {
-        // The locked client no longer appears in the live queue (maybe they
-        // got archived). Just end the session gracefully.
-        _wsEndSession(true);
-        return;
+        var _fallbackClient = (typeof getClient === 'function') ? getClient(clientId) : null;
+        item = {
+          clientId: clientId,
+          client: _fallbackClient || { fname:'', lname:'' },
+          topReason: sessionMode === 'review'
+            ? { label: 'Review check', detail: 'no open tasks' }
+            : { label: 'No pending tasks', detail: 'review or advance' },
+          topTask: null
+        };
       }
       var totalCount = session.queue.length;
-      var completedCount = Object.keys(session.completed).length;
-      var skippedCount   = Object.keys(session.skipped).length;
-      var remainingCount = totalCount - completedCount - skippedCount;
-      var pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+      var completedCount = Object.keys(session.completed || {}).length;
+      var skippedCount   = Object.keys(session.skipped || {}).length;
+      var reviewedCount  = Object.keys(session.reviewed || {}).length;
+      var doneCount      = completedCount + reviewedCount;
+      var remainingCount = Math.max(0, totalCount - doneCount - skippedCount);
+      var pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
       var reasonText = item.topReason.label + (item.topReason.detail ? ' — ' + item.topReason.detail : '');
-      var taskTitle = item.topTask ? item.topTask.title : 'Review stage progress';
+      var taskTitle = item.topTask ? item.topTask.title : (sessionMode === 'review' ? 'No open tasks — quick review' : 'Review stage progress');
       var taskDue   = item.topTask && item.topTask.dueDate
         ? (item.topTask.dueDate === _wsTodayStr() ? 'Today' : item.topTask.dueDate)
         : '—';
       var nextStep = item.topTask
         ? (item.topTask.description || 'Complete this task to advance to the next client.')
-        : 'Review profile, check funding state, and queue the next action.';
+        : (sessionMode === 'review'
+            ? 'Check if a follow-up, funding-sequence review, document request, or new task is needed.'
+            : 'Review profile, check funding state, and queue the next action.');
       var nameStr = ((item.client.fname || '') + ' ' + (item.client.lname || '')).trim();
 
+      // ── Review-mode banner: different action set ─────────────────────
+      // No Complete-Task button — there's no task to complete. Instead
+      // Add Task / Mark Reviewed / Skip For Later / Skip With Reason +
+      // session-level Pause / End.
+      var actionsHTML = '';
+      if (sessionMode === 'review') {
+        actionsHTML += '<button class="ws-btn complete" onclick="opsOpenCreate(\'' + clientId + '\')">+ Add Task</button>';
+        actionsHTML += '<button class="ws-btn" onclick="_wsMarkReviewedCurrent()">&#10003; Mark Reviewed</button>';
+        actionsHTML += '<button class="ws-btn" onclick="_wqOpenLaterMenu(\'' + clientId + '\', event)" title="Hide this client for 1–24 hours">Skip For Later</button>';
+        actionsHTML += '<button class="ws-btn" onclick="_wsAdvance()">Next Client →</button>';
+        actionsHTML += '<button class="ws-btn" onclick="_wsPauseSession()">Pause</button>';
+        actionsHTML += '<button class="ws-btn danger" onclick="if(confirm(\'End the current review session?\')) _wsEndSession()">End</button>';
+      } else {
+        actionsHTML += (item.topTask
+          ? '<button class="ws-btn complete" onclick="_wsCompleteCurrent()">&#10003; Complete Task</button>'
+          : '<button class="ws-btn complete" onclick="_wsAdvance()">Next Client →</button>');
+        actionsHTML += '<button class="ws-btn" onclick="_wqOpenLaterMenu(\'' + clientId + '\', event)" title="Hide this client for 1–24 hours">Skip For Later Today</button>';
+        actionsHTML += '<button class="ws-btn" onclick="_wsOpenSkipModal()">Skip With Reason</button>';
+        actionsHTML += '<button class="ws-btn" onclick="_wsPauseSession()">Pause Session</button>';
+        actionsHTML += '<button class="ws-btn danger" onclick="if(confirm(\'End the current work session?\')) _wsEndSession()">End</button>';
+      }
+
+      var modeBadge = sessionMode === 'review' ? 'REVIEW MODE'
+                    : (sessionMode === 'all-active' ? 'ALL ACTIVE' : 'TASKS');
       var bannerHTML =
         '<div class="ws-banner">'
           + '<div class="ws-banner-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h7v8l10-12h-7l0-8z"/></svg></div>'
           + '<div class="ws-banner-body">'
-            + '<div class="ws-banner-tag"><span class="ws-banner-tag-dot"></span>Currently working on · ' + _escHtml(reasonText) + '</div>'
+            + '<div class="ws-banner-tag"><span class="ws-banner-tag-dot"></span>' + modeBadge + ' · ' + _escHtml(reasonText) + '</div>'
             + '<div class="ws-banner-name">' + _escHtml(nameStr || 'Client') + '</div>'
-            + '<div class="ws-banner-task"><span class="ws-banner-task-lbl">Task</span>' + _escHtml(taskTitle) + ' <span style="color:rgba(255,255,255,0.5)">· Due ' + _escHtml(taskDue) + '</span></div>'
+            + '<div class="ws-banner-task">'
+              + '<span class="ws-banner-task-lbl">' + (sessionMode === 'review' ? 'Review' : 'Task') + '</span>'
+              + _escHtml(taskTitle)
+              + (item.topTask ? ' <span style="color:rgba(255,255,255,0.5)">· Due ' + _escHtml(taskDue) + '</span>' : '')
+            + '</div>'
             + '<div class="ws-banner-step">Next step: ' + _escHtml(nextStep) + '</div>'
           + '</div>'
-          + '<div class="ws-banner-actions">'
-            + (item.topTask ? '<button class="ws-btn complete" onclick="_wsCompleteCurrent()">&#10003; Complete Task</button>' : '<button class="ws-btn complete" onclick="_wsCompleteCurrent()">&#10003; Mark Done</button>')
-            + '<button class="ws-btn" onclick="_wqOpenLaterMenu(\'' + clientId + '\', event)" title="Hide this client for 1–24 hours">Skip For Later Today</button>'
-            + '<button class="ws-btn" onclick="_wsOpenSkipModal()">Skip With Reason</button>'
-            + '<button class="ws-btn" onclick="_wsPauseSession()">Pause Session</button>'
-            + '<button class="ws-btn danger" onclick="if(confirm(\'End the current work session?\')) _wsEndSession()">End</button>'
-          + '</div>'
+          + '<div class="ws-banner-actions">' + actionsHTML + '</div>'
         + '</div>'
         + '<div class="ws-progress-row">'
-          + '<div><strong>' + completedCount + '</strong> of ' + totalCount + ' completed</div>'
+          + '<div><strong>' + doneCount + '</strong> of ' + totalCount + ' ' + (sessionMode === 'review' ? 'reviewed' : 'completed') + '</div>'
           + '<div class="ws-progress-bar"><div class="ws-progress-fill" style="width:' + pct + '%"></div></div>'
           + '<div><strong>' + remainingCount + '</strong> remaining · <strong>' + skippedCount + '</strong> skipped</div>'
         + '</div>';
