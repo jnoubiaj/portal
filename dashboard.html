@@ -104,7 +104,21 @@
       font-size: 15px;
       color: var(--white);
       flex-shrink: 0;
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+      background-size: cover;
+      background-position: center;
+      transition: box-shadow 0.15s;
     }
+    .client-avatar:hover { box-shadow: 0 0 0 3px rgba(34,167,240,0.25); }
+    .client-avatar .cam-overlay {
+      position: absolute; inset: 0;
+      background: rgba(10,22,40,0.45);
+      display: none; align-items: center; justify-content: center;
+      border-radius: 50%;
+    }
+    .client-avatar:hover .cam-overlay { display: flex; }
     .client-info .name {
       font-size: 14px;
       font-weight: 600;
@@ -3123,7 +3137,13 @@
     </div>
 
     <div class="sidebar-client">
-      <div class="client-avatar">JD</div>
+      <div class="client-avatar" id="cp-avatar" onclick="_cpAvatarClick()" title="Click to change profile photo">
+        <span id="cp-avatar-initials">JD</span>
+        <div class="cam-overlay">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.4"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+      </div>
+      <input type="file" id="cp-avatar-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="_cpAvatarUpload(event)" />
       <div class="client-info">
         <div class="name">James Davis</div>
         <div class="status">Active Client</div>
@@ -4162,6 +4182,20 @@
     }
 
     const base = Object.assign({}, DEFAULT_DASH, saved || {});
+
+    // ── Profile photo URL — synced from admin or self-uploaded ─────────────
+    // Photo can land via two paths: admin writes to clients/{id}.photo (we
+    // read that through the admin-clients cache below), or the client self-
+    // uploads from this portal and we write to dashboards/{id}.photoUrl
+    // here. Prefer the dashboards field if it's newer.
+    try {
+      if (base.photoUrl) base.photo = base.photoUrl;
+      else if (clientId) {
+        const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
+        const ac = adminClients.find(cl => cl.id === clientId);
+        if (ac && ac.photo) base.photo = ac.photo;
+      }
+    } catch(e) {}
 
     // ── Merge client-visible ops tasks from the admin's task system ─────────
     // The admin v2 task modal writes to dashboards.opsTasks (separate from
@@ -5431,8 +5465,10 @@
 
     // Sidebar client name + avatar initials
     const sn = document.querySelector('.client-info .name'); if(sn) sn.textContent = (fn + (ln ? ' ' + ln : '')).trim();
-    const av = document.querySelector('.client-avatar'); if(av) av.textContent = displayInitials;
-    const hav = document.querySelector('.header-avatar'); if(hav) hav.textContent = displayInitials;
+    // Paint sidebar + header avatars. Uses photo if d.photo is set, falls
+    // back to initials otherwise. Sidebar avatar has a click-to-upload
+    // overlay (camera icon) wired via _cpAvatarClick.
+    _cpRenderAvatars(displayInitials, d.photo || (d._photoUrl) || '');
 
     // Progress
     const stages = _normalizeStages(d.stageNames);
@@ -7858,6 +7894,93 @@
     try { localStorage.removeItem('cq_client_session_bak'); } catch(e) {}
     window.location.replace('login.html');
   }
+
+  // ── PROFILE PHOTO ─────────────────────────────────────────────────────
+  // Paint the sidebar + header avatars. Photo URL from dashboards.photoUrl
+  // (self-upload) or admin clients.photo (admin upload) — getDashData
+  // normalizes both into d.photo. Falls back to initials text otherwise.
+  function _cpRenderAvatars(initials, photoUrl) {
+    const av = document.getElementById('cp-avatar');
+    if (av) {
+      const inits = av.querySelector('#cp-avatar-initials');
+      if (photoUrl) {
+        if (inits) inits.style.display = 'none';
+        av.style.backgroundImage = 'url("' + photoUrl + '")';
+        av.style.backgroundColor = 'transparent';
+      } else {
+        if (inits) { inits.style.display = ''; inits.textContent = initials; }
+        av.style.backgroundImage = 'none';
+        av.style.backgroundColor = '';
+      }
+    }
+    const hav = document.querySelector('.header-avatar');
+    if (hav) {
+      if (photoUrl) {
+        hav.style.backgroundImage = 'url("' + photoUrl + '")';
+        hav.style.backgroundSize = 'cover';
+        hav.style.backgroundPosition = 'center';
+        hav.style.color = 'transparent';
+        hav.textContent = '';
+      } else {
+        hav.style.backgroundImage = 'none';
+        hav.style.color = '';
+        hav.textContent = initials;
+      }
+    }
+  }
+
+  function _cpAvatarClick() {
+    const f = document.getElementById('cp-avatar-file');
+    if (f) f.click();
+  }
+
+  async function _cpAvatarUpload(ev) {
+    const file = ev && ev.target && ev.target.files && ev.target.files[0];
+    if (!file) return;
+    ev.target.value = '';
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      alert('Profile photo must be a JPG, PNG, or WebP image.'); return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Profile photo must be under 5 MB.'); return;
+    }
+    const session = getClientSession();
+    if (!session || !session.clientId) { alert('Session expired — please sign in again.'); return; }
+    const clientId = session.clientId;
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = 'client_photos/' + clientId + '_' + Date.now() + '.' + ext;
+    // Optimistic preview
+    try {
+      const localUrl = URL.createObjectURL(file);
+      _cpRenderAvatars('', localUrl);
+    } catch(e) {}
+    try {
+      const url = await fsUploadFile(path, file);
+      if (!url) { alert('Photo upload failed. Try again.'); loadDashboardData(); return; }
+      // Save to dashboards.photoUrl (this client's own source of truth)
+      const now = Date.now();
+      if (typeof fsSetDash === 'function') {
+        await fsSetDash(clientId, { photoUrl: url, photoUpdatedAt: now });
+      }
+      // Also mirror into the local dash cache so the next render shows it
+      try {
+        const cache = window._fsDashCache || {};
+        cache.photoUrl = url; cache.photoUpdatedAt = now;
+        window._fsDashCache = cache;
+        const local = JSON.parse(localStorage.getItem('cq_dash_' + clientId) || '{}');
+        local.photoUrl = url; local.photoUpdatedAt = now;
+        localStorage.setItem('cq_dash_' + clientId, JSON.stringify(local));
+      } catch(e) {}
+      // Re-render with the canonical URL
+      loadDashboardData();
+    } catch(e) {
+      console.error('[ClientPortal] photo upload failed:', e);
+      alert('Photo upload failed. ' + (e && e.message ? e.message : ''));
+      loadDashboardData();
+    }
+  }
+  window._cpAvatarClick  = _cpAvatarClick;
+  window._cpAvatarUpload = _cpAvatarUpload;
 
   // Init on load — render docs from localStorage immediately
   function docInit() { renderAllDocs(); }
