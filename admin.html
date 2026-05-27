@@ -20723,6 +20723,17 @@
   // sendMsg, GHL outbound, addSystemNote(category='Message'), "Mark
   // Contacted" button, phone call log, etc. Persists to localStorage +
   // Firestore + auto-completes any open follow-up task.
+  //
+  // Start Working session guard: when the admin is inside a locked session
+  // on THIS client, we deliberately skip the follow-up auto-close + the
+  // banner re-render. Auto-closing the follow-up task can pull the locked
+  // client out of the live queue (no more pending work), which makes
+  // _wqRenderBanner trip its "client gone" branch and call _wsEndSession —
+  // exiting the workflow. Keeping the follow-up task open during the
+  // session preserves the active task, the queue, and the banner state.
+  // The auto-close still fires when the admin marks contacted from outside
+  // the session (typical path) or when the contacted client isn't the
+  // currently locked one.
   function _fuMarkContacted(clientId, source) {
     if (!clientId) return;
     var record = {
@@ -20734,12 +20745,35 @@
     if (typeof fsSetDash === 'function') {
       fsSetDash(clientId, { lastContact: record }).catch(function () {});
     }
-    // Auto-close any open follow-up task — the action is now satisfied.
-    try { _fuCloseOpenFollowUps(clientId, source); } catch (e) {}
-    // Refresh visible surfaces
+    // Detect whether we're inside an active Start Working session locked
+    // on this client. Used to suppress the side-effects that would
+    // otherwise tear down the session below.
+    var _inLockedSession = false;
+    try {
+      if (typeof _wsGetSession === 'function') {
+        var _sess = _wsGetSession();
+        if (_sess && _sess.active && !_sess.paused) {
+          var _locked = _sess.queue && _sess.queue[_sess.currentIdx];
+          if (_locked && _locked === clientId) _inLockedSession = true;
+        }
+      }
+    } catch (e) {}
+
+    // Auto-close any open follow-up task — but ONLY when we're not in a
+    // locked session on this client. Closing the task mid-session removes
+    // the workflow's anchor and triggers an auto-end.
+    if (!_inLockedSession) {
+      try { _fuCloseOpenFollowUps(clientId, source); } catch (e) {}
+    }
+    // Refresh the snapshot badge always — admin needs the visual feedback.
     try { _fuRenderSnapshotBadge(clientId); } catch (e) {}
-    try { if (typeof refreshSidebarTasks === 'function') refreshSidebarTasks(clientId); } catch (e) {}
-    try { if (typeof _wqRenderBanner === 'function') _wqRenderBanner(); } catch (e) {}
+    // Sidebar tasks + queue banner — skip in locked session so we don't
+    // race the banner into seeing a transiently-empty queue. The session
+    // banner already shows the right active task; no refresh needed.
+    if (!_inLockedSession) {
+      try { if (typeof refreshSidebarTasks === 'function') refreshSidebarTasks(clientId); } catch (e) {}
+      try { if (typeof _wqRenderBanner === 'function') _wqRenderBanner(); } catch (e) {}
+    }
   }
 
   function _fuCloseOpenFollowUps(clientId, source) {
