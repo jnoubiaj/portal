@@ -11633,54 +11633,111 @@
       if (!t.dueDate) return false;
       return t.dueDate <= todayStr;
     });
+    // Sort: critical → high → medium → low; within priority, overdue first.
+    var _pri = { critical: 0, high: 1, medium: 2, low: 3 };
+    todayRemaining.sort(function(a, b) {
+      var pa = _pri[a.priority] != null ? _pri[a.priority] : 2;
+      var pb = _pri[b.priority] != null ? _pri[b.priority] : 2;
+      if (pa !== pb) return pa - pb;
+      var ao = a.dueDate < todayStr ? 0 : 1;
+      var bo = b.dueDate < todayStr ? 0 : 1;
+      if (ao !== bo) return ao - bo;
+      return (a.dueDate || '') < (b.dueDate || '') ? -1 : 1;
+    });
     var allDoneToday = todayRemaining.length === 0;
+    var remainingCount = todayRemaining.length;
 
     var session = _wsGetSession();
     var hasSession = !!(session && session.active);
-    var queueRemaining = hasSession
-      ? session.queue.filter(function(id) {
-          return !session.completed[id] && !session.skipped[id] && id !== clientId;
-        }).length
-      : 0;
 
-    var titleText  = allDoneToday ? 'All work completed for today.' : 'Task Completed';
-    var iconColor  = allDoneToday ? '#10b981' : '#22a7f0';
-    var iconBg     = allDoneToday ? '#ecfdf5' : '#eff6ff';
-    var subText    = '<strong style="color:var(--navy)">' + _escHtml(clientName) + '</strong> · ' + _escHtml(taskTitle);
+    var titleText, subText, iconColor, iconBg;
+    if (allDoneToday) {
+      titleText = 'All tasks completed for ' + _escHtml(clientName) + ' today.';
+      subText   = 'Last completed · ' + _escHtml(taskTitle);
+      iconColor = '#10b981'; iconBg = '#ecfdf5';
+    } else {
+      titleText = 'Task Completed';
+      subText   = '<strong style="color:var(--navy)">' + _escHtml(clientName) + '</strong> still has '
+                + '<strong style="color:var(--navy)">' + remainingCount + ' task' + (remainingCount === 1 ? '' : 's')
+                + '</strong> due today. What would you like to do?';
+      iconColor = '#22a7f0'; iconBg = '#eff6ff';
+    }
 
+    // Remaining-tasks preview (always shown when there ARE remaining; hidden
+    // in the all-done variant since there's nothing to list).
     var remainingHTML = '';
-    if (!allDoneToday && todayRemaining.length > 0) {
+    if (!allDoneToday) {
       var listItems = todayRemaining.slice(0, 4).map(function(t) {
-        var due = t.dueDate < todayStr ? '<span style="color:#dc2626;font-weight:700">overdue</span>'
-                : '<span style="color:var(--gray-500)">today</span>';
-        return '<li style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--gray-100);font-size:11.5px;color:var(--navy)"><span style="flex:1">' + _escHtml(t.title) + '</span>' + due + '</li>';
+        var dueChip = t.dueDate < todayStr
+          ? '<span style="font-size:9px;font-weight:800;color:#dc2626;background:#fee2e2;border-radius:4px;padding:2px 7px;letter-spacing:0.05em;text-transform:uppercase">Overdue</span>'
+          : '<span style="font-size:9px;font-weight:800;color:#1d4ed8;background:#eff6ff;border-radius:4px;padding:2px 7px;letter-spacing:0.05em;text-transform:uppercase">Today</span>';
+        var priDot = t.priority === 'critical' ? '#dc2626'
+                  : t.priority === 'high'     ? '#f59e0b'
+                  : t.priority === 'low'      ? '#94a3b8'
+                  : '#22A7F0';
+        return '<li style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100);font-size:12px;color:var(--navy)">'
+          + '<span style="width:6px;height:6px;border-radius:50%;background:' + priDot + ';flex-shrink:0"></span>'
+          + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escHtml(t.title) + '</span>'
+          + dueChip
+          + '</li>';
       }).join('');
-      var more = todayRemaining.length > 4 ? '<div style="font-size:10.5px;color:var(--gray-400);margin-top:5px">+ ' + (todayRemaining.length - 4) + ' more</div>' : '';
+      var more = remainingCount > 4 ? '<div style="font-size:10.5px;color:var(--gray-400);margin-top:5px;text-align:left">+ ' + (remainingCount - 4) + ' more</div>' : '';
       remainingHTML =
         '<div style="margin:14px 0 4px;text-align:left">'
-          + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:6px">Remaining Today · ' + todayRemaining.length + '</div>'
-          + '<ul style="list-style:none;margin:0;padding:0">' + listItems + '</ul>'
+          + '<div style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-500);margin-bottom:6px">Remaining Today · ' + remainingCount + '</div>'
+          + '<ul id="ws-complete-remaining-list" style="list-style:none;margin:0;padding:0;max-height:170px;overflow-y:auto">' + listItems + '</ul>'
           + more
         + '</div>';
     }
 
-    // Action buttons depend on context.
+    // ── Button set per spec ────────────────────────────────────────────
+    // Remaining tasks: Continue (primary) · Move To Next · View Remaining
+    // No remaining:   Move To Next Client (primary) · Stay On Client
+    // _wsAdvanceCurrentToBottom() reuses the existing session bookkeeping
+    // but pushes the current client to the end of the snapshot before
+    // advancing, so they reappear later instead of being treated as done.
+    var primaryBtn  = function(label, onclick) {
+      return '<button onclick="' + onclick + '" style="height:44px;background:var(--navy);color:white;border:none;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:0.02em;cursor:pointer">' + label + '</button>';
+    };
+    var secondaryBtn = function(label, onclick) {
+      return '<button onclick="' + onclick + '" style="height:38px;background:white;color:var(--navy);border:1.5px solid var(--gray-200);border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">' + label + '</button>';
+    };
+    var linkBtn = function(label, onclick) {
+      return '<button onclick="' + onclick + '" style="height:34px;background:transparent;color:var(--blue);border:none;border-radius:9px;font-family:var(--font-h);font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px">' + label + '</button>';
+    };
+
+    var _close = "document.getElementById('ws-complete-overlay').remove();";
     var actionsHTML = '<div style="display:flex;flex-direction:column;gap:7px;margin-top:14px">';
-    if (hasSession) {
-      if (allDoneToday) {
-        var nextLabel = queueRemaining > 0
-          ? 'Yes — Next Client (' + queueRemaining + ' remaining)'
-          : 'Finish Work Session';
-        actionsHTML += '<button onclick="document.getElementById(\'ws-complete-overlay\').remove();_wsAdvance()" style="height:42px;background:var(--navy);color:white;border:none;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:0.02em;cursor:pointer">' + nextLabel + '</button>';
-        actionsHTML += '<button onclick="document.getElementById(\'ws-complete-overlay\').remove()" style="height:36px;background:white;color:var(--gray-600);border:1.5px solid var(--gray-200);border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Stay Here</button>';
-      } else {
-        actionsHTML += '<button onclick="document.getElementById(\'ws-complete-overlay\').remove();_wsAdvance()" style="height:42px;background:var(--navy);color:white;border:none;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:0.02em;cursor:pointer">Move Anyway → Next Client</button>';
-        actionsHTML += '<button onclick="document.getElementById(\'ws-complete-overlay\').remove()" style="height:36px;background:white;color:var(--navy);border:1.5px solid var(--gray-200);border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Continue Working Here</button>';
+
+    if (!allDoneToday) {
+      // Remaining tasks today. The user explicitly said: "system should NOT
+      // automatically force me to stay on that client" — so Continue is the
+      // primary choice (it does what their last click implied: keep working
+      // here) but Move To Next is clearly available as the secondary.
+      actionsHTML += primaryBtn('Continue With This Client', _close + '_wsContinueCurrent();');
+      actionsHTML += secondaryBtn('Move To Next Client', _close + '_wsAdvanceCurrentToBottom();');
+      actionsHTML += linkBtn('View Remaining Tasks', '_wsViewRemainingTasks(\'' + clientId + '\');');
+      // Smart suggestions kept as a tertiary option (less prominent).
+      if (hasSession) {
+        actionsHTML += linkBtn('View Smart Next-Step Suggestions', '_wsShowNextStepSuggestions(\'' + clientId + '\');');
       }
-      actionsHTML += '<button onclick="_wsShowNextStepSuggestions(\'' + clientId + '\')" style="height:34px;background:transparent;color:var(--blue);border:none;border-radius:9px;font-family:var(--font-h);font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px">View Smart Next-Step Suggestions</button>';
+    } else if (hasSession) {
+      // No remaining tasks for THIS client today.
+      var queueLeft = session.queue.filter(function(id) {
+        var done = (session.completed && session.completed[id]) || (session.reviewed && session.reviewed[id]);
+        return !done && !(session.skipped && session.skipped[id]) && id !== clientId;
+      }).length;
+      var nextLabel = queueLeft > 0
+        ? 'Move To Next Client (' + queueLeft + ' remaining)'
+        : 'Finish Work Session';
+      actionsHTML += primaryBtn(nextLabel, _close + '_wsAdvance();');
+      actionsHTML += secondaryBtn('Stay On Client', _close);
+      actionsHTML += linkBtn('View Smart Next-Step Suggestions', '_wsShowNextStepSuggestions(\'' + clientId + '\');');
     } else {
-      actionsHTML += '<button onclick="_wsShowNextStepSuggestions(\'' + clientId + '\')" style="height:42px;background:var(--navy);color:white;border:none;border-radius:9px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:0.02em;cursor:pointer">View Smart Next-Step Suggestions</button>';
-      actionsHTML += '<button onclick="document.getElementById(\'ws-complete-overlay\').remove()" style="height:36px;background:white;color:var(--gray-600);border:1.5px solid var(--gray-200);border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer">Close</button>';
+      // No active session — completion came from Next Actions panel. Keep
+      // the existing simple confirmation flow.
+      actionsHTML += primaryBtn('View Smart Next-Step Suggestions', '_wsShowNextStepSuggestions(\'' + clientId + '\');');
+      actionsHTML += secondaryBtn('Close', _close);
     }
     actionsHTML += '</div>';
 
@@ -11689,16 +11746,85 @@
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.6);backdrop-filter:blur(4px);z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px';
     overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
     overlay.innerHTML =
-      '<div style="background:white;border-radius:14px;padding:24px 24px 20px;max-width:420px;width:100%;box-shadow:0 18px 64px rgba(0,0,0,0.28);text-align:center">'
+      '<div style="background:white;border-radius:14px;padding:24px 24px 20px;max-width:440px;width:100%;box-shadow:0 18px 64px rgba(0,0,0,0.28);text-align:center">'
         + '<div style="width:48px;height:48px;border-radius:50%;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;margin:0 auto 10px">'
           + '<svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="' + iconColor + '" stroke-width="2.6"><path d="M5 13l4 4L19 7"/></svg>'
         + '</div>'
         + '<div style="font-family:var(--font-h);font-size:17px;font-weight:800;color:var(--navy);letter-spacing:-0.01em;margin-bottom:5px">' + titleText + '</div>'
-        + '<div style="font-size:12px;color:var(--gray-500);line-height:1.55">' + subText + '</div>'
+        + '<div style="font-size:12.5px;color:var(--gray-500);line-height:1.55">' + subText + '</div>'
         + remainingHTML
         + actionsHTML
       + '</div>';
     document.body.appendChild(overlay);
+  }
+
+  // Continue With This Client — close the completion modal and refresh
+  // every surface so the next-priority task is now highlighted in the
+  // banner and Next Actions panel.
+  function _wsContinueCurrent() {
+    var s = _wsGetSession();
+    if (!s) return;
+    try { if (typeof _wqQueueCache !== 'undefined') _wqQueueCache = null; } catch(e) {}
+    try { if (typeof _wqRenderBanner === 'function') _wqRenderBanner(); } catch(e) {}
+    var clientId = s.queue[s.currentIdx];
+    if (clientId && typeof refreshSidebarTasks === 'function') {
+      try { refreshSidebarTasks(clientId); } catch(e) {}
+    }
+  }
+
+  // Move-to-bottom variant of _wsAdvance — used by "Move To Next Client"
+  // when the client still has remaining today tasks the admin chose to
+  // defer. The client is pushed to the END of the session snapshot so
+  // they reappear later in the cycle instead of being treated as done
+  // (which would have happened with a plain advance — _wsAdvance hides
+  // them via session.completed/skipped). Without this, "Move To Next"
+  // permanently dropped a client mid-day even though they still had work.
+  function _wsAdvanceCurrentToBottom() {
+    var s = _wsGetSession();
+    if (!s) return;
+    var clientId = s.queue[s.currentIdx];
+    if (!clientId) { _wsAdvance(); return; }
+    // Re-slot: remove from current position, push to end.
+    var newQueue = s.queue.slice();
+    newQueue.splice(s.currentIdx, 1);
+    newQueue.push(clientId);
+    s.queue = newQueue;
+    // currentIdx stays the same — the splice already pulled the next
+    // client into position s.currentIdx. Cap to queue length so we wrap.
+    if (s.currentIdx >= s.queue.length) s.currentIdx = 0;
+    _wsSaveSession(s);
+    // Activity log so the audit trail captures the deferral.
+    try {
+      var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+      var nm = c ? ((c.fname || '') + ' ' + (c.lname || '')).trim() : clientId;
+      if (typeof logActivity === 'function') {
+        logActivity('Deferred <strong>' + _escHtml(nm) + '</strong> to end of session queue', '#8b5cf6');
+      }
+    } catch(e) {}
+    var nextId = s.queue[s.currentIdx];
+    if (nextId && typeof selectClient === 'function') selectClient(nextId);
+    setTimeout(function() { _wqRenderBanner(); }, 60);
+  }
+
+  // View Remaining Tasks — closes the completion modal and scrolls the
+  // Next Actions panel (already populated with the same task list) into
+  // view so the admin can pick the next one to work on.
+  function _wsViewRemainingTasks(clientId) {
+    var ov = document.getElementById('ws-complete-overlay');
+    if (ov) ov.remove();
+    if (clientId && typeof refreshSidebarTasks === 'function') {
+      try { refreshSidebarTasks(clientId); } catch(e) {}
+    }
+    var panel = document.getElementById('sp-right-tasks-top');
+    if (panel) {
+      try {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Brief highlight pulse so the admin's eye lands on it.
+        panel.style.transition = 'box-shadow 0.4s ease';
+        panel.style.boxShadow = '0 0 0 3px rgba(34,167,240,0.55)';
+        setTimeout(function() { panel.style.boxShadow = ''; }, 1200);
+      } catch(e) {}
+    }
   }
 
   // Compute 3–5 smart next-step suggestions for the client. Reads from the
