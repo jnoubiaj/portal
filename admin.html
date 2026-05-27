@@ -21817,6 +21817,15 @@
   function _opsDoneAdd(clientId, taskId, meta) {
     if (!taskId) return;
     var map = _opsDoneGet(clientId);
+    // IDEMPOTENT: if this task is already in the ledger, do NOTHING. This is
+    // CRITICAL — the Firestore merge sites call _opsDoneAdd for every
+    // completed task they see. Without this guard each call wrote opsDone to
+    // Firestore, which re-fired the dashboards onSnapshot listener, which
+    // re-ran the merge, which called _opsDoneAdd again → an infinite
+    // write/render loop that froze the entire admin UI ("can't click
+    // anything, client flickers"). The early return breaks the loop: a
+    // task is written to the ledger exactly once.
+    if (map[taskId]) return;
     map[taskId] = Object.assign({ at: Date.now() }, meta || {});
     _opsDoneSet(clientId, map);
     // Mirror the ledger to Firestore so other devices/admins honor it too.
