@@ -3942,7 +3942,10 @@
         currentAdmin = { email: _cached.email, name: _profile.name, initials: _profile.initials };
         _adminAppInited = true;
         _setAuthStatus('authenticated');
-        var sbAv = document.getElementById('sb-avatar'); if (sbAv) sbAv.textContent = _profile.initials;
+        try {
+          if (typeof _adminAvatarPaint === 'function') _adminAvatarPaint(_profile.initials);
+          else { var sbAv = document.getElementById('sb-avatar'); if (sbAv) sbAv.textContent = _profile.initials; }
+        } catch(e) {}
         var sbNm = document.getElementById('sb-name');   if (sbNm) sbNm.textContent = _profile.name;
         if (typeof initAdminApp === 'function') initAdminApp();
         setTimeout(function() { try { if (typeof _ghlInit === 'function') _ghlInit(); } catch(e) {} }, 500);
@@ -23273,16 +23276,44 @@
   // through Firebase Storage and returns a download URL. JPG / PNG / WebP
   // accepted, 5 MB max.
   // ═══════════════════════════════════════════════════════════════════════
-  window._adminPhotos = window._adminPhotos || {}; // email → photoUrl
+  // Local cache so admin photos survive refreshes independent of the
+  // Firestore listener round-trip. Without this the avatar paints
+  // initials on every refresh until the snapshot arrives — and if the
+  // adminProfiles collection isn't readable (rules / offline / blocked)
+  // it stays on initials forever, which is what "image disappears" is.
+  function _adminPhotosLoadCache() {
+    try {
+      var raw = localStorage.getItem('cq_admin_photos');
+      if (raw) {
+        var obj = JSON.parse(raw);
+        if (obj && typeof obj === 'object') return obj;
+      }
+    } catch (e) {}
+    return {};
+  }
+  function _adminPhotosSaveCache() {
+    try { localStorage.setItem('cq_admin_photos', JSON.stringify(window._adminPhotos || {})); } catch (e) {}
+  }
+  window._adminPhotos = window._adminPhotos || _adminPhotosLoadCache(); // email → photoUrl
 
   function _emailToDocId(email) {
     return String(email || '').toLowerCase().replace(/\./g, ',');
   }
 
   // Paint the sidebar admin avatar with either a photo or initials.
+  // Lazy-loads the localStorage cache on first call so it works even when
+  // invoked from the fast-restore IIFE before the photo module has been
+  // parsed (script is one big file; fast-restore runs ~20k lines before
+  // window._adminPhotos is initialized).
   function _adminAvatarPaint(initials, photoUrl) {
     var el = document.getElementById('sb-avatar');
     if (!el) return;
+    if (!window._adminPhotos) {
+      try {
+        var raw = localStorage.getItem('cq_admin_photos');
+        window._adminPhotos = raw ? (JSON.parse(raw) || {}) : {};
+      } catch (e) { window._adminPhotos = {}; }
+    }
     if (!photoUrl && currentAdmin && currentAdmin.email) {
       photoUrl = window._adminPhotos[currentAdmin.email] || '';
     }
@@ -23328,6 +23359,7 @@
       var url = await fsUploadFile(path, file);
       if (!url) { alert('Photo upload failed. Try again.'); return; }
       window._adminPhotos[email] = url;
+      _adminPhotosSaveCache();
       _adminAvatarPaint(currentAdmin.initials);
       // Persist to Firestore so every admin sees it
       try {
@@ -23355,18 +23387,27 @@
     window._adminPhotosListening = true;
     try {
       db.collection('adminProfiles').onSnapshot(function(snap) {
+        var changed = false;
         snap.docChanges().forEach(function(change) {
           if (change.type === 'removed') return;
           var data = change.doc.data() || {};
           if (data.email && data.photoUrl) {
-            window._adminPhotos[data.email] = data.photoUrl;
+            if (window._adminPhotos[data.email] !== data.photoUrl) {
+              window._adminPhotos[data.email] = data.photoUrl;
+              changed = true;
+            }
           }
         });
+        if (changed) _adminPhotosSaveCache();
         // Repaint local avatar in case our own record showed up
         if (currentAdmin && currentAdmin.email) {
           _adminAvatarPaint(currentAdmin.initials);
         }
-      }, function() {});
+      }, function(err) {
+        // Listener errored (rules / offline / permission). Cached photos
+        // from localStorage still paint correctly — no visible regression.
+        console.warn('[AdminPhotos] listener failed:', err && err.message);
+      });
     } catch(e) { console.warn('[AdminPhotos] listener failed:', e); }
   }
 

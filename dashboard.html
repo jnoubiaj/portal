@@ -4187,13 +4187,31 @@
     // Photo can land via two paths: admin writes to clients/{id}.photo (we
     // read that through the admin-clients cache below), or the client self-
     // uploads from this portal and we write to dashboards/{id}.photoUrl
-    // here. Prefer the dashboards field if it's newer.
+    // here. A dedicated cq_client_photo_{id} key is the durable fallback
+    // — a stale listener echo that overwrites cq_dash_ without photoUrl
+    // can't wipe it. Order of preference: dashboards.photoUrl → admin
+    // clients.photo → dedicated photo cache.
     try {
-      if (base.photoUrl) base.photo = base.photoUrl;
-      else if (clientId) {
+      if (base.photoUrl) {
+        base.photo = base.photoUrl;
+        if (clientId) {
+          try { localStorage.setItem('cq_client_photo_' + clientId, base.photoUrl); } catch(e) {}
+        }
+      } else if (clientId) {
         const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
         const ac = adminClients.find(cl => cl.id === clientId);
-        if (ac && ac.photo) base.photo = ac.photo;
+        if (ac && ac.photo) {
+          base.photo = ac.photo;
+          try { localStorage.setItem('cq_client_photo_' + clientId, ac.photo); } catch(e) {}
+        } else {
+          // Fallback to the dedicated photo cache so a freshly-uploaded
+          // photo persists even if a stale listener echo wiped the main
+          // cache before the user refreshed.
+          try {
+            const cached = localStorage.getItem('cq_client_photo_' + clientId);
+            if (cached) base.photo = cached;
+          } catch(e) {}
+        }
       }
     } catch(e) {}
 
@@ -7962,7 +7980,9 @@
       if (typeof fsSetDash === 'function') {
         await fsSetDash(clientId, { photoUrl: url, photoUpdatedAt: now });
       }
-      // Also mirror into the local dash cache so the next render shows it
+      // Also mirror into the local dash cache so the next render shows it.
+      // The dedicated cq_client_photo_ key is the durable fallback if a
+      // stale listener echo later wipes photoUrl from cq_dash_.
       try {
         const cache = window._fsDashCache || {};
         cache.photoUrl = url; cache.photoUpdatedAt = now;
@@ -7970,6 +7990,7 @@
         const local = JSON.parse(localStorage.getItem('cq_dash_' + clientId) || '{}');
         local.photoUrl = url; local.photoUpdatedAt = now;
         localStorage.setItem('cq_dash_' + clientId, JSON.stringify(local));
+        localStorage.setItem('cq_client_photo_' + clientId, url);
       } catch(e) {}
       // Re-render with the canonical URL
       loadDashboardData();
