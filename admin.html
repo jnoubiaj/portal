@@ -4507,12 +4507,22 @@
                 data.opsTasks.forEach(function(rt) {
                   if (!rt || !rt.id) return;
                   var lt = _aById[rt.id];
-                  if (!lt) { _aById[rt.id] = rt; _aChanged = true; return; }
+                  if (!lt) {
+                    _aById[rt.id] = rt; _aChanged = true;
+                    if (_cqIsDone(rt)) _opsDoneAdd(clientId, rt.id, { at: rt.completedAt || Date.now(), by: rt.completedBy || '' });
+                    return;
+                  }
                   var ltTs = Number(lt._updatedAt || lt.completedAt || 0);
                   var rtTs = Number(rt._updatedAt || rt.completedAt || 0);
-                  var ltDone = (lt.status === 'completed' || lt.status === 'complete' || lt.status === 'done');
-                  var rtDone = (rt.status === 'completed' || rt.status === 'complete' || rt.status === 'done');
-                  if (rtTs > ltTs || (rtDone && !ltDone)) { _aById[rt.id] = rt; _aChanged = true; }
+                  var ltDone = _cqIsDone(lt), rtDone = _cqIsDone(rt);
+                  // COMPLETED ALWAYS WINS over pending — and any completion
+                  // we observe (either side) goes into the durable ledger so
+                  // it can never be reverted by a later stale snapshot.
+                  if (ltDone || rtDone) {
+                    _opsDoneAdd(clientId, rt.id, { at: (ltDone?lt.completedAt:rt.completedAt) || Date.now(), by: (ltDone?lt.completedBy:rt.completedBy) || '' });
+                    if (rtDone && !ltDone) { _aById[rt.id] = rt; _aChanged = true; }
+                    // if local done & remote pending → keep local (don't replace)
+                  } else if (rtTs > ltTs) { _aById[rt.id] = rt; _aChanged = true; }
                 });
                 if (_aChanged || !_aLocal.length) {
                   var _aMerged = Object.keys(_aById).map(function(k) { return _aById[k]; });
@@ -4685,13 +4695,17 @@
                 if (!lt) {
                   _opsById[rt.id] = rt;
                   _opsChanged = true;
+                  if (_cqIsDone(rt)) _opsDoneAdd(clientId, rt.id, { at: rt.completedAt || Date.now(), by: rt.completedBy || '' });
                   return;
                 }
                 var ltTs = Number(lt._updatedAt || lt.completedAt || 0);
                 var rtTs = Number(rt._updatedAt || rt.completedAt || 0);
-                var ltDone = (lt.status === 'completed' || lt.status === 'complete' || lt.status === 'done');
-                var rtDone = (rt.status === 'completed' || rt.status === 'complete' || rt.status === 'done');
-                if (rtTs > ltTs || (rtDone && !ltDone)) {
+                var ltDone = _cqIsDone(lt), rtDone = _cqIsDone(rt);
+                // Completed always wins over pending; ledger any completion.
+                if (ltDone || rtDone) {
+                  _opsDoneAdd(clientId, rt.id, { at: (ltDone?lt.completedAt:rt.completedAt) || Date.now(), by: (ltDone?lt.completedBy:rt.completedBy) || '' });
+                  if (rtDone && !ltDone) { _opsById[rt.id] = rt; _opsChanged = true; }
+                } else if (rtTs > ltTs) {
                   _opsById[rt.id] = rt;
                   _opsChanged = true;
                 }
@@ -6342,16 +6356,19 @@
             if (!lt) {
               _byId[rt.id] = rt;
               _changed = true;
+              if (_cqIsDone(rt)) _opsDoneAdd(clientId, rt.id, { at: rt.completedAt || Date.now(), by: rt.completedBy || '' });
               return;
             }
-            // Both sides have this task. Prefer whichever was updated last;
-            // fall back to "completed wins" so a completion never resurrects
-            // (matches the user's invariant: completed/extended must persist).
+            // Completed ALWAYS wins over pending, and any completion seen on
+            // either side is recorded in the durable ledger so it can never
+            // resurrect (the user's invariant: completed/extended must persist).
             var ltTs = Number(lt._updatedAt || lt.completedAt || 0);
             var rtTs = Number(rt._updatedAt || rt.completedAt || 0);
-            var ltDone = (lt.status === 'completed' || lt.status === 'complete' || lt.status === 'done');
-            var rtDone = (rt.status === 'completed' || rt.status === 'complete' || rt.status === 'done');
-            if (rtTs > ltTs || (rtDone && !ltDone)) {
+            var ltDone = _cqIsDone(lt), rtDone = _cqIsDone(rt);
+            if (ltDone || rtDone) {
+              _opsDoneAdd(clientId, rt.id, { at: (ltDone?lt.completedAt:rt.completedAt) || Date.now(), by: (ltDone?lt.completedBy:rt.completedBy) || '' });
+              if (rtDone && !ltDone) { _byId[rt.id] = rt; _changed = true; }
+            } else if (rtTs > ltTs) {
               _byId[rt.id] = rt;
               _changed = true;
             }
@@ -21779,6 +21796,13 @@
   // reopening a task removes it from the ledger so it can legitimately
   // reappear. Mirrored to Firestore dashboards.{id}.opsDone for cross-device
   // + cross-admin durability.
+  // Status-is-terminal-completed test usable from the early Firestore merge
+  // sites (which run before _isOpsTaskTerminal is in scope at parse time but
+  // is fine at call time; this standalone keeps the merge code self-contained).
+  function _cqIsDone(t) {
+    var s = t && t.status;
+    return s === 'completed' || s === 'complete' || s === 'done';
+  }
   function _opsDoneKey(clientId) { return 'cq_ops_done_' + clientId; }
   function _opsDoneGet(clientId) {
     try {
@@ -21830,19 +21854,29 @@
       var arr = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
       if (!Array.isArray(arr)) return [];
       var done = _opsDoneGet(clientId);
-      // Normalize status on every read so all queue/filter logic agrees on
-      // 'completed' (not 'complete'/'done'). Then ENFORCE the completion
-      // ledger: any task in the ledger is completed, period — this is what
-      // stops a stale snapshot from resurrecting a finished task.
-      return arr.map(function(t) {
+      var _backfill = null; // local-only ledger additions (no Firestore write here)
+      var out = arr.map(function(t) {
         t = _normalizeOpsTaskShape(t);
-        if (t && done[t.id] && !_isOpsTaskTerminal(t)) {
+        if (!t) return t;
+        // BACKFILL: any task whose array status is already 'completed' but
+        // isn't in the ledger gets added (local-only — avoids write storms).
+        // This makes legacy completions (done before the ledger existed)
+        // durable on first read, so a later stale merge can't revert them.
+        if (t.status === 'completed' && !done[t.id]) {
+          if (!_backfill) _backfill = done;
+          _backfill[t.id] = { at: t.completedAt || Date.now(), by: t.completedBy || '' };
+        }
+        // ENFORCE: any task in the ledger is completed, period — this is
+        // what stops a stale snapshot from resurrecting a finished task.
+        if (done[t.id] && !_isOpsTaskTerminal(t)) {
           t.status = 'completed';
           if (!t.completedAt) t.completedAt = done[t.id].at || Date.now();
           if (!t.completedBy && done[t.id].by) t.completedBy = done[t.id].by;
         }
         return t;
       }).filter(Boolean);
+      if (_backfill) { try { _opsDoneSet(clientId, _backfill); } catch(e) {} }
+      return out;
     } catch(e) { return []; }
   }
   function _saveOpsTasks(clientId, tasks) {
