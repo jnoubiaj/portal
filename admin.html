@@ -12732,7 +12732,7 @@
     modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
   }
 
-  function showAdminProfileEdit(clientId) {
+  function showAdminProfileEdit(clientId, _recovered) {
     const _c = getClient(clientId) || {};
     const o = getOnboardDataForClient(clientId);
     // Pre-fill any blank onboarding fields with the canonical client record values
@@ -12991,6 +12991,36 @@
 
     document.body.appendChild(overlay);
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    // ── Onboarding recovery by email (ID-drift) ──────────────────────────
+    // If this client's onboarding submission was saved under a DIFFERENT
+    // clientId (self-signup vs admin-created), getOnboardDataForClient finds
+    // nothing locally and the modal opens blank. Query Firestore's full
+    // onboarding set, match on email, and if a richer record exists, mirror
+    // it under THIS clientId and repaint the modal once. Only runs when the
+    // current data is thin and we haven't already recovered (no loop).
+    var _oThin = !(o && (o.bizName || o.dob || o.ssn || o.annualIncome || o.bizType || o.monthlySales || o.industry));
+    if (!_recovered && _oThin && _c.email && typeof fsGetAllOnboarding === 'function') {
+      fsGetAllOnboarding().then(function(all) {
+        if (!Array.isArray(all)) return;
+        var em = _c.email.toLowerCase();
+        var match = all.find(function(r) {
+          if (!r) return false;
+          var rEmail = (r.email || r.clientEmail || '').toLowerCase();
+          var rich = r.bizName || r.businessName || r.dob || r.ssn || r.annualIncome || r.bizType || r.monthlySales || r.industry;
+          return rEmail === em && rich;
+        });
+        if (!match) return;
+        // Normalize businessName→bizName so the modal/profile reads it.
+        if (match.businessName && !match.bizName) match.bizName = match.businessName;
+        try { localStorage.setItem('cq_onboard_data_' + clientId, JSON.stringify(match)); } catch(e) {}
+        try { if (typeof fsSetOnboarding === 'function') fsSetOnboarding(clientId, match).catch(function(){}); } catch(e) {}
+        // Repaint the modal with the recovered data (guarded — once only).
+        var ov = document.getElementById('admin-profile-edit-overlay');
+        if (ov) ov.remove();
+        showAdminProfileEdit(clientId, true);
+      }).catch(function(){});
+    }
 
     // Init password fields from data-val (not value attr) so Chrome doesn't treat them as saved credentials
     overlay.querySelectorAll('input[type="password"][data-val]').forEach(function(el) {
