@@ -23953,6 +23953,14 @@
       if (p.scope === 'team') metaBits.push('Shared · Team Workspace'); else metaBits.push('Private to you');
       if (p.dateKey) metaBits.push('Daily page');
       html += '<div class="cqw-page-meta">' + metaBits.join(' · ') + '</div>';
+      // Daily pages get a LIVE client-tasks panel pulled from the canonical
+      // opsTasks store (the same source as Next Actions / Start Working /
+      // My Tasks Today). These are NOT stored as workspace blocks — they're
+      // computed live and reference the original taskId, so completing one
+      // here completes it everywhere and it never duplicates.
+      if (p.group === 'daily') {
+        html += '<div id="cqw-livetasks">' + _cqwLiveTasksHTML() + '</div>';
+      }
       html += '<div class="cqw-blocks" id="cqw-blocks">';
       (p.blocks || []).forEach(function(b){ html += _cqwBlockHTML(b); });
       html += '</div>';
@@ -23961,6 +23969,90 @@
       host.innerHTML = html;
       _cqwUpdateFavBtn();
       _cqwAutoSizeTitle();
+    }
+
+    // Live client-tasks panel for daily pages — derived, never persisted.
+    // Pulls overdue + due-today opsTasks across all active clients and maps
+    // them into Notion-style sections. Each row's checkbox calls the
+    // canonical completeOpsTask so completion syncs to every other view.
+    function _cqwLiveTasksHTML() {
+      if (typeof clients === 'undefined' || !Array.isArray(clients) || typeof getOpsTasks !== 'function') return '';
+      var today = _cqwTodayKey();
+      var SECTIONS = [
+        { key:'priorities', label:'Today’s Priorities', icon:'⭐' },
+        { key:'followups',  label:'Funding Follow-Ups', icon:'💰' },
+        { key:'credit',     label:'Credit Reports',     icon:'📊' },
+        { key:'client',     label:'Client Work',        icon:'👥' }
+      ];
+      var buckets = { priorities:[], followups:[], credit:[], client:[] };
+      var isTerminal = function(s){ return s==='completed'||s==='complete'||s==='done'||s==='archived'||s==='cancelled'||s==='skipped'; };
+      clients.forEach(function(c){
+        if (!c || c.archived) return;
+        var ops = getOpsTasks(c.id) || [];
+        ops.forEach(function(t){
+          if (!t || isTerminal(t.status)) return;
+          if (!t.dueDate || t.dueDate > today) return; // due today or overdue only
+          var title = (t.title||'').toLowerCase();
+          var bucket;
+          if (t.type === 'client') bucket = 'client';
+          else if (t.source === 'auto_followup' || /follow.?up/.test(title)) bucket = 'followups';
+          else if (/credit|bureau|report|inquir/.test(title)) bucket = 'credit';
+          else if (/fund|appl|bank|amex|chase|card|loan|sequence/.test(title)) bucket = 'followups';
+          else bucket = 'priorities';
+          buckets[bucket].push({ c:c, t:t });
+        });
+      });
+      var total = buckets.priorities.length + buckets.followups.length + buckets.credit.length + buckets.client.length;
+      var html = '<div style="background:#f7f9fc;border:1px solid var(--gray-100);border-radius:12px;padding:14px 16px;margin:6px 0 18px">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+        + '<span style="font-family:var(--font-h);font-size:13px;font-weight:800;color:var(--navy)">📋 Client Tasks Due Today</span>'
+        + '<span style="font-size:11px;font-weight:700;color:#fff;background:' + (total?'var(--blue)':'var(--gray-300)') + ';border-radius:999px;padding:1px 8px">' + total + '</span>'
+        + '<span style="margin-left:auto;font-size:10.5px;color:var(--gray-400)">Live from your task system · complete here = complete everywhere</span>'
+        + '</div>';
+      if (!total) {
+        html += '<div style="font-size:12.5px;color:var(--gray-400);padding:6px 2px">Nothing due today. New client tasks land here automatically.</div></div>';
+        return html;
+      }
+      var pri = { critical:0, high:1, medium:2, low:3 };
+      SECTIONS.forEach(function(sec){
+        var rows = buckets[sec.key];
+        if (!rows.length) return;
+        rows.sort(function(a,b){
+          var pa = pri[a.t.priority]!=null?pri[a.t.priority]:2, pb = pri[b.t.priority]!=null?pri[b.t.priority]:2;
+          if (pa!==pb) return pa-pb;
+          return (a.t.dueDate||'') < (b.t.dueDate||'') ? -1 : 1;
+        });
+        html += '<div style="margin-top:8px"><div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray-500);margin:6px 0 3px">' + sec.icon + ' ' + sec.label + ' · ' + rows.length + '</div>';
+        rows.forEach(function(r){
+          var c=r.c, t=r.t;
+          var nm = ((c.fname||'')+' '+(c.lname||'')).trim() || c.email || 'Client';
+          var overdue = t.dueDate < today;
+          var stageIdx = (typeof getCanonicalStage==='function') ? getCanonicalStage(c.id) : -1;
+          var stageName = (typeof PIPELINE_STAGES!=='undefined' && PIPELINE_STAGES[stageIdx]) ? PIPELINE_STAGES[stageIdx].name : '';
+          var priColor = t.priority==='critical'?'#dc2626':t.priority==='high'?'#f59e0b':t.priority==='low'?'#94a3b8':'#22A7F0';
+          html += '<div class="cqw-livetask" style="display:flex;align-items:flex-start;gap:9px;padding:7px 6px;border-radius:7px" onmouseover="this.style.background=\'rgba(10,22,40,0.03)\'" onmouseout="this.style.background=\'\'">'
+            + '<span onclick="_cqwCompleteLiveTask(\'' + c.id + '\',\'' + t.id + '\')" title="Complete task" style="width:17px;height:17px;border-radius:4px;border:1.6px solid var(--gray-300);background:#fff;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"></span>'
+            + '<div style="flex:1;min-width:0">'
+              + '<div style="font-size:13px;color:var(--navy);font-weight:600;line-height:1.4"><span style="cursor:pointer;text-decoration:underline;text-underline-offset:2px" onclick="selectClient(\'' + c.id + '\')">' + _cqwEsc(nm) + '</span> — ' + _cqwEsc(t.title||'Task') + '</div>'
+              + '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:2px;font-size:10.5px;color:var(--gray-500)">'
+                + '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:5px;height:5px;border-radius:50%;background:' + priColor + '"></span>' + (t.priority||'medium') + '</span>'
+                + (overdue ? '<span style="color:#dc2626;font-weight:700">Overdue · ' + _cqwEsc(t.dueDate) + '</span>' : '<span>Due today</span>')
+                + (stageName ? '<span>· ' + _cqwEsc(stageName) + '</span>' : '')
+              + '</div>'
+            + '</div>'
+          + '</div>';
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+      return html;
+    }
+    function _cqwCompleteLiveTask(clientId, taskId) {
+      try { if (typeof completeOpsTask === 'function') completeOpsTask(clientId, taskId); } catch(e) {}
+      // Refresh just the live panel (the broadcast also refreshes Next
+      // Actions / Start Working / My Tasks Today).
+      var host = document.getElementById('cqw-livetasks');
+      if (host) host.innerHTML = _cqwLiveTasksHTML();
     }
 
     function _cqwBlockHTML(b) {
@@ -24396,6 +24488,17 @@
         document.addEventListener('selectionchange', function(){
           if (document.getElementById('asec-todo') && document.getElementById('asec-todo').classList.contains('active')) _cqwSelWatch();
         });
+        // Cross-view sync: when a task is completed/extended anywhere
+        // (Next Actions, Start Working, My Tasks Today, client portal),
+        // refresh the live client-tasks panel on the daily page so it
+        // stays consistent — same canonical store, no duplicate copies.
+        window.addEventListener('cq:tasks-updated', function(){
+          var host = document.getElementById('cqw-livetasks');
+          if (host) {
+            var p = _cqwGetActivePage();
+            if (p && p.group === 'daily') host.innerHTML = _cqwLiveTasksHTML();
+          }
+        });
       }
     }
 
@@ -24437,6 +24540,7 @@
     window._cqwTblAddCol       = _cqwTblAddCol;
     window._cqwTblDelRow       = _cqwTblDelRow;
     window._cqwTblDelCol       = _cqwTblDelCol;
+    window._cqwCompleteLiveTask = _cqwCompleteLiveTask;
     // Back-compat alias so the nav onclick (_adInit) still boots the workspace
     window._adInit             = _cqwInit;
   })();
