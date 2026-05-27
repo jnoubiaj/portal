@@ -4077,8 +4077,13 @@
     // Ops task overdue detection — run once, then every 60 seconds
     try { updateOverdueTaskStatuses(); } catch(e) {}
     setInterval(function() { try { updateOverdueTaskStatuses(); } catch(e) {} }, 60000);
-    // Auto follow-up creator — page load + hourly (Mon/Wed/Fri touchpoints)
-    try { if (typeof _fuRunAutoCreator === 'function') _fuRunAutoCreator(); } catch(e) {}
+    // Auto follow-up creator — DEFERRED 12s on load so Firestore has time to
+    // sync each client's existing opsTasks first. Running it immediately was
+    // the duplicate-follow-up bug: on a fresh login localStorage was empty,
+    // getOpsTasks returned [], the de-dupe saw "no open follow-up", and a new
+    // one was minted — then the old tasks loaded in, leaving 2+. The 12s
+    // delay + the de-dupe-collapse inside _fuRunAutoCreator stop that.
+    setTimeout(function() { try { if (typeof _fuRunAutoCreator === 'function') _fuRunAutoCreator(); } catch(e) {} }, 12000);
     setInterval(function() { try { if (typeof _fuRunAutoCreator === 'function') _fuRunAutoCreator(); } catch(e) {} }, 3600000);
     // Polling fallback — re-fetch open client dashboard every 15s in case
     // the Firestore listener misses an update. Targeted update only.
@@ -10806,7 +10811,11 @@
           || s === 'archived'  || s === 'cancelled' || s === 'skipped';
     };
     var activeOps = sortOpsTasks(opsTasks.filter(function(t){ return !_isTerminalOps(t); }));
-    var doneOps   = opsTasks.filter(_isTerminalOps);
+    // Completed list — most-recent first, and capped to a few so the panel
+    // doesn't drown in months of struck-through "Follow Up With Client"
+    // history. Auto-dedupe-closed copies are hidden entirely (pure noise).
+    var doneOps   = opsTasks.filter(function(t){ return _isTerminalOps(t) && t.autoClosedBy !== 'dedupe'; })
+      .sort(function(a, b){ return (Number(b.completedAt)||0) - (Number(a.completedAt)||0); });
 
     // Pipeline tasks are intentionally NOT rendered in Next Actions.
     // Per-stage checklists still live in cq_tasks_${id} (used by the
@@ -10854,13 +10863,17 @@
       body += activeOps.map(opsRow).join('');
     }
     if (doneOps.length > 0) {
+      var _doneShow = doneOps.slice(0, 3);
+      var _doneHidden = doneOps.length - _doneShow.length;
       body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-100)">'
-        + doneOps.map(function(task) {
+        + '<div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray-300);margin-bottom:4px">Recently completed</div>'
+        + _doneShow.map(function(task) {
             return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;opacity:0.5">'
               + '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>'
               + '<div style="font-size:11px;color:var(--gray-400);text-decoration:line-through">' + _escHtml(task.title) + '</div>'
             + '</div>';
           }).join('')
+        + (_doneHidden > 0 ? '<div style="font-size:10.5px;color:var(--gray-300);padding:3px 0 0 18px">+ ' + _doneHidden + ' more completed</div>' : '')
       + '</div>';
     }
     if (!body) {
@@ -21624,11 +21637,49 @@
     return task;
   }
 
-  // Scan every active client and create follow-up tasks where needed.
-  // Safe to call repeatedly — de-dupe inside _fuShouldCreateTask.
+  // Collapse duplicate OPEN follow-up tasks down to a single one. Keeps the
+  // earliest-created open follow-up and marks the rest completed (+ledger),
+  // so a client never shows two "Follow Up With Client" rows. Returns the
+  // count it collapsed. Safe to run any time — this also cleans up the
+  // duplicates that accumulated before the race fix.
+  function _fuDedupeOpenFollowUps(clientId) {
+    var tasks = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
+    var open = tasks.filter(function (t) {
+      if (!t || _isOpsTaskTerminal(t)) return false;
+      var norm = (t.title || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      return t.source === _FU_TASK_SOURCE || norm === 'follow up with client';
+    });
+    if (open.length <= 1) return 0;
+    // Keep the earliest-created (most "original") open follow-up.
+    open.sort(function (a, b) { return (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0); });
+    var keep = open[0];
+    var by = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'auto';
+    var collapsed = 0;
+    // Complete the extras DIRECTLY (ledger + array), NOT via completeOpsTask —
+    // completeOpsTask logs contact for follow-ups, which would cascade through
+    // _fuCloseOpenFollowUps and close the keep task too. Direct write avoids
+    // that and leaves exactly one open follow-up standing.
+    open.slice(1).forEach(function (t) {
+      if (typeof _opsDoneAdd === 'function') _opsDoneAdd(clientId, t.id, { by: by, autoClosedBy: 'dedupe' });
+      if (typeof updateOpsTask === 'function') {
+        updateOpsTask(clientId, t.id, { status: 'completed', completedAt: Date.now(), completedBy: by, autoClosedBy: 'dedupe' });
+      }
+      collapsed++;
+    });
+    if (collapsed > 0) {
+      console.log('[FollowUp] Collapsed', collapsed, 'duplicate follow-up(s) for', clientId, '— kept', keep.id);
+      try { if (typeof refreshSidebarTasks === 'function' && selectedClientId === clientId) refreshSidebarTasks(clientId); } catch(e) {}
+    }
+    return collapsed;
+  }
+
+  // Scan every active client: first collapse any duplicate open follow-ups,
+  // then create one only where genuinely needed (de-dupe in _fuShouldCreateTask).
   function _fuRunAutoCreator() {
     try {
       if (typeof clients === 'undefined' || !Array.isArray(clients)) return 0;
+      // Always collapse duplicates (cleanup), regardless of touchpoint day.
+      clients.forEach(function (c) { if (c && c.id && !c.archived) { try { _fuDedupeOpenFollowUps(c.id); } catch(e) {} } });
       if (!_fuIsRequiredToday()) return 0;
       var created = 0;
       clients.forEach(function (c) {
