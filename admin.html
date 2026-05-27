@@ -16820,8 +16820,24 @@
 
     const color = AVATAR_COLORS[clients.length % AVATAR_COLORS.length];
     const clientId = 'c'+Date.now();
-    // Use email prefix as display name until onboarding fills it in
-    const displayName = email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+    // Name resolution: prefer the name typed/selected in the search box
+    // ("philippe vaamonde"), parsed into first + last. Only fall back to the
+    // email prefix when no real name was entered. Previously this ALWAYS used
+    // the email prefix, which is why "pvaamonde@yahoo.com" showed as
+    // "Pvaamonde Vaamonde" instead of "Philippe Vaamonde".
+    var _cap = function(s){ return s ? s.replace(/\b\w/g, function(l){ return l.toUpperCase(); }) : s; };
+    var _typed = (document.getElementById('nc-ghl-search') ? document.getElementById('nc-ghl-search').value : '').trim();
+    var _looksLikeName = _typed && _typed.indexOf('@') === -1 && !/^\+?[\d\s().\-]+$/.test(_typed);
+    var _fname, _lname;
+    if (_looksLikeName) {
+      var _parts = _typed.replace(/\s+/g, ' ').split(' ');
+      _fname = _cap(_parts.shift() || '');
+      _lname = _cap(_parts.join(' '));
+    } else {
+      _fname = email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+      _lname = '';
+    }
+    const displayName = _fname;
     const contractType   = document.getElementById('nc-contract-type')?.value  || 'full';
     const contractAmount = document.getElementById('nc-contract-amount')?.value.replace(/[^0-9.]/g,'') || '';
     const contractPct    = document.getElementById('nc-contract-pct')?.value.replace(/[^0-9.]/g,'')    || '8';
@@ -16832,7 +16848,7 @@
 
     const newClient = {
       id: clientId,
-      fname: displayName, lname: '',
+      fname: displayName, lname: _lname,
       email, phone,
       status: 'new',
       serviceType: service,

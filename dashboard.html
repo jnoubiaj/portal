@@ -4618,18 +4618,55 @@
     const session = getClientSession();
     if (!session || !session.clientId) return;
 
+    // Does an onboarding object actually carry the client's real submission
+    // (vs. just an admin-stub with name/phone)? Used to decide whether to
+    // run the email-based fallback below.
+    const _hasRealOnboarding = (od) => !!(od && (od.firstName || od.businessName || od.dob ||
+      od.annualIncome || od.businessType || od.monthlySales || od.contractSigned));
+
+    // Email-based recovery: when the client-ID keyed onboarding doc is empty,
+    // the submission was almost certainly saved under a DIFFERENT client ID
+    // (ID drift between self-signup / admin-created / portal session). Scan
+    // onboarding records and match on the session email to recover it, then
+    // mirror it under THIS session's clientId so the portal shows it.
+    const _recoverOnboardingByEmail = () => {
+      const myEmail = (session.email || '').toLowerCase();
+      if (!myEmail || typeof fsGetAllOnboarding !== 'function') return Promise.resolve(null);
+      return fsGetAllOnboarding().then(all => {
+        if (!Array.isArray(all)) return null;
+        const match = all.find(o => o && (
+          (o.email && o.email.toLowerCase() === myEmail) ||
+          (o.clientEmail && o.clientEmail.toLowerCase() === myEmail)
+        ) && _hasRealOnboarding(o));
+        if (match) {
+          try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(match)); } catch(e) {}
+          // Persist under the session clientId too so future loads are direct.
+          try { if (typeof fsSetOnboarding === 'function') fsSetOnboarding(session.clientId, match).catch(()=>{}); } catch(e) {}
+          renderProfileSection();
+          renderAllDocs();
+          return match;
+        }
+        return null;
+      }).catch(()=>null);
+    };
+
     // Wait for Firebase Auth state before reading Firestore — phone auth session restores async
     const doFetch = () => {
       fsGetOnboarding(session.clientId).then(od => {
-        if (od) {
+        if (_hasRealOnboarding(od)) {
           try { localStorage.setItem('cq_onboard_data_' + session.clientId, JSON.stringify(od)); } catch(e) {}
           renderProfileSection();
           renderAllDocs();
-        } else {
-          // Fallback: use admin client record for basic name/phone/email fields
+          return;
+        }
+        // No real submission under this clientId — try to recover it by email.
+        _recoverOnboardingByEmail().then(found => {
+          if (found) return;
+          // Last resort: admin client record for basic name/phone/email fields.
           try {
             const adminClients = JSON.parse(localStorage.getItem('cq_admin_clients') || '[]');
-            const ac = adminClients.find(c => c.id === session.clientId);
+            const ac = adminClients.find(c => c.id === session.clientId) ||
+                       adminClients.find(c => c.email && c.email.toLowerCase() === (session.email||'').toLowerCase());
             if (ac) {
               const basic = { firstName: ac.fname || '', lastName: ac.lname || '', email: ac.email || '', phone: ac.phone || '' };
               const existing = JSON.parse(localStorage.getItem('cq_onboard_data_' + session.clientId) || '{}');
@@ -4638,7 +4675,7 @@
               renderProfileSection();
             }
           } catch(e) {}
-        }
+        });
       }).catch(()=>{});
     };
 
