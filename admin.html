@@ -21571,17 +21571,20 @@
     });
     if (hasOpen) return false;
 
-    // De-dupe #2 — we already created a follow-up THIS touchpoint cycle,
-    // whether it's still open or the admin already completed it. This is the
-    // fix for "I completed Follow Up With Client and it came back after
-    // refresh": completing the task left the client still 'cold', so the
-    // creator used to spawn a brand-new follow-up (new taskId) on the next
-    // page load. Now, once a follow-up exists for this cycle in ANY status,
-    // we don't recreate until the NEXT touchpoint (Mon→Wed→Fri).
-    var madeThisCycle = tasks.some(function (t) {
-      return t && t.source === _FU_TASK_SOURCE && (Number(t.createdAt) || 0) >= touchpointStart;
+    // De-dupe #2 — we already created OR completed a follow-up THIS
+    // touchpoint cycle. This is the core fix for "I completed Follow Up
+    // With Client and it came back": once a follow-up has been created or
+    // marked done since the current touchpoint start, do not mint another
+    // until the NEXT touchpoint (Mon→Wed→Fri). Checks createdAt AND
+    // completedAt so a task created on a prior day but completed today
+    // still suppresses re-creation today.
+    var handledThisCycle = tasks.some(function (t) {
+      if (!t || t.source !== _FU_TASK_SOURCE) return false;
+      var created   = Number(t.createdAt)   || 0;
+      var completed = Number(t.completedAt) || 0;
+      return created >= touchpointStart || completed >= touchpointStart;
     });
-    if (madeThisCycle) return false;
+    if (handledThisCycle) return false;
 
     // De-dupe #3 — generic guard: any task (manual or auto) with the same
     // normalized "follow up" intent due today, in any state. Prevents a
@@ -21876,6 +21879,8 @@
     // Write the durable ledger FIRST so even if the array write is later
     // clobbered by a stale snapshot, the read-time enforcement keeps it done.
     _opsDoneAdd(clientId, taskId, { by: by });
+    var wasFollowUp = (_t.source === 'auto_followup') ||
+      ((_t.title || '').toLowerCase().replace(/\s+/g, ' ').trim() === 'follow up with client');
     if (_isOpsTaskTerminal(_t)) return _t; // already terminal — ledger covers it
     var result = updateOpsTask(clientId, taskId, {
       status: 'completed',
@@ -21883,6 +21888,15 @@
       completedBy: by
     });
     _logActivity(clientId, 'task_completed', _t.title);
+    // Completing a follow-up task MEANS the admin followed up. Log contact so
+    // the client is no longer "cold" — otherwise _fuRunAutoCreator would see
+    // a cold client on the next touchpoint and mint a brand-new "Follow Up
+    // With Client" task (new id), which is exactly the "it came back after
+    // refresh" complaint. We pass a flag so _fuMarkContacted doesn't try to
+    // re-close the very task we're completing.
+    if (wasFollowUp && typeof _fuMarkContacted === 'function') {
+      try { _fuMarkContacted(clientId, 'followup_completed'); } catch(e) {}
+    }
     return result;
   }
   function getAllOpsTasks() {
