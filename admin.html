@@ -4484,6 +4484,10 @@
                 }
               } catch(e) {}
             }
+            // Merge the durable completion ledger FIRST so the opsTasks
+            // seed below is read back through getOpsTasks() with completions
+            // already enforced. Union semantics — a completion anywhere wins.
+            if (data.opsDone) { try { _opsDoneMerge(clientId, data.opsDone); } catch(e) {} }
             // Seed opsTasks on first load — last-writer-wins per task ID
             // so a cold-loading admin picks up every other admin's writes
             // without losing locally-pending edits. Mirrors the 'modified'
@@ -4660,6 +4664,9 @@
           // Last-writer-wins per task ID — same merge contract the
           // loadClientDocsFromFirestore selected-client path uses. Keeps
           // local pending edits safe while pulling in remote completions.
+          // Merge the completion ledger first (cross-admin completions).
+          var _opsLedgerChanged = false;
+          if (data.opsDone) { try { _opsLedgerChanged = _opsDoneMerge(clientId, data.opsDone); } catch(e) {} }
           if (Array.isArray(data.opsTasks)) {
             try {
               var _localOpsAll = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
@@ -4706,6 +4713,13 @@
                 } catch(e) {}
               }
             } catch(e) { console.warn('[Sync] opsTasks merge failed for', clientId, e); }
+          }
+          // If only the completion ledger changed (a remote admin completed
+          // a task), still invalidate caches + broadcast so the task drops
+          // out of every active view here without a refresh.
+          if (_opsLedgerChanged) {
+            try { if (typeof _wqQueueCache !== 'undefined') _wqQueueCache = null; } catch(e) {}
+            try { window.dispatchEvent(new CustomEvent('cq:tasks-updated', { detail: { clientId: clientId, ts: Date.now(), source: 'ledger-sync' } })); } catch(e) {}
           }
 
           // Targeted sidebar update — avoids full re-render and Firestore write loop
@@ -6305,6 +6319,9 @@
       // BOTH sides have the same task ID we must pick the newer one by
       // _updatedAt — otherwise a status='completed' write made elsewhere can
       // be clobbered by a stale 'pending' local copy.
+      // Merge the durable completion ledger first so getOpsTasks enforces
+      // completions even if the opsTasks array below is stale.
+      if (fsDash && fsDash.opsDone) { try { _opsDoneMerge(clientId, fsDash.opsDone); } catch(e) {} }
       if (fsDash && Array.isArray(fsDash.opsTasks)) {
         try {
           var _localOps = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
@@ -10710,9 +10727,11 @@
     var idx = tasks.findIndex(function(t){ return t.id === taskId; });
     if (idx < 0) return;
     if (tasks[idx].status === 'completed') {
+      // Re-open: clear the ledger so it isn't force-completed on next read.
       tasks[idx].status = 'pending';
       tasks[idx].completedAt = null;
       tasks[idx].completedBy = null;
+      if (typeof _opsDoneRemove === 'function') _opsDoneRemove(clientId, taskId);
       if (typeof _saveOpsTasks === 'function') _saveOpsTasks(clientId, tasks);
     } else {
       if (typeof completeOpsTask === 'function') completeOpsTask(clientId, taskId);
@@ -21494,12 +21513,15 @@
   function _fuCloseOpenFollowUps(clientId, source) {
     var tasks = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
     var changed = false;
+    var by = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'auto';
     tasks.forEach(function (t) {
       if (t && t.source === _FU_TASK_SOURCE && t.status !== 'completed') {
         t.status = 'completed';
         t.completedAt = Date.now();
-        t.completedBy = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'auto';
+        t.completedBy = by;
         t.autoClosedBy = source || 'contact';
+        // Durable ledger so the auto-closed follow-up never resurrects.
+        if (typeof _opsDoneAdd === 'function') _opsDoneAdd(clientId, t.id, { by: by });
         changed = true;
       }
     });
@@ -21668,14 +21690,81 @@
     if (t.status === 'completed' && !t.completedAt) t.completedAt = Date.now();
     return t;
   }
+  // ── DURABLE COMPLETION LEDGER ───────────────────────────────────────────
+  // A per-client set of task IDs that have been completed. This is the
+  // single source of truth for "is this task done", independent of the
+  // opsTasks array. getOpsTasks() enforces it on EVERY read: any task whose
+  // id is in the ledger is forced to status='completed', no matter what a
+  // stale Firestore snapshot, scheduler echo, or another admin's older copy
+  // says. This is what makes "completed means completed" survive refresh,
+  // logout/login, browser restart, and cross-admin races. Extending or
+  // reopening a task removes it from the ledger so it can legitimately
+  // reappear. Mirrored to Firestore dashboards.{id}.opsDone for cross-device
+  // + cross-admin durability.
+  function _opsDoneKey(clientId) { return 'cq_ops_done_' + clientId; }
+  function _opsDoneGet(clientId) {
+    try {
+      var raw = localStorage.getItem(_opsDoneKey(clientId));
+      var obj = raw ? JSON.parse(raw) : {};
+      return (obj && typeof obj === 'object') ? obj : {};
+    } catch(e) { return {}; }
+  }
+  function _opsDoneSet(clientId, map) {
+    try { localStorage.setItem(_opsDoneKey(clientId), JSON.stringify(map || {})); } catch(e) {}
+  }
+  function _opsDoneAdd(clientId, taskId, meta) {
+    if (!taskId) return;
+    var map = _opsDoneGet(clientId);
+    map[taskId] = Object.assign({ at: Date.now() }, meta || {});
+    _opsDoneSet(clientId, map);
+    // Mirror the ledger to Firestore so other devices/admins honor it too.
+    if (typeof fsSetDash === 'function') {
+      try { fsSetDash(clientId, { opsDone: map, opsDoneUpdatedAt: Date.now() }).catch(function(){}); } catch(e) {}
+    }
+  }
+  function _opsDoneRemove(clientId, taskId) {
+    if (!taskId) return;
+    var map = _opsDoneGet(clientId);
+    if (map[taskId]) {
+      delete map[taskId];
+      _opsDoneSet(clientId, map);
+      if (typeof fsSetDash === 'function') {
+        try { fsSetDash(clientId, { opsDone: map, opsDoneUpdatedAt: Date.now() }).catch(function(){}); } catch(e) {}
+      }
+    }
+  }
+  // Merge an incoming ledger (from Firestore) into the local one — union,
+  // since a completion on ANY device is authoritative. Returns true if the
+  // local ledger changed.
+  function _opsDoneMerge(clientId, incoming) {
+    if (!incoming || typeof incoming !== 'object') return false;
+    var map = _opsDoneGet(clientId);
+    var changed = false;
+    Object.keys(incoming).forEach(function(id) {
+      if (!map[id]) { map[id] = incoming[id]; changed = true; }
+    });
+    if (changed) _opsDoneSet(clientId, map);
+    return changed;
+  }
+
   function getOpsTasks(clientId) {
     try {
       var arr = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
       if (!Array.isArray(arr)) return [];
+      var done = _opsDoneGet(clientId);
       // Normalize status on every read so all queue/filter logic agrees on
-      // 'completed' (not 'complete'/'done'). Cheap; no allocations beyond the
-      // existing parse.
-      return arr.map(_normalizeOpsTaskShape).filter(Boolean);
+      // 'completed' (not 'complete'/'done'). Then ENFORCE the completion
+      // ledger: any task in the ledger is completed, period — this is what
+      // stops a stale snapshot from resurrecting a finished task.
+      return arr.map(function(t) {
+        t = _normalizeOpsTaskShape(t);
+        if (t && done[t.id] && !_isOpsTaskTerminal(t)) {
+          t.status = 'completed';
+          if (!t.completedAt) t.completedAt = done[t.id].at || Date.now();
+          if (!t.completedBy && done[t.id].by) t.completedBy = done[t.id].by;
+        }
+        return t;
+      }).filter(Boolean);
     } catch(e) { return []; }
   }
   function _saveOpsTasks(clientId, tasks) {
@@ -21753,9 +21842,17 @@
   }
   function completeOpsTask(clientId, taskId) {
     var _t = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
-    if (!_t) return null;
-    if (_isOpsTaskTerminal(_t)) return _t; // idempotent — already completed
+    if (!_t) {
+      // Task not in the array (could be a stale workflow reference) — still
+      // record it as done in the ledger so it can never resurface.
+      _opsDoneAdd(clientId, taskId, { by: (currentAdmin && currentAdmin.email) || 'admin' });
+      return null;
+    }
     var by = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'admin';
+    // Write the durable ledger FIRST so even if the array write is later
+    // clobbered by a stale snapshot, the read-time enforcement keeps it done.
+    _opsDoneAdd(clientId, taskId, { by: by });
+    if (_isOpsTaskTerminal(_t)) return _t; // already terminal — ledger covers it
     var result = updateOpsTask(clientId, taskId, {
       status: 'completed',
       completedAt: Date.now(),
@@ -22596,6 +22693,10 @@
     // (admin extended to a past date by mistake), let updateOverdueTaskStatuses
     // re-flag it on next refresh — meanwhile clear the stale overdue badge.
     var by = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'admin';
+    // Extending is the legitimate way to bring a task BACK — remove it from
+    // the completion ledger so read-time enforcement no longer forces it
+    // completed. (Same for any future "reopen" action.)
+    _opsDoneRemove(clientId, taskId);
     updateOpsTask(clientId, taskId, {
       dueDate:    newDate,
       dueTime:    newTime,

@@ -5027,10 +5027,17 @@
       completedBy: session.email || 'client',
       _updatedAt:  now
     });
+    // Durable completion ledger — union map of done task IDs. The admin
+    // portal enforces this on every read so a completion here can never be
+    // resurrected by a stale snapshot on either side.
+    const doneMap = Object.assign({}, (cache.opsDone && typeof cache.opsDone === 'object') ? cache.opsDone : {});
+    doneMap[taskId] = { at: now, by: session.email || 'client' };
     // Update in-memory cache so the re-render reflects the change immediately
     window._fsDashCache = Object.assign({}, cache, {
       opsTasks: ops,
-      opsTasksUpdatedAt: now
+      opsTasksUpdatedAt: now,
+      opsDone: doneMap,
+      opsDoneUpdatedAt: now
     });
     try {
       localStorage.setItem('cq_dash_' + session.clientId, JSON.stringify(window._fsDashCache));
@@ -5041,7 +5048,7 @@
     // Persist to Firestore — admin's listener picks this up automatically.
     if (typeof fsSetDash === 'function') {
       try {
-        await fsSetDash(session.clientId, { opsTasks: ops, opsTasksUpdatedAt: now });
+        await fsSetDash(session.clientId, { opsTasks: ops, opsTasksUpdatedAt: now, opsDone: doneMap, opsDoneUpdatedAt: now });
       } catch(e) { console.warn('[Dashboard] task complete sync failed:', e); }
     }
   }
