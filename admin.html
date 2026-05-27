@@ -2436,192 +2436,231 @@
   @media (max-width:960px)  { .a-ch2 { flex-wrap:wrap; padding:12px 14px; } .a-ch2-actions { margin-left:0; } }
 
   /* ══════════════════════════════════════════════════════
-     DAILY TO-DO (admin workspace, Notion-style)
+     CQ WORKSPACE — Notion-style internal OS (Daily To-Do)
      ══════════════════════════════════════════════════════ */
-  .ad-wrap { max-width: 980px; margin: 0 auto; padding: 0 4px; }
-  .ad-header {
-    display: flex; align-items: flex-end; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap;
-    padding: 6px 0 18px; border-bottom: 1px solid var(--gray-100);
-    margin-bottom: 18px;
+  #asec-todo { padding: 0 !important; }
+  .cqw-shell {
+    display: flex; height: calc(100vh - 64px); margin: -20px -24px 0;
+    background: var(--white); overflow: hidden;
   }
-  .ad-eyebrow {
-    font-size: 11px; font-weight: 800; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--gray-400);
+  /* ── Left page tree ── */
+  .cqw-sidebar {
+    width: 256px; flex-shrink: 0; background: #f7f8fa;
+    border-right: 1px solid var(--gray-100);
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: width 0.18s ease, margin-left 0.18s ease;
   }
-  .ad-title {
-    font-family: var(--font-h); font-size: 28px; font-weight: 800;
-    color: var(--navy); letter-spacing: -0.02em; line-height: 1.15;
-    margin-top: 3px;
+  .cqw-shell.sb-collapsed .cqw-sidebar { width: 0; margin-left: -1px; }
+  .cqw-sb-top { padding: 14px 12px 8px; }
+  .cqw-sb-search {
+    display: flex; align-items: center; gap: 7px; height: 32px;
+    padding: 0 10px; background: var(--white); border: 1px solid var(--gray-200);
+    border-radius: 8px; color: var(--gray-400);
   }
-  .ad-header-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  .ad-date-btn {
-    width: 30px; height: 30px; border-radius: 7px; border: 1.5px solid var(--gray-200);
-    background: var(--white); color: var(--navy); font-size: 16px;
-    line-height: 1; cursor: pointer; font-weight: 700;
-    transition: background 0.12s, border-color 0.12s;
+  .cqw-sb-search input {
+    border: none; outline: none; background: transparent; flex: 1;
+    font-family: var(--font-b); font-size: 12.5px; color: var(--navy); min-width: 0;
   }
-  .ad-date-btn:hover { background: var(--gray-50); border-color: var(--gray-300); }
-  .ad-date-input {
-    height: 30px; padding: 0 10px; border: 1.5px solid var(--gray-200);
-    border-radius: 7px; font-family: var(--font-b); font-size: 12px;
-    color: var(--navy); background: var(--white); cursor: pointer;
+  .cqw-tree { flex: 1; overflow-y: auto; padding: 4px 8px 40px; }
+  .cqw-tree-group { margin-top: 10px; }
+  .cqw-tree-grouphdr {
+    display: flex; align-items: center; gap: 6px; padding: 4px 8px;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--gray-400); cursor: pointer; user-select: none; border-radius: 6px;
   }
-  .ad-date-input:focus { border-color: var(--blue); outline: none; }
-  .ad-today-btn {
-    height: 30px; padding: 0 12px; border-radius: 7px;
-    border: 1.5px solid var(--gray-200); background: var(--white);
-    color: var(--navy); font-family: var(--font-h); font-size: 11.5px;
-    font-weight: 700; cursor: pointer;
+  .cqw-tree-grouphdr:hover { color: var(--gray-600); }
+  .cqw-tree-grouphdr .cqw-grp-chev { transition: transform 0.15s; }
+  .cqw-tree-group.collapsed .cqw-grp-chev { transform: rotate(-90deg); }
+  .cqw-tree-group.collapsed .cqw-tree-pages { display: none; }
+  .cqw-grp-add {
+    margin-left: auto; width: 18px; height: 18px; border-radius: 5px; border: none;
+    background: transparent; color: var(--gray-400); cursor: pointer; font-size: 15px;
+    display: none; align-items: center; justify-content: center; line-height: 1;
   }
-  .ad-today-btn:hover { background: var(--gray-50); }
-  .ad-search-wrap { display: flex; align-items: center; }
-  .ad-search-wrap input {
-    height: 30px; min-width: 200px; padding: 0 12px;
-    border: 1.5px solid var(--gray-200); border-radius: 7px;
-    font-family: var(--font-b); font-size: 12px; color: var(--navy);
-    background: var(--white);
+  .cqw-tree-grouphdr:hover .cqw-grp-add { display: flex; }
+  .cqw-grp-add:hover { background: var(--gray-200); color: var(--navy); }
+  .cqw-tree-pages { margin-top: 1px; }
+  .cqw-pagerow {
+    display: flex; align-items: center; gap: 7px; padding: 5px 8px;
+    border-radius: 6px; cursor: pointer; color: var(--gray-700);
+    font-size: 13.5px; font-weight: 500; transition: background 0.1s;
+    position: relative;
   }
-  .ad-search-wrap input:focus { border-color: var(--blue); outline: none; }
-  .ad-tabs {
-    display: flex; gap: 4px; padding: 4px;
-    background: var(--gray-50); border: 1px solid var(--gray-100);
-    border-radius: 11px; width: fit-content; margin-bottom: 18px;
+  .cqw-pagerow:hover { background: rgba(10,22,40,0.05); }
+  .cqw-pagerow.active { background: rgba(34,167,240,0.13); color: var(--navy); font-weight: 600; }
+  .cqw-pagerow-ico { font-size: 14px; flex-shrink: 0; width: 18px; text-align: center; }
+  .cqw-pagerow-name {
+    flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .ad-tab {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 8px 14px; border: none; background: transparent;
-    border-radius: 8px; font-family: var(--font-h); font-size: 12px;
-    font-weight: 700; color: var(--gray-500); cursor: pointer;
-    transition: background 0.12s, color 0.12s;
+  .cqw-pagerow-act {
+    width: 20px; height: 20px; border: none; background: transparent;
+    border-radius: 4px; color: var(--gray-400); cursor: pointer; font-size: 13px;
+    display: none; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .ad-tab:hover { color: var(--navy); }
-  .ad-tab.active { background: var(--white); color: var(--navy); box-shadow: 0 1px 3px rgba(10,22,40,0.06); }
-  .ad-body { display: flex; flex-direction: column; gap: 14px; padding-bottom: 80px; }
-  .ad-empty {
-    padding: 36px 24px; text-align: center; border: 1.5px dashed var(--gray-200);
-    border-radius: 12px; background: var(--white); color: var(--gray-500);
-    font-size: 13px; line-height: 1.6;
+  .cqw-pagerow:hover .cqw-pagerow-act { display: flex; }
+  .cqw-pagerow-act:hover { background: var(--gray-200); color: var(--navy); }
+  .cqw-pagerow.dragover { box-shadow: inset 0 -2px 0 var(--blue); }
+
+  /* ── Main editor ── */
+  .cqw-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .cqw-topbar {
+    display: flex; align-items: center; gap: 10px; height: 44px;
+    padding: 0 18px; border-bottom: 1px solid var(--gray-100); flex-shrink: 0;
   }
-  .ad-empty strong { color: var(--navy); display: block; margin-bottom: 4px; font-family: var(--font-h); font-size: 14px; }
-  .ad-section {
-    background: var(--white); border: 1px solid var(--gray-100);
-    border-radius: 12px; box-shadow: 0 1px 4px rgba(10,22,40,0.04);
-    overflow: hidden;
-  }
-  .ad-section-hdr {
-    display: flex; align-items: center; gap: 10px;
-    padding: 14px 18px; cursor: pointer;
-    border-bottom: 1px solid var(--gray-100);
-  }
-  .ad-section-hdr:hover { background: var(--gray-50); }
-  .ad-section-chev {
-    color: var(--gray-300); transition: transform 0.18s; flex-shrink: 0;
-  }
-  .ad-section.collapsed .ad-section-chev { transform: rotate(-90deg); }
-  .ad-section.collapsed .ad-section-body { display: none; }
-  .ad-section.collapsed .ad-section-hdr { border-bottom: none; }
-  .ad-section-title {
-    flex: 1; font-family: var(--font-h); font-size: 14px;
-    font-weight: 700; color: var(--navy); letter-spacing: -0.01em;
-    border: none; background: transparent; outline: none; padding: 2px 4px;
-    border-radius: 4px;
-  }
-  .ad-section-title:focus { background: rgba(34,167,240,0.06); }
-  .ad-section-count {
-    font-size: 11px; color: var(--gray-400); font-variant-numeric: tabular-nums;
-  }
-  .ad-section-del {
-    width: 26px; height: 26px; border-radius: 6px; border: none;
-    background: transparent; color: var(--gray-300); cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: color 0.12s, background 0.12s;
-  }
-  .ad-section-del:hover { color: #ef4444; background: #fef2f2; }
-  .ad-section-body { padding: 8px 12px 14px; display: flex; flex-direction: column; gap: 2px; }
-  .ad-item {
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 7px 8px; border-radius: 7px;
-    transition: background 0.1s;
-  }
-  .ad-item:hover { background: var(--gray-50); }
-  .ad-item.done .ad-item-text { color: var(--gray-400); text-decoration: line-through; }
-  .ad-item-check {
-    width: 18px; height: 18px; border-radius: 5px;
-    border: 1.5px solid var(--gray-300); background: var(--white);
-    cursor: pointer; flex-shrink: 0; margin-top: 1px;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.12s, border-color 0.12s;
-  }
-  .ad-item-check:hover { border-color: var(--blue); }
-  .ad-item.done .ad-item-check { background: var(--blue); border-color: var(--blue); }
-  .ad-item.done .ad-item-check svg { display: block; }
-  .ad-item-check svg { display: none; color: white; }
-  .ad-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-  .ad-item-text {
-    border: none; background: transparent; outline: none;
-    font-family: var(--font-b); font-size: 13.5px; color: var(--navy);
-    line-height: 1.5; padding: 2px 0; resize: none; width: 100%;
-    word-break: break-word; min-height: 22px;
-  }
-  .ad-item-text:focus { background: rgba(34,167,240,0.04); border-radius: 4px; padding: 2px 6px; }
-  .ad-item-meta {
-    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
-    font-size: 10.5px; color: var(--gray-500);
-  }
-  .ad-pill {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 1px 7px; border-radius: 999px;
-    font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-  .ad-pill.p-high     { background: #fef3c7; color: #92400e; }
-  .ad-pill.p-medium   { background: #eff6ff; color: #1d4ed8; }
-  .ad-pill.p-low      { background: var(--gray-50); color: var(--gray-500); }
-  .ad-pill.p-critical { background: #fee2e2; color: #b91c1c; }
-  .ad-item-actions {
-    display: flex; gap: 2px; flex-shrink: 0; opacity: 0; transition: opacity 0.12s;
-  }
-  .ad-item:hover .ad-item-actions { opacity: 1; }
-  .ad-item-act {
-    width: 24px; height: 24px; border: none; background: transparent;
-    border-radius: 5px; color: var(--gray-400); cursor: pointer;
+  .cqw-sb-toggle {
+    width: 28px; height: 28px; border: none; background: transparent;
+    border-radius: 6px; color: var(--gray-400); cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
-  .ad-item-act:hover { background: var(--gray-100); color: var(--navy); }
-  .ad-item-act.danger:hover { background: #fef2f2; color: #ef4444; }
-  .ad-add-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 7px 8px; border-radius: 7px; cursor: pointer;
-    color: var(--gray-400); font-size: 12px; transition: background 0.12s, color 0.12s;
+  .cqw-sb-toggle:hover { background: var(--gray-100); color: var(--navy); }
+  .cqw-breadcrumb { font-size: 12.5px; color: var(--gray-500); font-weight: 600; flex: 1; }
+  .cqw-topbar-actions { display: flex; align-items: center; gap: 8px; }
+  .cqw-fav-btn {
+    border: none; background: transparent; cursor: pointer; font-size: 17px;
+    color: var(--gray-400); line-height: 1;
   }
-  .ad-add-item:hover { background: var(--gray-50); color: var(--navy); }
-  .ad-add-section {
-    align-self: flex-start; display: inline-flex; align-items: center; gap: 7px;
-    height: 36px; padding: 0 14px; border-radius: 9px;
-    border: 1.5px dashed var(--gray-200); background: transparent;
-    color: var(--gray-500); font-family: var(--font-h); font-size: 12px;
-    font-weight: 700; cursor: pointer; transition: all 0.12s;
+  .cqw-fav-btn.on { color: #f59e0b; }
+  .cqw-saved { font-size: 11px; color: var(--gray-400); }
+  .cqw-page { flex: 1; overflow-y: auto; padding: 40px 24px 160px; }
+  .cqw-page-inner { max-width: 720px; margin: 0 auto; }
+  .cqw-page-ico {
+    font-size: 42px; line-height: 1; margin-bottom: 8px; cursor: pointer;
+    display: inline-block; border-radius: 8px; padding: 2px 4px;
   }
-  .ad-add-section:hover { border-color: var(--blue); color: var(--blue); background: rgba(34,167,240,0.04); }
-  .ad-pri-menu { position: relative; }
-  .ad-pri-trigger {
-    border: none; background: transparent; cursor: pointer;
-    padding: 0; line-height: 1;
+  .cqw-page-ico:hover { background: var(--gray-100); }
+  .cqw-page-title {
+    font-family: var(--font-h); font-size: 38px; font-weight: 800;
+    color: var(--navy); letter-spacing: -0.025em; line-height: 1.1;
+    border: none; outline: none; background: transparent; width: 100%;
+    padding: 2px 0; margin-bottom: 4px; resize: none; overflow: hidden;
   }
-  .ad-saving {
-    position: fixed; bottom: 18px; right: 18px;
-    padding: 8px 14px; background: var(--navy); color: white;
-    border-radius: 999px; font-size: 11px; font-weight: 700;
-    letter-spacing: 0.04em; box-shadow: 0 4px 14px rgba(10,22,40,0.18);
-    opacity: 0; pointer-events: none; transition: opacity 0.18s;
-    z-index: 200;
+  .cqw-page-title::placeholder { color: var(--gray-200); }
+  .cqw-page-meta { font-size: 12px; color: var(--gray-400); margin-bottom: 18px; }
+
+  /* ── Blocks ── */
+  .cqw-block {
+    position: relative; display: flex; align-items: flex-start; gap: 4px;
+    padding: 1px 0; border-radius: 4px;
   }
-  .ad-saving.show { opacity: 1; }
-  @media (max-width: 720px) {
-    .ad-title { font-size: 22px; }
-    .ad-search-wrap input { min-width: 0; flex: 1; }
-    .ad-header-actions { width: 100%; }
+  .cqw-block-handle {
+    width: 18px; flex-shrink: 0; cursor: grab; color: var(--gray-200);
+    opacity: 0; transition: opacity 0.1s; font-size: 14px; text-align: center;
+    user-select: none; padding-top: 4px; line-height: 1;
+  }
+  .cqw-block:hover .cqw-block-handle { opacity: 1; }
+  .cqw-block-handle:active { cursor: grabbing; }
+  .cqw-block.dragover { box-shadow: inset 0 -2px 0 var(--blue); }
+  .cqw-block-main { flex: 1; min-width: 0; }
+  .cqw-ce {
+    outline: none; border: none; background: transparent; width: 100%;
+    font-family: var(--font-b); color: var(--navy); line-height: 1.6;
+    padding: 3px 2px; word-break: break-word; min-height: 1.6em;
+  }
+  .cqw-ce:empty::before { content: attr(data-ph); color: var(--gray-300); pointer-events: none; }
+  .cqw-ce.t-text  { font-size: 15px; }
+  .cqw-ce.t-h1    { font-size: 27px; font-weight: 800; letter-spacing: -0.02em; font-family: var(--font-h); margin-top: 10px; }
+  .cqw-ce.t-h2    { font-size: 21px; font-weight: 800; letter-spacing: -0.015em; font-family: var(--font-h); margin-top: 8px; }
+  .cqw-ce.t-h3    { font-size: 17px; font-weight: 700; font-family: var(--font-h); margin-top: 6px; }
+  .cqw-ce.t-quote { font-size: 15px; font-style: italic; color: var(--gray-600); }
+  .cqw-block.b-quote { border-left: 3px solid var(--navy); padding-left: 12px; margin: 4px 0; }
+  .cqw-block.b-callout {
+    background: #eff6ff; border: 1px solid rgba(34,167,240,0.2);
+    border-radius: 8px; padding: 12px 14px; margin: 6px 0; gap: 10px;
+  }
+  .cqw-callout-emoji { font-size: 17px; flex-shrink: 0; padding-top: 2px; }
+  .cqw-block-divider { height: 1px; background: var(--gray-200); margin: 12px 0; flex: 1; }
+  .cqw-todo-check {
+    width: 17px; height: 17px; border-radius: 4px; border: 1.6px solid var(--gray-300);
+    background: var(--white); cursor: pointer; flex-shrink: 0; margin-top: 5px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+  }
+  .cqw-todo-check:hover { border-color: var(--blue); }
+  .cqw-block.done .cqw-todo-check { background: var(--blue); border-color: var(--blue); }
+  .cqw-block.done .cqw-todo-check svg { display: block; }
+  .cqw-todo-check svg { display: none; color: white; }
+  .cqw-block.done .cqw-ce { color: var(--gray-400); text-decoration: line-through; }
+  .cqw-bullet, .cqw-number {
+    flex-shrink: 0; color: var(--navy); padding-top: 3px; font-size: 15px;
+    min-width: 16px; text-align: center; user-select: none;
+  }
+  .cqw-toggle-arrow {
+    flex-shrink: 0; cursor: pointer; color: var(--gray-500); padding-top: 4px;
+    transition: transform 0.15s; user-select: none; font-size: 11px;
+  }
+  .cqw-block.b-toggle.collapsed .cqw-toggle-arrow { transform: rotate(-90deg); }
+  .cqw-toggle-children { padding-left: 24px; }
+  .cqw-block.b-toggle.collapsed + .cqw-toggle-children { display: none; }
+  /* Table block */
+  .cqw-tbl-wrap { margin: 8px 0; overflow-x: auto; border: 1px solid var(--gray-200); border-radius: 8px; }
+  .cqw-tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .cqw-tbl td, .cqw-tbl th {
+    border: 1px solid var(--gray-200); padding: 7px 10px; min-width: 90px;
+    color: var(--navy); vertical-align: top;
+  }
+  .cqw-tbl th { background: var(--gray-50); font-weight: 700; text-align: left; }
+  .cqw-tbl td:focus, .cqw-tbl th:focus { outline: 2px solid rgba(34,167,240,0.4); outline-offset: -2px; }
+  .cqw-tbl-tools { display: flex; gap: 6px; margin-top: 6px; }
+  .cqw-tbl-tool {
+    font-size: 11px; font-weight: 700; color: var(--gray-500);
+    border: 1px solid var(--gray-200); background: var(--white);
+    border-radius: 6px; padding: 3px 9px; cursor: pointer;
+  }
+  .cqw-tbl-tool:hover { border-color: var(--blue); color: var(--blue); }
+  .cqw-mention {
+    display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px;
+    background: rgba(34,167,240,0.12); color: #1565a8; border-radius: 4px;
+    font-weight: 600; font-size: 0.92em; cursor: pointer; text-decoration: none;
+  }
+  .cqw-mention:hover { background: rgba(34,167,240,0.2); }
+
+  /* ── Slash menu ── */
+  .cqw-slash {
+    position: fixed; z-index: 10050; width: 300px; max-height: 340px;
+    overflow-y: auto; background: var(--white); border: 1px solid var(--gray-200);
+    border-radius: 11px; box-shadow: 0 14px 44px rgba(10,22,40,0.22); padding: 6px;
+  }
+  .cqw-slash-cat { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-400); padding: 8px 10px 4px; }
+  .cqw-slash-item {
+    display: flex; align-items: center; gap: 10px; padding: 7px 10px;
+    border-radius: 7px; cursor: pointer;
+  }
+  .cqw-slash-item.sel, .cqw-slash-item:hover { background: rgba(34,167,240,0.1); }
+  .cqw-slash-ico {
+    width: 30px; height: 30px; border-radius: 6px; background: var(--gray-50);
+    border: 1px solid var(--gray-100); display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; color: var(--navy); font-size: 14px;
+  }
+  .cqw-slash-tx { flex: 1; min-width: 0; }
+  .cqw-slash-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+  .cqw-slash-desc { font-size: 11px; color: var(--gray-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── Selection format toolbar ── */
+  .cqw-fmt {
+    position: fixed; z-index: 10060; display: flex; align-items: center; gap: 2px;
+    background: var(--navy); border-radius: 8px; padding: 4px;
+    box-shadow: 0 8px 26px rgba(10,22,40,0.32);
+  }
+  .cqw-fmt button {
+    min-width: 28px; height: 28px; border: none; background: transparent;
+    color: white; border-radius: 5px; cursor: pointer; font-size: 13px;
+    padding: 0 6px; display: flex; align-items: center; justify-content: center;
+  }
+  .cqw-fmt button:hover { background: rgba(255,255,255,0.16); }
+  .cqw-fmt-sep { width: 1px; height: 18px; background: rgba(255,255,255,0.2); margin: 0 3px; }
+
+  .cqw-add-block {
+    display: flex; align-items: center; gap: 8px; padding: 6px 2px; margin-top: 4px;
+    color: var(--gray-300); font-size: 13.5px; cursor: pointer; border-radius: 4px;
+  }
+  .cqw-add-block:hover { color: var(--gray-500); }
+  .cqw-saving-dot { display: inline-block; }
+
+  @media (max-width: 820px) {
+    .cqw-shell { margin: -16px -14px 0; height: calc(100vh - 56px); }
+    .cqw-sidebar { position: absolute; z-index: 40; height: 100%; box-shadow: 4px 0 20px rgba(10,22,40,0.12); }
+    .cqw-shell:not(.sb-open) .cqw-sidebar { width: 0; }
+    .cqw-page { padding: 24px 16px 140px; }
+    .cqw-page-title { font-size: 28px; }
   }
 
 </style>
@@ -3035,35 +3074,48 @@
           <div id="bri-global-wrap" style="max-width:1240px;margin:0 auto;padding:0 4px"></div>
         </div>
 
-        <!-- DAILY TO-DO (Admin workspace, Notion-style) -->
+        <!-- DAILY TO-DO / WORKSPACE (Notion-style, two-pane) -->
         <div class="a-section" id="asec-todo">
-          <div class="ad-wrap">
-            <div class="ad-header">
-              <div class="ad-header-left">
-                <div class="ad-eyebrow">Workspace</div>
-                <div class="ad-title" id="ad-date-label">—</div>
-              </div>
-              <div class="ad-header-actions">
-                <button class="ad-date-btn" onclick="_adShiftDate(-1)" title="Previous day">‹</button>
-                <input id="ad-date-input" type="date" class="ad-date-input" onchange="_adSetDate(this.value)" />
-                <button class="ad-date-btn" onclick="_adShiftDate(1)" title="Next day">›</button>
-                <button class="ad-today-btn" onclick="_adSetDate(_adTodayStr())">Today</button>
-                <div class="ad-search-wrap">
-                  <input id="ad-search" type="text" placeholder="Search this page…" oninput="_adSearch(this.value)" />
+          <div class="cqw-shell">
+            <!-- LEFT: workspace page tree -->
+            <aside class="cqw-sidebar" id="cqw-sidebar">
+              <div class="cqw-sb-top">
+                <div class="cqw-sb-search">
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                  <input id="cqw-search" type="text" placeholder="Search all pages…" oninput="_cqwSearch(this.value)" />
                 </div>
               </div>
-            </div>
-            <div class="ad-tabs">
-              <button class="ad-tab active" data-tab="team"    onclick="_adSetTab('team')">
-                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-                Team Workspace
-              </button>
-              <button class="ad-tab" data-tab="private" onclick="_adSetTab('private')">
-                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                My Private Workspace
-              </button>
-            </div>
-            <div class="ad-body" id="ad-body"></div>
+              <div class="cqw-tree" id="cqw-tree"></div>
+            </aside>
+            <!-- RIGHT: page editor -->
+            <main class="cqw-main" id="cqw-main">
+              <div class="cqw-topbar" id="cqw-topbar">
+                <button class="cqw-sb-toggle" onclick="_cqwToggleSidebar()" title="Toggle sidebar">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+                </button>
+                <div class="cqw-breadcrumb" id="cqw-breadcrumb">Workspace</div>
+                <div class="cqw-topbar-actions">
+                  <button class="cqw-fav-btn" id="cqw-fav-btn" onclick="_cqwToggleFavorite()" title="Favorite this page">☆</button>
+                  <span class="cqw-saved" id="cqw-saved"></span>
+                </div>
+              </div>
+              <div class="cqw-page" id="cqw-page"></div>
+            </main>
+          </div>
+          <!-- "/" slash command menu (positioned at caret) -->
+          <div class="cqw-slash" id="cqw-slash" style="display:none"></div>
+          <!-- selection formatting toolbar -->
+          <div class="cqw-fmt" id="cqw-fmt" style="display:none">
+            <button onmousedown="_cqwFmt(event,'bold')" title="Bold"><b>B</b></button>
+            <button onmousedown="_cqwFmt(event,'italic')" title="Italic"><i>i</i></button>
+            <button onmousedown="_cqwFmt(event,'underline')" title="Underline"><u>U</u></button>
+            <button onmousedown="_cqwFmt(event,'strikeThrough')" title="Strikethrough"><s>S</s></button>
+            <span class="cqw-fmt-sep"></span>
+            <button onmousedown="_cqwFmtColor(event,'#dc2626')" title="Red text" style="color:#dc2626">A</button>
+            <button onmousedown="_cqwFmtColor(event,'#22a7f0')" title="Blue text" style="color:#22a7f0">A</button>
+            <button onmousedown="_cqwFmtColor(event,'#059669')" title="Green text" style="color:#059669">A</button>
+            <button onmousedown="_cqwFmtHilite(event,'#fef3c7')" title="Yellow highlight"><span style="background:#fef3c7;padding:0 3px;border-radius:2px">H</span></button>
+            <button onmousedown="_cqwFmtHilite(event,'transparent')" title="Clear highlight">⌫</button>
           </div>
         </div>
 
@@ -23479,499 +23531,813 @@
   window._clientAvatarRemove = _clientAvatarRemove;
 
   // ═══════════════════════════════════════════════════════════════════════
-  // DAILY TO-DO  — admin workspace (separate from client tasks)
+  // CQ WORKSPACE — Notion-style internal OS (Daily To-Do)
   // ═══════════════════════════════════════════════════════════════════════
-  // Two workspaces per day:
-  //   Team:    Firestore doc adminTodo/{date}      (shared, real-time)
-  //   Private: Firestore doc adminTodoPrivate/{date}__{adminEmailDocId}
-  //            (per-admin, real-time for the same admin across devices)
-  // Document shape (both):
-  //   {
-  //     sections: [
-  //       { id, title, collapsed, order,
-  //         items: [
-  //           { id, text, done, priority?, dueDate?, clientId?, by, at, order }
-  //         ]
-  //       }
-  //     ],
-  //     _updatedAt
-  //   }
-  // Writes are debounced 400ms so a burst of keystrokes turns into one
-  // Firestore write. Real-time listener mirrors changes back into the
-  // local state and re-renders without losing the active focus.
+  // Block-based pages organized in a left tree. Two scopes:
+  //   team    → Firestore cqWorkspace/team                  (shared, realtime)
+  //   private → Firestore cqWorkspace/private__{emailDocId}  (per-admin)
+  // Each scope doc = { pages: [ {id,title,icon,group,scope,favorite,blocks:[]} ], _updatedAt }
+  // Block = { id, type, html, checked?, collapsed?, emoji?, rows? }
+  // Autosave debounced 500ms; realtime onSnapshot mirrors remote → local.
+  // Completely separate from client tasks / Start Working / reminders.
   // ═══════════════════════════════════════════════════════════════════════
   (function() {
-    var _adTab     = 'team';
-    var _adDate    = _adTodayStr();
-    var _adData    = { team: null, private: null };
-    var _adUnsubs  = { team: null, private: null };
-    var _adSaveTimer = null;
-    var _adSearchQ = '';
-    var _adFocusKey = null; // { sectionId, itemId, kind:'title'|'text', cursor }
+    var _cqwTeam    = null;   // { pages:[], _updatedAt }
+    var _cqwPriv    = null;
+    var _cqwUnsub   = { team: null, priv: null };
+    var _cqwActive  = null;   // active page id
+    var _cqwSaveTimer = null;
+    var _cqwGroupCollapse = {}; // groupKey → bool
+    var _cqwInited = false;
 
-    function _adTodayStr() {
-      var d = new Date(); d.setHours(0,0,0,0);
-      return d.toISOString().split('T')[0];
+    function _cqwUid() { return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+    function _cqwBid() { return 'b_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+    function _cqwEsc(s) {
+      return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
-    function _adFmtDate(s) {
+    function _cqwEmail() { return (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || ''; }
+    function _cqwEmailDocId(e) { return String(e||'').toLowerCase().replace(/\./g, ','); }
+    function _cqwTodayKey() { var d=new Date(); d.setHours(0,0,0,0); return d.toISOString().split('T')[0]; }
+    function _cqwDailyTitle(key) {
       try {
-        var dt = new Date(s + 'T12:00:00');
-        var today = _adTodayStr();
-        var y = new Date(); y.setDate(y.getDate() - 1); y.setHours(0,0,0,0);
-        var yest = y.toISOString().split('T')[0];
-        var t = new Date(); t.setDate(t.getDate() + 1); t.setHours(0,0,0,0);
-        var tom = t.toISOString().split('T')[0];
-        var label = dt.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
-        if (s === today) return label + ' · Today';
-        if (s === yest)  return label + ' · Yesterday';
-        if (s === tom)   return label + ' · Tomorrow';
-        return label;
-      } catch(e) { return s; }
-    }
-    function _adEmailDocId(email) {
-      return String(email || '').toLowerCase().replace(/\./g, ',');
-    }
-    function _adFirestoreId(tab, date) {
-      if (tab === 'private') {
-        var email = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
-        return 'adminTodoPrivate/' + date + '__' + _adEmailDocId(email);
-      }
-      return 'adminTodo/' + date;
-    }
-    function _adLocalKey(tab, date) {
-      if (tab === 'private') {
-        var email = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
-        return 'cq_ad_priv_' + date + '__' + _adEmailDocId(email);
-      }
-      return 'cq_ad_team_' + date;
-    }
-    function _adUid() { return 'ad_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8); }
-
-    function _adDefaultDoc() {
-      return {
-        sections: [
-          { id: _adUid(), title: 'Today’s Priorities', collapsed: false, order: 0, items: [] }
-        ],
-        _updatedAt: 0
-      };
+        var dt = new Date(key + 'T12:00:00');
+        return dt.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+      } catch(e) { return key; }
     }
 
-    function _adLoadLocal(tab, date) {
-      try {
-        var raw = localStorage.getItem(_adLocalKey(tab, date));
-        if (!raw) return null;
-        var d = JSON.parse(raw);
-        if (!d || !Array.isArray(d.sections)) return null;
-        return d;
-      } catch(e) { return null; }
+    // ── Group definitions (tree order) ──────────────────────────────────
+    // 'derived' favorites group is computed. Daily lives in team scope.
+    var _CQW_GROUPS = [
+      { key:'favorites', label:'Favorites', icon:'⭐', derived:true },
+      { key:'daily',     label:'Daily Pages', icon:'📅', scope:'team',    addable:true },
+      { key:'team',      label:'Team Workspace', icon:'🏢', scope:'team', addable:true },
+      { key:'private',   label:'My Workspace', icon:'👤', scope:'private', addable:true }
+    ];
+
+    // ── Default seed (first run, team scope) ─────────────────────────────
+    function _cqwSeedTeam() {
+      var seedPages = [
+        { title:'Follow-Ups',    icon:'📞', group:'team' },
+        { title:'Funding Tasks', icon:'💰', group:'team' },
+        { title:'Meeting Notes', icon:'📝', group:'team' },
+        { title:'Operations',    icon:'📊', group:'team' },
+        { title:'Ideas',         icon:'🧠', group:'team' },
+        { title:'SOPs',          icon:'📋', group:'team' },
+        { title:'Archive',       icon:'📁', group:'team' }
+      ];
+      return { pages: seedPages.map(function(p){
+        return { id:_cqwUid(), title:p.title, icon:p.icon, group:p.group, scope:'team', favorite:false, blocks:[ _cqwBlankBlock() ], _updatedAt:0 };
+      }), _updatedAt: 0 };
     }
-    function _adSaveLocal(tab, date, doc) {
-      try { localStorage.setItem(_adLocalKey(tab, date), JSON.stringify(doc)); } catch(e) {}
-    }
-    function _adFlashSaving() {
-      var el = document.getElementById('ad-saving');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'ad-saving'; el.className = 'ad-saving'; el.textContent = 'Saving…';
-        document.body.appendChild(el);
-      }
-      el.classList.add('show');
-      clearTimeout(el._t);
-      el._t = setTimeout(function(){ el.classList.remove('show'); }, 900);
+    function _cqwBlankBlock() { return { id:_cqwBid(), type:'text', html:'' }; }
+
+    function _cqwDefaultDailyBlocks() {
+      var titles = ['Today’s Priorities','Funding Follow-Ups','Credit Reports','Client Work','Meeting Notes','Quick Notes','Wins Today','Problems to Solve','Tomorrow’s Plan'];
+      var blocks = [];
+      titles.forEach(function(t, i) {
+        blocks.push({ id:_cqwBid(), type:'h3', html:t });
+        if (i < 6) blocks.push({ id:_cqwBid(), type:'todo', html:'', checked:false });
+        else blocks.push({ id:_cqwBid(), type:'text', html:'' });
+      });
+      return blocks;
     }
 
-    function _adSaveDoc(tab) {
-      var doc = _adData[tab];
+    // ── Storage ─────────────────────────────────────────────────────────
+    function _cqwLocalKey(scope) {
+      return scope === 'private' ? ('cq_ws_priv_' + _cqwEmailDocId(_cqwEmail())) : 'cq_ws_team';
+    }
+    function _cqwFsPath(scope) {
+      return scope === 'private' ? ('cqWorkspace/private__' + _cqwEmailDocId(_cqwEmail())) : 'cqWorkspace/team';
+    }
+    function _cqwLoadLocal(scope) {
+      try { var raw = localStorage.getItem(_cqwLocalKey(scope)); if (raw) { var d = JSON.parse(raw); if (d && Array.isArray(d.pages)) return d; } } catch(e) {}
+      return null;
+    }
+    function _cqwSaveLocal(scope, doc) {
+      try { localStorage.setItem(_cqwLocalKey(scope), JSON.stringify(doc)); } catch(e) {}
+    }
+    function _cqwDoc(scope) { return scope === 'private' ? _cqwPriv : _cqwTeam; }
+    function _cqwSetDoc(scope, doc) { if (scope === 'private') _cqwPriv = doc; else _cqwTeam = doc; }
+
+    function _cqwFlashSaved() {
+      var el = document.getElementById('cqw-saved');
+      if (!el) return;
+      el.textContent = 'Saving…';
+      clearTimeout(el._t1); clearTimeout(el._t2);
+      el._t2 = setTimeout(function(){ el.textContent = 'Saved'; }, 500);
+      el._t1 = setTimeout(function(){ el.textContent = ''; }, 2200);
+    }
+
+    function _cqwSave(scope) {
+      var doc = _cqwDoc(scope);
       if (!doc) return;
       doc._updatedAt = Date.now();
-      var email = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
-      doc._updatedBy = email;
-      var date = _adDate;
-      _adSaveLocal(tab, date, doc);
-      _adFlashSaving();
-      // Debounced Firestore write
-      clearTimeout(_adSaveTimer);
-      _adSaveTimer = setTimeout(function() {
+      doc._updatedBy = _cqwEmail();
+      _cqwSaveLocal(scope, doc);
+      _cqwFlashSaved();
+      clearTimeout(_cqwSaveTimer);
+      _cqwSaveTimer = setTimeout(function() {
         try {
           if (typeof db === 'undefined' || !db) return;
-          var path = _adFirestoreId(tab, date);
-          var parts = path.split('/');
-          db.collection(parts[0]).doc(parts[1]).set(doc, { merge: true }).catch(function(){});
+          var parts = _cqwFsPath(scope).split('/');
+          db.collection(parts[0]).doc(parts[1]).set(doc, { merge:true }).catch(function(){});
         } catch(e) {}
-      }, 400);
+      }, 500);
     }
 
-    function _adFetchAndListen(tab, date) {
-      // Tear down any prior listener
-      try { if (_adUnsubs[tab]) _adUnsubs[tab](); } catch(e) {}
-      _adUnsubs[tab] = null;
-      // Seed from local cache first for instant paint
-      _adData[tab] = _adLoadLocal(tab, date) || _adDefaultDoc();
-      // Subscribe to Firestore for cross-admin sync
+    function _cqwListen(scope) {
+      try { if (_cqwUnsub[scope === 'private' ? 'priv':'team']) _cqwUnsub[scope === 'private' ? 'priv':'team'](); } catch(e) {}
       try {
         if (typeof db === 'undefined' || !db) return;
-        var path = _adFirestoreId(tab, date);
-        var parts = path.split('/');
-        _adUnsubs[tab] = db.collection(parts[0]).doc(parts[1]).onSnapshot(function(snap) {
+        var parts = _cqwFsPath(scope).split('/');
+        var key = scope === 'private' ? 'priv' : 'team';
+        _cqwUnsub[key] = db.collection(parts[0]).doc(parts[1]).onSnapshot(function(snap) {
           if (!snap.exists) return;
           var remote = snap.data() || {};
-          if (!Array.isArray(remote.sections)) return;
-          var local = _adData[tab] || _adDefaultDoc();
-          // Last-writer-wins at the document level — admin productivity
-          // doc, low conflict risk vs. structural complexity.
-          if ((remote._updatedAt || 0) > (local._updatedAt || 0)) {
-            _adData[tab] = remote;
-            _adSaveLocal(tab, date, remote);
-            if (_adTab === tab) _adRender();
+          if (!Array.isArray(remote.pages)) return;
+          var local = _cqwDoc(scope);
+          if (!local || (remote._updatedAt || 0) > (local._updatedAt || 0)) {
+            _cqwSetDoc(scope, remote);
+            _cqwSaveLocal(scope, remote);
+            // Re-render tree always; re-render page only if the active page
+            // belongs to this scope and isn't currently focused (avoid yanking
+            // the caret out from under the typer).
+            _cqwRenderTree();
+            var act = _cqwGetActivePage();
+            var focused = document.activeElement && document.activeElement.closest && document.activeElement.closest('.cqw-page');
+            if (act && act.scope === scope && !focused) _cqwRenderPage();
           }
-        }, function(){});
+        }, function(err){ console.warn('[CQW] listen failed', err && err.message); });
       } catch(e) {}
     }
 
-    function _adShiftDate(deltaDays) {
-      var dt = new Date(_adDate + 'T12:00:00');
-      dt.setDate(dt.getDate() + deltaDays);
-      _adSetDate(dt.toISOString().split('T')[0]);
+    // ── Page helpers ─────────────────────────────────────────────────────
+    function _cqwAllPages() {
+      var out = [];
+      if (_cqwTeam && _cqwTeam.pages) _cqwTeam.pages.forEach(function(p){ p.scope='team'; out.push(p); });
+      if (_cqwPriv && _cqwPriv.pages) _cqwPriv.pages.forEach(function(p){ p.scope='private'; out.push(p); });
+      return out;
     }
-    function _adSetDate(newDate) {
-      if (!newDate) return;
-      _adDate = newDate;
-      var di = document.getElementById('ad-date-input');
-      if (di) di.value = newDate;
-      var lbl = document.getElementById('ad-date-label');
-      if (lbl) lbl.textContent = _adFmtDate(newDate);
-      _adFetchAndListen('team', newDate);
-      _adFetchAndListen('private', newDate);
-      _adRender();
-    }
-    function _adSetTab(tab) {
-      _adTab = tab;
-      document.querySelectorAll('.ad-tab').forEach(function(b) {
-        b.classList.toggle('active', b.getAttribute('data-tab') === tab);
-      });
-      _adRender();
-    }
-    function _adSearch(q) {
-      _adSearchQ = String(q || '').toLowerCase();
-      _adRender();
+    function _cqwGetPage(id) { return _cqwAllPages().find(function(p){ return p.id === id; }) || null; }
+    function _cqwGetActivePage() { return _cqwActive ? _cqwGetPage(_cqwActive) : null; }
+    function _cqwScopeOfGroup(group) {
+      var g = _CQW_GROUPS.find(function(x){ return x.key === group; });
+      return (g && g.scope) || 'team';
     }
 
-    function _adCaptureFocus() {
-      var el = document.activeElement;
-      if (!el || !el.closest) { _adFocusKey = null; return; }
-      var item = el.closest('[data-aditem-id]');
-      var sec  = el.closest('[data-adsec-id]');
-      if (!sec) { _adFocusKey = null; return; }
-      var kind = el.classList.contains('ad-section-title') ? 'title'
-              : el.classList.contains('ad-item-text')      ? 'text'  : null;
-      if (!kind) { _adFocusKey = null; return; }
-      _adFocusKey = {
-        sectionId: sec.getAttribute('data-adsec-id'),
-        itemId:    item ? item.getAttribute('data-aditem-id') : null,
-        kind:      kind,
-        cursor:    el.selectionStart || 0
-      };
-    }
-    function _adRestoreFocus() {
-      if (!_adFocusKey) return;
-      var sel;
-      if (_adFocusKey.kind === 'title') {
-        sel = '[data-adsec-id="' + _adFocusKey.sectionId + '"] .ad-section-title';
-      } else {
-        sel = '[data-aditem-id="' + _adFocusKey.itemId + '"] .ad-item-text';
-      }
-      try {
-        var el = document.querySelector(sel);
-        if (el) {
-          el.focus();
-          if (typeof el.setSelectionRange === 'function') {
-            var pos = Math.min(_adFocusKey.cursor || 0, (el.value || el.textContent || '').length);
-            el.setSelectionRange(pos, pos);
-          }
-        }
-      } catch(e) {}
+    function _cqwEnsureDailyToday() {
+      if (!_cqwTeam) return;
+      var key = _cqwTodayKey();
+      var existing = _cqwTeam.pages.find(function(p){ return p.group==='daily' && p.dateKey===key; });
+      if (existing) return existing;
+      var page = { id:_cqwUid(), title:_cqwDailyTitle(key), icon:'📅', group:'daily', scope:'team', dateKey:key, favorite:false, blocks:_cqwDefaultDailyBlocks(), _updatedAt:0 };
+      _cqwTeam.pages.unshift(page);
+      _cqwSave('team');
+      return page;
     }
 
-    // ── RENDER ───────────────────────────────────────────────────────────
-    function _adRender() {
-      var body = document.getElementById('ad-body');
-      if (!body) return;
-      _adCaptureFocus();
-      var doc = _adData[_adTab] || _adDefaultDoc();
-      var q = _adSearchQ;
+    // ── Tree render ───────────────────────────────────────────────────────
+    function _cqwRenderTree() {
+      var tree = document.getElementById('cqw-tree');
+      if (!tree) return;
+      var q = (document.getElementById('cqw-search') || {}).value || '';
+      q = q.trim().toLowerCase();
       var html = '';
-      if (!doc.sections.length) {
-        html = '<div class="ad-empty"><strong>Empty page</strong>Add your first section to start organizing your day.</div>';
-      } else {
-        doc.sections.forEach(function(sec) {
-          var items = sec.items || [];
-          var matchSec = !q || sec.title.toLowerCase().indexOf(q) >= 0;
-          var filteredItems = q
-            ? items.filter(function(it) { return (it.text || '').toLowerCase().indexOf(q) >= 0; })
-            : items;
-          if (q && !matchSec && filteredItems.length === 0) return;
-          var doneCount = items.filter(function(i){ return i.done; }).length;
-          var collapsedCls = sec.collapsed ? ' collapsed' : '';
-          html += '<div class="ad-section' + collapsedCls + '" data-adsec-id="' + sec.id + '">'
-            + '<div class="ad-section-hdr" onclick="_adToggleSection(\'' + sec.id + '\', event)">'
-              + '<svg class="ad-section-chev" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path d="M19 9l-7 7-7-7"/></svg>'
-              + '<input class="ad-section-title" type="text" value="' + _adEsc(sec.title) + '"'
-              +   ' onclick="event.stopPropagation()" oninput="_adUpdateSectionTitle(\'' + sec.id + '\', this.value)" />'
-              + '<span class="ad-section-count">' + doneCount + '/' + items.length + '</span>'
-              + '<button class="ad-section-del" onclick="event.stopPropagation();_adDeleteSection(\'' + sec.id + '\')" title="Delete section">'
-                + '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>'
-              + '</button>'
-            + '</div>'
-            + '<div class="ad-section-body">';
-          filteredItems.forEach(function(it) {
-            html += _adRenderItem(sec.id, it);
-          });
-          html += '<div class="ad-add-item" onclick="_adAddItem(\'' + sec.id + '\')">'
-            + '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>'
-            + '<span>Add item</span>'
-          + '</div>'
-            + '</div></div>';
-        });
+
+      // Search mode — flat results across all pages.
+      if (q) {
+        var hits = _cqwAllPages().filter(function(p){ return (p.title||'').toLowerCase().indexOf(q) >= 0; });
+        html += '<div class="cqw-tree-group"><div class="cqw-tree-grouphdr"><span>Search · ' + hits.length + '</span></div><div class="cqw-tree-pages">';
+        hits.forEach(function(p){ html += _cqwPageRow(p); });
+        if (!hits.length) html += '<div style="padding:8px 10px;font-size:12px;color:var(--gray-400)">No pages match.</div>';
+        html += '</div></div>';
+        tree.innerHTML = html;
+        return;
       }
-      html += '<button class="ad-add-section" onclick="_adAddSection()">'
-        + '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>'
-        + 'Add Section</button>';
-      // Footer hint about who can see this tab
-      if (_adTab === 'team') {
-        html += '<div style="font-size:11px;color:var(--gray-400);padding:14px 4px 0;line-height:1.5">'
-          + '<strong style="color:var(--gray-500)">Team Workspace</strong> &middot; '
-          + 'Shared with every admin in real time. Anything you add here, Sam, Ali, and future admins see immediately.'
-          + '</div>';
-      } else {
-        html += '<div style="font-size:11px;color:var(--gray-400);padding:14px 4px 0;line-height:1.5">'
-          + '<strong style="color:var(--gray-500)">My Private Workspace</strong> &middot; '
-          + 'Only you can see this. Syncs across your own devices via Firestore.'
-          + '</div>';
-      }
-      body.innerHTML = html;
-      _adRestoreFocus();
+
+      _CQW_GROUPS.forEach(function(g) {
+        var pages;
+        if (g.derived) {
+          pages = _cqwAllPages().filter(function(p){ return p.favorite; });
+          if (!pages.length) return; // hide empty favorites
+        } else {
+          var doc = _cqwDoc(g.scope);
+          pages = (doc && doc.pages || []).filter(function(p){ return p.group === g.key; });
+        }
+        var collapsed = _cqwGroupCollapse[g.key] ? ' collapsed' : '';
+        html += '<div class="cqw-tree-group' + collapsed + '" data-grp="' + g.key + '">';
+        html += '<div class="cqw-tree-grouphdr" onclick="_cqwToggleGroup(\'' + g.key + '\')">';
+        html += '<svg class="cqw-grp-chev" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M19 9l-7 7-7-7"/></svg>';
+        html += '<span>' + g.icon + ' ' + g.label + '</span>';
+        if (g.addable) html += '<button class="cqw-grp-add" onclick="event.stopPropagation();_cqwAddPage(\'' + g.key + '\')" title="Add page">+</button>';
+        html += '</div><div class="cqw-tree-pages">';
+        pages.forEach(function(p){ html += _cqwPageRow(p); });
+        if (!pages.length && !g.derived) html += '<div style="padding:5px 10px;font-size:12px;color:var(--gray-300)">Empty</div>';
+        html += '</div></div>';
+      });
+      tree.innerHTML = html;
+    }
+    function _cqwPageRow(p) {
+      var active = p.id === _cqwActive ? ' active' : '';
+      return '<div class="cqw-pagerow' + active + '" draggable="true" data-pid="' + p.id + '"'
+        + ' onclick="_cqwOpenPage(\'' + p.id + '\')"'
+        + ' ondragstart="_cqwDragStart(event,\'' + p.id + '\')" ondragover="_cqwDragOver(event,\'' + p.id + '\')"'
+        + ' ondragleave="_cqwDragLeave(event)" ondrop="_cqwDrop(event,\'' + p.id + '\')" ondragend="_cqwDragEnd(event)">'
+        + '<span class="cqw-pagerow-ico">' + (p.icon || '📄') + '</span>'
+        + '<span class="cqw-pagerow-name">' + _cqwEsc(p.title || 'Untitled') + '</span>'
+        + '<button class="cqw-pagerow-act" onclick="event.stopPropagation();_cqwPageMenu(event,\'' + p.id + '\')" title="More">⋯</button>'
+        + '</div>';
     }
 
-    function _adRenderItem(secId, it) {
-      var done = !!it.done;
-      var pri  = it.priority || '';
-      var due  = it.dueDate || '';
-      var related = it.clientId ? _adClientName(it.clientId) : '';
-      var priChip = pri ? '<span class="ad-pill p-' + pri + '">' + pri + '</span>' : '';
-      var dueChip = due ? '<span style="font-size:10.5px;color:var(--gray-500)">Due ' + _adEsc(due) + '</span>' : '';
-      var relChip = related ? '<span style="font-size:10.5px;color:var(--blue);font-weight:600">@ ' + _adEsc(related) + '</span>' : '';
-      var metaHTML = (priChip || dueChip || relChip)
-        ? '<div class="ad-item-meta">' + priChip + dueChip + relChip + '</div>'
-        : '';
-      return '<div class="ad-item' + (done ? ' done' : '') + '" data-aditem-id="' + it.id + '">'
-        + '<div class="ad-item-check" onclick="_adToggleItem(\'' + secId + '\',\'' + it.id + '\')">'
-          + '<svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.2"><path d="M5 13l4 4L19 7"/></svg>'
-        + '</div>'
-        + '<div class="ad-item-body">'
-          + '<textarea class="ad-item-text" rows="1"'
-          +   ' oninput="_adUpdateItemText(\'' + secId + '\',\'' + it.id + '\', this.value);_adAutoSize(this)"'
-          +   ' onkeydown="_adItemKey(event, \'' + secId + '\', \'' + it.id + '\')">' + _adEsc(it.text || '') + '</textarea>'
-          + metaHTML
-        + '</div>'
-        + '<div class="ad-item-actions">'
-          + '<button class="ad-item-act" onclick="_adCyclePriority(\'' + secId + '\',\'' + it.id + '\')" title="Priority">'
-            + '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22V15"/></svg>'
-          + '</button>'
-          + '<button class="ad-item-act" onclick="_adSetItemDue(\'' + secId + '\',\'' + it.id + '\')" title="Due date">'
-            + '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>'
-          + '</button>'
-          + '<button class="ad-item-act" onclick="_adLinkClient(\'' + secId + '\',\'' + it.id + '\')" title="Related client">'
-            + '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a4 4 0 014-4h6a4 4 0 014 4v2"/></svg>'
-          + '</button>'
-          + '<button class="ad-item-act danger" onclick="_adDeleteItem(\'' + secId + '\',\'' + it.id + '\')" title="Delete">'
-            + '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>'
-          + '</button>'
-        + '</div>'
-      + '</div>';
+    // ── Page open / CRUD ──────────────────────────────────────────────────
+    function _cqwOpenPage(id) {
+      _cqwActive = id;
+      try { localStorage.setItem('cq_ws_lastpage', id); } catch(e) {}
+      _cqwRenderTree();
+      _cqwRenderPage();
     }
-
-    function _adEsc(s) {
-      return String(s == null ? '' : s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
-    function _adClientName(id) {
-      try {
-        var c = (typeof getClient === 'function') ? getClient(id) : null;
-        if (!c) return id;
-        return ((c.fname || '') + ' ' + (c.lname || '')).trim() || id;
-      } catch(e) { return id; }
-    }
-
-    function _adAutoSize(el) {
-      el.style.height = 'auto';
-      el.style.height = (el.scrollHeight) + 'px';
-    }
-
-    // ── CRUD ─────────────────────────────────────────────────────────────
-    function _adFindSection(secId) {
-      var doc = _adData[_adTab];
-      if (!doc) return null;
-      return doc.sections.find(function(s){ return s.id === secId; });
-    }
-    function _adFindItem(secId, itemId) {
-      var sec = _adFindSection(secId);
-      if (!sec) return null;
-      return (sec.items || []).find(function(i){ return i.id === itemId; });
-    }
-
-    function _adAddSection() {
-      var doc = _adData[_adTab] || (_adData[_adTab] = _adDefaultDoc());
-      doc.sections.push({ id: _adUid(), title: 'New section', collapsed: false, order: doc.sections.length, items: [] });
-      _adSaveDoc(_adTab); _adRender();
-      // Focus the new section title
-      setTimeout(function() {
-        var inputs = document.querySelectorAll('.ad-section-title');
-        var last = inputs[inputs.length - 1];
-        if (last) { last.focus(); last.select && last.select(); }
-      }, 30);
-    }
-    function _adDeleteSection(secId) {
-      if (!confirm('Delete this section and all its items?')) return;
-      var doc = _adData[_adTab];
+    function _cqwAddPage(group) {
+      var scope = _cqwScopeOfGroup(group);
+      var doc = _cqwDoc(scope);
       if (!doc) return;
-      doc.sections = doc.sections.filter(function(s){ return s.id !== secId; });
-      _adSaveDoc(_adTab); _adRender();
+      var page = { id:_cqwUid(), title:'', icon:'📄', group:group, scope:scope, favorite:false, blocks:[ _cqwBlankBlock() ], _updatedAt:0 };
+      if (group === 'daily') { page.icon='📅'; page.dateKey=_cqwTodayKey(); }
+      doc.pages.push(page);
+      _cqwSave(scope);
+      _cqwOpenPage(page.id);
+      setTimeout(function(){ var t=document.querySelector('.cqw-page-title'); if(t){ t.focus(); } }, 40);
     }
-    function _adToggleSection(secId, ev) {
-      // Don't toggle when clicking the title input or action buttons.
-      if (ev && ev.target && (ev.target.closest('.ad-section-title') || ev.target.closest('.ad-section-del'))) return;
-      var sec = _adFindSection(secId);
-      if (!sec) return;
-      sec.collapsed = !sec.collapsed;
-      _adSaveDoc(_adTab); _adRender();
+    function _cqwDeletePage(id) {
+      var p = _cqwGetPage(id);
+      if (!p) return;
+      if (!confirm('Delete “' + (p.title||'Untitled') + '”? This cannot be undone.')) return;
+      var doc = _cqwDoc(p.scope);
+      doc.pages = doc.pages.filter(function(x){ return x.id !== id; });
+      _cqwSave(p.scope);
+      if (_cqwActive === id) { _cqwActive = (doc.pages[0] && doc.pages[0].id) || (_cqwAllPages()[0] && _cqwAllPages()[0].id) || null; }
+      _cqwRenderTree(); _cqwRenderPage();
     }
-    function _adUpdateSectionTitle(secId, val) {
-      var sec = _adFindSection(secId);
-      if (!sec) return;
-      sec.title = val;
-      _adSaveDoc(_adTab);
-      // Don't re-render — would lose focus inside the input.
+    function _cqwPageMenu(ev, id) {
+      ev.stopPropagation();
+      var p = _cqwGetPage(id); if (!p) return;
+      var choice = prompt('Page actions for "' + (p.title||'Untitled') + '":\n\n1 = ' + (p.favorite?'Unfavorite':'Favorite') + '\n2 = Change icon (emoji)\n3 = Delete\n\nType 1, 2, or 3:', '');
+      if (choice === '1') { p.favorite = !p.favorite; _cqwSave(p.scope); _cqwRenderTree(); }
+      else if (choice === '2') { var e = prompt('Enter an emoji for this page:', p.icon || '📄'); if (e !== null) { p.icon = e.trim() || '📄'; _cqwSave(p.scope); _cqwRenderTree(); _cqwRenderPage(); } }
+      else if (choice === '3') { _cqwDeletePage(id); }
+    }
+    function _cqwToggleGroup(key) {
+      _cqwGroupCollapse[key] = !_cqwGroupCollapse[key];
+      _cqwRenderTree();
+    }
+    function _cqwToggleFavorite() {
+      var p = _cqwGetActivePage(); if (!p) return;
+      p.favorite = !p.favorite;
+      _cqwSave(p.scope);
+      _cqwRenderTree(); _cqwUpdateFavBtn();
+    }
+    function _cqwUpdateFavBtn() {
+      var b = document.getElementById('cqw-fav-btn');
+      var p = _cqwGetActivePage();
+      if (!b) return;
+      if (p && p.favorite) { b.textContent='★'; b.classList.add('on'); }
+      else { b.textContent='☆'; b.classList.remove('on'); }
     }
 
-    function _adAddItem(secId) {
-      var sec = _adFindSection(secId);
-      if (!sec) return;
-      var email = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
-      sec.items.push({ id: _adUid(), text: '', done: false, by: email, at: Date.now(), order: sec.items.length });
-      _adSaveDoc(_adTab); _adRender();
-      // Focus the new item's textarea
-      setTimeout(function() {
-        var areas = document.querySelectorAll('[data-adsec-id="' + secId + '"] .ad-item-text');
-        var last = areas[areas.length - 1];
-        if (last) last.focus();
-      }, 30);
+    // ── Drag reorder (within a scope) ──────────────────────────────────────
+    var _cqwDragId = null;
+    function _cqwDragStart(ev, id) { _cqwDragId = id; try { ev.dataTransfer.effectAllowed='move'; } catch(e){} }
+    function _cqwDragOver(ev, id) { ev.preventDefault(); var r=ev.currentTarget; if(r) r.classList.add('dragover'); }
+    function _cqwDragLeave(ev) { var r=ev.currentTarget; if(r) r.classList.remove('dragover'); }
+    function _cqwDragEnd(ev) { document.querySelectorAll('.cqw-pagerow.dragover').forEach(function(x){x.classList.remove('dragover');}); _cqwDragId=null; }
+    function _cqwDrop(ev, targetId) {
+      ev.preventDefault();
+      var r=ev.currentTarget; if(r) r.classList.remove('dragover');
+      if (!_cqwDragId || _cqwDragId === targetId) return;
+      var src = _cqwGetPage(_cqwDragId), tgt = _cqwGetPage(targetId);
+      if (!src || !tgt || src.scope !== tgt.scope) { _cqwDragId=null; return; }
+      var doc = _cqwDoc(src.scope);
+      var arr = doc.pages;
+      var si = arr.findIndex(function(x){return x.id===src.id;});
+      var ti = arr.findIndex(function(x){return x.id===tgt.id;});
+      if (si<0||ti<0) return;
+      // If moving across groups, adopt target group.
+      src.group = tgt.group;
+      arr.splice(ti, 0, arr.splice(si,1)[0]);
+      _cqwSave(src.scope);
+      _cqwRenderTree();
+      _cqwDragId=null;
     }
-    function _adUpdateItemText(secId, itemId, val) {
-      var it = _adFindItem(secId, itemId);
-      if (!it) return;
-      it.text = val;
-      _adSaveDoc(_adTab);
-    }
-    function _adToggleItem(secId, itemId) {
-      var it = _adFindItem(secId, itemId);
-      if (!it) return;
-      it.done = !it.done;
-      it.completedAt = it.done ? Date.now() : null;
-      _adSaveDoc(_adTab); _adRender();
-    }
-    function _adDeleteItem(secId, itemId) {
-      var sec = _adFindSection(secId);
-      if (!sec) return;
-      sec.items = sec.items.filter(function(i){ return i.id !== itemId; });
-      _adSaveDoc(_adTab); _adRender();
-    }
-    function _adCyclePriority(secId, itemId) {
-      var it = _adFindItem(secId, itemId);
-      if (!it) return;
-      var order = ['', 'low', 'medium', 'high', 'critical'];
-      var idx = order.indexOf(it.priority || '');
-      it.priority = order[(idx + 1) % order.length];
-      _adSaveDoc(_adTab); _adRender();
-    }
-    function _adSetItemDue(secId, itemId) {
-      var it = _adFindItem(secId, itemId);
-      if (!it) return;
-      var current = it.dueDate || _adTodayStr();
-      var v = prompt('Due date (YYYY-MM-DD), blank to clear:', current);
-      if (v === null) return;
-      it.dueDate = v.trim() || '';
-      _adSaveDoc(_adTab); _adRender();
-    }
-    function _adLinkClient(secId, itemId) {
-      var it = _adFindItem(secId, itemId);
-      if (!it) return;
-      // Simple prompt-based client picker. Lists clients by name.
-      var list = (typeof clients !== 'undefined' && Array.isArray(clients))
-        ? clients.filter(function(c){ return !c.archived; })
-                 .map(function(c){ var nm = ((c.fname||'') + ' ' + (c.lname||'')).trim(); return { id: c.id, name: nm }; })
-        : [];
-      if (!list.length) { alert('No active clients to link.'); return; }
-      var current = it.clientId || '';
-      var menu = list.map(function(c, i){ return (i+1) + '. ' + c.name + (c.id === current ? '  (linked)' : ''); }).join('\n');
-      var idx = prompt('Pick a client by number, blank to clear:\n\n' + menu, '');
-      if (idx === null) return;
-      if (!idx.trim()) { it.clientId = ''; }
-      else {
-        var n = parseInt(idx, 10) - 1;
-        if (n >= 0 && n < list.length) it.clientId = list[n].id;
+
+    // ── Page editor render ──────────────────────────────────────────────────
+    function _cqwRenderPage() {
+      var host = document.getElementById('cqw-page');
+      var bc = document.getElementById('cqw-breadcrumb');
+      if (!host) return;
+      var p = _cqwGetActivePage();
+      if (!p) {
+        host.innerHTML = '<div class="cqw-page-inner" style="text-align:center;padding-top:60px;color:var(--gray-400)">'
+          + '<div style="font-size:40px;margin-bottom:10px">🗂️</div>'
+          + '<div style="font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--navy);margin-bottom:6px">No page selected</div>'
+          + '<div style="font-size:13px">Pick a page on the left, or add one with the + next to a section.</div></div>';
+        if (bc) bc.textContent = 'Workspace';
+        _cqwUpdateFavBtn();
+        return;
       }
-      _adSaveDoc(_adTab); _adRender();
+      var grp = _CQW_GROUPS.find(function(g){ return g.key === p.group; });
+      if (bc) bc.textContent = (grp ? grp.label : 'Workspace') + ' / ' + (p.title || 'Untitled');
+      var html = '<div class="cqw-page-inner">';
+      html += '<div class="cqw-page-ico" onclick="_cqwChangeIcon()" title="Change icon">' + (p.icon || '📄') + '</div>';
+      html += '<textarea class="cqw-page-title" rows="1" placeholder="Untitled" oninput="_cqwTitleInput(this)">' + _cqwEsc(p.title) + '</textarea>';
+      var metaBits = [];
+      if (p.scope === 'team') metaBits.push('Shared · Team Workspace'); else metaBits.push('Private to you');
+      if (p.dateKey) metaBits.push('Daily page');
+      html += '<div class="cqw-page-meta">' + metaBits.join(' · ') + '</div>';
+      html += '<div class="cqw-blocks" id="cqw-blocks">';
+      (p.blocks || []).forEach(function(b){ html += _cqwBlockHTML(b); });
+      html += '</div>';
+      html += '<div class="cqw-add-block" onclick="_cqwAddBlockEnd()"><svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Click to add a block, or press “/” for commands</div>';
+      html += '</div>';
+      host.innerHTML = html;
+      _cqwUpdateFavBtn();
+      _cqwAutoSizeTitle();
     }
-    function _adItemKey(ev, secId, itemId) {
+
+    function _cqwBlockHTML(b) {
+      var t = b.type || 'text';
+      if (t === 'divider') {
+        return '<div class="cqw-block b-divider" data-bid="' + b.id + '"><span class="cqw-block-handle" draggable="true" ondragstart="_cqwBDragStart(event,\'' + b.id + '\')" ondragover="_cqwBDragOver(event,\'' + b.id + '\')" ondrop="_cqwBDrop(event,\'' + b.id + '\')" ondragend="_cqwBDragEnd(event)">⠿</span><div class="cqw-block-divider"></div></div>';
+      }
+      if (t === 'table') { return _cqwTableHTML(b); }
+      var handle = '<span class="cqw-block-handle" draggable="true" ondragstart="_cqwBDragStart(event,\'' + b.id + '\')" ondragover="_cqwBDragOver(event,\'' + b.id + '\')" ondrop="_cqwBDrop(event,\'' + b.id + '\')" ondragend="_cqwBDragEnd(event)">⠿</span>';
+      var lead = '';
+      var blockCls = 'cqw-block b-' + t + (b.checked ? ' done' : '') + (b.collapsed ? ' collapsed' : '');
+      var ceCls = 'cqw-ce t-' + (t==='h1'||t==='h2'||t==='h3' ? t : (t==='quote'?'quote':'text'));
+      var ph = '';
+      if (t === 'todo') { lead = '<span class="cqw-todo-check" onclick="_cqwToggleTodo(\'' + b.id + '\')"><svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.2"><path d="M5 13l4 4L19 7"/></svg></span>'; ph='To-do'; }
+      else if (t === 'bullet') { lead = '<span class="cqw-bullet">•</span>'; ph='List item'; }
+      else if (t === 'numbered') { lead = '<span class="cqw-number" data-num>1.</span>'; ph='List item'; }
+      else if (t === 'toggle') { lead = '<span class="cqw-toggle-arrow" onclick="_cqwToggleFold(\'' + b.id + '\')">▸</span>'; ph='Toggle'; }
+      else if (t === 'h1') ph='Heading 1';
+      else if (t === 'h2') ph='Heading 2';
+      else if (t === 'h3') ph='Heading 3';
+      else if (t === 'quote') ph='Quote';
+      else if (t === 'callout') ph='Callout';
+      else ph="Type '/' for commands";
+
+      if (t === 'callout') {
+        return '<div class="' + blockCls + '" data-bid="' + b.id + '">' + handle
+          + '<span class="cqw-callout-emoji" onclick="_cqwCalloutEmoji(\'' + b.id + '\')">' + (b.emoji || '💡') + '</span>'
+          + '<div class="cqw-block-main"><div class="' + ceCls + '" contenteditable="true" data-ph="' + ph + '" data-bid="' + b.id + '"'
+          + ' oninput="_cqwBlockInput(this,\'' + b.id + '\')" onkeydown="_cqwBlockKey(event,\'' + b.id + '\')" onkeyup="_cqwCaretWatch(event,\'' + b.id + '\')" onmouseup="_cqwSelWatch()">' + (b.html||'') + '</div></div></div>';
+      }
+      return '<div class="' + blockCls + '" data-bid="' + b.id + '">' + handle + lead
+        + '<div class="cqw-block-main"><div class="' + ceCls + '" contenteditable="true" data-ph="' + ph + '" data-bid="' + b.id + '"'
+        + ' oninput="_cqwBlockInput(this,\'' + b.id + '\')" onkeydown="_cqwBlockKey(event,\'' + b.id + '\')" onkeyup="_cqwCaretWatch(event,\'' + b.id + '\')" onmouseup="_cqwSelWatch()">' + (b.html||'') + '</div></div></div>';
+    }
+
+    function _cqwTableHTML(b) {
+      var rows = b.rows || [['Client','Task','Owner','Due','Status'],['','','','','']];
+      var handle = '<span class="cqw-block-handle" draggable="true" ondragstart="_cqwBDragStart(event,\'' + b.id + '\')" ondragover="_cqwBDragOver(event,\'' + b.id + '\')" ondrop="_cqwBDrop(event,\'' + b.id + '\')" ondragend="_cqwBDragEnd(event)">⠿</span>';
+      var h = '<div class="cqw-block b-table" data-bid="' + b.id + '">' + handle + '<div class="cqw-block-main"><div class="cqw-tbl-wrap"><table class="cqw-tbl"><tbody>';
+      rows.forEach(function(row, ri){
+        h += '<tr>';
+        row.forEach(function(cell, ci){
+          var tag = ri === 0 ? 'th' : 'td';
+          h += '<' + tag + ' contenteditable="true" data-r="' + ri + '" data-c="' + ci + '" oninput="_cqwTblInput(\'' + b.id + '\',this)">' + _cqwEsc(cell) + '</' + tag + '>';
+        });
+        h += '</tr>';
+      });
+      h += '</tbody></table></div><div class="cqw-tbl-tools">'
+        + '<button class="cqw-tbl-tool" onclick="_cqwTblAddRow(\'' + b.id + '\')">+ Row</button>'
+        + '<button class="cqw-tbl-tool" onclick="_cqwTblAddCol(\'' + b.id + '\')">+ Column</button>'
+        + '<button class="cqw-tbl-tool" onclick="_cqwTblDelRow(\'' + b.id + '\')">– Row</button>'
+        + '<button class="cqw-tbl-tool" onclick="_cqwTblDelCol(\'' + b.id + '\')">– Column</button>'
+        + '</div></div></div>';
+      return h;
+    }
+
+    // ── Title / icon ────────────────────────────────────────────────────────
+    function _cqwAutoSizeTitle() {
+      var t = document.querySelector('.cqw-page-title');
+      if (t) { t.style.height='auto'; t.style.height = t.scrollHeight + 'px'; }
+    }
+    function _cqwTitleInput(el) {
+      var p = _cqwGetActivePage(); if (!p) return;
+      p.title = el.value;
+      _cqwAutoSizeTitle();
+      _cqwSave(p.scope);
+      // Light tree refresh of just the active row's label
+      var row = document.querySelector('.cqw-pagerow.active .cqw-pagerow-name');
+      if (row) row.textContent = el.value || 'Untitled';
+      var bc = document.getElementById('cqw-breadcrumb');
+      var grp = _CQW_GROUPS.find(function(g){ return g.key === p.group; });
+      if (bc) bc.textContent = (grp ? grp.label : 'Workspace') + ' / ' + (el.value || 'Untitled');
+    }
+    function _cqwChangeIcon() {
+      var p = _cqwGetActivePage(); if (!p) return;
+      var e = prompt('Page icon (emoji):', p.icon || '📄');
+      if (e !== null) { p.icon = e.trim() || '📄'; _cqwSave(p.scope); _cqwRenderPage(); _cqwRenderTree(); }
+    }
+
+    // ── Block editing ─────────────────────────────────────────────────────
+    function _cqwFindBlock(id) {
+      var p = _cqwGetActivePage(); if (!p) return null;
+      var idx = (p.blocks||[]).findIndex(function(b){ return b.id === id; });
+      return idx < 0 ? null : { page:p, idx:idx, block:p.blocks[idx] };
+    }
+    function _cqwBlockInput(el, id) {
+      var f = _cqwFindBlock(id); if (!f) return;
+      f.block.html = el.innerHTML;
+      _cqwSave(f.page.scope);
+    }
+    function _cqwToggleTodo(id) {
+      var f = _cqwFindBlock(id); if (!f) return;
+      f.block.checked = !f.block.checked;
+      _cqwSave(f.page.scope);
+      var row = document.querySelector('.cqw-block[data-bid="' + id + '"]');
+      if (row) row.classList.toggle('done', f.block.checked);
+    }
+    function _cqwToggleFold(id) {
+      var row = document.querySelector('.cqw-block[data-bid="' + id + '"]');
+      var f = _cqwFindBlock(id); if (!f) return;
+      f.block.collapsed = !f.block.collapsed;
+      if (row) row.classList.toggle('collapsed', f.block.collapsed);
+      _cqwSave(f.page.scope);
+    }
+    function _cqwCalloutEmoji(id) {
+      var f = _cqwFindBlock(id); if (!f) return;
+      var e = prompt('Callout emoji:', f.block.emoji || '💡');
+      if (e !== null) { f.block.emoji = e.trim() || '💡'; _cqwSave(f.page.scope); _cqwRenderPage(); }
+    }
+    function _cqwBlockKey(ev, id) {
+      var f = _cqwFindBlock(id); if (!f) return;
+      // Slash menu open: route nav keys to it
+      if (_cqwSlashOpen) {
+        if (['ArrowDown','ArrowUp','Enter','Escape'].indexOf(ev.key) >= 0) { _cqwSlashNav(ev); return; }
+      }
       if (ev.key === 'Enter' && !ev.shiftKey) {
         ev.preventDefault();
-        _adAddItem(secId);
+        _cqwSplitBlock(f, ev.target);
       } else if (ev.key === 'Backspace') {
-        var it = _adFindItem(secId, itemId);
-        if (it && !it.text) {
+        var el = ev.target;
+        if (_cqwCaretAtStart(el) && (el.textContent || '').length === 0) {
           ev.preventDefault();
-          _adDeleteItem(secId, itemId);
+          _cqwBackspaceEmpty(f);
+        } else if (_cqwCaretAtStart(el)) {
+          // merge into previous block
+          if (f.idx > 0) { ev.preventDefault(); _cqwMergePrev(f, el); }
         }
+      } else if (ev.key === '/') {
+        // open slash after the char is inserted
+        setTimeout(function(){ _cqwOpenSlash(id, ev.target); }, 0);
+      } else if (ev.key === 'Escape') {
+        _cqwCloseSlash();
+      }
+    }
+    function _cqwCaretAtStart(el) {
+      var sel = window.getSelection();
+      if (!sel.rangeCount) return false;
+      var r = sel.getRangeAt(0);
+      var pre = r.cloneRange(); pre.selectNodeContents(el); pre.setEnd(r.endContainer, r.endOffset);
+      return pre.toString().length === 0;
+    }
+    function _cqwSplitBlock(f, el) {
+      // New block inherits list/todo type so Enter keeps the list going.
+      var contType = (f.block.type === 'todo' || f.block.type === 'bullet' || f.block.type === 'numbered') ? f.block.type : 'text';
+      // If the current block is an empty list item, convert to text (exit list).
+      if (contType !== 'text' && (el.textContent||'').length === 0) {
+        f.block.type = 'text'; f.block.checked = false;
+        _cqwSave(f.page.scope); _cqwRenderPage();
+        setTimeout(function(){ _cqwFocusBlock(f.block.id, true); }, 20);
+        return;
+      }
+      var nb = { id:_cqwBid(), type:contType, html:'' };
+      if (contType === 'todo') nb.checked = false;
+      f.page.blocks.splice(f.idx + 1, 0, nb);
+      f.block.html = el.innerHTML;
+      _cqwSave(f.page.scope);
+      _cqwRenderPage();
+      setTimeout(function(){ _cqwFocusBlock(nb.id, true); }, 20);
+    }
+    function _cqwBackspaceEmpty(f) {
+      if (f.page.blocks.length <= 1) { f.block.type='text'; f.block.html=''; _cqwSave(f.page.scope); _cqwRenderPage(); return; }
+      var prevId = f.page.blocks[f.idx - 1] ? f.page.blocks[f.idx-1].id : null;
+      f.page.blocks.splice(f.idx, 1);
+      _cqwSave(f.page.scope);
+      _cqwRenderPage();
+      if (prevId) setTimeout(function(){ _cqwFocusBlock(prevId, false); }, 20);
+    }
+    function _cqwMergePrev(f, el) {
+      var prev = f.page.blocks[f.idx - 1];
+      if (!prev || prev.type === 'divider' || prev.type === 'table') return;
+      var prevLen = (prev.html||'').replace(/<[^>]*>/g,'').length;
+      prev.html = (prev.html||'') + (el.innerHTML||'');
+      f.page.blocks.splice(f.idx, 1);
+      _cqwSave(f.page.scope);
+      _cqwRenderPage();
+      setTimeout(function(){ _cqwFocusBlock(prev.id, false, prevLen); }, 20);
+    }
+    function _cqwFocusBlock(id, atStart, atOffset) {
+      var el = document.querySelector('.cqw-ce[data-bid="' + id + '"]');
+      if (!el) return;
+      el.focus();
+      try {
+        var sel = window.getSelection(); var r = document.createRange();
+        if (typeof atOffset === 'number' && el.firstChild) {
+          // best-effort offset into text
+          var node = el.firstChild; r.setStart(node, Math.min(atOffset, (node.textContent||'').length)); r.collapse(true);
+        } else {
+          r.selectNodeContents(el); r.collapse(!!atStart);
+        }
+        sel.removeAllRanges(); sel.addRange(r);
+      } catch(e) {}
+    }
+    function _cqwAddBlockEnd() {
+      var p = _cqwGetActivePage(); if (!p) return;
+      var nb = _cqwBlankBlock();
+      p.blocks.push(nb);
+      _cqwSave(p.scope); _cqwRenderPage();
+      setTimeout(function(){ _cqwFocusBlock(nb.id, true); }, 20);
+    }
+
+    // ── Slash command menu ──────────────────────────────────────────────────
+    var _cqwSlashOpen = false, _cqwSlashBlockId = null, _cqwSlashSel = 0, _cqwSlashItems = [];
+    var _CQW_SLASH = [
+      { cat:'Basic blocks' },
+      { k:'text', name:'Text', desc:'Plain paragraph', ico:'T' },
+      { k:'h1', name:'Heading 1', desc:'Big section heading', ico:'H₁' },
+      { k:'h2', name:'Heading 2', desc:'Medium heading', ico:'H₂' },
+      { k:'h3', name:'Heading 3', desc:'Small heading', ico:'H₃' },
+      { k:'todo', name:'To-do list', desc:'Checklist item', ico:'☑' },
+      { k:'bullet', name:'Bulleted list', desc:'Simple bullet', ico:'•' },
+      { k:'numbered', name:'Numbered list', desc:'Ordered list', ico:'1.' },
+      { k:'toggle', name:'Toggle list', desc:'Collapsible block', ico:'▸' },
+      { k:'quote', name:'Quote', desc:'Capture a quote', ico:'❝' },
+      { k:'callout', name:'Callout', desc:'Highlighted note', ico:'💡' },
+      { k:'divider', name:'Divider', desc:'Visual separator', ico:'―' },
+      { cat:'Advanced' },
+      { k:'table', name:'Table', desc:'Simple grid / database', ico:'▦' },
+      { k:'client', name:'Client mention', desc:'@ link a client', ico:'@' },
+      { k:'funding', name:'Funding note', desc:'Funding callout', ico:'💰' },
+      { k:'meeting', name:'Meeting note', desc:'Meeting callout', ico:'📝' }
+    ];
+    function _cqwOpenSlash(blockId, el) {
+      _cqwSlashOpen = true; _cqwSlashBlockId = blockId; _cqwSlashSel = 0;
+      _cqwRenderSlash('');
+      // position near caret
+      var menu = document.getElementById('cqw-slash');
+      try {
+        var sel = window.getSelection(); var r = sel.getRangeAt(0).getClientRects()[0];
+        var rect = r || el.getBoundingClientRect();
+        var top = Math.min(rect.bottom + 6, window.innerHeight - 350);
+        var left = Math.min(rect.left, window.innerWidth - 320);
+        menu.style.top = top + 'px'; menu.style.left = left + 'px';
+      } catch(e) {
+        var rb = el.getBoundingClientRect(); menu.style.top=(rb.bottom+6)+'px'; menu.style.left=rb.left+'px';
+      }
+      menu.style.display = 'block';
+    }
+    function _cqwRenderSlash(filter) {
+      var menu = document.getElementById('cqw-slash');
+      if (!menu) return;
+      filter = (filter||'').toLowerCase();
+      var items = _CQW_SLASH.filter(function(x){ return x.cat || !filter || x.name.toLowerCase().indexOf(filter) >= 0; });
+      // drop category headers with no following items
+      _cqwSlashItems = items.filter(function(x){ return x.k; });
+      if (_cqwSlashSel >= _cqwSlashItems.length) _cqwSlashSel = 0;
+      var html = ''; var realIdx = -1;
+      items.forEach(function(x){
+        if (x.cat) { html += '<div class="cqw-slash-cat">' + x.cat + '</div>'; return; }
+        realIdx++;
+        var sel = realIdx === _cqwSlashSel ? ' sel' : '';
+        html += '<div class="cqw-slash-item' + sel + '" onmousedown="_cqwSlashPick(event,\'' + x.k + '\')">'
+          + '<span class="cqw-slash-ico">' + x.ico + '</span>'
+          + '<span class="cqw-slash-tx"><span class="cqw-slash-name">' + x.name + '</span><span class="cqw-slash-desc">' + x.desc + '</span></span>'
+          + '</div>';
+      });
+      if (!_cqwSlashItems.length) html = '<div style="padding:12px;font-size:12px;color:var(--gray-400)">No blocks match.</div>';
+      menu.innerHTML = html;
+    }
+    function _cqwCaretWatch(ev, id) {
+      if (!_cqwSlashOpen) return;
+      // Read the text after the last "/" to filter
+      var el = ev.target;
+      var txt = el.textContent || '';
+      var pos = txt.lastIndexOf('/');
+      if (pos < 0) { _cqwCloseSlash(); return; }
+      var filter = txt.slice(pos + 1);
+      if (/\s/.test(filter)) { _cqwCloseSlash(); return; }
+      _cqwRenderSlash(filter);
+    }
+    function _cqwSlashNav(ev) {
+      if (ev.key === 'Escape') { ev.preventDefault(); _cqwCloseSlash(); return; }
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); _cqwSlashSel = Math.min(_cqwSlashSel+1, _cqwSlashItems.length-1); _cqwRenderSlashKeepFilter(); }
+      else if (ev.key === 'ArrowUp') { ev.preventDefault(); _cqwSlashSel = Math.max(_cqwSlashSel-1, 0); _cqwRenderSlashKeepFilter(); }
+      else if (ev.key === 'Enter') { ev.preventDefault(); var it=_cqwSlashItems[_cqwSlashSel]; if (it) _cqwApplySlash(it.k); }
+    }
+    function _cqwRenderSlashKeepFilter() {
+      var el = document.querySelector('.cqw-ce[data-bid="' + _cqwSlashBlockId + '"]');
+      var txt = el ? (el.textContent||'') : '';
+      var pos = txt.lastIndexOf('/');
+      _cqwRenderSlash(pos>=0 ? txt.slice(pos+1) : '');
+    }
+    function _cqwSlashPick(ev, k) { ev.preventDefault(); _cqwApplySlash(k); }
+    function _cqwCloseSlash() { _cqwSlashOpen=false; _cqwSlashBlockId=null; var m=document.getElementById('cqw-slash'); if(m) m.style.display='none'; }
+    function _cqwApplySlash(k) {
+      var id = _cqwSlashBlockId;
+      _cqwCloseSlash();
+      var f = _cqwFindBlock(id); if (!f) return;
+      // Strip the trailing "/filter" from the block html/text
+      var el = document.querySelector('.cqw-ce[data-bid="' + id + '"]');
+      var txt = el ? (el.textContent||'') : '';
+      var pos = txt.lastIndexOf('/');
+      var keep = pos >= 0 ? txt.slice(0, pos) : txt;
+
+      if (k === 'divider') {
+        f.block.type = 'text'; f.block.html = keep;
+        f.page.blocks.splice(f.idx + 1, 0, { id:_cqwBid(), type:'divider' });
+        f.page.blocks.splice(f.idx + 2, 0, _cqwBlankBlock());
+        _cqwSave(f.page.scope); _cqwRenderPage();
+        return;
+      }
+      if (k === 'table') {
+        f.block.type='text'; f.block.html=keep;
+        f.page.blocks.splice(f.idx+1, 0, { id:_cqwBid(), type:'table', rows:[['Client','Task','Owner','Due','Status'],['','','','',''],['','','','','']] });
+        f.page.blocks.splice(f.idx+2, 0, _cqwBlankBlock());
+        _cqwSave(f.page.scope); _cqwRenderPage();
+        return;
+      }
+      if (k === 'client') { _cqwInsertClientMention(f, el, keep); return; }
+      if (k === 'funding' || k === 'meeting') {
+        f.block.type = 'callout'; f.block.emoji = (k==='funding'?'💰':'📝'); f.block.html = keep;
+        _cqwSave(f.page.scope); _cqwRenderPage();
+        setTimeout(function(){ _cqwFocusBlock(id, false); }, 20);
+        return;
+      }
+      // Standard type swap
+      f.block.type = k;
+      if (k === 'todo' && f.block.checked === undefined) f.block.checked = false;
+      f.block.html = keep;
+      _cqwSave(f.page.scope); _cqwRenderPage();
+      setTimeout(function(){ _cqwFocusBlock(id, false); }, 20);
+    }
+    function _cqwInsertClientMention(f, el, keep) {
+      var list = (typeof clients !== 'undefined' && Array.isArray(clients))
+        ? clients.filter(function(c){ return !c.archived; }).map(function(c){ return { id:c.id, name:((c.fname||'')+' '+(c.lname||'')).trim() }; })
+        : [];
+      if (!list.length) { alert('No active clients to mention.'); _cqwFocusBlock(f.block.id, false); return; }
+      var menu = list.map(function(c,i){ return (i+1)+'. '+c.name; }).join('\n');
+      var pick = prompt('Mention a client by number:\n\n' + menu, '');
+      if (pick === null) return;
+      var n = parseInt(pick,10)-1;
+      if (n < 0 || n >= list.length) return;
+      var c = list[n];
+      var chip = '<a class="cqw-mention" contenteditable="false" onclick="selectClient(\'' + c.id + '\')">@' + _cqwEsc(c.name) + '</a>&nbsp;';
+      f.block.html = keep + chip;
+      _cqwSave(f.page.scope); _cqwRenderPage();
+      setTimeout(function(){ _cqwFocusBlock(f.block.id, false); }, 20);
+    }
+
+    // ── Selection format toolbar ────────────────────────────────────────────
+    function _cqwSelWatch() { setTimeout(_cqwShowFmt, 10); }
+    function _cqwShowFmt() {
+      var sel = window.getSelection();
+      var fmt = document.getElementById('cqw-fmt');
+      if (!fmt) return;
+      if (!sel || sel.isCollapsed || !sel.rangeCount) { fmt.style.display='none'; return; }
+      var anchor = sel.anchorNode;
+      if (!anchor || !(anchor.parentElement && anchor.parentElement.closest && anchor.parentElement.closest('.cqw-ce'))) { fmt.style.display='none'; return; }
+      var r = sel.getRangeAt(0).getBoundingClientRect();
+      fmt.style.display='flex';
+      fmt.style.top = (r.top - 42) + 'px';
+      fmt.style.left = Math.max(8, r.left + (r.width/2) - 90) + 'px';
+    }
+    function _cqwFmt(ev, cmd) { ev.preventDefault(); try { document.execCommand(cmd, false, null); } catch(e){} _cqwPersistActiveBlock(); }
+    function _cqwFmtColor(ev, color) { ev.preventDefault(); try { document.execCommand('foreColor', false, color); } catch(e){} _cqwPersistActiveBlock(); }
+    function _cqwFmtHilite(ev, color) { ev.preventDefault(); try { document.execCommand('hiliteColor', false, color); } catch(e){ try{ document.execCommand('backColor',false,color);}catch(_){} } _cqwPersistActiveBlock(); }
+    function _cqwPersistActiveBlock() {
+      var el = document.activeElement;
+      if (el && el.classList && el.classList.contains('cqw-ce')) {
+        var id = el.getAttribute('data-bid');
+        var f = _cqwFindBlock(id);
+        if (f) { f.block.html = el.innerHTML; _cqwSave(f.page.scope); }
       }
     }
 
-    // ── INIT ─────────────────────────────────────────────────────────────
-    function _adInit() {
-      var di = document.getElementById('ad-date-input');
-      if (di) di.value = _adDate;
-      var lbl = document.getElementById('ad-date-label');
-      if (lbl) lbl.textContent = _adFmtDate(_adDate);
-      _adFetchAndListen('team', _adDate);
-      _adFetchAndListen('private', _adDate);
-      _adRender();
-      // Auto-size all textareas after paint
-      setTimeout(function() {
-        document.querySelectorAll('#asec-todo .ad-item-text').forEach(_adAutoSize);
-      }, 40);
+    // ── Block drag reorder ──────────────────────────────────────────────────
+    var _cqwBDragId = null;
+    function _cqwBDragStart(ev, id) { _cqwBDragId=id; try{ev.dataTransfer.effectAllowed='move';}catch(e){} }
+    function _cqwBDragOver(ev, id) { ev.preventDefault(); var row=ev.currentTarget.closest('.cqw-block'); if(row) row.classList.add('dragover'); }
+    function _cqwBDragEnd(ev) { document.querySelectorAll('.cqw-block.dragover').forEach(function(x){x.classList.remove('dragover');}); _cqwBDragId=null; }
+    function _cqwBDrop(ev, targetId) {
+      ev.preventDefault();
+      document.querySelectorAll('.cqw-block.dragover').forEach(function(x){x.classList.remove('dragover');});
+      if (!_cqwBDragId || _cqwBDragId === targetId) return;
+      var p = _cqwGetActivePage(); if (!p) return;
+      var si = p.blocks.findIndex(function(b){return b.id===_cqwBDragId;});
+      var ti = p.blocks.findIndex(function(b){return b.id===targetId;});
+      if (si<0||ti<0) return;
+      p.blocks.splice(ti, 0, p.blocks.splice(si,1)[0]);
+      _cqwSave(p.scope); _cqwRenderPage();
+      _cqwBDragId=null;
     }
 
-    // Expose globals for inline onclick handlers
-    window._adRender             = _adRender;
-    window._adSetTab             = _adSetTab;
-    window._adSetDate            = _adSetDate;
-    window._adShiftDate          = _adShiftDate;
-    window._adTodayStr           = _adTodayStr;
-    window._adSearch             = _adSearch;
-    window._adAddSection         = _adAddSection;
-    window._adDeleteSection      = _adDeleteSection;
-    window._adToggleSection      = _adToggleSection;
-    window._adUpdateSectionTitle = _adUpdateSectionTitle;
-    window._adAddItem            = _adAddItem;
-    window._adUpdateItemText     = _adUpdateItemText;
-    window._adToggleItem         = _adToggleItem;
-    window._adDeleteItem         = _adDeleteItem;
-    window._adCyclePriority      = _adCyclePriority;
-    window._adSetItemDue         = _adSetItemDue;
-    window._adLinkClient         = _adLinkClient;
-    window._adItemKey            = _adItemKey;
-    window._adAutoSize           = _adAutoSize;
-    window._adInit               = _adInit;
+    // ── Table ops ────────────────────────────────────────────────────────────
+    function _cqwTblInput(id, cell) {
+      var f = _cqwFindBlock(id); if (!f) return;
+      var r = +cell.getAttribute('data-r'), c = +cell.getAttribute('data-c');
+      if (!f.block.rows[r]) f.block.rows[r] = [];
+      f.block.rows[r][c] = cell.textContent;
+      _cqwSave(f.page.scope);
+    }
+    function _cqwTblAddRow(id) { var f=_cqwFindBlock(id); if(!f)return; var cols=(f.block.rows[0]||[]).length||1; f.block.rows.push(new Array(cols).fill('')); _cqwSave(f.page.scope); _cqwRenderPage(); }
+    function _cqwTblAddCol(id) { var f=_cqwFindBlock(id); if(!f)return; f.block.rows.forEach(function(r){ r.push(''); }); _cqwSave(f.page.scope); _cqwRenderPage(); }
+    function _cqwTblDelRow(id) { var f=_cqwFindBlock(id); if(!f)return; if(f.block.rows.length>1) f.block.rows.pop(); _cqwSave(f.page.scope); _cqwRenderPage(); }
+    function _cqwTblDelCol(id) { var f=_cqwFindBlock(id); if(!f)return; if((f.block.rows[0]||[]).length>1) f.block.rows.forEach(function(r){ r.pop(); }); _cqwSave(f.page.scope); _cqwRenderPage(); }
+
+    // ── Sidebar toggle / search ──────────────────────────────────────────────
+    function _cqwToggleSidebar() {
+      var shell = document.querySelector('.cqw-shell');
+      if (shell) shell.classList.toggle('sb-collapsed');
+    }
+    function _cqwSearch(q) { _cqwRenderTree(); }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    function _cqwInit() {
+      // Seed/load team
+      _cqwTeam = _cqwLoadLocal('team');
+      if (!_cqwTeam) _cqwTeam = _cqwSeedTeam();
+      _cqwPriv = _cqwLoadLocal('private') || { pages:[], _updatedAt:0 };
+      _cqwListen('team');
+      _cqwListen('private');
+      // Ensure today's daily page exists
+      try { _cqwEnsureDailyToday(); } catch(e) {}
+      // Restore last open page, else today's daily, else first page
+      var last = null;
+      try { last = localStorage.getItem('cq_ws_lastpage'); } catch(e) {}
+      if (last && _cqwGetPage(last)) _cqwActive = last;
+      else {
+        var today = _cqwTeam.pages.find(function(p){ return p.group==='daily' && p.dateKey===_cqwTodayKey(); });
+        _cqwActive = today ? today.id : (_cqwTeam.pages[0] && _cqwTeam.pages[0].id) || null;
+      }
+      _cqwRenderTree();
+      _cqwRenderPage();
+      _cqwInited = true;
+      // Global: close slash + fmt on outside click
+      if (!window._cqwGlobalsBound) {
+        window._cqwGlobalsBound = true;
+        document.addEventListener('click', function(e){
+          var m = document.getElementById('cqw-slash');
+          if (m && m.style.display==='block' && !m.contains(e.target)) _cqwCloseSlash();
+          var fmt = document.getElementById('cqw-fmt');
+          if (fmt && !fmt.contains(e.target)) { var s=window.getSelection(); if(!s||s.isCollapsed) fmt.style.display='none'; }
+        }, true);
+        document.addEventListener('selectionchange', function(){
+          if (document.getElementById('asec-todo') && document.getElementById('asec-todo').classList.contains('active')) _cqwSelWatch();
+        });
+      }
+    }
+
+    // Expose for inline handlers + the nav entry point
+    window._cqwInit            = _cqwInit;
+    window._cqwToggleSidebar   = _cqwToggleSidebar;
+    window._cqwSearch          = _cqwSearch;
+    window._cqwToggleGroup     = _cqwToggleGroup;
+    window._cqwAddPage         = _cqwAddPage;
+    window._cqwOpenPage        = _cqwOpenPage;
+    window._cqwPageMenu        = _cqwPageMenu;
+    window._cqwDeletePage      = _cqwDeletePage;
+    window._cqwToggleFavorite  = _cqwToggleFavorite;
+    window._cqwTitleInput      = _cqwTitleInput;
+    window._cqwChangeIcon      = _cqwChangeIcon;
+    window._cqwBlockInput      = _cqwBlockInput;
+    window._cqwBlockKey        = _cqwBlockKey;
+    window._cqwCaretWatch      = _cqwCaretWatch;
+    window._cqwSelWatch        = _cqwSelWatch;
+    window._cqwToggleTodo      = _cqwToggleTodo;
+    window._cqwToggleFold      = _cqwToggleFold;
+    window._cqwCalloutEmoji    = _cqwCalloutEmoji;
+    window._cqwAddBlockEnd     = _cqwAddBlockEnd;
+    window._cqwSlashPick       = _cqwSlashPick;
+    window._cqwFmt             = _cqwFmt;
+    window._cqwFmtColor        = _cqwFmtColor;
+    window._cqwFmtHilite       = _cqwFmtHilite;
+    window._cqwDragStart       = _cqwDragStart;
+    window._cqwDragOver        = _cqwDragOver;
+    window._cqwDragLeave       = _cqwDragLeave;
+    window._cqwDrop            = _cqwDrop;
+    window._cqwDragEnd         = _cqwDragEnd;
+    window._cqwBDragStart      = _cqwBDragStart;
+    window._cqwBDragOver       = _cqwBDragOver;
+    window._cqwBDrop           = _cqwBDrop;
+    window._cqwBDragEnd        = _cqwBDragEnd;
+    window._cqwTblInput        = _cqwTblInput;
+    window._cqwTblAddRow       = _cqwTblAddRow;
+    window._cqwTblAddCol       = _cqwTblAddCol;
+    window._cqwTblDelRow       = _cqwTblDelRow;
+    window._cqwTblDelCol       = _cqwTblDelCol;
+    // Back-compat alias so the nav onclick (_adInit) still boots the workspace
+    window._adInit             = _cqwInit;
   })();
 
 </script>
