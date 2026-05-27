@@ -10,21 +10,13 @@
   <title>Admin — CapitalQuest</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <!-- BEFORE-PAINT auth probe.
-       Runs synchronously before any HTML body is parsed, so the very
-       first frame the browser paints already knows whether to show the
-       splash or skip straight to the admin-app shell. Without this, the
-       blue splash appears for a flash even when a valid admin session
-       is cached, because the fast-restore IIFE lives ~20k lines below
-       in the script block and the browser paints once before getting
-       there. CSS uses the `auth-cached` class to suppress the splash
-       and reveal #admin-app immediately. -->
-  <script>
-    try {
-      var _c = JSON.parse(localStorage.getItem('cq_admin_user') || 'null');
-      if (_c && _c.email) document.documentElement.classList.add('auth-cached');
-    } catch(e) {}
-  </script>
+  <!-- SECURITY: no before-paint auto-reveal.
+       The admin app is NEVER shown from a cached localStorage value.
+       The page boots into the splash ('checking' state) and stays there
+       until Firebase Auth confirms a valid, non-expired admin session via
+       onAuthStateChanged. A stale/forged localStorage flag cannot grant
+       access — only a real Firebase token can. This is the fix for
+       "opening the link auto-logs me in". -->
   <script src="ghl.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -98,13 +90,6 @@
       transition: opacity 0.18s ease;
     }
     #admin-splash.hide { opacity: 0; pointer-events: none; }
-    /* Cached session detected before paint → suppress the splash entirely
-       and reveal the admin-app shell immediately. The fast-restore IIFE
-       still confirms the cached session, populates the sidebar avatar/name,
-       and kicks off initAdminApp(); it just doesn't need to fade anything
-       in. No blue flash on refresh when you're already signed in. */
-    html.auth-cached #admin-splash { display: none !important; }
-    html.auth-cached #admin-app    { display: block; }
     #admin-splash img { height: 30px; opacity: 0.92; }
     .admin-splash-spinner {
       width: 22px; height: 22px;
@@ -2675,6 +2660,13 @@
       <label>Password</label>
       <input type="password" id="al-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin()" />
     </div>
+    <label for="al-remember" style="display:flex;align-items:center;gap:9px;margin:4px 0 6px;cursor:pointer;user-select:none">
+      <input type="checkbox" id="al-remember" style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;margin:0" />
+      <span style="font-size:13px;color:var(--gray-600);font-weight:500">Remember me on this device</span>
+    </label>
+    <div style="font-size:11px;color:var(--gray-400);line-height:1.5;margin-bottom:6px">
+      Leave unchecked on shared computers — your session ends when the browser closes.
+    </div>
     <div class="lf-error" id="al-error">Invalid email or password. Please try again.</div>
     <button class="btn-login" onclick="adminLogin()">Sign In</button>
   </div>
@@ -3525,18 +3517,24 @@
   async function adminLogin() {
     const email = document.getElementById('al-email').value.trim().toLowerCase();
     const pass  = document.getElementById('al-pass').value;
+    const remember = !!(document.getElementById('al-remember') && document.getElementById('al-remember').checked);
     const errEl = document.getElementById('al-error');
     errEl.classList.remove('show');
     const btn = document.querySelector('.btn-login');
     if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
     try {
-      const result = await fsAuthSignIn(email, pass);
+      // Remember Me controls Firebase persistence:
+      //   checked   → LOCAL   (session survives browser close, ~weeks)
+      //   unchecked → SESSION (session ends when the browser fully closes)
+      const result = await fsAuthSignIn(email, pass, remember);
       const user = result.user;
       // After successful auth, verify it's a known admin email
       if (!ADMIN_PROFILES[user.email]) {
         await fsAuthSignOut();
         throw new Error('Not an admin account');
       }
+      // Record the preference so other code paths know the intent.
+      try { localStorage.setItem('cq_admin_remember', remember ? '1' : '0'); } catch(e) {}
       // onAuthStateChanged will handle showing the app
     } catch(e) {
       errEl.classList.add('show');
@@ -3589,6 +3587,11 @@
     try { initNotifListeners(); } catch(e) {}
     // Start GHL integration layer
     try { if (typeof _ghlInit === 'function') _ghlInit(); } catch(e) {}
+    // Background jobs (overdue detection, follow-up automation, poll
+    // fallback) — start them here now that auth is confirmed. They used to
+    // live in a DOMContentLoaded `if (currentAdmin)` block that no longer
+    // fires since currentAdmin is null until Firebase resolves.
+    try { if (typeof _startAdminBackgroundJobs === 'function') _startAdminBackgroundJobs(); } catch(e) {}
   }
 
   function adminLogout() {
@@ -3934,79 +3937,61 @@
   // login flash. The old code showed login as soon as cache missed, then
   // swapped to admin-app the moment Firebase confirmed a user. Now login
   // only appears after Firebase resolves to "definitely no user".
+  // SECURITY MODEL (rewritten):
+  // The page boots into the splash ('checking'). It NEVER shows the admin
+  // app from the localStorage cache. The only thing that grants access is
+  // Firebase Auth confirming a real, valid, non-expired session for an
+  // email that exists in ADMIN_PROFILES. The localStorage 'cq_admin_user'
+  // value is used ONLY to pre-paint the sidebar name/avatar AFTER Firebase
+  // has already authorized the same email — it is not an auth grant.
   (function() {
+    // Pre-fill the avatar/name from cache so that, IF Firebase then
+    // authorizes the same user, the sidebar is already populated and there's
+    // no name flicker. This does NOT reveal the app — splash stays up until
+    // _showAdminApp() runs from the verified onAuthStateChanged callback.
     try {
       var _cached = JSON.parse(localStorage.getItem('cq_admin_user') || 'null');
       if (_cached && _cached.email && ADMIN_PROFILES[_cached.email]) {
         var _profile = ADMIN_PROFILES[_cached.email];
-        currentAdmin = { email: _cached.email, name: _profile.name, initials: _profile.initials };
-        _adminAppInited = true;
-        _setAuthStatus('authenticated');
-        try {
-          if (typeof _adminAvatarPaint === 'function') _adminAvatarPaint(_profile.initials);
-          else { var sbAv = document.getElementById('sb-avatar'); if (sbAv) sbAv.textContent = _profile.initials; }
-        } catch(e) {}
-        var sbNm = document.getElementById('sb-name');   if (sbNm) sbNm.textContent = _profile.name;
-        if (typeof initAdminApp === 'function') initAdminApp();
-        setTimeout(function() { try { if (typeof _ghlInit === 'function') _ghlInit(); } catch(e) {} }, 500);
+        var sbNm = document.getElementById('sb-name'); if (sbNm) sbNm.textContent = _profile.name;
+        try { if (typeof _adminAvatarPaint === 'function') _adminAvatarPaint(_profile.initials); } catch(e) {}
       }
-      // No cache → leave _authStatus at 'checking' (splash visible). The
-      // fsAuthOnStateChange handler below resolves it to authenticated or
-      // unauthenticated once Firebase reports back.
-    } catch(e) {
-      // If localStorage is wedged we still don't render login here. Wait for
-      // Firebase to confirm — the timeout below will fall through to login
-      // if nothing arrives.
-    }
+    } catch(e) {}
+    // Stay on the splash. Firebase decides everything below.
   })();
 
-  // Firebase Auth state — drives the final authStatus resolution.
-  //
-  // The handler distinguishes between the "Firebase just warming up" null
-  // and a "definitely signed out" null by only acting on null when we're
-  // still in the 'checking' state AND no localStorage cache exists. If a
-  // cache exists we trust it (mirrors the prior behavior that fixed the
-  // mid-session auto-revoke bug).
-  //
-  // The hard timeout below ensures the splash never spins forever — if
-  // Firebase doesn't respond within 4 seconds AND there's no cache, fall
-  // through to the login form so users without a session can sign in.
+  // Firebase Auth state — the SINGLE source of authorization.
+  //   valid admin user  → show the app (initAdminApp runs once)
+  //   null / non-admin   → show the login form
+  // No localStorage shortcut. No cache-based access. Opening the URL with
+  // a stale localStorage flag but no valid Firebase token lands on login.
   var _firebaseAuthResolved = false;
   fsAuthOnStateChange(function(user) {
+    _firebaseAuthResolved = true;
     if (user && ADMIN_PROFILES[user.email]) {
-      _firebaseAuthResolved = true;
+      // Real, authorized session.
       _showAdminApp(user);
-      return;
-    }
-    // Null or non-admin user.
-    if (user === null) {
-      _firebaseAuthResolved = true;
-      // If we already showed the admin app from a cached session, don't
-      // forcibly sign the user out — token may have expired but the cached
-      // session is still meaningful (same behavior as before). They can
-      // explicitly Sign Out if they need a fresh login.
-      if (_authStatus === 'checking') {
-        try {
-          var hasCache = !!JSON.parse(localStorage.getItem('cq_admin_user') || 'null');
-          if (!hasCache) _setAuthStatus('unauthenticated');
-        } catch(e) { _setAuthStatus('unauthenticated'); }
+    } else {
+      // Either no session, or a session whose email isn't an admin.
+      // If a non-admin somehow has a Firebase session, sign them out so a
+      // client token can't linger in the admin tab.
+      if (user && !ADMIN_PROFILES[user.email]) {
+        try { if (typeof fsAuthSignOut === 'function') fsAuthSignOut(); } catch(e) {}
       }
+      // Clear the stale pre-fill cache — it's not a valid admin session.
+      try { localStorage.removeItem('cq_admin_user'); } catch(e) {}
+      _setAuthStatus('unauthenticated');
     }
   });
 
-  // Splash watchdog — guard against the case where Firebase Auth never fires
-  // (offline, blocked, network hiccup). 4s is enough to feel responsive but
-  // long enough to avoid racing the cold Firebase init on slow connections.
+  // Splash watchdog — if Firebase Auth never reports back (offline, blocked,
+  // SDK failed to load) we must NOT silently grant access. Fall through to
+  // the login form so the only way in is a real sign-in.
   setTimeout(function() {
-    if (_authStatus === 'checking') {
-      try {
-        var hasCache = !!JSON.parse(localStorage.getItem('cq_admin_user') || 'null');
-        // Cache exists but Firebase never responded — the cache decision
-        // already wins via fast-restore; nothing to do here.
-        if (!hasCache) _setAuthStatus('unauthenticated');
-      } catch(e) { _setAuthStatus('unauthenticated'); }
+    if (!_firebaseAuthResolved && _authStatus === 'checking') {
+      _setAuthStatus('unauthenticated');
     }
-  }, 4000);
+  }, 6000);
 
   // Re-render overview once DOM is fully ready
   document.addEventListener('DOMContentLoaded', function() {
@@ -4020,35 +4005,48 @@
           switchAdminSection(lastSection, navEl);
         }
       } catch(e) {}
-      // Ops task overdue detection — run once on load, then every 60 seconds
-      try { updateOverdueTaskStatuses(); } catch(e) {}
-      setInterval(function() { try { updateOverdueTaskStatuses(); } catch(e) {} }, 60000);
-      // Auto follow-up creator — runs on page load + hourly. Creates a
-      // CRITICAL "Follow Up With Client" task on Mon/Wed/Fri for any
-      // client we haven't contacted since the previous required touchpoint.
-      // De-duped: never creates two open follow-ups for the same client.
-      try { if (typeof _fuRunAutoCreator === 'function') _fuRunAutoCreator(); } catch(e) {}
-      setInterval(function() { try { if (typeof _fuRunAutoCreator === 'function') _fuRunAutoCreator(); } catch(e) {} }, 3600000);
-      // Polling fallback — re-fetch open client dashboard every 15s in case Firestore listener misses an update
-      // Uses targeted update only — never does a full re-render
-      setInterval(function() {
-        if (!selectedClientId) return;
-        try {
-          fsGetDash(selectedClientId).then(function(fsD) {
-            if (!fsD) return;
-            var localD = getDashData(selectedClientId);
-            var fsTs = fsD._updatedAt || 0;
-            var localTs = localD._updatedAt || 0;
-            if (fsTs > localTs) {
-              saveDashData(selectedClientId, fsD, true); // update localStorage only, no re-write to Firestore
-              _syncUpdateOpenClient(selectedClientId, 'poll-fallback');
-              console.log('[Sync] poll caught update for', selectedClientId, '| by:', fsD._updatedBy||'?');
-            }
-          }).catch(function(){});
-        } catch(e) {}
-      }, 15000);
+      // Background jobs now start from _startAdminBackgroundJobs(), invoked
+      // by _showAdminApp once Firebase confirms the session — they used to
+      // be gated on `if (currentAdmin)` here, but currentAdmin is null at
+      // DOMContentLoaded now that auth is validated asynchronously, so this
+      // block would never run. Calling the starter here too is harmless
+      // (idempotent) in the rare case currentAdmin is already set.
+      try { _startAdminBackgroundJobs(); } catch(e) {}
     }
   });
+
+  // Overdue detection, follow-up automation, and the dashboard poll-fallback.
+  // Idempotent — guarded by _adminJobsStarted so repeated calls (DOMContentLoaded
+  // + _showAdminApp) only wire the intervals once.
+  var _adminJobsStarted = false;
+  function _startAdminBackgroundJobs() {
+    if (_adminJobsStarted) return;
+    _adminJobsStarted = true;
+    // Ops task overdue detection — run once, then every 60 seconds
+    try { updateOverdueTaskStatuses(); } catch(e) {}
+    setInterval(function() { try { updateOverdueTaskStatuses(); } catch(e) {} }, 60000);
+    // Auto follow-up creator — page load + hourly (Mon/Wed/Fri touchpoints)
+    try { if (typeof _fuRunAutoCreator === 'function') _fuRunAutoCreator(); } catch(e) {}
+    setInterval(function() { try { if (typeof _fuRunAutoCreator === 'function') _fuRunAutoCreator(); } catch(e) {} }, 3600000);
+    // Polling fallback — re-fetch open client dashboard every 15s in case
+    // the Firestore listener misses an update. Targeted update only.
+    setInterval(function() {
+      if (!selectedClientId) return;
+      try {
+        fsGetDash(selectedClientId).then(function(fsD) {
+          if (!fsD) return;
+          var localD = getDashData(selectedClientId);
+          var fsTs = fsD._updatedAt || 0;
+          var localTs = localD._updatedAt || 0;
+          if (fsTs > localTs) {
+            saveDashData(selectedClientId, fsD, true);
+            _syncUpdateOpenClient(selectedClientId, 'poll-fallback');
+            console.log('[Sync] poll caught update for', selectedClientId, '| by:', fsD._updatedBy||'?');
+          }
+        }).catch(function(){});
+      } catch(e) {}
+    }, 15000);
+  }
 
   // ── SECTION SWITCHING ─────────────────────────────────────────────────
   const sectionLabels = { overview:'Overview', clients:'Clients', messages:'GHL', analytics:'Analytics', pipeline:'Pipeline', settings:'Settings', relationships:'Bank Relationships', todo:'Daily To-Do' };

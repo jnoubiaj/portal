@@ -188,20 +188,28 @@ function fsListenMessages(clientId, callback) {
 
 // ── FIREBASE AUTH ─────────────────────────────────────────────────────────
 
-async function fsAuthSignIn(email, password) {
-  // LOCAL persistence: auth token lives in browser-scoped storage (IndexedDB
-  // by default) and survives refreshes, hard-reloads, and the tab being
-  // closed and reopened. SESSION persistence was used previously to prevent
-  // admin/client tab clobbering, but that came at the cost of admins being
-  // signed out on every refresh — which is the more common scenario by far.
+async function fsAuthSignIn(email, password, remember) {
+  // Persistence is controlled by the caller's "Remember Me" choice:
+  //   remember === true  → LOCAL   — token lives in IndexedDB and survives
+  //                        the browser being fully closed and reopened
+  //                        (the "stay logged in for weeks" path).
+  //   remember !== true  → SESSION — token lives only for the current
+  //                        browser session. Survives refreshes and
+  //                        reopening the tab, but is cleared when the
+  //                        browser is fully closed. Secure default for
+  //                        shared machines: opening the link in a fresh
+  //                        browser will NOT auto-authenticate.
   //
-  // Tab-collision is still handled portal-side: admin.html validates
-  // ADMIN_PROFILES[user.email] before showing the admin app; dashboard.html
-  // identifies the active client via session.clientId in localStorage rather
-  // than the Firebase user email, so an admin token leaking into the client
-  // tab doesn't break the client portal. Phone-auth in login.html still
-  // overrides this persistence for client sign-in.
-  try { await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch(e) {}
+  // Either way the admin app never renders from a cached localStorage flag.
+  // admin.html waits for Firebase onAuthStateChanged to confirm a valid
+  // token before showing anything; persistence only decides whether that
+  // token still exists after the browser closes. Tab-collision is still
+  // handled portal-side (admin.html validates ADMIN_PROFILES; dashboard.html
+  // keys off session.clientId, not the Firebase email).
+  var mode = remember
+    ? firebase.auth.Auth.Persistence.LOCAL
+    : firebase.auth.Auth.Persistence.SESSION;
+  try { await firebase.auth().setPersistence(mode); } catch(e) {}
   return firebase.auth().signInWithEmailAndPassword(email, password);
 }
 
