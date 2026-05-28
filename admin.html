@@ -84,6 +84,46 @@
       pointer-events: none; opacity: 0.7;
     }
 
+    #admin-login .al-wrap {
+      position: relative; z-index: 2;
+      width: 100%; max-width: 420px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* Brand quote above the card — fills the empty space, premium tone */
+    #admin-login .al-quote {
+      width: 100%; max-width: 520px;
+      text-align: center; margin-bottom: 28px;
+      padding: 0 12px;
+    }
+    #admin-login .al-quote-mark {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 48px; line-height: 1;
+      color: rgba(34,167,240,0.45);
+      font-weight: 800; margin-bottom: -8px;
+      user-select: none;
+    }
+    #admin-login .al-quote-text {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 22px; font-weight: 600;
+      font-style: italic;
+      letter-spacing: -0.012em; line-height: 1.35;
+      color: rgba(255,255,255,0.82);
+      margin-bottom: 14px;
+    }
+    #admin-login .al-quote-text .al-q-blue { color: #22A7F0; font-style: normal; font-weight: 700; }
+    #admin-login .al-quote-by {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(255,255,255,0.42);
+    }
+    #admin-login .al-quote-by::before,
+    #admin-login .al-quote-by::after {
+      content: ''; width: 26px; height: 1px;
+      background: rgba(255,255,255,0.2);
+    }
+
     #admin-login .al-card {
       position: relative; z-index: 2;
       width: 100%; max-width: 420px;
@@ -196,6 +236,9 @@
       #admin-login .al-card { padding: 32px 22px 26px; border-radius: 18px; }
       #admin-login .al-logo img { height: 60px; }
       #admin-login .al-title { font-size: 22px; }
+      #admin-login .al-quote-text { font-size: 17px; }
+      #admin-login .al-quote-mark { font-size: 36px; margin-bottom: -6px; }
+      #admin-login .al-quote { margin-bottom: 22px; }
     }
 
     /* ── AUTH SPLASH ───────────────────────────────────
@@ -3336,6 +3379,12 @@
      #al-email, #al-pass, #al-remember, #al-error, .btn-login, and the
      adminLogin() click handler is unchanged. -->
 <div id="admin-login">
+  <div class="al-wrap">
+    <div class="al-quote">
+      <div class="al-quote-mark">&ldquo;</div>
+      <div class="al-quote-text">Where credit becomes <span class="al-q-blue">capital</span>.</div>
+      <div class="al-quote-by">CapitalQuest Consulting</div>
+    </div>
   <div class="al-card">
     <div class="al-logo">
       <img src="Brand_assets/CapitalQuest%20Consulting-R-02.png" alt="CapitalQuest" />
@@ -3371,6 +3420,7 @@
     <div class="al-help">
       Stays signed in across browser restarts. Uncheck on shared computers — your session ends when the browser closes.
     </div>
+  </div>
   </div>
   <div class="al-footer">© CapitalQuest Consulting · Internal Tool</div>
 </div>
