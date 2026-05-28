@@ -2806,6 +2806,388 @@
   .ov-kpi-num { letter-spacing: -0.02em; }
   .a-ch2-name-text { letter-spacing: -0.015em; }
 
+  /* ════════════════════════════════════════════════════════════════════
+     PHASE B — PREMIUM SAAS VISUAL LANGUAGE (CSS only, additive, no JS)
+     Substantially bigger spacing + typography + modern card system.
+     Linear / Stripe / Mercury / Attio inspiration. Safe to revert by
+     deleting this block — no HTML or JS depends on any new class name.
+     ════════════════════════════════════════════════════════════════════ */
+
+  /* ── 1. Refined color tokens (only adds, doesn't replace existing) ─── */
+  :root {
+    --b-surface:        #ffffff;
+    --b-surface-2:      #fafbfc;
+    --b-surface-3:      #f5f7fa;
+    --b-border-subtle:  rgba(10,22,40,0.06);
+    --b-border-soft:    rgba(10,22,40,0.10);
+    --b-text-strong:    #0A1628;
+    --b-text-body:      #334155;
+    --b-text-muted:     #64748b;
+    --b-text-soft:      #94a3b8;
+    --b-accent:         #22A7F0;
+    --b-accent-soft:    rgba(34,167,240,0.12);
+    --b-accent-tint:    rgba(34,167,240,0.06);
+    --b-success:        #10b981;
+    --b-warn:           #f59e0b;
+    --b-danger:         #ef4444;
+    --b-shadow-1:       0 1px 2px rgba(10,22,40,0.04);
+    --b-shadow-2:       0 1px 3px rgba(10,22,40,0.05), 0 8px 24px rgba(10,22,40,0.06);
+    --b-shadow-3:       0 1px 3px rgba(10,22,40,0.06), 0 14px 36px rgba(10,22,40,0.10);
+    --b-radius-sm:      8px;
+    --b-radius:         14px;
+    --b-radius-lg:      18px;
+    --b-radius-xl:      22px;
+  }
+
+  /* ── 2. Background — slight warmth + texture (Stripe-ish) ─────────── */
+  .a-wrap,
+  .main-wrap,
+  body { background: var(--b-surface-3); }
+  .content-area,
+  .a-content,
+  .a-section { background: transparent; }
+
+  /* ── 3. Sidebar — premium feel ───────────────────────────────────── */
+  .a-sidebar {
+    box-shadow: inset -1px 0 0 rgba(255,255,255,0.04);
+  }
+  .a-sb-logo { padding: 26px 22px 20px; }
+  .a-sb-user { padding: 14px 16px; gap: 12px; }
+  .a-sb-uname { font-size: 13.5px; letter-spacing: -0.005em; }
+  .a-sb-urole { font-size: 11.5px; }
+  .a-sb-nav { padding: 14px 10px; }
+  .a-sb-label {
+    font-size: 10px; padding: 0 12px; margin: 18px 0 8px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.35); font-weight: 700;
+  }
+  .a-nav-item {
+    height: 38px; padding: 0 12px; gap: 11px;
+    font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,0.72);
+  }
+  .a-nav-item .a-nav-icon { width: 16px; height: 16px; opacity: 0.7; }
+  .a-nav-item.active { color: #fff; font-weight: 600; background: rgba(34,167,240,0.13); }
+  .a-nav-item.active .a-nav-icon { opacity: 1; color: var(--b-accent); }
+  .a-nav-badge {
+    height: 18px; min-width: 18px; padding: 0 6px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.02em;
+    background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.85);
+    border-radius: 999px; margin-left: auto;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .a-nav-badge.red { background: rgba(239,68,68,0.18); color: #fda4a4; }
+
+  /* ── 4. Top header bar ───────────────────────────────────────────── */
+  .top-header,
+  .a-top-header {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid var(--b-border-subtle);
+    box-shadow: none;
+  }
+  #a-page-title,
+  .page-title {
+    font-family: var(--font-h);
+    font-size: 18px; font-weight: 800;
+    letter-spacing: -0.02em; color: var(--b-text-strong);
+  }
+
+  /* ── 5. Cards — modern airy surface, no harsh borders ─────────────── */
+  .a-card,
+  .section-card,
+  .ov-table-card,
+  .ov-panel {
+    background: var(--b-surface);
+    border: 1px solid var(--b-border-subtle);
+    border-radius: var(--b-radius-lg);
+    box-shadow: var(--b-shadow-1);
+  }
+  .a-card:hover { box-shadow: var(--b-shadow-2); }
+  .a-card-hdr {
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--b-border-subtle);
+  }
+  .a-card-title {
+    font-family: var(--font-h);
+    font-size: 14px; font-weight: 700;
+    letter-spacing: -0.005em; color: var(--b-text-strong);
+  }
+  .a-card-sub {
+    font-size: 11.5px; color: var(--b-text-muted);
+    margin-top: 2px; letter-spacing: 0.005em;
+  }
+  .a-card-btn {
+    height: 30px; padding: 0 13px;
+    font-size: 11.5px; font-weight: 600; letter-spacing: 0.01em;
+    background: var(--b-surface); color: var(--b-text-strong);
+    border: 1px solid var(--b-border-soft); border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(10,22,40,0.04);
+  }
+  .a-card-btn:hover {
+    background: var(--b-surface-3);
+    border-color: rgba(10,22,40,0.18);
+    box-shadow: 0 1px 2px rgba(10,22,40,0.06);
+  }
+
+  /* ── 6. KPI / Overview stat cards — Stripe-style hero numbers ──── */
+  .ov-kpi-card {
+    background: linear-gradient(180deg, #0A1628 0%, #0d1c33 100%);
+    padding: 22px 24px;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: var(--b-radius-lg);
+    box-shadow: 0 1px 3px rgba(10,22,40,0.08), 0 16px 36px rgba(10,22,40,0.12);
+  }
+  .ov-kpi-num {
+    font-family: var(--font-h);
+    font-size: 30px; font-weight: 800;
+    letter-spacing: -0.025em; line-height: 1.05;
+  }
+  .ov-kpi-label {
+    font-size: 11.5px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+  }
+  /* In-card stat values (Stage, Approved, Goal, Remaining, Active Apps) */
+  .a-cmd-stat-val {
+    font-family: var(--font-h);
+    font-size: 19px; font-weight: 800;
+    letter-spacing: -0.018em; line-height: 1.2;
+    color: var(--b-text-strong);
+  }
+  .a-cmd-stat-lbl {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--b-text-soft); margin-bottom: 5px;
+  }
+
+  /* ── 7. Client header v2 — bigger, calmer, modern ─────────────── */
+  .a-ch2 { padding: 18px 24px; gap: 18px; }
+  .a-ch2-identity { gap: 5px; }
+  .a-ch2-name { gap: 10px; }
+  .a-ch2-name-text {
+    font-family: var(--font-h);
+    font-size: 22px; font-weight: 800;
+    letter-spacing: -0.022em; color: var(--b-text-strong);
+  }
+  .a-ch2-state {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    background: var(--b-accent-soft); color: var(--b-accent);
+    padding: 3px 8px; border-radius: 5px;
+  }
+  .a-ch2-stats { gap: 18px; }
+  .a-ch2-stat-val {
+    font-family: var(--font-h);
+    font-size: 14.5px; font-weight: 800; letter-spacing: -0.012em;
+  }
+  .a-ch2-stat-lbl {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--b-text-soft);
+  }
+
+  /* ── 8. Client list — HubSpot/Linear style rows ──────────────── */
+  .a-client-row-v2 {
+    padding: 11px 14px; gap: 11px;
+    border-radius: 11px; margin: 1px 0;
+    transition: background 0.13s ease, transform 0.09s ease;
+  }
+  .a-client-row-v2:hover { background: rgba(34,167,240,0.05); }
+  .a-client-row-v2.active {
+    background: rgba(34,167,240,0.10);
+    box-shadow: inset 3px 0 0 var(--b-accent);
+  }
+  .a-crv2-avatar {
+    width: 32px; height: 32px;
+    font-family: var(--font-h); font-size: 11.5px;
+    font-weight: 700; letter-spacing: 0.02em;
+    box-shadow: 0 1px 3px rgba(10,22,40,0.10);
+  }
+  .a-crv2-name {
+    font-size: 13.5px; font-weight: 600;
+    letter-spacing: -0.005em; color: var(--b-text-strong);
+  }
+  .a-crv2-sub { font-size: 11px; color: var(--b-text-muted); }
+  .a-crv2-fico {
+    font-weight: 700; color: var(--b-accent);
+    padding: 1px 7px; border-radius: 4px;
+    background: var(--b-accent-tint);
+    font-size: 10.5px;
+  }
+  .a-crv2-stage {
+    font-size: 10px; color: var(--b-text-muted);
+    background: var(--b-surface-3);
+    padding: 2px 7px; border-radius: 4px;
+    font-weight: 600;
+  }
+  .a-crv2-days {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.03em;
+    padding: 3px 8px; border-radius: 5px;
+  }
+  .a-crv2-days.ok   { background: rgba(16,185,129,0.10); color: #047857; }
+  .a-crv2-days.warn { background: rgba(245,158,11,0.10); color: #b45309; }
+  .a-crv2-days.hot  { background: rgba(239,68,68,0.10); color: #b91c1c; }
+  .a-cl-stage-hdr {
+    padding: 12px 14px 6px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--b-text-soft);
+  }
+
+  /* ── 9. Right sidebar — generous breathing room ──────────────── */
+  .a-sp-right { gap: 14px; }
+  .a-sp-right .a-card-hdr {
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--b-border-subtle);
+  }
+  .a-qi-row {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--b-border-subtle);
+  }
+  .a-qi-row:last-child { border-bottom: none; }
+  .a-qi-label {
+    font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--b-text-soft);
+  }
+  .a-qi-val {
+    font-size: 13px; font-weight: 600;
+    color: var(--b-text-strong); letter-spacing: -0.005em;
+  }
+
+  /* ── 10. Notes — modern CRM feel ─────────────────────────────── */
+  .a-sn-list { padding: 6px 0; gap: 10px; }
+  .a-sn-input {
+    border-radius: 10px; padding: 10px 12px;
+    font-size: 12.5px; line-height: 1.5;
+    border: 1px solid var(--b-border-soft);
+    background: var(--b-surface-2);
+    box-shadow: inset 0 1px 2px rgba(10,22,40,0.03);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .a-sn-input:focus {
+    border-color: var(--b-accent);
+    background: var(--b-surface);
+    outline: none;
+  }
+  .a-sn-add {
+    height: 32px; padding: 0 14px;
+    border-radius: 8px; border: none;
+    background: var(--b-text-strong); color: #fff;
+    font-family: var(--font-h); font-size: 11.5px;
+    font-weight: 700; letter-spacing: 0.02em;
+    transition: background 0.14s, transform 0.1s;
+  }
+  .a-sn-add:hover { background: #1a2e4d; }
+  .a-sn-add:active { transform: scale(0.97); }
+
+  /* ── 11. Funding application row (compact + scannable) ─────── */
+  .fs-bank-row {
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: var(--b-surface);
+    border: 1px solid var(--b-border-subtle);
+    margin-bottom: 8px;
+    box-shadow: var(--b-shadow-1);
+    transition: box-shadow 0.18s ease, border-color 0.14s ease;
+  }
+  .fs-bank-row:hover {
+    box-shadow: var(--b-shadow-2);
+    border-color: var(--b-border-soft);
+  }
+
+  /* ── 12. Inputs / selects everywhere — premium focus ────────── */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  select {
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="search"]:focus,
+  input[type="number"]:focus,
+  input[type="tel"]:focus,
+  input[type="date"]:focus,
+  input[type="time"]:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--b-accent) !important;
+    box-shadow: 0 0 0 3px var(--b-accent-tint);
+  }
+
+  /* ── 13. Buttons — refined large primary ────────────────────── */
+  .btn-next-stage {
+    border-radius: 10px; padding: 0 16px; height: 38px;
+    font-family: var(--font-h); font-size: 12.5px;
+    font-weight: 700; letter-spacing: 0.01em;
+    box-shadow: 0 1px 2px rgba(10,22,40,0.06);
+  }
+  .btn-next-stage:hover {
+    box-shadow: 0 2px 6px rgba(10,22,40,0.10), 0 0 0 3px var(--b-accent-tint);
+  }
+  .a-header-btn {
+    height: 36px; border-radius: 10px; padding: 0 14px;
+    font-weight: 700; letter-spacing: 0.005em;
+  }
+
+  /* ── 14. Page-level workspace spacing ───────────────────────── */
+  .content-area,
+  .a-content { padding: 20px 22px 40px; }
+  .a-sp-workspace { gap: 14px; padding: 14px 22px 32px; }
+  .section-card { margin-bottom: 18px; }
+
+  /* ── 15. Section labels everywhere ──────────────────────────── */
+  .ov-table-title,
+  .card-title {
+    font-family: var(--font-h);
+    font-size: 14.5px; font-weight: 700;
+    letter-spacing: -0.005em; color: var(--b-text-strong);
+  }
+
+  /* ── 16. Tighter divider lines (replace heavy borders) ─────── */
+  .a-cl-list-wrap > * + *,
+  .a-section + .a-section { border-top-color: var(--b-border-subtle); }
+
+  /* ── 17. Welcome / hero areas keep dark surface for contrast ─ */
+  .ov-kpi-card .ov-kpi-num { color: #fff; }
+  .ov-kpi-card .ov-kpi-label { color: rgba(255,255,255,0.55); }
+
+  /* ── 18. Subtle accent rings on focused / interactive surfaces */
+  .a-cl-tab.active,
+  .a-filter-btn.active {
+    box-shadow: inset 0 -2px 0 var(--b-accent);
+  }
+
+  /* ── 19. Funding strategy cards (FSG) — refined ──────────── */
+  .fsg-round { border-radius: var(--b-radius); border: 1px solid var(--b-border-subtle); box-shadow: var(--b-shadow-1); }
+  .fsg-round:hover { box-shadow: var(--b-shadow-2); }
+  .fsg-section { border-radius: var(--b-radius); }
+
+  /* ── 20. Activity / notes panel polish ─────────────────────── */
+  .a-sn-msg, .a-sn-item, .a-sn-bubble {
+    background: var(--b-surface-2);
+    border: 1px solid var(--b-border-subtle);
+    border-radius: 12px;
+    padding: 11px 14px;
+  }
+
+  /* ── 21. Better mobile breathing room ──────────────────────── */
+  @media (max-width: 768px) {
+    .a-ch2 { padding: 14px 16px; gap: 12px; }
+    .a-ch2-name-text { font-size: 18px; }
+    .content-area, .a-content { padding: 14px 14px 32px; }
+    .a-sp-workspace { padding: 10px 14px 28px; gap: 12px; }
+    .a-card-hdr { padding: 14px 16px 10px; }
+    .a-card-title { font-size: 13.5px; }
+  }
+
 </style>
 </head>
 <body>
