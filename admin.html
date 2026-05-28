@@ -1622,6 +1622,26 @@
   .a-sp-right > #sp-right-notes { flex: 1 !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden; }
   .a-sp-right > #sp-right-notes > .a-sn-body { flex: 1 !important; min-height: 0 !important; height: auto !important; }
 
+  /* ── Collapsible right-sidebar cards ────────────────────────────────────
+     Chevron in the header toggles `.collapsed` on the card. Body hides;
+     header stays so the section is one click away. Notes also shrinks
+     to header-only when collapsed, so Snapshot+Notes can both be cleanly
+     stowed if Next Actions is the only thing the admin needs visible. */
+  .a-card.a-card-collapsible > .a-card-hdr { cursor: pointer; user-select: none; }
+  .a-card.a-card-collapsible > .a-card-hdr:hover { background: rgba(10,22,40,0.02); }
+  .a-card-chev {
+    width: 24px; height: 24px; border: none; background: transparent;
+    border-radius: 6px; color: var(--gray-400); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s, transform 0.18s;
+  }
+  .a-card-chev:hover { background: var(--gray-100); color: var(--navy); }
+  .a-card.a-card-collapsible.collapsed .a-card-chev { transform: rotate(-90deg); }
+  .a-card.a-card-collapsible.collapsed > .a-card-body,
+  .a-card.a-card-collapsible.collapsed > .a-sn-body { display: none !important; }
+  /* When Notes is collapsed, give the space back to the Snapshot/tasks above. */
+  .a-sp-right > #sp-right-notes.a-card-collapsible.collapsed { flex: 0 0 auto !important; }
+
   /* Sections */
   .a-sp-sec { border-bottom: 1px solid var(--gray-100); }
   .a-sp-sec:last-child { border-bottom: none; }
@@ -6140,51 +6160,69 @@
                (ops tasks + current-stage pipeline tasks). Card is intentionally
                empty here so we never flash legacy _d.tasks data on first paint or
                after a stage change. -->
-          <div class="a-card" id="sp-right-tasks-top">
-            <div class="a-card-hdr">
+          <div class="a-card a-card-collapsible" id="sp-right-tasks-top">
+            <div class="a-card-hdr" onclick="_aCardToggle(this, event)">
               <div class="a-card-hdrl">
                 <div class="a-card-title">Next Actions</div>
               </div>
               <div class="a-card-btns">
-                <button class="a-card-btn" onclick="opsOpenCreate('${id}')">+ Task</button>
+                <button class="a-card-btn" onclick="event.stopPropagation();opsOpenCreate('${id}')">+ Task</button>
+                <button class="a-card-chev" title="Collapse" onclick="event.stopPropagation();_aCardToggle(this.parentElement.parentElement, event)">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6"><path d="M19 9l-7 7-7-7"/></svg>
+                </button>
               </div>
             </div>
-            <div id="sp-right-tasks-body"></div>
+            <div class="a-card-body"><div id="sp-right-tasks-body"></div></div>
           </div>
 
-          <!-- CLIENT SNAPSHOT -->
-          <div class="a-card" id="sp-right-info">
-            <div class="a-card-hdr">
+          <!-- CLIENT SNAPSHOT (compact by default) -->
+          <div class="a-card a-card-collapsible" id="sp-right-info">
+            <div class="a-card-hdr" onclick="_aCardToggle(this, event)">
               <div class="a-card-hdrl">
                 <div class="a-card-title">Client Snapshot</div>
               </div>
               <div class="a-card-btns">
-                <button class="a-card-btn" onclick="showAdminProfileEdit('${id}')">Edit</button>
+                <button class="a-card-btn" onclick="event.stopPropagation();showAdminProfileEdit('${id}')">Edit</button>
+                <button class="a-card-chev" title="Collapse" onclick="event.stopPropagation();_aCardToggle(this.parentElement.parentElement, event)">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6"><path d="M19 9l-7 7-7-7"/></svg>
+                </button>
               </div>
             </div>
+            <div class="a-card-body">
             ${_ob ? `
               ${_fico ? `<div class="a-qi-row"><span class="a-qi-label">FICO</span><span id="snap-fico-${id}" class="a-qi-val" style="color:${Number(_fico)>=700?'#059669':Number(_fico)>=680?'#d97706':'#dc2626'};font-weight:800;font-size:14px">${_fico}</span></div>` : ''}
               <div class="a-qi-row"><span class="a-qi-label">Phone</span><span class="a-qi-val" style="display:flex;align-items:center;gap:6px">${_ob.phone || c.phone || '—'}${(_ob.phone || c.phone) ? `<button class="ghl-call-btn" onclick="showCallModal('${id}','${_escHtml(_ob.phone || c.phone || '')}')"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>Call</button>` : ''}</span></div>
               <div class="a-qi-row"><span class="a-qi-label">Email</span><span class="a-qi-val">${c.email || '—'}</span></div>
-              ${_ob.bizName ? `<div class="a-qi-row"><span class="a-qi-label">Business</span><span class="a-qi-val">${_ob.bizName}</span></div>` : ''}
-              ${_ob.industry ? `<div class="a-qi-row"><span class="a-qi-label">Industry</span><span class="a-qi-val">${_ob.industry}</span></div>` : ''}
-              ${_ob.monthlySales ? `<div class="a-qi-row"><span class="a-qi-label">Mo. Revenue</span><span class="a-qi-val">${_fmtMoney(Number(_ob.monthlySales))}</span></div>` : ''}
               ${_ob.loanAmount ? `<div class="a-qi-row"><span class="a-qi-label">Loan Ask</span><span class="a-qi-val">${_fmtMoney(Number(_ob.loanAmount))}</span></div>` : ''}
-              ${_ob.ein ? `<div class="a-qi-row"><span class="a-qi-label">EIN</span><span class="a-qi-val">${_ob.ein}</span></div>` : ''}`
+              <div id="snap-extras-${id}" style="display:none">
+                ${_ob.bizName ? `<div class="a-qi-row"><span class="a-qi-label">Business</span><span class="a-qi-val">${_ob.bizName}</span></div>` : ''}
+                ${_ob.industry ? `<div class="a-qi-row"><span class="a-qi-label">Industry</span><span class="a-qi-val">${_ob.industry}</span></div>` : ''}
+                ${_ob.monthlySales ? `<div class="a-qi-row"><span class="a-qi-label">Mo. Revenue</span><span class="a-qi-val">${_fmtMoney(Number(_ob.monthlySales))}</span></div>` : ''}
+                ${_ob.ein ? `<div class="a-qi-row"><span class="a-qi-label">EIN</span><span class="a-qi-val">${_ob.ein}</span></div>` : ''}
+                ${_ob.bizType ? `<div class="a-qi-row"><span class="a-qi-label">Business Type</span><span class="a-qi-val">${_ob.bizType}</span></div>` : ''}
+                ${_ob.annualIncome ? `<div class="a-qi-row"><span class="a-qi-label">Annual Income</span><span class="a-qi-val">${_fmtMoney(Number(_ob.annualIncome))}</span></div>` : ''}
+              </div>`
             : `<div style="font-size:12px;color:var(--gray-400);margin-bottom:10px">Onboarding not submitted yet.</div>`}
             ${typeof _fuSnapshotBlockHTML === 'function' ? _fuSnapshotBlockHTML(id) : ''}
-            <button onclick="showClientFullProfile('${id}')" style="width:100%;margin-top:10px;height:30px;border-radius:7px;border:1.5px solid var(--navy);background:transparent;font-family:var(--font-h);font-size:11px;font-weight:700;color:var(--navy);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--navy)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">View Full Profile</button>
+            ${_ob && (_ob.bizName || _ob.industry || _ob.monthlySales || _ob.ein || _ob.bizType || _ob.annualIncome) ? `<button id="snap-toggle-${id}" onclick="_snapToggleExtras('${id}', this)" style="width:100%;margin-top:8px;height:28px;border-radius:7px;border:1px solid var(--gray-200);background:var(--gray-50);font-family:var(--font-h);font-size:11px;font-weight:700;color:var(--gray-500);cursor:pointer">View More</button>` : ''}
+            <button onclick="showClientFullProfile('${id}')" style="width:100%;margin-top:6px;height:30px;border-radius:7px;border:1.5px solid var(--navy);background:transparent;font-family:var(--font-h);font-size:11px;font-weight:700;color:var(--navy);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--navy)';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">View Full Profile</button>
+            </div>
           </div>
 
           <!-- INTERNAL ADMIN NOTES -->
-          <div class="a-card" id="sp-right-notes">
-            <div class="a-card-hdr">
+          <div class="a-card a-card-collapsible" id="sp-right-notes">
+            <div class="a-card-hdr" onclick="_aCardToggle(this, event)">
               <div class="a-card-hdrl">
                 <div class="a-card-title">Notes</div>
                 <div class="a-card-sub">Internal notes for this client</div>
               </div>
+              <div class="a-card-btns">
+                <button class="a-card-chev" title="Collapse" onclick="event.stopPropagation();_aCardToggle(this.parentElement.parentElement, event)">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6"><path d="M19 9l-7 7-7-7"/></svg>
+                </button>
+              </div>
             </div>
-            <div class="a-sn-body">
+            <div class="a-sn-body a-card-body">
               <div class="a-sn-list" id="sidebar-notes-list-${id}">
                 ${renderSidebarNotes(id)}
               </div>
@@ -6204,6 +6242,9 @@
         </div><!-- /a-sp-right -->
 
       </div><!-- /a-sp-workspace -->`;
+
+    // Restore the admin's per-card collapse choices for this sidebar
+    try { _aRestoreSidebarCollapse(); } catch(e) {}
 
     // Start real-time message listener for this client
     _listenMsgs(id);
@@ -12734,6 +12775,45 @@
     document.body.appendChild(modal);
     modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
   }
+
+  // ── Right-sidebar card collapse + Snapshot "View More" ────────────────
+  // Toggles a single card's `.collapsed` state and persists the choice per
+  // card id so it survives client switches + refreshes. Wired by inline
+  // header onclick + chevron onclick. The header click ignores presses
+  // inside buttons inside the header so action buttons (+ Task, Edit)
+  // still work normally.
+  function _aCardToggle(hdrOrCard, ev) {
+    if (ev && ev.target && ev.target.closest && ev.target.closest('button.a-card-btn')) return;
+    var card = hdrOrCard && hdrOrCard.classList && hdrOrCard.classList.contains('a-card')
+      ? hdrOrCard : (hdrOrCard && hdrOrCard.closest ? hdrOrCard.closest('.a-card') : null);
+    if (!card) return;
+    card.classList.toggle('collapsed');
+    try {
+      var st = JSON.parse(localStorage.getItem('cq_sidebar_collapse') || '{}');
+      st[card.id] = card.classList.contains('collapsed');
+      localStorage.setItem('cq_sidebar_collapse', JSON.stringify(st));
+    } catch(e) {}
+  }
+  function _aRestoreSidebarCollapse() {
+    try {
+      var st = JSON.parse(localStorage.getItem('cq_sidebar_collapse') || '{}');
+      Object.keys(st).forEach(function(id) {
+        if (!st[id]) return;
+        var el = document.getElementById(id);
+        if (el && el.classList.contains('a-card-collapsible')) el.classList.add('collapsed');
+      });
+    } catch(e) {}
+  }
+  function _snapToggleExtras(clientId, btn) {
+    var box = document.getElementById('snap-extras-' + clientId);
+    if (!box) return;
+    var shown = box.style.display !== 'none';
+    box.style.display = shown ? 'none' : '';
+    if (btn) btn.textContent = shown ? 'View More' : 'View Less';
+  }
+  window._aCardToggle = _aCardToggle;
+  window._snapToggleExtras = _snapToggleExtras;
+  window._aRestoreSidebarCollapse = _aRestoreSidebarCollapse;
 
   function showAdminProfileEdit(clientId, _recovered) {
     const _c = getClient(clientId) || {};
