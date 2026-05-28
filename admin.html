@@ -55,20 +55,148 @@
     * { touch-action: manipulation; }
     input, select, textarea { font-size: 16px !important; }
 
-    /* ── LOGIN ─────────────────────────────────── */
-    /* Default-hidden so it can never flash on initial paint. Only the auth
-       handler explicitly sets display:flex when login is genuinely required
-       (no cached session at all, or after the grace period confirms signout). */
+    /* ══════════════════════════════════════════════════════════
+       ADMIN LOGIN — centered card on dark gradient background
+       Single box, everything centered. Brand background + glow
+       behind, premium glass card in the middle.
+       ══════════════════════════════════════════════════════════ */
     #admin-login {
       min-height: 100vh;
       display: none;
       align-items: center;
       justify-content: center;
-      background: var(--navy);
-      background-image: radial-gradient(ellipse at 20% 50%, rgba(34,167,240,0.12) 0%, transparent 60%),
-                        radial-gradient(ellipse at 80% 20%, rgba(26,58,107,0.4) 0%, transparent 50%);
+      padding: 24px;
+      background: #070F1E;
+      background-image:
+        radial-gradient(circle at 22% 26%, rgba(34,167,240,0.18) 0%, transparent 55%),
+        radial-gradient(circle at 78% 78%, rgba(26,58,107,0.55) 0%, transparent 60%),
+        linear-gradient(180deg, #070F1E 0%, #0a1428 100%);
+      position: relative; overflow: hidden;
+      color: #fff;
     }
     #admin-login.show { display: flex; }
+    #admin-login::before {
+      content: ''; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(34,167,240,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,167,240,0.035) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none; opacity: 0.7;
+    }
+
+    #admin-login .al-card {
+      position: relative; z-index: 2;
+      width: 100%; max-width: 420px;
+      padding: 44px 40px 36px;
+      background: rgba(13, 27, 48, 0.85);
+      backdrop-filter: blur(14px) saturate(180%);
+      -webkit-backdrop-filter: blur(14px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.02) inset;
+      text-align: center;
+    }
+    #admin-login .al-logo {
+      display: flex; justify-content: center;
+      margin-bottom: 22px; padding-bottom: 22px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    #admin-login .al-logo img {
+      height: 72px;
+      filter: brightness(0) invert(1);
+      image-rendering: -webkit-optimize-contrast;
+    }
+    #admin-login .al-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #22A7F0; background: rgba(34,167,240,0.12);
+      border: 1px solid rgba(34,167,240,0.20);
+      padding: 5px 12px; border-radius: 999px;
+      margin-bottom: 18px;
+    }
+    #admin-login .al-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 28px; font-weight: 800; color: #fff;
+      letter-spacing: -0.028em; line-height: 1.1;
+      margin-bottom: 8px;
+    }
+    #admin-login .al-sub {
+      font-size: 14px; color: rgba(255,255,255,0.5);
+      margin-bottom: 30px; line-height: 1.5;
+    }
+    #admin-login .al-fg { margin-bottom: 16px; text-align: left; }
+    #admin-login .al-flabel {
+      display: block; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: rgba(255,255,255,0.45); margin-bottom: 8px;
+    }
+    #admin-login .al-finput {
+      width: 100%; height: 48px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.10);
+      border-radius: 11px; padding: 0 14px;
+      font-family: 'Inter', sans-serif; font-size: 14px; color: #fff;
+      outline: none; transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    #admin-login .al-finput::placeholder { color: rgba(255,255,255,0.22); }
+    #admin-login .al-finput:focus {
+      border-color: #22A7F0;
+      background: rgba(34,167,240,0.07);
+      box-shadow: 0 0 0 3px rgba(34,167,240,0.14);
+    }
+    #admin-login .al-remember {
+      display: flex; align-items: flex-start; gap: 10px;
+      margin: 4px 0 20px; cursor: pointer; user-select: none; text-align: left;
+    }
+    #admin-login .al-remember input[type="checkbox"] {
+      width: 16px; height: 16px; margin-top: 2px;
+      accent-color: #22A7F0; flex-shrink: 0;
+    }
+    #admin-login .al-remember span {
+      font-size: 12.5px; color: rgba(255,255,255,0.55); line-height: 1.5; font-weight: 500;
+    }
+    #admin-login .lf-error {
+      font-size: 12.5px; color: #fda4a4;
+      background: rgba(239,68,68,0.10);
+      border: 1px solid rgba(239,68,68,0.20);
+      border-radius: 9px; padding: 10px 12px;
+      margin-bottom: 14px; display: none;
+      text-align: left;
+    }
+    #admin-login .lf-error.show { display: block; }
+    #admin-login .btn-login {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; height: 50px;
+      background: #22A7F0; color: #fff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px; font-weight: 700; letter-spacing: 0.01em;
+      border: none; border-radius: 12px; cursor: pointer;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 6px 24px rgba(34,167,240,0.35);
+    }
+    #admin-login .btn-login:hover {
+      background: #1a8fd4; transform: translateY(-1px);
+      box-shadow: 0 10px 32px rgba(34,167,240,0.42);
+    }
+    #admin-login .btn-login:active { transform: translateY(0); }
+    #admin-login .btn-login:disabled {
+      opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none;
+    }
+    #admin-login .al-help {
+      font-size: 11.5px; color: rgba(255,255,255,0.32);
+      line-height: 1.55; margin-top: 16px;
+    }
+    #admin-login .al-footer {
+      position: absolute; bottom: 18px; left: 0; right: 0;
+      text-align: center; z-index: 2;
+      font-size: 12px; color: rgba(255,255,255,0.25);
+    }
+
+    @media (max-width: 480px) {
+      #admin-login .al-card { padding: 32px 22px 26px; border-radius: 18px; }
+      #admin-login .al-logo img { height: 60px; }
+      #admin-login .al-title { font-size: 22px; }
+    }
 
     /* ── AUTH SPLASH ───────────────────────────────────
        Shown immediately on page load (display:flex by default).
@@ -3202,38 +3330,49 @@
   <div class="admin-splash-spinner"></div>
 </div>
 
-<!-- ── LOGIN ─────────────────────────────────────────────────────────
-     Hidden by default via CSS (display:none). Only revealed by adding the
-     `.show` class — set from the auth handler when login is genuinely needed. -->
+<!-- ── ADMIN LOGIN ───────────────────────────────────────────────────
+     Centered card on dark gradient. Hidden by default via CSS — only
+     revealed by .show class set from the auth handler. JS still finds
+     #al-email, #al-pass, #al-remember, #al-error, .btn-login, and the
+     adminLogin() click handler is unchanged. -->
 <div id="admin-login">
-  <div class="login-box">
-    <div class="login-logo">
+  <div class="al-card">
+    <div class="al-logo">
       <img src="Brand_assets/CapitalQuest%20Consulting-R-02.png" alt="CapitalQuest" />
     </div>
-    <div class="login-badge">
-      <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <div class="al-badge">
+      <svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
       Admin Portal
     </div>
-    <h1>Welcome back</h1>
-    <p>Sign in to manage your clients</p>
-    <div class="lf-group">
-      <label>Email Address</label>
-      <input type="email" id="al-email" placeholder="you@capitalquestfunding.com" autocomplete="username" />
+    <div class="al-title">Welcome back</div>
+    <div class="al-sub">Sign in to manage your clients</div>
+
+    <div class="al-fg">
+      <label class="al-flabel" for="al-email">Email Address</label>
+      <input class="al-finput" type="email" id="al-email" placeholder="you@capitalquestfunding.com" autocomplete="username" />
     </div>
-    <div class="lf-group">
-      <label>Password</label>
-      <input type="password" id="al-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin()" />
+    <div class="al-fg">
+      <label class="al-flabel" for="al-pass">Password</label>
+      <input class="al-finput" type="password" id="al-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin()" />
     </div>
-    <label for="al-remember" style="display:flex;align-items:center;gap:9px;margin:4px 0 6px;cursor:pointer;user-select:none">
-      <input type="checkbox" id="al-remember" checked style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;margin:0" />
-      <span style="font-size:13px;color:var(--gray-600);font-weight:500">Keep me signed in on this device</span>
+
+    <label class="al-remember" for="al-remember">
+      <input type="checkbox" id="al-remember" checked />
+      <span>Keep me signed in on this device</span>
     </label>
-    <div style="font-size:11px;color:var(--gray-400);line-height:1.5;margin-bottom:6px">
-      Stays signed in across browser restarts. Uncheck on shared computers — then your session ends when the browser closes.
-    </div>
+
     <div class="lf-error" id="al-error">Invalid email or password. Please try again.</div>
-    <button class="btn-login" onclick="adminLogin()">Sign In</button>
+
+    <button class="btn-login" onclick="adminLogin()">
+      <span>Sign In</span>
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6"><path d="M14 5l7 7-7 7M3 12h18"/></svg>
+    </button>
+
+    <div class="al-help">
+      Stays signed in across browser restarts. Uncheck on shared computers — your session ends when the browser closes.
+    </div>
   </div>
+  <div class="al-footer">© CapitalQuest Consulting · Internal Tool</div>
 </div>
 
 <!-- ── ADMIN APP ────────────────────────────────────────────────────── -->
