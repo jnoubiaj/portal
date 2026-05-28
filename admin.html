@@ -5801,7 +5801,10 @@
     const _appDenied    = _apps.filter(a => a.status === 'denied').length;
     const _appPending   = _apps.filter(a => a.status === 'pending' || a.status === 'applied').length;
     const _totalFunded  = _apps.filter(a => a.status === 'approved').reduce((s,a) => s + (Number(a.amount)||0), 0);
-    const _fundGoal     = _d.fundingGoal ? Number(_d.fundingGoal) : 0;
+    // Canonical funding goal: dashboard editor value (if set) → profile
+    // loanAmount → client roster loanAmount. One formula everywhere so
+    // Goal / Approved / Remaining stay consistent across screens.
+    const _fundGoal     = Number(_d.fundingGoal || _ob?.loanAmount || c.loanAmount || 0) || 0;
     const _fundPct      = _fundGoal > 0 ? Math.min(100, Math.round((_totalFunded / _fundGoal) * 100)) : (_totalFunded > 0 ? 100 : 0);
     const _fmtMoney     = n => n > 0 ? '$' + Number(n).toLocaleString() : '—';
 
@@ -13083,10 +13086,15 @@
       }
     }
 
+    // Numeric helper — accept "80,000" / "$80,000" / 80000, return clean Number
+    // (or 0 if empty). Firestore needs real numbers here, not formatted strings,
+    // so funding-math reads consistently. Empty strings stay "" to avoid forcing
+    // 0 into fields the admin intentionally cleared.
+    const numOrEmpty = v => { var s=(v||'').replace(/[^0-9.]/g,''); return s ? (Number(s) || 0) : ''; };
     Object.assign(o, {
       firstName: g('firstName'), lastName: g('lastName'),
       email: g('email'), phone: g('phone'), dob: dobVal,
-      annualIncome: cleanNum(g('annualIncome')), address: g('address'),
+      annualIncome: numOrEmpty(g('annualIncome')), address: g('address'),
       street: g('street'), city: g('city'), state: g('state'), zip: g('zip'),
       ssn: g('ssn') || o.ssn,
       maidenName: g('maidenName'),
@@ -13095,15 +13103,36 @@
       personalBanks,
       bizName: g('bizName'), dba: g('dba'), ein: g('ein'),
       bizType: g('bizType'), industry: g('industry'), employees: g('employees'),
-      monthlySales: cleanNum(g('monthlySales')), ownership: g('ownership'),
+      monthlySales: numOrEmpty(g('monthlySales')), ownership: g('ownership'),
       bizPhone: g('bizPhone'), dateEstablished: _parseDate(g('dateEstablished')),
-      loanAmount: cleanNum(g('loanAmount')), loanReason: g('loanReason'),
+      loanAmount: numOrEmpty(g('loanAmount')), loanReason: g('loanReason'),
       bizAddress: g('bizAddress'),
       bizBanks, bizCreditCards,
       experianEmail: g('experianEmail'), experianPass: g('experianPass'),
       pin: g('pin'), secQuestion: g('secQuestion'), secAnswer: g('secAnswer'),
       _updatedAt: Date.now(),
     });
+
+    // Sanitize for Firestore: strip undefined / NaN / functions anywhere in
+    // the object. invalid-argument errors come from undefined values nested
+    // inside o (e.g. legacy fields that got assigned `undefined` by a prior
+    // form). One pass before every db.collection().set() makes the write safe.
+    function _fsClean(v) {
+      if (v === undefined || v === null) return null;
+      if (typeof v === 'number' && isNaN(v)) return 0;
+      if (typeof v === 'function' || typeof v === 'symbol') return null;
+      if (Array.isArray(v)) return v.map(_fsClean).filter(x => x !== null || x === 0 || x === '');
+      if (typeof v === 'object') {
+        var out = {};
+        Object.keys(v).forEach(function(k) {
+          var cleaned = _fsClean(v[k]);
+          if (cleaned !== null) out[k] = cleaned;
+        });
+        return out;
+      }
+      return v;
+    }
+    var oClean = _fsClean(o) || {};
 
     // Disable Save button + show in-flight status while writes are pending
     const origLabel = saveBtn ? saveBtn.textContent : '';
@@ -13140,15 +13169,16 @@
       if (globalC) Object.keys(mirror).forEach(k => { if (mirror[k] !== undefined && mirror[k] !== '') globalC[k] = mirror[k]; });
     }
 
-    // 3) Firestore writes — all three collections, direct SDK calls so errors surface
+    // 3) Firestore writes — all three collections use the SANITIZED object so
+    //    legacy undefined / NaN values can no longer trigger invalid-argument.
     const fsErrors = [];
     if (idx >= 0) {
-      try { await db.collection('clients').doc(allClients[idx].id).set(allClients[idx]); }
+      try { await db.collection('clients').doc(allClients[idx].id).set(_fsClean(allClients[idx]) || {}); }
       catch(e) { fsErrors.push('client (' + (e.code || e.message || 'unknown') + ')'); }
     }
-    try { await db.collection('onboarding').doc(clientId).set(o); }
+    try { await db.collection('onboarding').doc(clientId).set(oClean); }
     catch(e) { fsErrors.push('onboarding (' + (e.code || e.message || 'unknown') + ')'); }
-    try { await db.collection('dashboards').doc(clientId).set({ profileData: o }, { merge: true }); }
+    try { await db.collection('dashboards').doc(clientId).set({ profileData: oClean }, { merge: true }); }
     catch(e) { fsErrors.push('dashboard (' + (e.code || e.message || 'unknown') + ')'); }
 
     // 4) Save FAILED — KEEP modal open, surface error, do NOT discard edits
