@@ -5263,10 +5263,15 @@
                 var _rTs   = data._updatedAt || 0;
                 if (_rTs >= _exDTs) {
                   if (data.currentStage !== undefined) _exD.currentStage = data.currentStage;
-                  if (data.fundingRows)    _exD.fundingRows    = data.fundingRows;
+                  // Typing-window guard: if this admin is mid-typing a
+                  // funding amount, skip the fundingRows replacement so a
+                  // remote echo can't clobber in-flight digits. Other
+                  // fields (stage, applyingBanks, etc.) still apply.
+                  var _typingAdded = _exD._typingRow && Date.now() < _exD._typingRow.until;
+                  if (data.fundingRows && !_typingAdded) _exD.fundingRows = data.fundingRows;
                   if (data.applyingBanks)  _exD.applyingBanks  = data.applyingBanks;
-                  if (data.fundingApproved !== undefined) _exD.fundingApproved = data.fundingApproved;
-                  if (data.fundingSecured  !== undefined) _exD.fundingSecured  = data.fundingSecured;
+                  if (data.fundingApproved !== undefined && !_typingAdded) _exD.fundingApproved = data.fundingApproved;
+                  if (data.fundingSecured  !== undefined && !_typingAdded) _exD.fundingSecured  = data.fundingSecured;
                   if (data.creditScore     !== undefined) _exD.creditScore     = data.creditScore;
                   _exD._updatedAt = _rTs;
                   localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exD));
@@ -5436,10 +5441,15 @@
               var _rTsM   = data._updatedAt || 0;
               if (_rTsM >= _exDmTs) {
                 if (data.currentStage !== undefined)    _exDm.currentStage   = data.currentStage;
-                if (data.fundingRows)                   _exDm.fundingRows    = data.fundingRows;
+                // Typing-window guard: skip the funding fields if this
+                // admin is mid-typing an amount. Stage / applyingBanks /
+                // creditScore still apply because they're independent of
+                // the funding-amount keystroke loop.
+                var _typingMod = _exDm._typingRow && Date.now() < _exDm._typingRow.until;
+                if (data.fundingRows && !_typingMod)    _exDm.fundingRows    = data.fundingRows;
                 if (data.applyingBanks)                 _exDm.applyingBanks  = data.applyingBanks;
-                if (data.fundingApproved !== undefined)  _exDm.fundingApproved = data.fundingApproved;
-                if (data.fundingSecured  !== undefined)  _exDm.fundingSecured  = data.fundingSecured;
+                if (data.fundingApproved !== undefined && !_typingMod) _exDm.fundingApproved = data.fundingApproved;
+                if (data.fundingSecured  !== undefined && !_typingMod) _exDm.fundingSecured  = data.fundingSecured;
                 if (data.creditScore     !== undefined)  _exDm.creditScore     = data.creditScore;
                 _exDm._updatedAt = _rTsM;
                 localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exDm));
@@ -5620,6 +5630,57 @@
         }
       }, function(){});
       _notifUnsubs.push(credUnsub);
+    } catch(e) {}
+
+    // ── bankApps live sync ────────────────────────────────────────
+    // Cross-admin sync for the bankApps/{clientId} collection used by the
+    // Funding tab's bank-app wizard. Previously this collection had NO
+    // listener — saveBankAppsLocal wrote with non-merge set({apps}) and
+    // each admin's stale localStorage cache would silently overwrite the
+    // other's edits on next save. Now we mirror remote → local using a
+    // last-writer-wins guard against the {_updatedAt,_updatedBy} sidecar
+    // saved by saveBankAppsLocal, then repaint the open client's Funding
+    // tab if the change is for that client.
+    try {
+      var bankAppsUnsub = db.collection('bankApps').onSnapshot(function(snap) {
+        snap.docChanges().forEach(function(change) {
+          if (change.type === 'removed') return;
+          var clientId = change.doc.id;
+          var data = change.doc.data() || {};
+          if (!Array.isArray(data.apps)) return;
+          var rTs = data._updatedAt || 0;
+          var lMeta = {};
+          try { lMeta = JSON.parse(localStorage.getItem('cq_bank_apps_meta_' + clientId) || '{}'); } catch(e) {}
+          var lTs = lMeta._updatedAt || 0;
+          if (rTs < lTs) return; // stale echo — ignore
+          try {
+            localStorage.setItem('cq_bank_apps_' + clientId, JSON.stringify(data.apps));
+            localStorage.setItem('cq_bank_apps_meta_' + clientId, JSON.stringify({ _updatedAt: rTs, _updatedBy: data._updatedBy || '' }));
+          } catch(e) {}
+          if (selectedClientId === clientId && typeof refreshClientUI === 'function') {
+            try { refreshClientUI(clientId); } catch(e) {}
+          }
+        });
+      }, function(){});
+      _notifUnsubs.push(bankAppsUnsub);
+    } catch(e) {}
+
+    // ── Work sessions presence (other admins) ─────────────────────
+    // Subscribe to workSessions/* so Ali sees "Sam is working through 8
+    // clients" without leaking Sam's queue into Ali's own _WS_KEY. Updates
+    // window._otherWorkSessions (a {emailDocId: {session, email}} map).
+    // The Start Working banner reads from this map to render the presence
+    // line below its own session info.
+    try {
+      if (typeof fsListenWorkSessions === 'function') {
+        var wsUnsub = fsListenWorkSessions(function(sessions) {
+          window._otherWorkSessions = sessions || {};
+          // Repaint the banner if it's currently rendered. _wqRenderBanner
+          // is idempotent — safe to call on every change.
+          try { if (typeof _wqRenderBanner === 'function') _wqRenderBanner(); } catch(e) {}
+        });
+        _notifUnsubs.push(wsUnsub);
+      }
     } catch(e) {}
 
     // ── Client data change listener ───────────────
@@ -12692,6 +12753,15 @@
   }
   function _wsSaveSession(s) {
     try { localStorage.setItem(_WS_KEY, JSON.stringify(s)); } catch(e) {}
+    // Mirror to Firestore so other admins see a "Sam is working through N
+    // clients" banner. Per-admin doc — never cross-loaded into another
+    // admin's _WS_KEY, just a broadcast channel for awareness.
+    try {
+      var _myEmail = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || (s && s.startedBy) || '';
+      if (_myEmail && typeof fsSetWorkSession === 'function') {
+        fsSetWorkSession(_myEmail, s);
+      }
+    } catch(e) {}
   }
   function _wsIsActive() {
     var s = _wsGetSession();
@@ -13281,6 +13351,13 @@
   }
   function _wsEndSession(silent) {
     try { localStorage.removeItem(_WS_KEY); } catch(e) {}
+    // Broadcast the end so other admins' banner clears immediately.
+    try {
+      var _myEmail = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
+      if (_myEmail && typeof fsClearWorkSession === 'function') {
+        fsClearWorkSession(_myEmail);
+      }
+    } catch(e) {}
     _wqCurrentClientId = null;
     var existingConfirm = document.getElementById('ws-confirm-overlay');
     if (existingConfirm) existingConfirm.remove();
@@ -18626,7 +18703,14 @@
       autoCalcFundingApproved(clientId);  // update display + standard debounce
       refreshClientUI(clientId);
     } else if (field === 'amount') {
-      // Amount: localStorage only while typing, NO debouncedPublish from autoCalc
+      // Amount: localStorage only while typing, NO debouncedPublish from autoCalc.
+      //
+      // Cross-admin race fix: stamp _typingRow on the dash doc BEFORE we
+      // save, then check it in the dashboards listener so a remote
+      // 'modified' echo arriving mid-typing can't clobber the in-flight
+      // digits. The window is wider than the 700ms debounce so any echo
+      // round-tripping from the LAST status change can't slip through.
+      d._typingRow = { rowId: rowId, until: Date.now() + 2000 };
       saveDashData(clientId, d, true);    // localStorage only — no Firestore
       autoCalcFundingApproved(clientId, true); // update display only, skip publish
       refreshClientUI(clientId);
@@ -18634,6 +18718,9 @@
       clearTimeout(_amountTimers[clientId]);
       _amountTimers[clientId] = setTimeout(() => {
         const latestD = getDashData(clientId); // fresh from localStorage — has final typed value
+        // Clear the typing-window stamp on the flush so subsequent remote
+        // edits flow through the standard freshness guard.
+        delete latestD._typingRow;
         const approved = (latestD.fundingRows || [])
           .filter(r => r.status === 'approved')
           .reduce((s, r) => s + (+r.amount || 0), 0);
@@ -20346,9 +20433,18 @@
     try { return JSON.parse(localStorage.getItem('cq_bank_apps_' + clientId) || '[]'); } catch(e) { return []; }
   }
   function saveBankAppsLocal(clientId, apps) {
+    // Stamp _updatedAt + _updatedBy on the Firestore mirror so the
+    // bankApps listener (initNotifListeners) can apply a last-writer-wins
+    // freshness guard and refuse stale snapshots from other admins. Also
+    // mirror the same stamp into the localStorage cache key as a hidden
+    // sibling — the listener compares against this on every snapshot.
+    const _ts = Date.now();
+    const _by = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
     try { localStorage.setItem('cq_bank_apps_' + clientId, JSON.stringify(apps)); } catch(e) {}
-    // Persist to Firestore async
-    db.collection('bankApps').doc(clientId).set({ apps }).catch(() => {});
+    try { localStorage.setItem('cq_bank_apps_meta_' + clientId, JSON.stringify({ _updatedAt: _ts, _updatedBy: _by })); } catch(e) {}
+    // Persist to Firestore async, merge:true so a partial in-flight write
+    // can't nuke the whole doc.
+    db.collection('bankApps').doc(clientId).set({ apps: apps, _updatedAt: _ts, _updatedBy: _by }, { merge: true }).catch(() => {});
   }
 
   function renderFundingTab(clientId) {

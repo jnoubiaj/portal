@@ -243,6 +243,56 @@ async function fsAuthCreateUser(email, password) {
   } catch(e) { return null; }
 }
 
+// ── WORK SESSIONS ─────────────────────────────────────────────────────────
+// Cross-admin broadcast of "who's currently running a Start Working session".
+// Per-admin doc keyed by emailToDocId(email). NEVER cross-loaded into another
+// admin's local _WS_KEY — purely a banner-awareness channel so Ali sees "Sam
+// is working through 8 clients" without overwriting Ali's own queue position.
+
+async function fsSetWorkSession(email, session) {
+  try {
+    await db.collection('workSessions').doc(emailToDocId(email)).set({
+      session: session || null,
+      email: (email || '').toLowerCase(),
+      _updatedAt: Date.now()
+    }, { merge: true });
+  } catch(e) {}
+}
+
+async function fsClearWorkSession(email) {
+  try {
+    await db.collection('workSessions').doc(emailToDocId(email)).set({
+      session: null,
+      email: (email || '').toLowerCase(),
+      endedAt: Date.now(),
+      _updatedAt: Date.now()
+    }, { merge: true });
+  } catch(e) {}
+}
+
+function fsListenWorkSessions(callback) {
+  let unsub = null;
+  let stopped = false;
+  let retries = 0;
+  function attach() {
+    if (stopped) return;
+    unsub = db.collection('workSessions').onSnapshot(
+      snap => {
+        retries = 0;
+        const sessions = {};
+        snap.forEach(d => { sessions[d.id] = d.data(); });
+        callback(sessions);
+      },
+      () => {
+        const delay = Math.min(1000 * Math.pow(2, Math.min(retries, 5)), 30000);
+        setTimeout(() => { if (!stopped) { retries++; attach(); } }, delay);
+      }
+    );
+  }
+  attach();
+  return () => { stopped = true; if (unsub) unsub(); };
+}
+
 // ── CLIENT AUTH MAPPING ───────────────────────────────────────────────────
 // Maps Firebase UID → { clientId, email }
 
