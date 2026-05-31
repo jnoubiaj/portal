@@ -5165,6 +5165,37 @@
     } catch(e) {}
 
     // ── Dashboard / document upload + task completion listener ─────
+    //
+    // ARCHITECTURE — DO NOT REMOVE THE LOCALSTORAGE CACHES.
+    //
+    // Firestore is the source of truth. localStorage (cq_ops_tasks_,
+    // cq_dash_, cq_tasks_, cq_notes_, cq_credit_, cq_bankrels_, cq_ops_done_,
+    // cq_fsg_overrides_, cq_fse_sent_) is the RENDER CACHE — it lets
+    // selectClient / refreshSidebarTasks / Next Actions / Overview /
+    // Pipeline / Start Working compute synchronously without awaiting the
+    // network on every keystroke or stage move.
+    //
+    // The contract every dashboards snapshot must honour:
+    //   1. Merge incoming Firestore data into localStorage using the
+    //      _updatedAt freshness guard (rTs >= lTs). This is the documented
+    //      fix that stops stale 'modified' echoes from reverting fresh
+    //      currentStage / pipelineTasks / fundingRows writes — see the
+    //      explicit comments at the per-field gates below.
+    //   2. After merging, repaint every OPEN-CLIENT surface so Sam and Ali
+    //      see the same picture without a refresh: header pills, Next
+    //      Actions sidebar, funding rows table, funding strategy panel,
+    //      Stage Progress card, Notes panel, Activity Timeline. This is
+    //      what _syncUpdateOpenClient + _doSyncUpdateOpenClient (11716)
+    //      do — extend that function if you add a new surface.
+    //   3. Cross-admin merges (opsTasks at 5460, opsDone at 5459, adminNotes
+    //      below) must run for EVERY client in the snapshot, not just the
+    //      open one, so My Tasks Today / Start Working queue / Overview
+    //      counts stay accurate across clients the admin isn't viewing.
+    //
+    // If you ever feel tempted to "fix sync" by removing the LS cache and
+    // reading from Firestore on every render: don't. That breaks offline
+    // reload (login splash → admin app fast restore), inflates Firestore
+    // reads, and removes the freshness gate that catches stale snapshots.
     try {
       var dashPrev = {};
       var dashUnsub = db.collection('dashboards').onSnapshot(function(snap) {
@@ -5516,6 +5547,19 @@
             try { window.dispatchEvent(new CustomEvent('cq:tasks-updated', { detail: { clientId: clientId, ts: Date.now(), source: 'ledger-sync' } })); } catch(e) {}
           }
 
+          // ── Cross-admin adminNotes sync ───────────────────────────────────
+          // Mirror Firestore dashboards/{id}.adminNotes into local
+          // cq_notes_{id} for EVERY client (not just the open one). Without
+          // this, a note Ali adds to David Johnson never reaches Sam's local
+          // cache unless Sam happens to have David open — the per-client
+          // fsListenDash at selectClient is detached the moment a different
+          // client is opened. _mergeIncomingAdminNotes is union-only (it
+          // never deletes), so re-running it on every modified snapshot is
+          // safe and idempotent.
+          if (Array.isArray(data.adminNotes)) {
+            try { _mergeIncomingAdminNotes(clientId, data.adminNotes); } catch(e) {}
+          }
+
           // Targeted sidebar update — avoids full re-render and Firestore write loop
           _syncUpdateOpenClient(clientId, 'dashboard-snapshot');
           // Overview pipeline list
@@ -5544,6 +5588,38 @@
         });
       }, function(){});
       _notifUnsubs.push(dashUnsub);
+    } catch(e) {}
+
+    // ── Credentials live sync ─────────────────────────────────────
+    // When one admin resets a client's portal password or creates a new
+    // client, the credentials/{emailDocId} doc is updated. Without a
+    // listener, other admins only see the stale password in the Portal
+    // Access card until they restart. ADD-ONLY merge — never deletes
+    // local entries from the listener (credential deletions are sensitive
+    // and propagate through the explicit fsDeleteCred path instead).
+    try {
+      var credUnsub = db.collection('credentials').onSnapshot(function(snap) {
+        var changed = false;
+        var lsCreds = {};
+        try { lsCreds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) { lsCreds = {}; }
+        snap.docChanges().forEach(function(change) {
+          if (change.type === 'removed') return;
+          var docId = change.doc.id;
+          var cred = change.doc.data();
+          if (!cred || !cred.clientId) return;
+          var email = docId.replace(/,/g, '.');
+          _fsCreds[docId] = cred;
+          lsCreds[email] = cred;
+          changed = true;
+        });
+        if (changed) {
+          try { localStorage.setItem('cq_client_creds', JSON.stringify(lsCreds)); } catch(e) {}
+          if (selectedClientId && typeof renderClientDetail === 'function') {
+            try { renderClientDetail(selectedClientId); } catch(e) {}
+          }
+        }
+      }, function(){});
+      _notifUnsubs.push(credUnsub);
     } catch(e) {}
 
     // ── Client data change listener ───────────────
@@ -11786,7 +11862,20 @@
       }
     } catch(e) {}
 
-    // 5. Update pipeline + overview list (not the sidebar)
+    // 5. Stage Progress card (right rail). When another admin advances a
+    // stage, ticks a stage-internal task, or moves the client forward, the
+    // dashboards listener has already merged the new currentStage /
+    // pipelineTasks into local cache — this repaints the visible card.
+    try { if (typeof refreshStageProgressCard === 'function') refreshStageProgressCard(clientId); } catch(e) {}
+
+    // 6. Notes + Activity Timeline. The cross-admin adminNotes merge
+    // (handled in the global 'modified' branch) only writes to localStorage;
+    // these calls actually repaint the visible sidebar Notes card and the
+    // client-detail timeline so Sam sees Ali's notes/activity live.
+    try { if (typeof refreshSidebarNotes === 'function') refreshSidebarNotes(clientId); } catch(e) {}
+    try { if (typeof refreshClientTimeline === 'function') refreshClientTimeline(clientId); } catch(e) {}
+
+    // 7. Update pipeline + overview list (not the sidebar)
     try { renderPipeline(); } catch(e) {}
     try { renderOvClientTasks(); } catch(e) {}
   }
@@ -24801,15 +24890,26 @@
           if (!Array.isArray(remote.pages)) return;
           var local = _cqwDoc(scope);
           if (!local || (remote._updatedAt || 0) > (local._updatedAt || 0)) {
+            var localTs = (local && local._updatedAt) || 0;
+            var remoteTs = remote._updatedAt || 0;
             _cqwSetDoc(scope, remote);
             _cqwSaveLocal(scope, remote);
-            // Re-render tree always; re-render page only if the active page
-            // belongs to this scope and isn't currently focused (avoid yanking
-            // the caret out from under the typer).
+            // Re-render tree always; for the active page, skip repaint only
+            // if the typer is ACTIVELY inside this page AND the last
+            // keystroke was within the last 1.5s — otherwise the typing
+            // guard would stay sticky after blur and Ali's remote edits
+            // would never appear on Sam's screen.
             _cqwRenderTree();
             var act = _cqwGetActivePage();
             var focused = document.activeElement && document.activeElement.closest && document.activeElement.closest('.cqw-page');
-            if (act && act.scope === scope && !focused) _cqwRenderPage();
+            var lastType = (typeof window !== 'undefined' && window._cqwLastTypeTs) || 0;
+            var activelyTyping = focused && (Date.now() - lastType) < 1500;
+            // Catch-up: if the remote jumped more than 5s ahead of local,
+            // force the repaint even if the caret is inside the page.
+            // This rescues the case where the typing guard kept the page
+            // stale through several incoming snapshots.
+            var bigJump = (remoteTs - localTs) > 5000;
+            if (act && act.scope === scope && (!activelyTyping || bigJump)) _cqwRenderPage();
           }
         }, function(err){ console.warn('[CQW] listen failed', err && err.message); });
       } catch(e) {}
@@ -25522,6 +25622,15 @@
       // Global: close slash + fmt on outside click
       if (!window._cqwGlobalsBound) {
         window._cqwGlobalsBound = true;
+        // Track the last keystroke timestamp inside any .cqw-page so the
+        // listener can tell "user is actively typing" from "user clicked
+        // here 30s ago and walked away". Lets remote edits land after a
+        // 1.5s idle window without yanking the caret while typing.
+        document.addEventListener('keydown', function(e){
+          if (e && e.target && e.target.closest && e.target.closest('.cqw-page')) {
+            window._cqwLastTypeTs = Date.now();
+          }
+        }, true);
         document.addEventListener('click', function(e){
           var m = document.getElementById('cqw-slash');
           if (m && m.style.display==='block' && !m.contains(e.target)) _cqwCloseSlash();
