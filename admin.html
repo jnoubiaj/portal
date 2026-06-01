@@ -14595,10 +14595,38 @@
     }
 
     // ── Business Information ────────────────────────────────────────────
-    set('bizName',         findOne(['Legal Business Name','Business Name','Company Name','Entity Name'], ['DBA','EIN','Address']));
+    // Many onboarding forms print the multiple-choice option list before
+    // the selected value, producing values like "LLC, S-Corp, C-Corp,
+    // Sole Prop, FCTAO LLC" for Business Name. These cleaners pull out
+    // the real value from such a list.
+    const _ENTITY_TYPES = ['LLC','L.L.C.','S-Corp','S Corp','S-Corporation','C-Corp','C Corp','C-Corporation','Sole Prop','Sole Proprietorship','Sole Proprietor','Trust','Inc','Inc.','Incorporated','Corp','Corp.','Corporation','LLP','L.L.P.','LP','L.P.','Partnership','PLLC','PC'];
+    const _isKnownType = v => _ENTITY_TYPES.some(k => k.toLowerCase() === String(v||'').trim().toLowerCase());
+    function _ofCleanBizType(val) {
+      if (!val) return val;
+      const parts = String(val).split(/,\s*/).map(p => p.trim()).filter(Boolean);
+      if (parts.length < 2) return val;
+      // Pick the FIRST token that is a known type — first option in the
+      // list is typically the default/selected one in printed forms.
+      const match = parts.find(_isKnownType);
+      return match || val;
+    }
+    function _ofCleanBizName(val) {
+      if (!val) return val;
+      const parts = String(val).split(/,\s*/).map(p => p.trim()).filter(Boolean);
+      if (parts.length < 2) return val;
+      // The business name is the token that is NOT a known entity type
+      // (e.g. "FCTAO LLC" inside "LLC, S-Corp, C-Corp, Sole Prop, FCTAO LLC").
+      const nonOption = parts.find(p => !_isKnownType(p) && p.length > 2);
+      return nonOption || val;
+    }
+    const _bizNameRaw = findOne(['Legal Business Name','Business Name','Company Name','Entity Name'], ['DBA','EIN','Address']);
+    if (_bizNameRaw) _bizNameRaw.value = _ofCleanBizName(_bizNameRaw.value);
+    set('bizName', _bizNameRaw);
     set('dba',             findOne(['DBA / Trade Name','DBA/Trade Name','DBA Name','Doing Business As','Trade Name','DBA'], ['EIN','Address','Type']));
     set('ein',             findOne(['EIN','Tax ID','Employer Identification Number','Federal Tax ID','Tax Identification Number'], ['SSN','Date','Phone','Type']));
-    set('bizType',         findOne(['Business Type','Entity Type','Business Structure','Type of Business'], ['Industry','EIN','Address']));
+    const _bizTypeRaw = findOne(['Business Type','Entity Type','Business Structure','Type of Business'], ['Industry','EIN','Address']);
+    if (_bizTypeRaw) _bizTypeRaw.value = _ofCleanBizType(_bizTypeRaw.value);
+    set('bizType', _bizTypeRaw);
     set('industry',        findOne(['Industry','Business Industry','Industry Type'], ['Employees','Type','Sales']));
     set('employees',       findOne(['Number of Employees','# of Employees','# Employees','Employees'], ['Sales','Revenue','Ownership']));
     set('monthlySales',    findOne(['Average Monthly Sales','Avg Monthly Sales','Monthly Sales','Monthly Revenue','Monthly Gross Revenue'], ['Annual','Ownership','Established']));
@@ -14647,72 +14675,212 @@
     return out;
   }
 
-  // Value-only sweep: pattern-match SSN/EIN/phone/email/ZIP/currency/dates
-  // independent of labels. Only fills slots that the label-keyed pass left
-  // empty. Confidence is moderate (these are unambiguous data formats but
-  // there's no label context to confirm them).
+  // Value-only sweep: pattern-match data formats independent of labels.
+  // Only fills slots the label-keyed pass left empty. This is the critical
+  // path for label-less PDF exports (forms that print just the typed
+  // values without "Field Name:" prefixes) — without this, an admin gets
+  // five fields detected when 15+ are clearly in the text.
   function _ofValueOnlySweep(text, fields) {
     const out = {};
     function fill(id, val, conf) {
       if (fields[id] || out[id]) return;
-      out[id] = { value: val, confidence: conf };
+      if (val == null || String(val).trim() === '') return;
+      out[id] = { value: String(val).trim(), confidence: conf };
     }
     const t = String(text || '');
+    const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
 
-    // SSN — exactly XXX-XX-XXXX. If multiple, take first.
+    // ── SSN — XXX-XX-XXXX ───────────────────────────────────────────────
     const ssn = t.match(/\b(\d{3}-\d{2}-\d{4})\b/);
     if (ssn) fill('ssn', ssn[1], 0.75);
 
-    // EIN — XX-XXXXXXX. Avoid matching as part of a phone or zip.
+    // ── EIN — XX-XXXXXXX ────────────────────────────────────────────────
     const einAll = [...t.matchAll(/\b(\d{2}-\d{7})\b/g)].map(m => m[1]);
-    if (einAll.length) fill('ein', einAll[0], 0.75);
+    if (einAll.length) fill('ein', einAll[0], 0.8);
 
-    // Email — first non-experian email goes to personal email, an
-    // @experian.com one goes to the Experian email field.
+    // ── Email — split by domain ─────────────────────────────────────────
     const emails = [...t.matchAll(/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g)].map(m => m[0]);
-    const expEmail = emails.find(e => /experian/i.test(e));
+    const expEmail   = emails.find(e => /experian/i.test(e));
     const otherEmail = emails.find(e => !/experian/i.test(e));
-    if (otherEmail) fill('email', otherEmail, 0.7);
-    if (expEmail) fill('experianEmail', expEmail, 0.8);
+    if (otherEmail) fill('email',         otherEmail, 0.75);
+    if (expEmail)   fill('experianEmail', expEmail,   0.85);
 
-    // Phone — (XXX) XXX-XXXX or XXX.XXX.XXXX or XXX-XXX-XXXX or XXX XXX XXXX.
-    const phones = [...t.matchAll(/(?:\(\d{3}\)\s*|\b\d{3}[\s.\-])\d{3}[\s.\-]\d{4}\b/g)].map(m => m[0]);
-    if (phones.length) {
-      fill('phone', phones[0].trim(), 0.65);
-      if (phones.length > 1) fill('bizPhone', phones[1].trim(), 0.6);
+    // ── Phone numbers (formatted + unformatted 10-digit) ────────────────
+    const phonesFmt = [...t.matchAll(/(?:\(\d{3}\)\s*|\b\d{3}[\s.\-])\d{3}[\s.\-]\d{4}\b/g)].map(m => m[0].trim());
+    // 10 consecutive digits — but NOT inside a longer digit run (e.g. a
+    // certificate reference 84A822FB... or 17-digit barcode). Use look-
+    // around against \d. Also exclude obvious SSN/EIN-hyphen contexts.
+    const phones10 = [];
+    const phoneIter = t.matchAll(/(?<!\d)(\d{10})(?!\d)/g);
+    for (const m of phoneIter) {
+      const v = m[1];
+      // Skip values that look like a date or year+digits.
+      if (/^(19|20)\d{8}$/.test(v)) continue;
+      // Format as (XXX) XXX-XXXX so the formatter doesn't mangle it.
+      phones10.push('(' + v.slice(0,3) + ') ' + v.slice(3,6) + '-' + v.slice(6));
+    }
+    const allPhones = phonesFmt.concat(phones10);
+    if (allPhones.length) {
+      fill('phone',    allPhones[0], 0.7);
+      if (allPhones.length > 1) fill('bizPhone', allPhones[1], 0.65);
+      else                       fill('bizPhone', allPhones[0], 0.55);
     }
 
-    // ZIP — first 5-digit ZIP not preceded by SSN/EIN context.
+    // ── ZIP ─────────────────────────────────────────────────────────────
     const zips = [...t.matchAll(/\b(\d{5}(?:-\d{4})?)\b/g)].map(m => m[1]);
-    if (zips.length) fill('zip', zips[0], 0.65);
+    if (zips.length) fill('zip', zips[0], 0.7);
 
-    // DOB — date in MM/DD/YYYY or MM-DD-YYYY (1900-2010 range so we don't
-    // pick the form submission date or business establishment date).
-    const dates = [...t.matchAll(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g)];
-    for (const d of dates) {
-      const year = parseInt(d[3], 10);
-      const fullYear = year < 100 ? 1900 + year : year;
-      if (fullYear >= 1900 && fullYear <= 2010) {
-        fill('dob', d[0], 0.65);
+    // ── Address line detection (street + same-or-next-line CSZ) ─────────
+    // Look for a line like "116 Agnes Rd Knoxville, TN 37919" or split
+    // across two lines. Street pattern: digit + 1-4 words + street suffix.
+    const streetSuffix = '(?:St|Rd|Ave|Blvd|Dr|Ln|Way|Ct|Cir|Pkwy|Hwy|Place|Pl|Trail|Tr|Terrace|Ter|Square|Sq|Court|Lane|Drive|Street|Road|Avenue|Boulevard|Highway)\\.?';
+    const streetRe = new RegExp('^(\\d+\\s+[A-Z][A-Za-z0-9\\.\\s]{1,40}?' + streetSuffix + ')\\b(.*)$', 'i');
+    let pickedAddress = null;
+    for (let i = 0; i < lines.length; i++) {
+      const sm = lines[i].match(streetRe);
+      if (!sm) continue;
+      const street = sm[1].trim();
+      let trailing = (sm[2] || '').trim();
+      let cityStr = trailing;
+      // If nothing trailing, try the next line.
+      if (!cityStr) {
+        for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+          if (lines[j]) { cityStr = lines[j]; break; }
+        }
+      }
+      const p = _ofParseCityStateZip(cityStr);
+      if (p.city || p.state || p.zip) {
+        pickedAddress = { street: street, city: p.city || '', state: p.state || '', zip: p.zip || '' };
+        break;
+      }
+      // Even without CSZ, the street alone is useful.
+      if (!pickedAddress) pickedAddress = { street: street, city: '', state: '', zip: '' };
+    }
+    if (pickedAddress) {
+      // Without label context we can't tell home vs business — fill BOTH
+      // (the admin can uncheck whichever is wrong). Business gets a
+      // combined string; home gets the split fields.
+      if (pickedAddress.street) fill('street', pickedAddress.street, 0.6);
+      if (pickedAddress.city)   fill('city',   pickedAddress.city,   0.6);
+      if (pickedAddress.state)  fill('state',  pickedAddress.state,  0.6);
+      if (pickedAddress.zip)    fill('zip',    pickedAddress.zip,    0.7);
+      const bizParts = [
+        pickedAddress.street,
+        pickedAddress.city,
+        (pickedAddress.state ? pickedAddress.state + (pickedAddress.zip ? ' ' + pickedAddress.zip : '') : pickedAddress.zip),
+      ].filter(x => x && x.trim());
+      if (bizParts.length >= 2) fill('bizAddress', bizParts.join(', '), 0.6);
+    }
+
+    // ── Business name (line ending in LLC/Inc/Corp/etc.) ────────────────
+    // Skip lines that are option lists ("LLC, S-Corp, C-Corp, Sole Prop,
+    // FCTAO LLC") by requiring the whole line to be a short name + suffix.
+    const entitySuffix = /(LLC|L\.L\.C\.|Inc\.?|Incorporated|Corp\.?|Corporation|LLP|L\.L\.P\.|Ltd\.?|PLLC|PC|LP|L\.P\.)$/i;
+    for (const ln of lines) {
+      if (ln.length > 60) continue;
+      if (ln.includes(',')) continue; // skip option lists
+      const m = ln.match(new RegExp('^([A-Z][A-Za-z0-9&\\.\\s\\-\']{1,50}?)\\s+' + entitySuffix.source, 'i'));
+      if (m && m[1].length >= 2) {
+        fill('bizName', ln, 0.7);
         break;
       }
     }
 
-    // Currency — $123,456 / $1.5M not supported. Largest goes to
-    // annualIncome; loanAmount has its own label parsing usually.
+    // ── First + Last name (two consecutive capitalized alpha words) ─────
+    if (!out.firstName && !out.lastName && !fields.firstName && !fields.lastName) {
+      const stopWords = /^(LLC|Inc|Corp|Bank|Chase|USAA|Wells|Fargo|America|Capital|Citi|PNC|Real|Estate|Trust|Sole|Prop|YES|NO|United|States|Document|Reference|Signature|Certificate)$/i;
+      for (const ln of lines) {
+        if (ln.length > 50) continue;
+        const m = ln.match(/^([A-Z][a-z'\-]{1,20})\s+([A-Z][a-z'\-]{1,20})$/);
+        if (!m) continue;
+        if (stopWords.test(m[1]) || stopWords.test(m[2])) continue;
+        fill('firstName', m[1], 0.6);
+        fill('lastName',  m[2], 0.6);
+        break;
+      }
+    }
+
+    // ── DOB — MM/DD/YYYY or MM-DD-YYYY, birth-year range 1900-2010 ──────
+    const dobIter = t.matchAll(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g);
+    for (const d of dobIter) {
+      const year = parseInt(d[3], 10);
+      const full = year < 100 ? (year > 30 ? 1900 + year : 2000 + year) : year;
+      if (full >= 1900 && full <= 2010) { fill('dob', d[0], 0.7); break; }
+    }
+
+    // ── Date Established — "14 May 2025" or "May 14, 2025" or month-only ──
+    const monthNames = '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)';
+    let dateEst = t.match(new RegExp('\\b(\\d{1,2}\\s+' + monthNames + '\\s+(?:19|20)\\d{2})\\b', 'i'));
+    if (!dateEst) dateEst = t.match(new RegExp('\\b(' + monthNames + '\\s+\\d{1,2},?\\s+(?:19|20)\\d{2})\\b', 'i'));
+    if (dateEst) fill('dateEstablished', dateEst[1], 0.7);
+
+    // ── Banks list (line with multiple bank keywords) ───────────────────
+    const bankTokens = /(Chase|Bank of America|BofA|Wells Fargo|US Bank|U\.S\. Bank|USAA|Citi(?:bank)?|Capital One|PNC|TD Bank|Truist|Regions|Fifth Third|HSBC|American Express|Amex|Discover|Synchrony|Navy Federal|Ally|SoFi|Goldman|Marcus|Credit Union)/gi;
+    for (const ln of lines) {
+      const hits = ln.match(bankTokens);
+      if (hits && hits.length >= 2) {
+        // First multi-bank line goes to personalBanks, second to bizBanks.
+        if (!out.personalBanks && !fields.personalBanks) fill('personalBanks', ln, 0.65);
+        else if (!out.bizBanks && !fields.bizBanks)      fill('bizBanks',      ln, 0.65);
+        if (out.personalBanks && out.bizBanks) break;
+      }
+    }
+    // If only one was filled and personalBanks is empty, copy bizBanks→personalBanks
+    // is wrong — leave the admin to decide. Default behavior: same list duplicated
+    // across personal AND business when only one is found.
+    if ((out.personalBanks || fields.personalBanks) && !out.bizBanks && !fields.bizBanks) {
+      const ref = out.personalBanks || fields.personalBanks;
+      fill('bizBanks', ref.value, 0.5);
+    }
+
+    // ── Currency: sort by amount, route by magnitude ────────────────────
+    // Heuristic: largest = annualIncome (typically 5-7 figures), second
+    // largest = loanAmount, smallest = monthlySales. Forms commonly write
+    // monthly sales as $2000 or $2,000 and annual income as $150,000.
     const moneys = [...t.matchAll(/\$\s?([\d,]+(?:\.\d{2})?)/g)]
       .map(m => ({ raw: m[0].trim(), num: parseFloat(m[1].replace(/,/g, '')) || 0 }))
       .filter(x => x.num > 0);
     if (moneys.length) {
       const sorted = moneys.slice().sort((a, b) => b.num - a.num);
-      fill('annualIncome', sorted[0].raw, 0.55);
+      // Distinct values only.
+      const distinct = [];
+      const seen = new Set();
+      for (const m of sorted) { if (!seen.has(m.num)) { distinct.push(m); seen.add(m.num); } }
+      if (distinct[0]) fill('annualIncome', distinct[0].raw, 0.55);
+      if (distinct[1]) fill('loanAmount',   distinct[1].raw, 0.55);
+      // Monthly sales = smallest value if it's distinct.
+      const smallest = distinct[distinct.length - 1];
+      if (smallest && smallest !== distinct[0]) fill('monthlySales', smallest.raw, 0.5);
     }
 
-    // Ownership % — 1-100 followed by %.
+    // ── Ownership % — 1-100 followed by % ───────────────────────────────
     const own = t.match(/\b(\d{1,3})\s*%/);
     if (own) {
       const n = parseInt(own[1], 10);
       if (n >= 1 && n <= 100) fill('ownership', own[1] + '%', 0.6);
+    }
+    // Bare integer in 0-100 range on a line by itself, near other small
+    // numbers — likely ownership %. e.g. `$2000  50` => 50 = ownership.
+    if (!out.ownership && !fields.ownership) {
+      for (const ln of lines) {
+        const m = ln.match(/\$[\d,]+\s+(\d{1,3})\b/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (n >= 1 && n <= 100) { fill('ownership', m[1] + '%', 0.5); break; }
+        }
+      }
+    }
+
+    // ── # Employees — small integer near top of form ────────────────────
+    if (!out.employees && !fields.employees) {
+      // "Real Estat 2" type pattern: word(s) + a small integer 1-999.
+      for (const ln of lines) {
+        const m = ln.match(/^[A-Za-z][A-Za-z\s]+\s+(\d{1,3})\s*$/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (n >= 1 && n <= 999) { fill('employees', m[1], 0.45); break; }
+        }
+      }
     }
 
     return out;
