@@ -14461,6 +14461,12 @@
     return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
+  // Shared entity-type vocabulary used by both _ofParseFields (option-list
+  // cleaner for bizName/bizType) and _ofValueOnlySweep (standalone bizType
+  // detection from a single-token line like "LLC").
+  const _OF_ENTITY_TYPES = ['LLC','L.L.C.','S-Corp','S Corp','S-Corporation','C-Corp','C Corp','C-Corporation','Sole Prop','Sole Proprietorship','Sole Proprietor','Trust','Inc','Inc.','Incorporated','Corp','Corp.','Corporation','LLP','L.L.P.','LP','L.P.','Partnership','PLLC','PC'];
+  const _ofIsKnownType = v => _OF_ENTITY_TYPES.some(k => k.toLowerCase() === String(v || '').trim().toLowerCase());
+
   // Normalize a date string to MM/DD/YYYY so the ape-dob / ape-dateEstablished
   // input formatters don't mangle it. Handles "14 May 2025", "May 14, 2025",
   // "May 14 2025", "5/14/2025", "5-14-25". Pass-through if it's already in
@@ -14641,24 +14647,18 @@
     // the selected value, producing values like "LLC, S-Corp, C-Corp,
     // Sole Prop, FCTAO LLC" for Business Name. These cleaners pull out
     // the real value from such a list.
-    const _ENTITY_TYPES = ['LLC','L.L.C.','S-Corp','S Corp','S-Corporation','C-Corp','C Corp','C-Corporation','Sole Prop','Sole Proprietorship','Sole Proprietor','Trust','Inc','Inc.','Incorporated','Corp','Corp.','Corporation','LLP','L.L.P.','LP','L.P.','Partnership','PLLC','PC'];
-    const _isKnownType = v => _ENTITY_TYPES.some(k => k.toLowerCase() === String(v||'').trim().toLowerCase());
     function _ofCleanBizType(val) {
       if (!val) return val;
       const parts = String(val).split(/,\s*/).map(p => p.trim()).filter(Boolean);
       if (parts.length < 2) return val;
-      // Pick the FIRST token that is a known type — first option in the
-      // list is typically the default/selected one in printed forms.
-      const match = parts.find(_isKnownType);
+      const match = parts.find(_ofIsKnownType);
       return match || val;
     }
     function _ofCleanBizName(val) {
       if (!val) return val;
       const parts = String(val).split(/,\s*/).map(p => p.trim()).filter(Boolean);
       if (parts.length < 2) return val;
-      // The business name is the token that is NOT a known entity type
-      // (e.g. "FCTAO LLC" inside "LLC, S-Corp, C-Corp, Sole Prop, FCTAO LLC").
-      const nonOption = parts.find(p => !_isKnownType(p) && p.length > 2);
+      const nonOption = parts.find(p => !_ofIsKnownType(p) && p.length > 2);
       return nonOption || val;
     }
     const _bizNameRaw = findOne(['Legal Business Name','Business Name','Company Name','Entity Name'], ['DBA','EIN','Address']);
@@ -14883,11 +14883,138 @@
       if (full >= 1900 && full <= 2010) { fill('dob', d[0], 0.7); break; }
     }
 
-    // ── Date Established — "14 May 2025" or "May 14, 2025" or month-only ──
+    // ── Date Established — "14 May 2025" or "May 14, 2025" — NORMALIZE ──
     const monthNames = '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)';
     let dateEst = t.match(new RegExp('\\b(\\d{1,2}\\s+' + monthNames + '\\s+(?:19|20)\\d{2})\\b', 'i'));
     if (!dateEst) dateEst = t.match(new RegExp('\\b(' + monthNames + '\\s+\\d{1,2},?\\s+(?:19|20)\\d{2})\\b', 'i'));
-    if (dateEst) fill('dateEstablished', dateEst[1], 0.7);
+    if (dateEst) fill('dateEstablished', _ofNormDate(dateEst[1]), 0.7);
+
+    // ── BUSINESS TYPE: standalone entity-type token ─────────────────────
+    // Forms commonly print just "LLC" or "Inc" on its own line when the
+    // user circled/selected that option. Find a line that is JUST an
+    // entity-type word (case-insensitive). Skip option-list lines (commas).
+    if (!fields.bizType && !out.bizType) {
+      for (const ln of lines) {
+        if (ln.includes(',')) continue;
+        if (ln.length > 20) continue;
+        if (_isKnownType(ln)) { fill('bizType', ln, 0.55); break; }
+      }
+      // Fallback: extract first known type from any comma-separated line.
+      if (!out.bizType) {
+        for (const ln of lines) {
+          if (!ln.includes(',')) continue;
+          const parts = ln.split(/,\s*/).map(p => p.trim());
+          const match = parts.find(_isKnownType);
+          if (match) { fill('bizType', match, 0.5); break; }
+        }
+      }
+    }
+
+    // ── DBA: a business-name-shaped string appearing 2+ times ───────────
+    // When the same name (e.g. "FCTAO LLC") appears twice in the text, the
+    // second is typically DBA. Search for any line ending in an entity
+    // suffix that also matches the already-detected bizName, and treat
+    // that as DBA confirmation.
+    if (!fields.dba && !out.dba) {
+      const bizNameVal = (out.bizName && out.bizName.value) || (fields.bizName && fields.bizName.value) || '';
+      if (bizNameVal) {
+        const occurrences = lines.filter(l => l === bizNameVal || l.indexOf(bizNameVal) === 0);
+        if (occurrences.length >= 2) fill('dba', bizNameVal, 0.6);
+      }
+      // Alternative: any line that ends in LLC/Inc/Corp not already used as bizName.
+      if (!out.dba) {
+        for (const ln of lines) {
+          if (ln === bizNameVal) continue;
+          if (ln.includes(',')) continue;
+          if (ln.length > 60) continue;
+          if (/\b(LLC|Inc\.?|Corp\.?|Corporation|LLP|Ltd\.?|PLLC)\s*$/i.test(ln) && /[A-Z]/.test(ln) && ln.length > 4) {
+            fill('dba', ln, 0.5);
+            break;
+          }
+        }
+      }
+    }
+
+    // ── INDUSTRY: text-then-small-integer pattern ("Real Estat 2") ──────
+    // The form's two-column layout puts industry + employee count on the
+    // same row. Pattern: word(s) followed by 1-3 digit integer at end.
+    // Strip the trailing integer (employee count already detected) and
+    // use the text as industry.
+    if (!fields.industry && !out.industry) {
+      for (const ln of lines) {
+        const m = ln.match(/^([A-Z][A-Za-z][A-Za-z\s&\-\/]{2,30}?)\s+(\d{1,3})\s*$/);
+        if (!m) continue;
+        const text = m[1].trim();
+        // Reject if the text is a known entity type, name, or bank.
+        if (_isKnownType(text)) continue;
+        if (/\b(LLC|Inc|Corp|Bank|Trust)\b/i.test(text)) continue;
+        if (text.split(/\s+/).length > 4) continue; // too long
+        fill('industry', text, 0.5);
+        break;
+      }
+    }
+
+    // ── LOAN AMOUNT + LOAN REASON: "$90,000 Scaling" pattern ────────────
+    // Form layout: loan amount + reason on the same row. Pattern: dollar
+    // amount of >= $5000 followed by a short capitalized word.
+    if (!fields.loanAmount || !fields.loanReason) {
+      for (const ln of lines) {
+        const m = ln.match(/(\$\s?[\d,]+(?:\.\d{2})?)\s+([A-Z][a-z]{2,20})\s*$/);
+        if (!m) continue;
+        const num = parseFloat(m[1].replace(/[\$,\s]/g, '')) || 0;
+        if (num < 5000) continue;
+        if (!fields.loanAmount && !out.loanAmount) fill('loanAmount', m[1].replace(/\s/g,''), 0.6);
+        if (!fields.loanReason && !out.loanReason) {
+          // Avoid common stop words.
+          if (!/^(YES|NO|None|True|False|Cash|Check)$/i.test(m[2])) fill('loanReason', m[2], 0.55);
+        }
+        break;
+      }
+    }
+
+    // Standalone loan reason: single short capitalized word on its own line
+    // following a currency amount somewhere above.
+    if (!fields.loanReason && !out.loanReason) {
+      for (let i = 0; i < lines.length; i++) {
+        if (!/^\$/.test(lines[i])) continue;
+        // Look ahead for a single capitalized word
+        for (let j = i; j <= Math.min(i + 2, lines.length - 1); j++) {
+          const w = lines[j].match(/^([A-Z][a-z]{3,20})\s*$/);
+          if (w && !/^(YES|NO|None|True|False|Cash|Check|Chase|USAA|Wells|Fargo|Bank|America|Trust)$/i.test(w[1])) {
+            fill('loanReason', w[1], 0.5);
+            break;
+          }
+        }
+        if (out.loanReason) break;
+      }
+    }
+
+    // ── BUSINESS BANKS: single bank token line ──────────────────────────
+    // If we found a multi-bank Personal Banking line but no business bank,
+    // look for a standalone line with a single bank keyword and use it.
+    if ((out.personalBanks || fields.personalBanks) && !out.bizBanks && !fields.bizBanks) {
+      for (const ln of lines) {
+        const hits = ln.match(bankTokens);
+        if (!hits || hits.length === 0) continue;
+        if (hits.length >= 2) continue; // skip multi-bank lines (those went to personal)
+        if (/personal/i.test(ln)) continue; // skip personal-context
+        // Use just the bank token, not the whole line (in case of label remnants).
+        const value = ln.replace(/^[^:]*(?:banking|banks|relationships)[^:]*:\s*/i, '').trim() || ln;
+        if (value.length < 60) { fill('bizBanks', value, 0.5); break; }
+      }
+    }
+
+    // Reverse case: bizBanks filled but not personalBanks → look for the
+    // multi-bank line (if any) and assign it.
+    if ((out.bizBanks || fields.bizBanks) && !out.personalBanks && !fields.personalBanks) {
+      for (const ln of lines) {
+        const hits = ln.match(bankTokens);
+        if (!hits || hits.length < 2) continue;
+        const value = ln.replace(/^[^:]*(?:banking|banks|relationships)[^:]*:\s*/i, '').trim() || ln;
+        fill('personalBanks', value, 0.55);
+        break;
+      }
+    }
 
     // ── Banks list (lines with bank keywords) ───────────────────────────
     // Route by keyword context: a line containing "Personal Banking" or
