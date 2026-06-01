@@ -14325,22 +14325,36 @@
       }
       setMsg('Opening PDF…');
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-      // Reconstruct text by clustering items by y-coordinate so labels and
-      // values that sit on the same line stay together — critical for
-      // "Label: value" matching downstream.
+      // Reconstruct text. Old approach used only y-coord; that flattened
+      // multi-column forms onto one line ("First Name John Last Name Doe…")
+      // and the strict label parser missed every label after the first.
+      // New approach inserts a line break whenever EITHER (a) y shifts by
+      // more than 50% of the font height, OR (b) the x cursor wraps left
+      // (cursor jumped backwards = new visual row). Together these catch
+      // column wraps AND row gaps so each label sits on its own line.
       let pageTexts = [];
       for (let p = 1; p <= pdf.numPages; p++) {
         setMsg('Reading page ' + p + ' of ' + pdf.numPages + '…');
         const page = await pdf.getPage(p);
         const tc = await page.getTextContent({ normalizeWhitespace: true });
-        const items = tc.items.map(i => ({ str: i.str, x: i.transform[4], y: Math.round(i.transform[5]) }));
+        const items = tc.items.map(i => ({
+          str: i.str,
+          x: i.transform[4],
+          y: Math.round(i.transform[5]),
+          h: i.height || 10,
+          w: i.width || 0,
+        }));
         items.sort((a,b) => b.y - a.y || a.x - b.x);
-        let pageText = ''; let lastY = null;
+        let pageText = ''; let lastY = null; let lastX = null;
         items.forEach(it => {
-          if (lastY !== null && Math.abs(it.y - lastY) > 2) pageText += '\n';
-          else if (pageText && !pageText.endsWith(' ')) pageText += ' ';
+          if (lastY !== null) {
+            const yJump = Math.abs(it.y - lastY) > Math.max(2, it.h * 0.5);
+            const xWrap = lastX !== null && it.x < lastX - 5; // cursor moved back
+            if (yJump || xWrap) pageText += '\n';
+            else if (pageText && !pageText.endsWith(' ') && !pageText.endsWith('\n')) pageText += ' ';
+          }
           pageText += it.str;
-          lastY = it.y;
+          lastY = it.y; lastX = it.x + (it.w || 0);
         });
         pageTexts.push(pageText);
       }
@@ -14395,17 +14409,27 @@
     return text;
   }
 
-  // Split "Holly Ridge, NC 28445" or variants into {city, state, zip}.
+  // Split "Holly Ridge, NC 28445" and variants into {city, state, zip}.
+  // Tolerant of trailing label garbage (e.g. "Holly Ridge, NC 28445 Business
+  // Phone:") and the no-space-before-zip case ("Holly Ridge, NC28445").
   function _ofParseCityStateZip(s) {
     if (!s) return {};
-    s = s.trim().replace(/\s+/g, ' ');
-    // City, ST ZIP   /  City, ST, ZIP
-    let m = s.match(/^(.+?),\s*([A-Za-z]{2})\s*,?\s*(\d{5}(?:-\d{4})?)\s*$/);
+    s = String(s).trim().replace(/\s+/g, ' ');
+    // Cut at the first occurrence of a known next-field label so we don't
+    // glue downstream junk onto the city. Common offenders that the
+    // y-clustering bug occasionally welded on: phone/email/EIN/SSN/date.
+    s = s.replace(/\s+(?:Business\s*Phone|Phone|Email|EIN|SSN|Date\s*of\s*Birth|DOB|Tax\s*ID)\b.*$/i, '').trim();
+    // Strict 1: "City, ST ZIP" / "City, ST, ZIP" — un-anchored to allow
+    // trailing tokens that survived the cut above.
+    let m = s.match(/(.+?),\s*([A-Za-z]{2})[\s,]+(\d{5}(?:-\d{4})?)(?:\b|$)/);
     if (m) return { city: m[1].trim(), state: m[2].toUpperCase(), zip: m[3] };
-    // City ST ZIP (no comma)
-    m = s.match(/^(.+?)\s+([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)\s*$/);
+    // Strict 1b: "City, STZIP" (no space — pdf.js sometimes joins adjacent items).
+    m = s.match(/(.+?),\s*([A-Za-z]{2})(\d{5}(?:-\d{4})?)(?:\b|$)/);
     if (m) return { city: m[1].trim(), state: m[2].toUpperCase(), zip: m[3] };
-    // Loose: pick zip + state out, the rest is city.
+    // Strict 2: "City ST ZIP" (no comma).
+    m = s.match(/(.+?)\s+([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)(?:\b|$)/);
+    if (m) return { city: m[1].trim(), state: m[2].toUpperCase(), zip: m[3] };
+    // Loose: pull zip and 2-letter state by pattern, treat the rest as city.
     const zipM = s.match(/\b(\d{5}(?:-\d{4})?)\b/);
     const stateM = s.match(/\b([A-Z]{2})\b/);
     if (zipM || stateM) {
@@ -14418,106 +14442,278 @@
     return { city: s };
   }
 
-  // Label-keyed field extraction. Each entry has a list of aliases; the
-  // first match wins. Returns { fieldId: {value, confidence} }.
+  // Normalize a label/line for fuzzy comparison: lowercase, strip
+  // punctuation, collapse whitespace. Also normalize common scan typos
+  // ("Stress" -> "Street", "adress" -> "address") so the form's labels
+  // and our aliases land in the same space.
+  function _ofNormLabel(s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/\bstress\b/g, 'street')
+      .replace(/\badress\b/g, 'address')
+      .replace(/\bcuty\b/g, 'city')
+      .replace(/[^a-z0-9 ]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function _ofEscapeRegex(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  // Robust label-keyed extractor. For each alias, tries multiple regex
+  // patterns (same-line-with-separator, same-line-with-whitespace, label-
+  // then-newline-then-value, anywhere-with-colon). Returns the highest-
+  // confidence match across all aliases. If none hit, falls back to a
+  // token-overlap fuzzy search across all lines.
   function _ofParseFields(text) {
-    const blob = text.replace(/\r/g, '');
+    const blob = String(text || '').replace(/\r/g, '');
+    const blobLines = blob.split('\n');
     const out = {};
-    function find(aliases, stopBefore) {
-      for (const a of aliases) {
-        const pattern = a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        // Match label followed by : or - or newline + value (up to end of line)
-        const re = new RegExp('(?:^|\\n)\\s*' + pattern + '\\s*[:\\-]?\\s*([^\\n]+)', 'i');
-        const m = blob.match(re);
-        if (m && m[1]) {
+
+    // ── label-keyed value extraction ────────────────────────────────────
+    function findOne(aliases, stopBefore) {
+      let best = null;
+      for (const alias of aliases) {
+        const lit = _ofEscapeRegex(alias);
+        // Try a graduated set of patterns; first hit per alias wins,
+        // then we cross-compare confidence across aliases.
+        const patterns = [
+          // (a) Label followed by colon/dash/equals and value on same line.
+          { re: new RegExp('(?:^|[^A-Za-z])' + lit + '\\s*[:\\-=]\\s*([^\\n\\r]{1,200})', 'i'), conf: 1.0 },
+          // (b) Label then 2+ spaces then value (forms with no colon).
+          { re: new RegExp('(?:^|[^A-Za-z])' + lit + '[ \\t]{2,}([^\\n\\r]{1,200})', 'i'),    conf: 0.9 },
+          // (c) Label followed by newline then value on the next line.
+          { re: new RegExp('(?:^|[^A-Za-z])' + lit + '\\s*[:\\-=]?\\s*\\n+\\s*([^\\n\\r]{1,200})', 'i'), conf: 0.85 },
+        ];
+        for (const p of patterns) {
+          const m = blob.match(p.re);
+          if (!m || !m[1]) continue;
           let v = m[1].trim();
-          // Strip inline "next field" labels that landed on the same line.
+          // Trim trailing "next field" tokens that ended up on the same line.
           if (stopBefore && stopBefore.length) {
             for (const stop of stopBefore) {
-              const re2 = new RegExp('\\s*' + stop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-              const m2 = v.match(re2);
-              if (m2 && m2.index > 0) v = v.slice(0, m2.index).trim();
+              const stopRe = new RegExp('\\s+' + _ofEscapeRegex(stop) + '\\b', 'i');
+              const m2 = v.match(stopRe);
+              if (m2 && m2.index > 0) { v = v.slice(0, m2.index).trim(); }
             }
           }
-          if (v) return { value: v, confidence: 1 };
+          // Strip a trailing capitalized "Word Word :" pattern that signals
+          // a next-field label glued onto our value.
+          v = v.replace(/\s+(?:[A-Z][A-Za-z]{2,}\s+){0,3}[A-Z][A-Za-z]{2,}\s*:.*$/, '').trim();
+          if (!v) continue;
+          if (!best || p.conf > best.confidence) best = { value: v, confidence: p.conf };
+          if (best && best.confidence >= 1.0) return best;
         }
+      }
+      if (best) return best;
+      // ── fuzzy fallback: token-overlap search across lines ──────────────
+      for (const alias of aliases) {
+        const target = _ofNormLabel(alias);
+        const tokens = target.split(' ').filter(t => t.length > 2);
+        if (!tokens.length) continue;
+        let bestLine = { score: 0, idx: -1, raw: '' };
+        for (let i = 0; i < blobLines.length; i++) {
+          const norm = _ofNormLabel(blobLines[i]);
+          if (!norm) continue;
+          let hits = 0;
+          for (const t of tokens) if (norm.includes(t)) hits++;
+          const score = hits / tokens.length;
+          if (score >= 0.6 && score > bestLine.score) bestLine = { score, idx: i, raw: blobLines[i] };
+        }
+        if (bestLine.idx < 0) continue;
+        // Take everything after the matched label tokens on this line,
+        // or the next non-empty line if the value spilled over.
+        const raw = bestLine.raw;
+        const tokenAlts = tokens.map(_ofEscapeRegex).join('|');
+        const cutRe = new RegExp('(?:' + tokenAlts + ')\\s*[:\\-=]?\\s*', 'gi');
+        let tail = raw.replace(cutRe, ' ').replace(/\s+/g, ' ').trim();
+        // If the tail looks like just label remnants (very short), look ahead.
+        if (!tail || tail.length < 2) {
+          for (let j = bestLine.idx + 1; j < Math.min(bestLine.idx + 3, blobLines.length); j++) {
+            const nxt = (blobLines[j] || '').trim();
+            if (nxt) { tail = nxt; break; }
+          }
+        }
+        if (tail) return { value: tail, confidence: Math.min(0.75, 0.5 + bestLine.score * 0.25) };
       }
       return null;
     }
     function set(id, res) { if (res && res.value && String(res.value).trim()) out[id] = res; }
 
-    // Personal Information
-    let fn = find(['First Name','FName','Given Name']);
-    let ln = find(['Last Name','LName','Surname','Family Name']);
+    // ── Personal Information ────────────────────────────────────────────
+    let fn = findOne(['First Name','FName','Given Name']);
+    let ln = findOne(['Last Name','LName','Surname','Family Name']);
     if (!fn || !ln) {
-      const full = find(['Full Name','Applicant Name','Borrower Name']);
+      const full = findOne(['Full Name','Applicant Name','Borrower Name']);
       if (full && full.value) {
         const parts = full.value.split(/\s+/).filter(Boolean);
-        if (!fn && parts.length) fn = { value: parts[0], confidence: 0.7 };
-        if (!ln && parts.length > 1) ln = { value: parts.slice(1).join(' '), confidence: 0.7 };
+        if (!fn && parts.length) fn = { value: parts[0], confidence: Math.min(full.confidence, 0.7) };
+        if (!ln && parts.length > 1) ln = { value: parts.slice(1).join(' '), confidence: Math.min(full.confidence, 0.7) };
       }
     }
     set('firstName', fn); set('lastName', ln);
-    set('email',        find(['Email Address','Personal Email','Email','E-mail'], ['Phone','Business']));
-    set('phone',        find(['Personal Phone','Cell Phone','Mobile Phone','Phone Number','Phone'], ['Email','Business','EIN','SSN']));
-    set('dob',          find(['Date of Birth','DOB','Birth Date'], ['SSN','Email','Phone']));
-    set('ssn',          find(['Social Security Number','SSN','Social Security'], ['EIN','Date','Phone']));
-    set('maidenName',   find(["Mother's Maiden Name",'Mothers Maiden Name','Maiden Name']));
-    set('annualIncome', find(['Personal Annual Income','Annual Income','Yearly Income','Gross Annual Income']));
-    set('citizen',      find(['US Citizen','U.S. Citizen','Citizen']));
+    set('email',        findOne(['Email Address','Personal Email','Email','E-mail'], ['Phone','Business','Cell','Mobile']));
+    set('phone',        findOne(['Personal Phone','Cell Phone','Mobile Phone','Phone Number','Phone'], ['Email','Business','EIN','SSN','Date']));
+    set('dob',          findOne(['Date of Birth','DOB','Birth Date'], ['SSN','Email','Phone']));
+    set('ssn',          findOne(['Social Security Number','SSN','Social Security'], ['EIN','Date','Phone']));
+    set('maidenName',   findOne(["Mother's Maiden Name",'Mothers Maiden Name','Maiden Name'], ['SSN','DOB']));
+    set('annualIncome', findOne(['Personal Annual Income','Annual Income','Yearly Income','Gross Annual Income'], ['Monthly','Business']));
+    set('citizen',      findOne(['US Citizen','U.S. Citizen','Citizen']));
 
-    // Home Address — split CSZ line if present
-    const street = find(['Home Street Address','Home Address','Residential Street Address','Residential Address','Street Address','Address Line 1']);
+    // ── Home Address ────────────────────────────────────────────────────
+    const street = findOne(['Home Street Address','Home Address','Residential Street Address','Residential Address','Street Address','Address Line 1'], ['City','State','Zip','Business']);
     if (street) set('street', street);
-    const csz = find(['Home City, State, Zip','Home City, State Zip','City, State, Zip','City, State Zip','City State Zip','City/State/Zip']);
+    const csz = findOne(['Home City, State, Zip','Home City, State Zip','City, State, Zip','City, State Zip','City State Zip','City/State/Zip'], ['Business','EIN','Phone']);
     if (csz && csz.value) {
       const p = _ofParseCityStateZip(csz.value);
-      if (p.city)  set('city',  { value: p.city,  confidence: 1 });
-      if (p.state) set('state', { value: p.state, confidence: 1 });
-      if (p.zip)   set('zip',   { value: p.zip,   confidence: 1 });
+      if (p.city)  set('city',  { value: p.city,  confidence: Math.min(csz.confidence, 1) });
+      if (p.state) set('state', { value: p.state, confidence: Math.min(csz.confidence, 1) });
+      if (p.zip)   set('zip',   { value: p.zip,   confidence: Math.min(csz.confidence, 1) });
     } else {
-      set('city',  find(['Home City','City']));
-      set('state', find(['Home State','State']));
-      set('zip',   find(['Home Zip','Home ZIP','ZIP Code','Zip Code','Postal Code','Zip','ZIP']));
+      set('city',  findOne(['Home City','City'], ['State','Zip','Business']));
+      set('state', findOne(['Home State','State'], ['Zip','City','Business']));
+      set('zip',   findOne(['Home Zip','Home ZIP','ZIP Code','Zip Code','Postal Code','Zip','ZIP'], ['Business']));
+    }
+    // Multi-line consumer: if we found street but no city/state/zip yet,
+    // look at the line immediately after the street value for a CSZ string.
+    if (out.street && (!out.city || !out.state || !out.zip)) {
+      const streetIdx = blobLines.findIndex(l => l && l.indexOf(out.street.value) >= 0);
+      if (streetIdx >= 0) {
+        for (let j = streetIdx + 1; j < Math.min(streetIdx + 3, blobLines.length); j++) {
+          const nxt = (blobLines[j] || '').trim();
+          if (!nxt) continue;
+          const p = _ofParseCityStateZip(nxt);
+          if (p.city || p.state || p.zip) {
+            if (!out.city  && p.city)  set('city',  { value: p.city,  confidence: 0.8 });
+            if (!out.state && p.state) set('state', { value: p.state, confidence: 0.8 });
+            if (!out.zip   && p.zip)   set('zip',   { value: p.zip,   confidence: 0.8 });
+            break;
+          }
+        }
+      }
     }
 
-    // Business Information
-    set('bizName',         find(['Legal Business Name','Business Name','Company Name','Entity Name']));
-    set('dba',             find(['DBA / Trade Name','DBA/Trade Name','DBA Name','Doing Business As','Trade Name','DBA']));
-    set('ein',             find(['EIN','Tax ID','Employer Identification Number','Federal Tax ID','Tax Identification Number']));
-    set('bizType',         find(['Business Type','Entity Type','Business Structure','Type of Business']));
-    set('industry',        find(['Industry','Business Industry','Industry Type']));
-    set('employees',       find(['Number of Employees','# of Employees','# Employees','Employees']));
-    set('monthlySales',    find(['Average Monthly Sales','Avg Monthly Sales','Monthly Sales','Monthly Revenue','Monthly Gross Revenue']));
-    set('ownership',       find(['Ownership Percentage','Ownership %','Percent Ownership','% Ownership']));
-    set('bizPhone',        find(['Company Phone','Business Phone Number','Business Phone']));
-    set('dateEstablished', find(['Business Date Established','Date Established','Established Date','Date of Establishment','Inception Date','Established']));
-    set('loanAmount',      find(['Desired Loan Amount','Requested Loan Amount','Loan Amount','Funding Amount','Desired Funding']));
-    set('loanReason',      find(['Loan Purpose','Loan Reason','Purpose of Loan','Use of Funds','Use of Proceeds']));
+    // ── Business Information ────────────────────────────────────────────
+    set('bizName',         findOne(['Legal Business Name','Business Name','Company Name','Entity Name'], ['DBA','EIN','Address']));
+    set('dba',             findOne(['DBA / Trade Name','DBA/Trade Name','DBA Name','Doing Business As','Trade Name','DBA'], ['EIN','Address','Type']));
+    set('ein',             findOne(['EIN','Tax ID','Employer Identification Number','Federal Tax ID','Tax Identification Number'], ['SSN','Date','Phone','Type']));
+    set('bizType',         findOne(['Business Type','Entity Type','Business Structure','Type of Business'], ['Industry','EIN','Address']));
+    set('industry',        findOne(['Industry','Business Industry','Industry Type'], ['Employees','Type','Sales']));
+    set('employees',       findOne(['Number of Employees','# of Employees','# Employees','Employees'], ['Sales','Revenue','Ownership']));
+    set('monthlySales',    findOne(['Average Monthly Sales','Avg Monthly Sales','Monthly Sales','Monthly Revenue','Monthly Gross Revenue'], ['Annual','Ownership','Established']));
+    set('ownership',       findOne(['Ownership Percentage','Ownership %','Percent Ownership','% Ownership'], ['Phone','Established','Loan']));
+    set('bizPhone',        findOne(['Company Phone','Business Phone Number','Business Phone'], ['Email','Date','Established','Loan']));
+    set('dateEstablished', findOne(['Business Date Established','Date Established','Established Date','Date of Establishment','Inception Date','Established'], ['Loan','Purpose']));
+    set('loanAmount',      findOne(['Desired Loan Amount','Requested Loan Amount','Loan Amount','Funding Amount','Desired Funding'], ['Purpose','Reason','Use']));
+    set('loanReason',      findOne(['Loan Purpose','Loan Reason','Purpose of Loan','Use of Funds','Use of Proceeds'], ['Bank','Banking','Personal']));
 
-    // Business Address — combine street + city/state/zip into one display string
-    const bStreet = find(['Business Street Address','Business Address','Company Address','Company Street Address']);
-    const bCsz    = find(['Business City, State, Zip','Business City, State Zip','Business City/State/Zip']);
-    if (bStreet && bCsz && bCsz.value) {
-      const p = _ofParseCityStateZip(bCsz.value);
-      const parts = [bStreet.value, p.city, (p.state || '') + (p.zip ? ' ' + p.zip : '')].filter(x => x && x.trim());
-      set('bizAddress', { value: parts.join(', '), confidence: 0.9 });
-    } else if (bStreet) {
-      set('bizAddress', bStreet);
+    // Business Address — combine street + city/state/zip. Now supports
+    // bizCsz alone (when the street label got swallowed upstream).
+    const bStreet = findOne(['Business Street Address','Business Address','Company Address','Company Street Address'], ['City','State','Zip','Banking','Bank']);
+    const bCsz    = findOne(['Business City, State, Zip','Business City, State Zip','Business City/State/Zip'], ['Banking','Bank','Phone']);
+    {
+      const haveStreet = bStreet && bStreet.value;
+      let cityPart = '', stateZip = '';
+      if (bCsz && bCsz.value) {
+        const p = _ofParseCityStateZip(bCsz.value);
+        cityPart = p.city || '';
+        stateZip = (p.state || '') + (p.zip ? ' ' + p.zip : '');
+      }
+      const parts = [
+        haveStreet ? bStreet.value : '',
+        cityPart,
+        stateZip.trim(),
+      ].filter(x => x && x.trim());
+      if (parts.length) {
+        const conf = haveStreet && bCsz ? 0.9 : (haveStreet ? bStreet.confidence : 0.7);
+        set('bizAddress', { value: parts.join(', '), confidence: conf });
+      }
     }
 
-    // Banking & Credit
-    set('personalBanks',  find(['Current Personal Banking Relationships','Personal Banking Relationships','Personal Banks','Current Personal Banks']));
-    set('bizBanks',       find(['Current Business Banking Relationships','Business Banking Relationships','Business Banks','Current Business Banks']));
-    set('bizCreditCards', find(['Current Business Credit Cards','Existing Business Credit Cards','Business Credit Cards']));
-    set('newCreditAccts', find(['New Credit Accounts Opened','New Credit Accounts','Recently Opened Accounts','New Accounts Opened']));
+    // ── Banking & Credit ────────────────────────────────────────────────
+    set('personalBanks',  findOne(['Current Personal Banking Relationships','Personal Banking Relationships','Personal Banks','Current Personal Banks'], ['Business','Credit']));
+    set('bizBanks',       findOne(['Current Business Banking Relationships','Business Banking Relationships','Business Banks','Current Business Banks'], ['Credit','Personal','Experian']));
+    set('bizCreditCards', findOne(['Current Business Credit Cards','Existing Business Credit Cards','Business Credit Cards'], ['New','Experian','Account']));
+    set('newCreditAccts', findOne(['New Credit Accounts Opened','New Credit Accounts','Recently Opened Accounts','New Accounts Opened'], ['Experian','Security']));
 
-    // Experian Access & Security
-    set('experianEmail', find(['Experian Login Email','Experian Email','Experian Account Email']));
-    set('experianPass',  find(['Experian Login Password','Experian Password','Experian Account Password']));
-    set('pin',           find(['Experian PIN','Account PIN','PIN']));
-    set('secQuestion',   find(['Security Question']));
-    set('secAnswer',     find(['Security Answer']));
+    // ── Experian Access & Security ──────────────────────────────────────
+    set('experianEmail', findOne(['Experian Login Email','Experian Email','Experian Account Email'], ['Password','PIN']));
+    set('experianPass',  findOne(['Experian Login Password','Experian Password','Experian Account Password'], ['PIN','Security']));
+    set('pin',           findOne(['Experian PIN','Account PIN','PIN'], ['Security']));
+    set('secQuestion',   findOne(['Security Question'], ['Answer']));
+    set('secAnswer',     findOne(['Security Answer']));
+
+    return out;
+  }
+
+  // Value-only sweep: pattern-match SSN/EIN/phone/email/ZIP/currency/dates
+  // independent of labels. Only fills slots that the label-keyed pass left
+  // empty. Confidence is moderate (these are unambiguous data formats but
+  // there's no label context to confirm them).
+  function _ofValueOnlySweep(text, fields) {
+    const out = {};
+    function fill(id, val, conf) {
+      if (fields[id] || out[id]) return;
+      out[id] = { value: val, confidence: conf };
+    }
+    const t = String(text || '');
+
+    // SSN — exactly XXX-XX-XXXX. If multiple, take first.
+    const ssn = t.match(/\b(\d{3}-\d{2}-\d{4})\b/);
+    if (ssn) fill('ssn', ssn[1], 0.75);
+
+    // EIN — XX-XXXXXXX. Avoid matching as part of a phone or zip.
+    const einAll = [...t.matchAll(/\b(\d{2}-\d{7})\b/g)].map(m => m[1]);
+    if (einAll.length) fill('ein', einAll[0], 0.75);
+
+    // Email — first non-experian email goes to personal email, an
+    // @experian.com one goes to the Experian email field.
+    const emails = [...t.matchAll(/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g)].map(m => m[0]);
+    const expEmail = emails.find(e => /experian/i.test(e));
+    const otherEmail = emails.find(e => !/experian/i.test(e));
+    if (otherEmail) fill('email', otherEmail, 0.7);
+    if (expEmail) fill('experianEmail', expEmail, 0.8);
+
+    // Phone — (XXX) XXX-XXXX or XXX.XXX.XXXX or XXX-XXX-XXXX or XXX XXX XXXX.
+    const phones = [...t.matchAll(/(?:\(\d{3}\)\s*|\b\d{3}[\s.\-])\d{3}[\s.\-]\d{4}\b/g)].map(m => m[0]);
+    if (phones.length) {
+      fill('phone', phones[0].trim(), 0.65);
+      if (phones.length > 1) fill('bizPhone', phones[1].trim(), 0.6);
+    }
+
+    // ZIP — first 5-digit ZIP not preceded by SSN/EIN context.
+    const zips = [...t.matchAll(/\b(\d{5}(?:-\d{4})?)\b/g)].map(m => m[1]);
+    if (zips.length) fill('zip', zips[0], 0.65);
+
+    // DOB — date in MM/DD/YYYY or MM-DD-YYYY (1900-2010 range so we don't
+    // pick the form submission date or business establishment date).
+    const dates = [...t.matchAll(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g)];
+    for (const d of dates) {
+      const year = parseInt(d[3], 10);
+      const fullYear = year < 100 ? 1900 + year : year;
+      if (fullYear >= 1900 && fullYear <= 2010) {
+        fill('dob', d[0], 0.65);
+        break;
+      }
+    }
+
+    // Currency — $123,456 / $1.5M not supported. Largest goes to
+    // annualIncome; loanAmount has its own label parsing usually.
+    const moneys = [...t.matchAll(/\$\s?([\d,]+(?:\.\d{2})?)/g)]
+      .map(m => ({ raw: m[0].trim(), num: parseFloat(m[1].replace(/,/g, '')) || 0 }))
+      .filter(x => x.num > 0);
+    if (moneys.length) {
+      const sorted = moneys.slice().sort((a, b) => b.num - a.num);
+      fill('annualIncome', sorted[0].raw, 0.55);
+    }
+
+    // Ownership % — 1-100 followed by %.
+    const own = t.match(/\b(\d{1,3})\s*%/);
+    if (own) {
+      const n = parseInt(own[1], 10);
+      if (n >= 1 && n <= 100) fill('ownership', own[1] + '%', 0.6);
+    }
 
     return out;
   }
@@ -14552,15 +14748,19 @@
     }
     try { overlay.remove(); } catch(_) {}
 
-    const fields = _ofParseFields(text);
-    if (!Object.keys(fields).length) {
-      alert('No fields could be extracted from this file. The form may use a different label format, or the scan quality is too low. You can still edit fields manually.');
-      return;
-    }
-    _ofShowPreview(clientId, fields);
+    // Two-pass extraction: label-keyed first, then value-only heuristics
+    // fill any slots the label pass missed. We NEVER abort here even if
+    // both passes return nothing — the preview opens with the raw text in
+    // a readonly textarea so the admin can copy values manually.
+    const labeled = _ofParseFields(text);
+    const heuristic = _ofValueOnlySweep(text, labeled);
+    const fields = Object.assign({}, labeled, heuristic);
+    _ofShowPreview(clientId, fields, { rawText: text });
   }
 
-  function _ofShowPreview(clientId, fields) {
+  function _ofShowPreview(clientId, fields, opts) {
+    opts = opts || {};
+    const rawText = opts.rawText || '';
     const currentVal = id => {
       const el = document.getElementById('ape-' + id);
       return el ? el.value : '';
@@ -14616,16 +14816,44 @@
     const idList = sections.flatMap(s => s.ids).filter(id => fields[id]);
     const idListAttr = JSON.stringify(idList).replace(/"/g,'&quot;');
 
+    // Banner: empty-match state OR partial state where user should know
+    // raw text is available below. Always renders the raw-text expander
+    // so admin can copy values manually when auto-extract misses things.
+    let banner = '';
+    if (totalFound === 0) {
+      banner = '<div style="padding:12px 14px;margin-bottom:14px;background:#fef3c7;border:1px solid #fcd34d;border-radius:9px;font-size:12.5px;color:#854d0e;line-height:1.45">'
+        + '<strong>No fields were auto-detected</strong> — the form may use unfamiliar labels. The raw text extracted from the file is shown below. Paste values into the input boxes above (you can add fields by checking the section rows), or close this preview and edit the profile manually.'
+        + '</div>';
+    } else {
+      banner = '<div style="padding:10px 14px;margin-bottom:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;font-size:12px;color:#1e3a8a;line-height:1.4">'
+        + '<strong>' + totalFound + ' field' + (totalFound !== 1 ? 's' : '') + ' auto-detected.</strong> Review and edit each value, uncheck any you don\'t want to import, then click Import Selected.'
+        + (rawText ? ' If a field is wrong or missing, expand the raw-text panel below to verify what the OCR/PDF reader saw.' : '')
+        + '</div>';
+    }
+
+    // Raw-text expander — always present when we have rawText. Lets admin
+    // verify what was extracted and copy missed values into the inputs
+    // above. Collapsed by default to save space.
+    const escTxt = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    let rawPanel = '';
+    if (rawText) {
+      const startOpen = totalFound === 0 ? 'open' : '';
+      rawPanel = '<details ' + startOpen + ' style="margin-top:6px;border:1px solid #e2e8f0;border-radius:9px;background:#fafafa">'
+        + '<summary style="cursor:pointer;padding:9px 14px;font-size:12px;font-weight:700;color:var(--gray-600);user-select:none">Raw text extracted from file (' + rawText.length + ' chars) — click to ' + (startOpen ? 'collapse' : 'expand') + '</summary>'
+        + '<textarea readonly style="display:block;width:100%;height:200px;padding:10px 12px;border:none;border-top:1px solid #e2e8f0;background:#fff;font-family:Menlo,Monaco,Consolas,monospace;font-size:11px;line-height:1.4;color:#0f172a;resize:vertical;outline:none">' + escTxt(rawText) + '</textarea>'
+        + '</details>';
+    }
+
     const ov = document.createElement('div');
     ov.id = 'of-preview-overlay';
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.55);z-index:100001;display:flex;align-items:center;justify-content:center;padding:20px';
-    ov.innerHTML = '<div style="background:#fff;border-radius:14px;width:720px;max-width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.35)">'
+    ov.innerHTML = '<div style="background:#fff;border-radius:14px;width:760px;max-width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.35)">'
       + '<div style="padding:18px 22px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:12px">'
       +   '<div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#22A7F0,#10b981);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg></div>'
-      +   '<div style="flex:1"><div style="font-family:var(--font-h);font-weight:800;font-size:15px;color:var(--navy)">Preview Extracted Fields</div><div style="font-size:12px;color:var(--gray-500);margin-top:2px">Review and edit before importing. '+totalFound+' field'+(totalFound!==1?'s':'')+' detected.</div></div>'
+      +   '<div style="flex:1"><div style="font-family:var(--font-h);font-weight:800;font-size:15px;color:var(--navy)">Preview Extracted Fields</div><div style="font-size:12px;color:var(--gray-500);margin-top:2px">'+(totalFound > 0 ? 'Review and edit before importing. '+totalFound+' field'+(totalFound!==1?'s':'')+' detected.' : 'Review the raw text and enter values manually if needed.')+'</div></div>'
       +   '<button onclick="document.getElementById(\'of-preview-overlay\').remove()" style="width:30px;height:30px;border-radius:7px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;color:#64748b;font-size:18px;line-height:1">×</button>'
       + '</div>'
-      + '<div style="padding:18px 22px;overflow-y:auto;flex:1">'+body+'</div>'
+      + '<div style="padding:18px 22px;overflow-y:auto;flex:1">'+banner+body+rawPanel+'</div>'
       + '<div style="padding:14px 22px;border-top:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;background:#f8fafc;border-radius:0 0 14px 14px;flex-wrap:wrap">'
       +   '<button onclick="_ofToggleAll(true)" style="height:32px;padding:0 14px;background:#fff;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;font-weight:600;color:#475569;cursor:pointer">Select All</button>'
       +   '<button onclick="_ofToggleAll(false)" style="height:32px;padding:0 14px;background:#fff;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;font-weight:600;color:#475569;cursor:pointer">Deselect All</button>'
