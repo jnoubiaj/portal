@@ -13175,6 +13175,42 @@
     setTimeout(function() { _wqRenderBanner(); }, 60);
   }
 
+  // Next Client — banner action. Rotates the locked client to the bottom
+  // of session.queue WITHOUT touching task status, cooldown, or the
+  // completed/skipped/reviewed maps, then loads whoever is now at
+  // currentIdx. Lets the admin defer a client mid-session for any reason
+  // (call didn't connect, awaiting info, just want to come back later)
+  // without marking the task done or hiding the client like Skip-For-Later
+  // does. The task and its due date stay exactly as they were.
+  function _wsNextClient() {
+    var s = _wsGetSession();
+    if (!s || !s.active || s.paused) return;
+    var clientId = s.queue[s.currentIdx];
+    if (!clientId) { _wsAdvance(); return; }
+    // Re-slot: remove current, push to end. Same primitive as
+    // _wsAdvanceCurrentToBottom but logs as 'Moved to next client' for the
+    // audit trail and intentionally never mutates completed/skipped/reviewed.
+    var newQueue = s.queue.slice();
+    newQueue.splice(s.currentIdx, 1);
+    newQueue.push(clientId);
+    s.queue = newQueue;
+    // currentIdx stays — the splice pulled the next client into position
+    // s.currentIdx. Wrap if we were at the end.
+    if (s.currentIdx >= s.queue.length) s.currentIdx = 0;
+    _wsSaveSession(s);
+    try {
+      var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+      var nm = c ? ((c.fname || '') + ' ' + (c.lname || '')).trim() : clientId;
+      if (typeof logActivity === 'function') {
+        logActivity('Moved to next client — <strong>' + _escHtml(nm) + '</strong> rotated to end of session queue', '#22A7F0');
+      }
+    } catch(e) {}
+    var nextId = s.queue[s.currentIdx];
+    _wqCurrentClientId = nextId;
+    if (nextId && typeof selectClient === 'function') selectClient(nextId);
+    setTimeout(function() { _wqRenderBanner(); }, 60);
+  }
+
   // View Remaining Tasks — closes the completion modal and scrolls the
   // Next Actions panel (already populated with the same task list) into
   // view so the admin can pick the next one to work on.
@@ -13596,6 +13632,13 @@
         actionsHTML += (item.topTask
           ? '<button class="ws-btn complete" onclick="_wsCompleteCurrent()">&#10003; Complete Task</button>'
           : '<button class="ws-btn complete" onclick="_wsAdvance()">Next Client →</button>');
+        // Next Client — rotates current client to bottom of queue, loads
+        // next. Does NOT change task status, due date, or skip maps. Only
+        // shown when there IS a top task (when no task, the Complete-Task
+        // slot above is already an Advance button so this would be redundant).
+        if (item.topTask) {
+          actionsHTML += '<button class="ws-btn" onclick="_wsNextClient()" title="Move this client to the bottom of the queue and load the next one — leaves the task unchanged">Next Client →</button>';
+        }
         actionsHTML += '<button class="ws-btn" onclick="_wqOpenLaterMenu(\'' + clientId + '\', event)" title="Hide this client for 1–24 hours">Skip For Later Today</button>';
         actionsHTML += '<button class="ws-btn" onclick="_wsOpenSkipModal()">Skip With Reason</button>';
         actionsHTML += '<button class="ws-btn" onclick="_wsPauseSession()">Pause Session</button>';
