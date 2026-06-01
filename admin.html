@@ -14461,6 +14461,41 @@
     return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
+  // Normalize a date string to MM/DD/YYYY so the ape-dob / ape-dateEstablished
+  // input formatters don't mangle it. Handles "14 May 2025", "May 14, 2025",
+  // "May 14 2025", "5/14/2025", "5-14-25". Pass-through if it's already in
+  // MM/DD/YYYY format. Returns the original string if no pattern matches.
+  function _ofNormDate(s) {
+    if (!s) return s;
+    const months = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+    const raw = String(s).trim();
+    // Already in MM/DD/YYYY or M/D/YY — just normalize widths.
+    let m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (m) {
+      const y = m[3].length === 2 ? (parseInt(m[3], 10) > 30 ? '19' + m[3] : '20' + m[3]) : m[3];
+      return m[1].padStart(2, '0') + '/' + m[2].padStart(2, '0') + '/' + y;
+    }
+    // DD Month YYYY (e.g. "14 May 2025")
+    m = raw.match(/^(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{2,4})/);
+    if (m) {
+      const mo = months[m[2].slice(0, 3).toLowerCase()];
+      if (mo) {
+        const y = m[3].length === 2 ? '20' + m[3] : m[3];
+        return String(mo).padStart(2, '0') + '/' + m[1].padStart(2, '0') + '/' + y;
+      }
+    }
+    // Month DD, YYYY (e.g. "May 14, 2025")
+    m = raw.match(/^([A-Za-z]+)\.?\s+(\d{1,2}),?\s+(\d{2,4})/);
+    if (m) {
+      const mo = months[m[1].slice(0, 3).toLowerCase()];
+      if (mo) {
+        const y = m[3].length === 2 ? '20' + m[3] : m[3];
+        return String(mo).padStart(2, '0') + '/' + m[2].padStart(2, '0') + '/' + y;
+      }
+    }
+    return raw;
+  }
+
   // Robust label-keyed extractor. For each alias, tries multiple regex
   // patterns (same-line-with-separator, same-line-with-whitespace, label-
   // then-newline-then-value, anywhere-with-colon). Returns the highest-
@@ -14475,16 +14510,21 @@
     function findOne(aliases, stopBefore) {
       let best = null;
       for (const alias of aliases) {
-        const lit = _ofEscapeRegex(alias);
-        // Try a graduated set of patterns; first hit per alias wins,
-        // then we cross-compare confidence across aliases.
+        // CRITICAL: pdf.js often splits multi-word labels across lines
+        // ("Desired Loan" \n "amount: 90,000"). Convert spaces inside the
+        // alias to [\\s\\n]+ so the label still matches even when broken
+        // by a newline. Also tolerate optional intermediate punctuation
+        // like "(LLC,etc)" inside a label by allowing one parenthetical
+        // group between any two tokens.
+        const escTokens = alias.split(/\s+/).map(_ofEscapeRegex);
+        const litMulti = escTokens.join('[\\s\\n]+(?:\\([^)]{0,40}\\)[\\s\\n]*)?');
         const patterns = [
           // (a) Label followed by colon/dash/equals and value on same line.
-          { re: new RegExp('(?:^|[^A-Za-z])' + lit + '\\s*[:\\-=]\\s*([^\\n\\r]{1,200})', 'i'), conf: 1.0 },
+          { re: new RegExp('(?:^|[^A-Za-z])' + litMulti + '\\s*[:\\-=]\\s*([^\\n\\r]{1,200})', 'i'), conf: 1.0 },
           // (b) Label then 2+ spaces then value (forms with no colon).
-          { re: new RegExp('(?:^|[^A-Za-z])' + lit + '[ \\t]{2,}([^\\n\\r]{1,200})', 'i'),    conf: 0.9 },
+          { re: new RegExp('(?:^|[^A-Za-z])' + litMulti + '[ \\t]{2,}([^\\n\\r]{1,200})', 'i'),    conf: 0.9 },
           // (c) Label followed by newline then value on the next line.
-          { re: new RegExp('(?:^|[^A-Za-z])' + lit + '\\s*[:\\-=]?\\s*\\n+\\s*([^\\n\\r]{1,200})', 'i'), conf: 0.85 },
+          { re: new RegExp('(?:^|[^A-Za-z])' + litMulti + '\\s*[:\\-=]?\\s*\\n+\\s*([^\\n\\r]{1,200})', 'i'), conf: 0.85 },
         ];
         for (const p of patterns) {
           const m = blob.match(p.re);
@@ -14555,7 +14595,9 @@
     set('firstName', fn); set('lastName', ln);
     set('email',        findOne(['Email Address','Personal Email','Email','E-mail'], ['Phone','Business','Cell','Mobile']));
     set('phone',        findOne(['Personal Phone','Cell Phone','Mobile Phone','Phone Number','Phone'], ['Email','Business','EIN','SSN','Date']));
-    set('dob',          findOne(['Date of Birth','DOB','Birth Date'], ['SSN','Email','Phone']));
+    const _dobRaw = findOne(['Date of Birth','DOB','Birth Date'], ['SSN','Email','Phone']);
+    if (_dobRaw) _dobRaw.value = _ofNormDate(_dobRaw.value);
+    set('dob', _dobRaw);
     set('ssn',          findOne(['Social Security Number','SSN','Social Security'], ['EIN','Date','Phone']));
     set('maidenName',   findOne(["Mother's Maiden Name",'Mothers Maiden Name','Maiden Name'], ['SSN','DOB']));
     set('annualIncome', findOne(['Personal Annual Income','Annual Income','Yearly Income','Gross Annual Income'], ['Monthly','Business']));
@@ -14627,14 +14669,21 @@
     const _bizTypeRaw = findOne(['Business Type','Entity Type','Business Structure','Type of Business'], ['Industry','EIN','Address']);
     if (_bizTypeRaw) _bizTypeRaw.value = _ofCleanBizType(_bizTypeRaw.value);
     set('bizType', _bizTypeRaw);
-    set('industry',        findOne(['Industry','Business Industry','Industry Type'], ['Employees','Type','Sales']));
+    // Industry can pick up the employee count from a two-column layout
+    // ("Real Estat 2"). Strip a trailing 1-3 digit number so the cell
+    // doesn't carry the next field's value.
+    const _indRaw = findOne(['Industry','Business Industry','Industry Type'], ['Employees','Type','Sales','Employee']);
+    if (_indRaw) _indRaw.value = String(_indRaw.value).replace(/\s+\d{1,3}\s*$/, '').trim();
+    set('industry', _indRaw);
     set('employees',       findOne(['Number of Employees','# of Employees','# Employees','Employees'], ['Sales','Revenue','Ownership']));
     set('monthlySales',    findOne(['Average Monthly Sales','Avg Monthly Sales','Monthly Sales','Monthly Revenue','Monthly Gross Revenue'], ['Annual','Ownership','Established']));
     set('ownership',       findOne(['Ownership Percentage','Ownership %','Percent Ownership','% Ownership'], ['Phone','Established','Loan']));
     set('bizPhone',        findOne(['Company Phone','Business Phone Number','Business Phone'], ['Email','Date','Established','Loan']));
-    set('dateEstablished', findOne(['Business Date Established','Date Established','Established Date','Date of Establishment','Inception Date','Established'], ['Loan','Purpose']));
-    set('loanAmount',      findOne(['Desired Loan Amount','Requested Loan Amount','Loan Amount','Funding Amount','Desired Funding'], ['Purpose','Reason','Use']));
-    set('loanReason',      findOne(['Loan Purpose','Loan Reason','Purpose of Loan','Use of Funds','Use of Proceeds'], ['Bank','Banking','Personal']));
+    const _deRaw = findOne(['Business Date Established','Date Established','Established Date','Date of Establishment','Inception Date','Established'], ['Loan','Purpose']);
+    if (_deRaw) _deRaw.value = _ofNormDate(_deRaw.value);
+    set('dateEstablished', _deRaw);
+    set('loanAmount',      findOne(['Desired Loan Amount','Desired Loan amount','Requested Loan Amount','Loan Amount','Funding Amount','Desired Funding'], ['Purpose','Reason','Use','Bank']));
+    set('loanReason',      findOne(['Reason For Loan','Reason for Loan','Loan Purpose','Loan Reason','Purpose of Loan','Use of Funds','Use of Proceeds'], ['Bank','Banking','Personal','Credit']));
 
     // Business Address — combine street + city/state/zip. Now supports
     // bizCsz alone (when the street label got swallowed upstream).
@@ -14690,13 +14739,39 @@
     const t = String(text || '');
     const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
 
-    // ── SSN — XXX-XX-XXXX ───────────────────────────────────────────────
-    const ssn = t.match(/\b(\d{3}-\d{2}-\d{4})\b/);
-    if (ssn) fill('ssn', ssn[1], 0.75);
+    // ── SSN — XXX-XX-XXXX or 9 consecutive digits ───────────────────────
+    const ssnDashed = t.match(/\b(\d{3}-\d{2}-\d{4})\b/);
+    if (ssnDashed) fill('ssn', ssnDashed[1], 0.8);
+    if (!out.ssn && !fields.ssn) {
+      // 9 bare digits not part of a longer run, not preceded/followed by a
+      // dash (which would make it part of an EIN/zip+4). Format as
+      // XXX-XX-XXXX so the ape-ssn formatter renders it cleanly.
+      const ssnBare = t.match(/(?<![\d\-])(\d{9})(?![\d\-])/);
+      if (ssnBare) {
+        const v = ssnBare[1];
+        fill('ssn', v.slice(0,3) + '-' + v.slice(3,5) + '-' + v.slice(5), 0.7);
+      }
+    }
 
     // ── EIN — XX-XXXXXXX ────────────────────────────────────────────────
     const einAll = [...t.matchAll(/\b(\d{2}-\d{7})\b/g)].map(m => m[1]);
     if (einAll.length) fill('ein', einAll[0], 0.8);
+
+    // ── Mother's Maiden Name (name pattern within ~2 lines of "Maiden") ──
+    if (!fields.maidenName && !out.maidenName) {
+      for (let i = 0; i < lines.length; i++) {
+        if (!/maiden/i.test(lines[i])) continue;
+        // Try same line: "Maiden Name: Olivia Urrutia" or just trailing tokens after "Name"
+        const sameLine = lines[i].match(/maiden(?:\s+name)?\s*:?\s*([A-Z][A-Za-z'\-]+\s+[A-Z][A-Za-z'\-]+)/i);
+        if (sameLine) { fill('maidenName', sameLine[1].trim(), 0.7); break; }
+        // Next line: first capitalized two-word name pattern
+        for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+          const nx = lines[j].match(/^([A-Z][A-Za-z'\-]+\s+[A-Z][A-Za-z'\-]+)/);
+          if (nx) { fill('maidenName', nx[1].trim(), 0.65); break; }
+        }
+        if (out.maidenName) break;
+      }
+    }
 
     // ── Email — split by domain ─────────────────────────────────────────
     const emails = [...t.matchAll(/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g)].map(m => m[0]);
@@ -14814,43 +14889,75 @@
     if (!dateEst) dateEst = t.match(new RegExp('\\b(' + monthNames + '\\s+\\d{1,2},?\\s+(?:19|20)\\d{2})\\b', 'i'));
     if (dateEst) fill('dateEstablished', dateEst[1], 0.7);
 
-    // ── Banks list (line with multiple bank keywords) ───────────────────
+    // ── Banks list (lines with bank keywords) ───────────────────────────
+    // Route by keyword context: a line containing "Personal Banking" or
+    // "Personal Bank" within a few characters of the bank tokens goes to
+    // personalBanks. Same for "Business Banking" → bizBanks. Falls back to
+    // multi-token-count routing only when no context keyword is present.
+    // CRITICALLY: do NOT duplicate one list to the other slot — these are
+    // distinct fields and a wrong fill is worse than an empty one.
     const bankTokens = /(Chase|Bank of America|BofA|Wells Fargo|US Bank|U\.S\. Bank|USAA|Citi(?:bank)?|Capital One|PNC|TD Bank|Truist|Regions|Fifth Third|HSBC|American Express|Amex|Discover|Synchrony|Navy Federal|Ally|SoFi|Goldman|Marcus|Credit Union)/gi;
+    const multiBankLines = [];
     for (const ln of lines) {
       const hits = ln.match(bankTokens);
-      if (hits && hits.length >= 2) {
-        // First multi-bank line goes to personalBanks, second to bizBanks.
-        if (!out.personalBanks && !fields.personalBanks) fill('personalBanks', ln, 0.65);
-        else if (!out.bizBanks && !fields.bizBanks)      fill('bizBanks',      ln, 0.65);
-        if (out.personalBanks && out.bizBanks) break;
+      if (!hits || !hits.length) continue;
+      const isPersonalCtx = /personal\s+bank/i.test(ln);
+      const isBusinessCtx = /business\s+bank/i.test(ln);
+      // Strip the leading "...Banking Relationships:" prefix so the value
+      // saved is just the bank list, not the whole label line.
+      const value = ln.replace(/^[^:]*(?:banking|banks)[^:]*:\s*/i, '').trim() || ln;
+      if (isPersonalCtx && !out.personalBanks && !fields.personalBanks) {
+        fill('personalBanks', value, 0.7);
+      } else if (isBusinessCtx && !out.bizBanks && !fields.bizBanks) {
+        fill('bizBanks', value, 0.7);
+      } else if (hits.length >= 2) {
+        multiBankLines.push(value);
       }
     }
-    // If only one was filled and personalBanks is empty, copy bizBanks→personalBanks
-    // is wrong — leave the admin to decide. Default behavior: same list duplicated
-    // across personal AND business when only one is found.
-    if ((out.personalBanks || fields.personalBanks) && !out.bizBanks && !fields.bizBanks) {
-      const ref = out.personalBanks || fields.personalBanks;
-      fill('bizBanks', ref.value, 0.5);
+    // Fallback for unlabeled multi-bank lines (no Personal/Business
+    // context keyword on the line itself). First goes to personalBanks,
+    // second to bizBanks. Never duplicates.
+    if (multiBankLines.length) {
+      if (!out.personalBanks && !fields.personalBanks) fill('personalBanks', multiBankLines[0], 0.6);
+      else if (!out.bizBanks && !fields.bizBanks)      fill('bizBanks',      multiBankLines[0], 0.6);
+      if (multiBankLines[1]) {
+        if (!out.bizBanks && !fields.bizBanks) fill('bizBanks', multiBankLines[1], 0.6);
+      }
     }
 
     // ── Currency: sort by amount, route by magnitude ────────────────────
     // Heuristic: largest = annualIncome (typically 5-7 figures), second
-    // largest = loanAmount, smallest = monthlySales. Forms commonly write
-    // monthly sales as $2000 or $2,000 and annual income as $150,000.
+    // largest = loanAmount (must be >= $5,000 to qualify — prevents monthly
+    // sales of $2,000 from being assigned to loan), smallest = monthlySales.
+    // Also catches loan amounts WITHOUT a $ sign by looking for bare 4-7
+    // digit numbers (with optional commas) that follow common loan keywords.
     const moneys = [...t.matchAll(/\$\s?([\d,]+(?:\.\d{2})?)/g)]
       .map(m => ({ raw: m[0].trim(), num: parseFloat(m[1].replace(/,/g, '')) || 0 }))
       .filter(x => x.num > 0);
+    // Loan amounts often appear as bare "90,000" with no $ sign in
+    // hand-filled forms. Scan for patterns like "loan amount: 90,000" or
+    // "desired loan: 90,000" in the raw text and treat as currency.
+    const bareLoan = t.match(/(?:loan\s+amount|desired\s+loan|funding\s+amount)[^\n]{0,30}?(\d{1,3}(?:,\d{3})+|\d{4,7})/i);
+    if (bareLoan) {
+      const num = parseFloat(bareLoan[1].replace(/,/g, '')) || 0;
+      if (num >= 5000) moneys.push({ raw: '$' + bareLoan[1], num: num });
+    }
     if (moneys.length) {
       const sorted = moneys.slice().sort((a, b) => b.num - a.num);
-      // Distinct values only.
       const distinct = [];
       const seen = new Set();
       for (const m of sorted) { if (!seen.has(m.num)) { distinct.push(m); seen.add(m.num); } }
       if (distinct[0]) fill('annualIncome', distinct[0].raw, 0.55);
-      if (distinct[1]) fill('loanAmount',   distinct[1].raw, 0.55);
-      // Monthly sales = smallest value if it's distinct.
+      // Loan amount must be at least $5,000 — prevents monthly sales of
+      // $2,000 from being mis-routed to loanAmount when there are only
+      // two currency values on the form.
+      if (distinct[1] && distinct[1].num >= 5000) fill('loanAmount', distinct[1].raw, 0.55);
+      else if (bareLoan) {
+        // Standalone bare loan match — even if not the 2nd-largest, surface it.
+        fill('loanAmount', bareLoan[1].includes(',') ? '$' + bareLoan[1] : '$' + bareLoan[1], 0.6);
+      }
       const smallest = distinct[distinct.length - 1];
-      if (smallest && smallest !== distinct[0]) fill('monthlySales', smallest.raw, 0.5);
+      if (smallest && smallest !== distinct[0] && smallest.num < 50000) fill('monthlySales', smallest.raw, 0.5);
     }
 
     // ── Ownership % — 1-100 followed by % ───────────────────────────────
