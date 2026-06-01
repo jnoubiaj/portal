@@ -14064,6 +14064,14 @@
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2"/></svg>
             Import From GHL
           </button>
+          <input type="file" id="of-file-${clientId}" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="_ofHandleFile('${clientId}', this.files[0])" />
+          <button onclick="_ofOpenUpload('${clientId}')"
+            style="height:40px;padding:0 18px;background:transparent;border:1.5px solid #f97316;border-radius:9px;font-family:var(--font-h);font-size:12px;font-weight:700;color:#f97316;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.13s"
+            onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background='transparent'"
+            title="Upload a completed onboarding PDF/image to auto-fill profile fields">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+            Upload Onboarding Form
+          </button>
         </div>
       </div>`;
 
@@ -14282,6 +14290,381 @@
       renderClientList();
       renderClientDetail(clientId);
     }, 800);
+  }
+
+  // ── ONBOARDING FORM IMPORT ───────────────────────────────────────────────
+  // Upload a completed onboarding application (PDF / JPG / PNG), extract
+  // text via pdf.js (already loaded by the credit-report parser at 15663)
+  // or Tesseract.js (15714) — falls back to OCR for image-only PDFs and
+  // direct images. Parses field values by label, opens a preview modal,
+  // lets the admin pick which fields to import. The import only SEEDS the
+  // ape-* inputs in the Edit Profile modal — it never writes to Firestore
+  // directly. Save proceeds through saveAdminProfileEdit unchanged.
+  //
+  // Security: Experian credentials (email/password/PIN/security Q+A) seed
+  // the existing ape-* admin-only inputs at lines 14026-14036. The save
+  // handler at 14186 already writes these to dashboards/{id}.profileData
+  // (admin-readable). They are NEVER mirrored to onboarding/{id} (the
+  // client portal source) so the client never sees them.
+
+  async function _ofExtractTextFromFile(file) {
+    const setMsg = m => { const el = document.getElementById('of-msg'); if (el) el.textContent = m; };
+    const buf = await file.arrayBuffer();
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+    if (isPdf) {
+      if (!window.pdfjsLib) {
+        setMsg('Loading PDF reader…');
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      setMsg('Opening PDF…');
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      // Reconstruct text by clustering items by y-coordinate so labels and
+      // values that sit on the same line stay together — critical for
+      // "Label: value" matching downstream.
+      let pageTexts = [];
+      for (let p = 1; p <= pdf.numPages; p++) {
+        setMsg('Reading page ' + p + ' of ' + pdf.numPages + '…');
+        const page = await pdf.getPage(p);
+        const tc = await page.getTextContent({ normalizeWhitespace: true });
+        const items = tc.items.map(i => ({ str: i.str, x: i.transform[4], y: Math.round(i.transform[5]) }));
+        items.sort((a,b) => b.y - a.y || a.x - b.x);
+        let pageText = ''; let lastY = null;
+        items.forEach(it => {
+          if (lastY !== null && Math.abs(it.y - lastY) > 2) pageText += '\n';
+          else if (pageText && !pageText.endsWith(' ')) pageText += ' ';
+          pageText += it.str;
+          lastY = it.y;
+        });
+        pageTexts.push(pageText);
+      }
+      let text = pageTexts.join('\n');
+      // If the extract is sparse (image-only PDF), OCR every page.
+      if (text.replace(/\s/g, '').length < 100) {
+        setMsg('Scanned PDF — running OCR (may take 20-40s)…');
+        if (!window.Tesseract) {
+          await new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+            s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+          });
+        }
+        const worker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
+        let ocrText = '';
+        for (let p = 1; p <= pdf.numPages; p++) {
+          setMsg('OCR: page ' + p + ' of ' + pdf.numPages + '…');
+          const page = await pdf.getPage(p);
+          const vp = page.getViewport({ scale: 2.0 });
+          const cv = document.createElement('canvas');
+          cv.width = vp.width; cv.height = vp.height;
+          await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+          const { data: { text: t } } = await worker.recognize(cv);
+          ocrText += t + '\n';
+          cv.remove();
+        }
+        await worker.terminate();
+        text = ocrText;
+      }
+      return text;
+    }
+
+    // Image: OCR directly.
+    setMsg('Loading OCR engine…');
+    if (!window.Tesseract) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    setMsg('Reading image…');
+    const worker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
+    const blob = new Blob([buf], { type: file.type });
+    const url = URL.createObjectURL(blob);
+    const { data: { text } } = await worker.recognize(url);
+    URL.revokeObjectURL(url);
+    await worker.terminate();
+    return text;
+  }
+
+  // Split "Holly Ridge, NC 28445" or variants into {city, state, zip}.
+  function _ofParseCityStateZip(s) {
+    if (!s) return {};
+    s = s.trim().replace(/\s+/g, ' ');
+    // City, ST ZIP   /  City, ST, ZIP
+    let m = s.match(/^(.+?),\s*([A-Za-z]{2})\s*,?\s*(\d{5}(?:-\d{4})?)\s*$/);
+    if (m) return { city: m[1].trim(), state: m[2].toUpperCase(), zip: m[3] };
+    // City ST ZIP (no comma)
+    m = s.match(/^(.+?)\s+([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)\s*$/);
+    if (m) return { city: m[1].trim(), state: m[2].toUpperCase(), zip: m[3] };
+    // Loose: pick zip + state out, the rest is city.
+    const zipM = s.match(/\b(\d{5}(?:-\d{4})?)\b/);
+    const stateM = s.match(/\b([A-Z]{2})\b/);
+    if (zipM || stateM) {
+      let city = s;
+      if (zipM) city = city.replace(zipM[0], '');
+      if (stateM) city = city.replace(stateM[0], '');
+      city = city.replace(/[,\s]+$/, '').replace(/^[,\s]+/, '').trim();
+      return { city: city, state: stateM ? stateM[1] : '', zip: zipM ? zipM[1] : '' };
+    }
+    return { city: s };
+  }
+
+  // Label-keyed field extraction. Each entry has a list of aliases; the
+  // first match wins. Returns { fieldId: {value, confidence} }.
+  function _ofParseFields(text) {
+    const blob = text.replace(/\r/g, '');
+    const out = {};
+    function find(aliases, stopBefore) {
+      for (const a of aliases) {
+        const pattern = a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Match label followed by : or - or newline + value (up to end of line)
+        const re = new RegExp('(?:^|\\n)\\s*' + pattern + '\\s*[:\\-]?\\s*([^\\n]+)', 'i');
+        const m = blob.match(re);
+        if (m && m[1]) {
+          let v = m[1].trim();
+          // Strip inline "next field" labels that landed on the same line.
+          if (stopBefore && stopBefore.length) {
+            for (const stop of stopBefore) {
+              const re2 = new RegExp('\\s*' + stop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+              const m2 = v.match(re2);
+              if (m2 && m2.index > 0) v = v.slice(0, m2.index).trim();
+            }
+          }
+          if (v) return { value: v, confidence: 1 };
+        }
+      }
+      return null;
+    }
+    function set(id, res) { if (res && res.value && String(res.value).trim()) out[id] = res; }
+
+    // Personal Information
+    let fn = find(['First Name','FName','Given Name']);
+    let ln = find(['Last Name','LName','Surname','Family Name']);
+    if (!fn || !ln) {
+      const full = find(['Full Name','Applicant Name','Borrower Name']);
+      if (full && full.value) {
+        const parts = full.value.split(/\s+/).filter(Boolean);
+        if (!fn && parts.length) fn = { value: parts[0], confidence: 0.7 };
+        if (!ln && parts.length > 1) ln = { value: parts.slice(1).join(' '), confidence: 0.7 };
+      }
+    }
+    set('firstName', fn); set('lastName', ln);
+    set('email',        find(['Email Address','Personal Email','Email','E-mail'], ['Phone','Business']));
+    set('phone',        find(['Personal Phone','Cell Phone','Mobile Phone','Phone Number','Phone'], ['Email','Business','EIN','SSN']));
+    set('dob',          find(['Date of Birth','DOB','Birth Date'], ['SSN','Email','Phone']));
+    set('ssn',          find(['Social Security Number','SSN','Social Security'], ['EIN','Date','Phone']));
+    set('maidenName',   find(["Mother's Maiden Name",'Mothers Maiden Name','Maiden Name']));
+    set('annualIncome', find(['Personal Annual Income','Annual Income','Yearly Income','Gross Annual Income']));
+    set('citizen',      find(['US Citizen','U.S. Citizen','Citizen']));
+
+    // Home Address — split CSZ line if present
+    const street = find(['Home Street Address','Home Address','Residential Street Address','Residential Address','Street Address','Address Line 1']);
+    if (street) set('street', street);
+    const csz = find(['Home City, State, Zip','Home City, State Zip','City, State, Zip','City, State Zip','City State Zip','City/State/Zip']);
+    if (csz && csz.value) {
+      const p = _ofParseCityStateZip(csz.value);
+      if (p.city)  set('city',  { value: p.city,  confidence: 1 });
+      if (p.state) set('state', { value: p.state, confidence: 1 });
+      if (p.zip)   set('zip',   { value: p.zip,   confidence: 1 });
+    } else {
+      set('city',  find(['Home City','City']));
+      set('state', find(['Home State','State']));
+      set('zip',   find(['Home Zip','Home ZIP','ZIP Code','Zip Code','Postal Code','Zip','ZIP']));
+    }
+
+    // Business Information
+    set('bizName',         find(['Legal Business Name','Business Name','Company Name','Entity Name']));
+    set('dba',             find(['DBA / Trade Name','DBA/Trade Name','DBA Name','Doing Business As','Trade Name','DBA']));
+    set('ein',             find(['EIN','Tax ID','Employer Identification Number','Federal Tax ID','Tax Identification Number']));
+    set('bizType',         find(['Business Type','Entity Type','Business Structure','Type of Business']));
+    set('industry',        find(['Industry','Business Industry','Industry Type']));
+    set('employees',       find(['Number of Employees','# of Employees','# Employees','Employees']));
+    set('monthlySales',    find(['Average Monthly Sales','Avg Monthly Sales','Monthly Sales','Monthly Revenue','Monthly Gross Revenue']));
+    set('ownership',       find(['Ownership Percentage','Ownership %','Percent Ownership','% Ownership']));
+    set('bizPhone',        find(['Company Phone','Business Phone Number','Business Phone']));
+    set('dateEstablished', find(['Business Date Established','Date Established','Established Date','Date of Establishment','Inception Date','Established']));
+    set('loanAmount',      find(['Desired Loan Amount','Requested Loan Amount','Loan Amount','Funding Amount','Desired Funding']));
+    set('loanReason',      find(['Loan Purpose','Loan Reason','Purpose of Loan','Use of Funds','Use of Proceeds']));
+
+    // Business Address — combine street + city/state/zip into one display string
+    const bStreet = find(['Business Street Address','Business Address','Company Address','Company Street Address']);
+    const bCsz    = find(['Business City, State, Zip','Business City, State Zip','Business City/State/Zip']);
+    if (bStreet && bCsz && bCsz.value) {
+      const p = _ofParseCityStateZip(bCsz.value);
+      const parts = [bStreet.value, p.city, (p.state || '') + (p.zip ? ' ' + p.zip : '')].filter(x => x && x.trim());
+      set('bizAddress', { value: parts.join(', '), confidence: 0.9 });
+    } else if (bStreet) {
+      set('bizAddress', bStreet);
+    }
+
+    // Banking & Credit
+    set('personalBanks',  find(['Current Personal Banking Relationships','Personal Banking Relationships','Personal Banks','Current Personal Banks']));
+    set('bizBanks',       find(['Current Business Banking Relationships','Business Banking Relationships','Business Banks','Current Business Banks']));
+    set('bizCreditCards', find(['Current Business Credit Cards','Existing Business Credit Cards','Business Credit Cards']));
+    set('newCreditAccts', find(['New Credit Accounts Opened','New Credit Accounts','Recently Opened Accounts','New Accounts Opened']));
+
+    // Experian Access & Security
+    set('experianEmail', find(['Experian Login Email','Experian Email','Experian Account Email']));
+    set('experianPass',  find(['Experian Login Password','Experian Password','Experian Account Password']));
+    set('pin',           find(['Experian PIN','Account PIN','PIN']));
+    set('secQuestion',   find(['Security Question']));
+    set('secAnswer',     find(['Security Answer']));
+
+    return out;
+  }
+
+  function _ofOpenUpload(clientId) {
+    const inp = document.getElementById('of-file-' + clientId);
+    if (!inp) return;
+    inp.value = '';
+    inp.click();
+  }
+
+  async function _ofHandleFile(clientId, file) {
+    if (!file) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'of-loading-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.55);z-index:100002;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:14px;padding:28px 36px;min-width:340px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,0.35)">'
+      + '<div style="font-family:var(--font-h);font-weight:800;font-size:16px;color:var(--navy);margin-bottom:8px">Reading onboarding form…</div>'
+      + '<div id="of-msg" style="font-size:13px;color:var(--gray-500);min-height:18px">Starting…</div>'
+      + '<div style="margin-top:16px;width:100%;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden"><div style="width:100%;height:100%;background:linear-gradient(90deg,#22A7F0,#10b981);animation:of-pulse 1.4s ease-in-out infinite"></div></div>'
+      + '<style>@keyframes of-pulse{0%,100%{opacity:0.4}50%{opacity:1}}</style>'
+      + '</div>';
+    document.body.appendChild(overlay);
+
+    let text = '';
+    try {
+      text = await _ofExtractTextFromFile(file);
+    } catch(e) {
+      try { overlay.remove(); } catch(_) {}
+      alert('Could not read the file: ' + (e && e.message ? e.message : 'unknown error'));
+      return;
+    }
+    try { overlay.remove(); } catch(_) {}
+
+    const fields = _ofParseFields(text);
+    if (!Object.keys(fields).length) {
+      alert('No fields could be extracted from this file. The form may use a different label format, or the scan quality is too low. You can still edit fields manually.');
+      return;
+    }
+    _ofShowPreview(clientId, fields);
+  }
+
+  function _ofShowPreview(clientId, fields) {
+    const currentVal = id => {
+      const el = document.getElementById('ape-' + id);
+      return el ? el.value : '';
+    };
+    const sections = [
+      { name: 'Personal Information', ids: ['firstName','lastName','email','phone','dob','ssn','maidenName','annualIncome','citizen'] },
+      { name: 'Home Address',         ids: ['street','city','state','zip'] },
+      { name: 'Business Information', ids: ['bizName','dba','ein','bizType','industry','employees','monthlySales','ownership','bizPhone','dateEstablished','loanAmount','loanReason','bizAddress'] },
+      { name: 'Banking & Credit',     ids: ['personalBanks','bizBanks','bizCreditCards','newCreditAccts'] },
+      { name: 'Experian Access',      ids: ['experianEmail','experianPass','pin','secQuestion','secAnswer'] },
+    ];
+    const labels = {
+      firstName:"First Name", lastName:"Last Name", email:"Email", phone:"Phone",
+      dob:"Date of Birth", ssn:"SSN", maidenName:"Mother's Maiden Name", annualIncome:"Annual Income", citizen:"US Citizen",
+      street:"Street Address", city:"City", state:"State", zip:"ZIP",
+      bizName:"Business Name", dba:"DBA / Trade Name", ein:"EIN", bizType:"Business Type",
+      industry:"Industry", employees:"# Employees", monthlySales:"Monthly Sales",
+      ownership:"Ownership %", bizPhone:"Business Phone", dateEstablished:"Date Established",
+      loanAmount:"Loan Amount", loanReason:"Loan Purpose", bizAddress:"Business Address",
+      personalBanks:"Personal Banks", bizBanks:"Business Banks", bizCreditCards:"Business Credit Cards",
+      newCreditAccts:"New Credit Accounts",
+      experianEmail:"Experian Email", experianPass:"Experian Password", pin:"PIN",
+      secQuestion:"Security Question", secAnswer:"Security Answer",
+    };
+    const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    let body = '';
+    let totalFound = 0;
+    for (const sec of sections) {
+      const rows = sec.ids.filter(id => fields[id]).map(id => {
+        totalFound++;
+        const f = fields[id];
+        const cur = currentVal(id);
+        const conflict = cur && cur !== f.value;
+        const lowConf = (f.confidence || 1) < 0.85;
+        const bg = lowConf ? '#fefce8' : (conflict ? '#fff7ed' : '#fff');
+        const border = lowConf ? '#fde047' : (conflict ? '#fed7aa' : '#e2e8f0');
+        const isPass = id === 'experianPass' || id === 'pin';
+        return '<div style="display:grid;grid-template-columns:24px 170px 1fr;gap:10px;align-items:center;padding:8px 10px;background:'+bg+';border:1px solid '+border+';border-radius:8px;margin-bottom:6px">'
+          + '<input type="checkbox" id="of-chk-'+id+'" checked style="width:16px;height:16px;accent-color:#22A7F0;cursor:pointer">'
+          + '<label for="of-chk-'+id+'" style="font-size:12px;font-weight:600;color:var(--navy);cursor:pointer;line-height:1.3">'+labels[id]
+          + (lowConf ? ' <span style="font-size:10px;font-weight:700;color:#a16207">LOW</span>' : '')
+          + (conflict ? ' <span style="font-size:10px;font-weight:700;color:#9a3412">OVERWRITE</span>' : '')
+          + '</label>'
+          + '<input type="'+(isPass?'password':'text')+'" id="of-val-'+id+'" value="'+esc(f.value)+'" style="height:32px;padding:0 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;font-family:var(--font-b);outline:none" />'
+          + '</div>';
+      }).join('');
+      if (rows) {
+        body += '<div style="margin-bottom:14px"><div style="font-family:var(--font-h);font-size:11px;font-weight:800;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">'+sec.name+'</div>'+rows+'</div>';
+      }
+    }
+
+    const idList = sections.flatMap(s => s.ids).filter(id => fields[id]);
+    const idListAttr = JSON.stringify(idList).replace(/"/g,'&quot;');
+
+    const ov = document.createElement('div');
+    ov.id = 'of-preview-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.55);z-index:100001;display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.innerHTML = '<div style="background:#fff;border-radius:14px;width:720px;max-width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.35)">'
+      + '<div style="padding:18px 22px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:12px">'
+      +   '<div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#22A7F0,#10b981);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg></div>'
+      +   '<div style="flex:1"><div style="font-family:var(--font-h);font-weight:800;font-size:15px;color:var(--navy)">Preview Extracted Fields</div><div style="font-size:12px;color:var(--gray-500);margin-top:2px">Review and edit before importing. '+totalFound+' field'+(totalFound!==1?'s':'')+' detected.</div></div>'
+      +   '<button onclick="document.getElementById(\'of-preview-overlay\').remove()" style="width:30px;height:30px;border-radius:7px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;color:#64748b;font-size:18px;line-height:1">×</button>'
+      + '</div>'
+      + '<div style="padding:18px 22px;overflow-y:auto;flex:1">'+body+'</div>'
+      + '<div style="padding:14px 22px;border-top:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;background:#f8fafc;border-radius:0 0 14px 14px;flex-wrap:wrap">'
+      +   '<button onclick="_ofToggleAll(true)" style="height:32px;padding:0 14px;background:#fff;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;font-weight:600;color:#475569;cursor:pointer">Select All</button>'
+      +   '<button onclick="_ofToggleAll(false)" style="height:32px;padding:0 14px;background:#fff;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;font-weight:600;color:#475569;cursor:pointer">Deselect All</button>'
+      +   '<span style="margin-left:auto;font-size:11px;color:var(--gray-400)">Yellow = low confidence · Orange = will overwrite</span>'
+      +   '<button onclick="_ofImportSelected(\''+clientId+'\', '+idListAttr+')" style="height:36px;padding:0 22px;background:#10b981;border:none;border-radius:8px;font-family:var(--font-h);font-size:13px;font-weight:700;color:#fff;cursor:pointer">Import Selected Fields</button>'
+      + '</div>'
+      + '</div>';
+    document.body.appendChild(ov);
+  }
+
+  function _ofToggleAll(checked) {
+    document.querySelectorAll('#of-preview-overlay input[type=checkbox]').forEach(cb => { cb.checked = checked; });
+  }
+
+  function _ofImportSelected(clientId, ids) {
+    let count = 0;
+    (ids || []).forEach(id => {
+      const cb  = document.getElementById('of-chk-' + id);
+      const val = document.getElementById('of-val-' + id);
+      if (!cb || !cb.checked || !val) return;
+      const target = document.getElementById('ape-' + id);
+      if (!target) return;
+      target.value = val.value;
+      // Trigger oninput so phone/SSN/EIN/currency/date formatters at
+      // lines 13842-13847 fire and the display string normalizes.
+      try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
+      count++;
+    });
+    // Re-sync hidden combined home address (used by the save handler).
+    try { if (typeof window._apeAddrSync === 'function') window._apeAddrSync(); } catch(e) {}
+    const ov = document.getElementById('of-preview-overlay');
+    if (ov) ov.remove();
+    const toast = document.getElementById('admin-profile-save-toast');
+    if (toast) {
+      toast.textContent = 'Imported ' + count + ' field' + (count !== 1 ? 's' : '') + ' — review and Save Changes';
+      toast.style.color = '#10b981';
+      toast.style.opacity = '1';
+      setTimeout(() => { toast.style.opacity = '0'; }, 4500);
+    }
   }
 
   // ── GHL FORM DATA IMPORT ─────────────────────────────────────────────────
