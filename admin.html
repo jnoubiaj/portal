@@ -4744,6 +4744,7 @@
         try { if (cid && typeof refreshSidebarTasks === 'function') refreshSidebarTasks(cid); } catch(e) {}
         try { if (cid && typeof refreshStageProgressCard === 'function') refreshStageProgressCard(cid); } catch(e) {}
         try { if (cid && typeof refreshActivityTimeline === 'function') refreshActivityTimeline(cid); } catch(e) {}
+        try { if (cid && typeof refreshSidebarNotes === 'function') refreshSidebarNotes(cid); } catch(e) {}
         try { if (typeof renderClientList === 'function') renderClientList(); } catch(e) {}
         // Overview KPI cards + Next Actions panel sit on the Overview page
         // and read across every client. Refresh them on a debounce so a
@@ -5303,7 +5304,7 @@
             // Merge the durable completion ledger FIRST so the opsTasks
             // seed below is read back through getOpsTasks() with completions
             // already enforced. Union semantics — a completion anywhere wins.
-            if (data.opsDone) { try { _opsDoneMerge(clientId, data.opsDone); } catch(e) {} }
+            if (data.opsDone || data.opsDoneUpdatedAt) { try { _opsDoneMerge(clientId, data.opsDone || {}, data.opsDoneUpdatedAt || 0); } catch(e) {} }
             // Seed opsTasks on first load — last-writer-wins per task ID
             // so a cold-loading admin picks up every other admin's writes
             // without losing locally-pending edits. Mirrors the 'modified'
@@ -5325,15 +5326,24 @@
                   }
                   var ltTs = Number(lt._updatedAt || lt.completedAt || 0);
                   var rtTs = Number(rt._updatedAt || rt.completedAt || 0);
-                  var ltDone = _cqIsDone(lt), rtDone = _cqIsDone(rt);
-                  // COMPLETED ALWAYS WINS over pending — and any completion
-                  // we observe (either side) goes into the durable ledger so
-                  // it can never be reverted by a later stale snapshot.
-                  if (ltDone || rtDone) {
-                    _opsDoneAdd(clientId, rt.id, { at: (ltDone?lt.completedAt:rt.completedAt) || Date.now(), by: (ltDone?lt.completedBy:rt.completedBy) || '' });
-                    if (rtDone && !ltDone) { _aById[rt.id] = rt; _aChanged = true; }
-                    // if local done & remote pending → keep local (don't replace)
-                  } else if (rtTs > ltTs) { _aById[rt.id] = rt; _aChanged = true; }
+                  var ltTermA = _isOpsTaskTerminal(lt), rtTermA = _isOpsTaskTerminal(rt);
+                  var ledgerHasA = false;
+                  try { ledgerHasA = !!_opsDoneGet(clientId)[rt.id]; } catch(e) {}
+                  // NEWEST _updatedAt WINS — ledger reconciliation is
+                  // handled by _opsDoneMerge above. Remote reopen/extend
+                  // can now legitimately replace a stale local completed
+                  // row. Closes the cross-admin one-way-ratchet bug.
+                  if (rtTs > ltTs) {
+                    _aById[rt.id] = rt; _aChanged = true;
+                    if (rtTermA && _cqIsDone(rt)) {
+                      _opsDoneAdd(clientId, rt.id, { at: rt.completedAt || Date.now(), by: rt.completedBy || '' });
+                    }
+                  } else if (ltTermA && _cqIsDone(lt) && !ledgerHasA) {
+                    // Local says completed but the ledger (just reconciled
+                    // from Firestore) has no entry → trust Firestore.
+                    lt.status = 'pending'; lt.completedAt = null; lt.completedBy = null;
+                    _aById[rt.id] = lt; _aChanged = true;
+                  }
                 });
                 if (_aChanged || !_aLocal.length) {
                   var _aMerged = Object.keys(_aById).map(function(k) { return _aById[k]; });
@@ -5497,7 +5507,7 @@
           // local pending edits safe while pulling in remote completions.
           // Merge the completion ledger first (cross-admin completions).
           var _opsLedgerChanged = false;
-          if (data.opsDone) { try { _opsLedgerChanged = _opsDoneMerge(clientId, data.opsDone); } catch(e) {} }
+          if (data.opsDone || data.opsDoneUpdatedAt) { try { _opsLedgerChanged = _opsDoneMerge(clientId, data.opsDone || {}, data.opsDoneUpdatedAt || 0); } catch(e) {} }
           if (Array.isArray(data.opsTasks)) {
             try {
               var _localOpsAll = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
@@ -5516,14 +5526,27 @@
                 }
                 var ltTs = Number(lt._updatedAt || lt.completedAt || 0);
                 var rtTs = Number(rt._updatedAt || rt.completedAt || 0);
-                var ltDone = _cqIsDone(lt), rtDone = _cqIsDone(rt);
-                // Completed always wins over pending; ledger any completion.
-                if (ltDone || rtDone) {
-                  _opsDoneAdd(clientId, rt.id, { at: (ltDone?lt.completedAt:rt.completedAt) || Date.now(), by: (ltDone?lt.completedBy:rt.completedBy) || '' });
-                  if (rtDone && !ltDone) { _opsById[rt.id] = rt; _opsChanged = true; }
-                } else if (rtTs > ltTs) {
-                  _opsById[rt.id] = rt;
-                  _opsChanged = true;
+                var ltTerm = _isOpsTaskTerminal(lt), rtTerm = _isOpsTaskTerminal(rt);
+                var ledgerHas = false;
+                try { ledgerHas = !!_opsDoneGet(clientId)[rt.id]; } catch(e) {}
+                // NEWEST _updatedAt WINS — full last-writer-wins per task.
+                // The ledger is now timestamp-reconciled in _opsDoneMerge
+                // (so a remote reopen/extend can shrink it), which means we
+                // no longer need 'completed always wins' as a separate
+                // override here. Using _isOpsTaskTerminal closes the
+                // archived/cancelled/skipped silent-revert hole.
+                if (rtTs > ltTs) {
+                  _opsById[rt.id] = rt; _opsChanged = true;
+                  if (rtTerm && _cqIsDone(rt)) {
+                    _opsDoneAdd(clientId, rt.id, { at: rt.completedAt || Date.now(), by: rt.completedBy || '' });
+                  }
+                } else if (ltTerm && _cqIsDone(lt) && !ledgerHas) {
+                  // Local says completed but the ledger (just reconciled
+                  // from Firestore) has no entry — a remote reopen
+                  // arrived. Demote the local row to pending so the
+                  // backfill (22970) can't re-zombify it.
+                  lt.status = 'pending'; lt.completedAt = null; lt.completedBy = null;
+                  _opsById[rt.id] = lt; _opsChanged = true;
                 }
               });
               if (_opsChanged) {
@@ -7276,7 +7299,7 @@
       // be clobbered by a stale 'pending' local copy.
       // Merge the durable completion ledger first so getOpsTasks enforces
       // completions even if the opsTasks array below is stale.
-      if (fsDash && fsDash.opsDone) { try { _opsDoneMerge(clientId, fsDash.opsDone); } catch(e) {} }
+      if (fsDash && (fsDash.opsDone || fsDash.opsDoneUpdatedAt)) { try { _opsDoneMerge(clientId, fsDash.opsDone || {}, fsDash.opsDoneUpdatedAt || 0); } catch(e) {} }
       if (fsDash && Array.isArray(fsDash.opsTasks)) {
         try {
           var _localOps = JSON.parse(localStorage.getItem('cq_ops_tasks_' + clientId) || '[]');
@@ -7295,18 +7318,22 @@
               if (_cqIsDone(rt)) _opsDoneAdd(clientId, rt.id, { at: rt.completedAt || Date.now(), by: rt.completedBy || '' });
               return;
             }
-            // Completed ALWAYS wins over pending, and any completion seen on
-            // either side is recorded in the durable ledger so it can never
-            // resurrect (the user's invariant: completed/extended must persist).
+            // NEWEST _updatedAt WINS — ledger reconciliation handled by
+            // _opsDoneMerge above. Recovery path now accepts remote
+            // reopens that happened while this admin was offline.
             var ltTs = Number(lt._updatedAt || lt.completedAt || 0);
             var rtTs = Number(rt._updatedAt || rt.completedAt || 0);
-            var ltDone = _cqIsDone(lt), rtDone = _cqIsDone(rt);
-            if (ltDone || rtDone) {
-              _opsDoneAdd(clientId, rt.id, { at: (ltDone?lt.completedAt:rt.completedAt) || Date.now(), by: (ltDone?lt.completedBy:rt.completedBy) || '' });
-              if (rtDone && !ltDone) { _byId[rt.id] = rt; _changed = true; }
-            } else if (rtTs > ltTs) {
-              _byId[rt.id] = rt;
-              _changed = true;
+            var ltTermR = _isOpsTaskTerminal(lt), rtTermR = _isOpsTaskTerminal(rt);
+            var ledgerHasR = false;
+            try { ledgerHasR = !!_opsDoneGet(clientId)[rt.id]; } catch(e) {}
+            if (rtTs > ltTs) {
+              _byId[rt.id] = rt; _changed = true;
+              if (rtTermR && _cqIsDone(rt)) {
+                _opsDoneAdd(clientId, rt.id, { at: rt.completedAt || Date.now(), by: rt.completedBy || '' });
+              }
+            } else if (ltTermR && _cqIsDone(lt) && !ledgerHasR) {
+              lt.status = 'pending'; lt.completedAt = null; lt.completedBy = null;
+              _byId[rt.id] = lt; _changed = true;
             }
           });
           if (_changed || _localOps.length === 0) {
@@ -11578,7 +11605,7 @@
       var xs = (typeof x.stage === 'number') ? x.stage : ((typeof x.stage === 'string' && x.stage) ? parseInt(x.stage, 10) - 1 : stageIdx);
       return xs === stageIdx;
     });
-    var doneCount = stageOps.filter(function(x){ return x.status === 'completed'; }).length;
+    var doneCount = stageOps.filter(function(x){ return _isOpsTaskTerminal(x); }).length;
     var totalCount = stageOps.length;
     var pct = totalCount > 0 ? Math.round(doneCount / totalCount * 100) : 0;
     var allDone = totalCount > 0 && doneCount === totalCount;
@@ -11588,7 +11615,7 @@
         ? '<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:#eff6ff;color:#1d4ed8;letter-spacing:0.03em">CLIENT</span>'
         : '<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:#f5f3ff;color:#6d28d9;letter-spacing:0.03em">ADMIN</span>';
       var due = task.dueDate ? '<span style="font-size:10.5px;color:var(--gray-400);margin-left:auto">' + task.dueDate + '</span>' : '';
-      var isDone = task.status === 'completed';
+      var isDone = _isOpsTaskTerminal(task);
       var chk = isDone
         ? '<button onclick="opsToggleTaskFromStageCard(\'' + clientId + '\',\'' + task.id + '\')" title="Mark undone" style="width:16px;height:16px;border-radius:4px;border:1.5px solid #10b981;background:#10b981;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></button>'
         : '<button onclick="opsToggleTaskFromStageCard(\'' + clientId + '\',\'' + task.id + '\')" title="Mark done" style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--gray-300);background:white;cursor:pointer;flex-shrink:0"></button>';
@@ -11684,8 +11711,12 @@
     var tasks = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
     var idx = tasks.findIndex(function(t){ return t.id === taskId; });
     if (idx < 0) return;
-    if (tasks[idx].status === 'completed') {
-      // Re-open: clear the ledger so it isn't force-completed on next read.
+    if (_isOpsTaskTerminal(tasks[idx])) {
+      // Re-open from ANY terminal state (completed/archived/cancelled/
+      // skipped): clear the ledger so the task can't be force-completed
+      // on next read. Previously this branch only fired for === 'completed'
+      // and clicking the checkbox on an archived/cancelled task would
+      // silently re-complete it, losing the original terminal classification.
       tasks[idx].status = 'pending';
       tasks[idx].completedAt = null;
       tasks[idx].completedBy = null;
@@ -22940,12 +22971,45 @@
       }
     }
   }
-  // Merge an incoming ledger (from Firestore) into the local one — union,
-  // since a completion on ANY device is authoritative. Returns true if the
-  // local ledger changed.
-  function _opsDoneMerge(clientId, incoming) {
+  // Merge an incoming ledger (from Firestore) into the local one.
+  //
+  // CRITICAL ARCHITECTURE — this function used to be union-only, which
+  // turned the ledger into a one-way ratchet: once Sam's local ledger
+  // had taskX, nothing Ali did (reopen / extend / delete) could ever
+  // clear it on Sam's machine — getOpsTasks (22976) would force-flip
+  // status='completed' on every read. Sam and Ali stayed permanently
+  // out of sync on Philippe Vaamonde / any reopened task.
+  //
+  // Now: when Firestore provides an authoritative opsDoneUpdatedAt
+  // timestamp that's >= our last-applied stamp, treat the incoming map
+  // as the source of truth — add missing keys AND remove keys absent
+  // remotely. This lets a remote reopen/extend propagate. Local writes
+  // (_opsDoneAdd / _opsDoneRemove at 22929 / 22939) always stamp
+  // opsDoneUpdatedAt=Date.now(), so a fresh local change still races
+  // ahead of stale snapshots. Without a timestamp we fall back to the
+  // legacy union semantics so pre-fix docs don't lose completions.
+  function _opsDoneMerge(clientId, incoming, incomingTs) {
     if (!incoming || typeof incoming !== 'object') return false;
     var map = _opsDoneGet(clientId);
+    var localTsKey = 'cq_ops_done_ts_' + clientId;
+    var localTs = 0;
+    try { localTs = parseInt(localStorage.getItem(localTsKey) || '0', 10) || 0; } catch(e) {}
+    var rTs = Number(incomingTs || 0);
+    if (rTs && rTs >= localTs) {
+      var next = {};
+      Object.keys(incoming).forEach(function(id) { next[id] = incoming[id]; });
+      // Diff for change detection.
+      var lk = Object.keys(map), rk = Object.keys(next);
+      var changed = lk.length !== rk.length;
+      if (!changed) {
+        for (var i = 0; i < lk.length; i++) { if (!next[lk[i]]) { changed = true; break; } }
+      }
+      if (changed) _opsDoneSet(clientId, next);
+      try { localStorage.setItem(localTsKey, String(rTs)); } catch(e) {}
+      return changed;
+    }
+    // Fallback (no timestamp on incoming): preserve original union
+    // semantics so we don't accidentally drop completions on legacy docs.
     var changed = false;
     Object.keys(incoming).forEach(function(id) {
       if (!map[id]) { map[id] = incoming[id]; changed = true; }
@@ -22960,14 +23024,23 @@
       if (!Array.isArray(arr)) return [];
       var done = _opsDoneGet(clientId);
       var _backfill = null; // local-only ledger additions (no Firestore write here)
+      // Has _opsDoneMerge ever applied an authoritative Firestore timestamp
+      // for this client? If yes, the ledger is the source of truth and we
+      // MUST NOT re-add locally-cached 'completed' rows that Firestore has
+      // already shrunk away (remote reopen / extend). Without this gate
+      // the backfill resurrects zombies within milliseconds of a remote
+      // reopen — the exact bug behind Sam/Ali staying out of sync.
+      var _hasLedgerTs = false;
+      try { _hasLedgerTs = !!parseInt(localStorage.getItem('cq_ops_done_ts_' + clientId) || '0', 10); } catch(e) {}
       var out = arr.map(function(t) {
         t = _normalizeOpsTaskShape(t);
         if (!t) return t;
-        // BACKFILL: any task whose array status is already 'completed' but
-        // isn't in the ledger gets added (local-only — avoids write storms).
-        // This makes legacy completions (done before the ledger existed)
-        // durable on first read, so a later stale merge can't revert them.
-        if (t.status === 'completed' && !done[t.id]) {
+        // BACKFILL: only ledger a locally-completed row when we DO NOT yet
+        // have an authoritative ledger timestamp (legacy / pre-fix client).
+        // Once _opsDoneMerge has applied a Firestore opsDoneUpdatedAt, the
+        // ledger IS authoritative — re-adding here would resurrect entries
+        // that a remote admin just legitimately removed via reopen/extend.
+        if (!_hasLedgerTs && t.status === 'completed' && !done[t.id]) {
           if (!_backfill) _backfill = done;
           _backfill[t.id] = { at: t.completedAt || Date.now(), by: t.completedBy || '' };
         }
