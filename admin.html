@@ -24011,9 +24011,16 @@
     if (map[taskId]) return;
     map[taskId] = Object.assign({ at: Date.now() }, meta || {});
     _opsDoneSet(clientId, map);
+    // CRITICAL: bump the local ledger timestamp NOW so the echo of our
+    // own Firestore write can't trick _opsDoneMerge into rolling us back.
+    // Without this, the snapshot listener could fire on the (older)
+    // opsTasks write before the opsDone write reaches Firestore, see a
+    // stale opsDone, and demote the just-completed task back to pending.
+    var now = Date.now();
+    try { localStorage.setItem('cq_ops_done_ts_' + clientId, String(now)); } catch(e) {}
     // Mirror the ledger to Firestore so other devices/admins honor it too.
     if (typeof fsSetDash === 'function') {
-      try { fsSetDash(clientId, { opsDone: map, opsDoneUpdatedAt: Date.now() }).catch(function(){}); } catch(e) {}
+      try { fsSetDash(clientId, { opsDone: map, opsDoneUpdatedAt: now }).catch(function(){}); } catch(e) {}
     }
   }
   function _opsDoneRemove(clientId, taskId) {
@@ -24022,8 +24029,12 @@
     if (map[taskId]) {
       delete map[taskId];
       _opsDoneSet(clientId, map);
+      // CRITICAL: same as _opsDoneAdd — bump local ts so a stale snapshot
+      // echo can't re-resurrect the just-removed entry.
+      var now = Date.now();
+      try { localStorage.setItem('cq_ops_done_ts_' + clientId, String(now)); } catch(e) {}
       if (typeof fsSetDash === 'function') {
-        try { fsSetDash(clientId, { opsDone: map, opsDoneUpdatedAt: Date.now() }).catch(function(){}); } catch(e) {}
+        try { fsSetDash(clientId, { opsDone: map, opsDoneUpdatedAt: now }).catch(function(){}); } catch(e) {}
       }
     }
   }
@@ -24051,10 +24062,17 @@
     var localTs = 0;
     try { localTs = parseInt(localStorage.getItem(localTsKey) || '0', 10) || 0; } catch(e) {}
     var rTs = Number(incomingTs || 0);
-    if (rTs && rTs >= localTs) {
+    if (rTs > 0) {
+      // Authoritative timestamp present. Three cases:
+      //   rTs >= localTs → remote is at least as fresh, apply replace.
+      //   rTs <  localTs → STALE echo (our own write hasn't reached
+      //                    Firestore yet, or another admin's write was
+      //                    overtaken by ours). Ignore entirely — do NOT
+      //                    fall through to union semantics, which would
+      //                    re-resurrect a just-removed entry.
+      if (rTs < localTs) return false;
       var next = {};
       Object.keys(incoming).forEach(function(id) { next[id] = incoming[id]; });
-      // Diff for change detection.
       var lk = Object.keys(map), rk = Object.keys(next);
       var changed = lk.length !== rk.length;
       if (!changed) {
@@ -24064,8 +24082,10 @@
       try { localStorage.setItem(localTsKey, String(rTs)); } catch(e) {}
       return changed;
     }
-    // Fallback (no timestamp on incoming): preserve original union
-    // semantics so we don't accidentally drop completions on legacy docs.
+    // No timestamp on incoming (legacy doc that predates the
+    // opsDoneUpdatedAt field) — preserve union semantics so we don't
+    // accidentally drop completions on docs written before this fix
+    // shipped. Adds only; never removes.
     var changed = false;
     Object.keys(incoming).forEach(function(id) {
       if (!map[id]) { map[id] = incoming[id]; changed = true; }
