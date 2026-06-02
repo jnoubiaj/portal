@@ -12025,7 +12025,13 @@
   var _wqCurrentClientId = null; // client currently "being worked" — drives the banner
   var _wqCurrentReason = null;   // reason that put them at the top of the queue
 
-  function _wqTodayStr() { return new Date().toISOString().split('T')[0]; }
+  // Local-time YYYY-MM-DD (NOT UTC). toISOString() returns UTC date, so at
+  // 9pm Eastern it already reads as tomorrow's date — which made every task
+  // due "tomorrow" display as "Due today" once the wall clock crossed 7-8pm.
+  function _wqTodayStr() {
+    var dt = new Date();
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+  }
   function _wqDayMs() { return 86400000; }
 
   function _wqGetState() {
@@ -12770,7 +12776,11 @@
 
   var _WS_KEY = 'cq_ws_session';
 
-  function _wsTodayStr() { return new Date().toISOString().split('T')[0]; }
+  // Local-time YYYY-MM-DD — see _wqTodayStr for the timezone rationale.
+  function _wsTodayStr() {
+    var dt = new Date();
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+  }
 
   function _wsGetSession() {
     try {
@@ -19004,8 +19014,8 @@
       isActive: true,
       adminCreated: true,
       fico: null,
-      createdAt: new Date().toISOString().split('T')[0],
-      lastActivity: new Date().toISOString().split('T')[0],
+      createdAt: (function(){ var dt = new Date(); return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0'); })(),
+      lastActivity: (function(){ var dt = new Date(); return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0'); })(),
       notes: '',
       color,
       fundingApprovedAmount: 0,
@@ -22083,7 +22093,7 @@
         relationshipAgeDays: ageDays, monthlyDepositAverage: 0, transactionCountMonthly: 0,
         brmAssigned: false, brmName: '', brmPhone: '', brmEmail: '', brmAppointmentDate: null,
         branchAssigned: '', notes: '', manualOverride: false, manualStrengthScore: null,
-        auditLog: [{ date: new Date().toISOString().split('T')[0], event: 'Auto-detected from credit report — ' + det.detectedAccountName, type: 'detected' }],
+        auditLog: [{ date: (function(){ var dt = new Date(); return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0'); })(), event: 'Auto-detected from credit report — ' + det.detectedAccountName, type: 'detected' }],
         createdAt: Date.now(), updatedAt: Date.now() }, det);
       var sr = calcRelStrength(newRel, rule); newRel.relationshipStrength = sr.label; newRel.estimatedApprovalBoost = sr.boost;
       existing.push(newRel); added++;
@@ -22442,7 +22452,7 @@
       detectedFrom: existing.detectedFrom || 'manual',
       createdAt: existing.createdAt || Date.now()
     });
-    var today = new Date().toISOString().split('T')[0];
+    var today = (function(){ var dt = new Date(); return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0'); })();
     if (!existing.bankId) newRel.auditLog.push({ date: today, event: 'Relationship added manually', type: 'created' });
     else newRel.auditLog.push({ date: today, event: 'Relationship details updated', type: 'updated' });
     if (brmName && (!existing.brmName || existing.brmName !== brmName)) newRel.auditLog.push({ date: today, event: 'BRM assigned: ' + brmName, type: 'brm' });
@@ -23594,7 +23604,12 @@
     try { var d = new Date(dateStr + 'T12:00:00'); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
     catch(e) { return dateStr; }
   }
-  function _todayStr() { return new Date().toISOString().split('T')[0]; }
+  // Local-time YYYY-MM-DD (NOT UTC). Used by Next Actions, My Tasks Today,
+  // follow-up dedupe, and stage-card today-filter. See _wqTodayStr comment.
+  function _todayStr() {
+    var dt = new Date();
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+  }
 
   // ══════════════════════════════════════════════════════════════════════
   // AUTO FOLLOW-UP SYSTEM
@@ -24440,7 +24455,7 @@
     var ct = getClientTasks(clientId);
     var d = (typeof getDashData === 'function') ? getDashData(clientId) : {};
     var curStage = ct ? (typeof ct.stage === 'number' ? ct.stage : 0) : Math.max(0, (d.currentStage || 1) - 1);
-    var todayStr = new Date().toISOString().split('T')[0];
+    var todayStr = (function(){ var dt = new Date(); return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0'); })();
 
     var stageOptions = PIPELINE_STAGES.map(function(s, i) {
       var sel = (isEdit ? task.stage : curStage) === i ? ' selected' : '';
