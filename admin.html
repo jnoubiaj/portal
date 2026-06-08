@@ -5322,8 +5322,13 @@
       now.setMonth(now.getMonth() + (Number(opts.monthOffset) || 0));
       target = { year: now.getFullYear(), month: now.getMonth() };
     }
+    // Include ARCHIVED clients too — Mark Funded archives the client at
+    // the moment of final approval, so excluding archived would silently
+    // drop just-funded deals from the metric. The approvedAt timestamp
+    // is per-application, so an archived client's June approval still
+    // correctly counts toward June's total.
     return (clients || []).reduce(function(sum, c) {
-      if (!c || c.archived) return sum;
+      if (!c) return sum;
       var d = null;
       try { d = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) { d = null; }
       var rows = (d && d.fundingRows) || [];
@@ -5349,7 +5354,7 @@
     // new total calc — replaces the old client-level c.fundingApprovedDate
     // path that never gets populated by the per-row UI).
     const funded = (clients || []).filter(c => {
-      if (!c || c.archived) return false;
+      if (!c) return false; // include archived (same rationale as calcMonthlyFunding)
       let dd = null;
       try { dd = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) {}
       const rows = (dd && dd.fundingRows) || [];
