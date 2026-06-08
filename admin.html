@@ -16153,25 +16153,27 @@
     var profile = client || {};
     // Pull from profile (Edit Profile saves into the client doc).
     var name = ((profile.fname || profile.firstName || '') + ' ' + (profile.lname || profile.lastName || '')).trim() || '—';
-    var dob = profile.dob || dash.dob || '—';
-    var phone = profile.phone || '—';
-    var email = profile.email || '—';
-    var street = profile.address || profile.street || '—';
-    var state2 = profile.state || '—';
-    var income = profile.annualIncome ? '$' + Number(profile.annualIncome).toLocaleString() : '—';
-    var ownership = profile.ownership || '—';
+    var dob = profile.dob || dash.dob || '';
+    var phone = profile.phone || '';
+    var email = profile.email || '';
+    var street = profile.address || profile.street || '';
+    var state2 = profile.state || '';
+    var income = profile.annualIncome ? '$' + Number(profile.annualIncome).toLocaleString() : '';
+    var ownership = profile.ownership || '';
+    // Show profile value when present; format example when empty.
+    var or = function(v, fmt) { return v && v !== '—' ? String(v) : fmt; };
     var verifyHTML = ''
       + '<div class="ocw-field-grid">'
-      +   _ocwField('Full Legal Name', 'step2.notesName', { placeholder: name })
-      +   _ocwField('Date of Birth', 'step2.notesDob', { placeholder: dob })
-      +   _ocwField('Street Address', 'step2.notesAddr', { placeholder: street })
-      +   _ocwField('State', 'step2.notesState', { placeholder: state2 })
-      +   _ocwField('Phone', 'step2.notesPhone', { placeholder: phone })
-      +   _ocwField('Email', 'step2.notesEmail', { placeholder: email })
-      +   _ocwField('Annual Personal Income', 'step2.notesIncome', { placeholder: income })
-      +   _ocwField('Ownership %', 'step2.notesOwnership', { placeholder: String(ownership) })
+      +   _ocwField('Full Legal Name', 'step2.notesName', { placeholder: or(name, 'First Last') })
+      +   _ocwField('Date of Birth', 'step2.notesDob', { placeholder: or(dob, 'MM/DD/YYYY') })
+      +   _ocwField('Street Address', 'step2.notesAddr', { placeholder: or(street, '123 Main St') })
+      +   _ocwField('State', 'step2.notesState', { placeholder: or(state2, 'NC') })
+      +   _ocwField('Phone', 'step2.notesPhone', { placeholder: or(phone, '(555) 123-4567') })
+      +   _ocwField('Email', 'step2.notesEmail', { placeholder: or(email, 'name@domain.com') })
+      +   _ocwField('Annual Personal Income', 'step2.notesIncome', { placeholder: or(income, '$150,000') })
+      +   _ocwField('Ownership %', 'step2.notesOwnership', { placeholder: or(String(ownership), '100%') })
       + '</div>'
-      + '<div style="margin-top:8px;font-size:11px;color:var(--gray-400)"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Placeholders show current profile values. Leave blank to keep them, or type to override and we\'ll log the change in the call summary.</div>';
+      + '<div style="margin-top:8px;font-size:11px;color:var(--gray-400)"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Placeholders show current profile values or a format example. Leave blank to keep what\'s on file, or type to override and we\'ll log the change in the call summary.</div>';
     var fraudFlag = (_ocwGet('step2.fraudAlert') === 'yes')
       ? _ocwFlag('<strong>Auto-task queued:</strong> Remove fraud alert before applying — will be added on Complete (Step 10).')
       : '';
@@ -16179,7 +16181,7 @@
       + '<div class="ocw-step-title">Personal Information</div>'
       + '<div class="ocw-step-sub">Verify what we have on file. Anything that doesn\'t match gets flagged in the summary.</div>'
       + _ocwSection('Verify Profile Fields', verifyHTML)
-      + _ocwSection('Quick Q&amp;A',
+      + _ocwSection('Quick Q&A',
             _ocwYN('Have you moved recently?', 'step2.movedRecently')
           + _ocwYN('Fraud alerts, freezes, or security blocks on any bureau?', 'step2.fraudAlert')
           + _ocwYN('Any bankruptcies or negatives not showing on the report?', 'step2.bankruptcies')
@@ -16191,15 +16193,17 @@
   window._ocwRenderStep3 = function(clientId, state) {
     var client = (typeof getClient === 'function') ? getClient(clientId) : {};
     var dash = (typeof getDashData === 'function') ? getDashData(clientId) : {};
-    var bizName = client.bizName || dash.bizName || '—';
-    var ein = client.ein || dash.ein || '—';
-    var bizType = client.bizType || dash.bizType || '—';
-    var industry = client.industry || dash.industry || '—';
-    var employees = client.employees || dash.employees || '—';
-    var monthly = client.monthlySales ? '$' + Number(client.monthlySales).toLocaleString() : '—';
-    var bizAddress = client.bizAddress || dash.bizAddress || '—';
-    var bizPhone = client.bizPhone || dash.bizPhone || '—';
-    var dateEst = client.dateEstablished || dash.dateEstablished || '—';
+    var bizName = client.bizName || dash.bizName || '';
+    var ein = client.ein || dash.ein || '';
+    var bizType = client.bizType || dash.bizType || '';
+    var industry = client.industry || dash.industry || '';
+    var employees = client.employees || dash.employees || '';
+    var monthly = client.monthlySales ? '$' + Number(client.monthlySales).toLocaleString() : '';
+    var bizAddress = client.bizAddress || dash.bizAddress || '';
+    var bizPhone = client.bizPhone || dash.bizPhone || '';
+    var dateEst = client.dateEstablished || dash.dateEstablished || '';
+    // Show profile value when present; format example when empty.
+    var or = function(v, fmt) { return v && v !== '—' ? String(v) : fmt; };
     var followUps = '';
     if (_ocwGet('step3.hasBizChecking') === 'yes') {
       followUps = _ocwSection('Business Checking Details',
@@ -16214,20 +16218,20 @@
       + '<div class="ocw-step-sub">Confirm what the bank underwriters will see.</div>'
       + _ocwSection('Verify Profile Fields',
             '<div class="ocw-field-grid">'
-          +   _ocwField('Business Name', 'step3.notesBizName', { placeholder: bizName })
-          +   _ocwField('Entity Type', 'step3.notesBizType', { placeholder: bizType })
-          +   _ocwField('EIN', 'step3.notesEin', { placeholder: ein })
-          +   _ocwField('Date Established', 'step3.notesDateEst', { placeholder: dateEst })
-          +   _ocwField('Industry', 'step3.notesIndustry', { placeholder: industry })
-          +   _ocwField('Employees', 'step3.notesEmployees', { placeholder: String(employees) })
-          +   _ocwField('Monthly Revenue', 'step3.notesMonthly', { placeholder: monthly })
-          +   _ocwField('Business Phone', 'step3.notesBizPhone', { placeholder: bizPhone })
-          +   _ocwField('Business Address', 'step3.notesBizAddress', { type: 'textarea', placeholder: bizAddress })
+          +   _ocwField('Business Name', 'step3.notesBizName', { placeholder: or(bizName, 'Acme LLC') })
+          +   _ocwField('Entity Type', 'step3.notesBizType', { placeholder: or(bizType, 'LLC') })
+          +   _ocwField('EIN', 'step3.notesEin', { placeholder: or(ein, 'XX-XXXXXXX') })
+          +   _ocwField('Date Established', 'step3.notesDateEst', { placeholder: or(dateEst, 'MM/DD/YYYY') })
+          +   _ocwField('Industry', 'step3.notesIndustry', { placeholder: or(industry, 'Real Estate') })
+          +   _ocwField('Employees', 'step3.notesEmployees', { placeholder: or(String(employees), '5') })
+          +   _ocwField('Monthly Revenue', 'step3.notesMonthly', { placeholder: or(monthly, '$15,000') })
+          +   _ocwField('Business Phone', 'step3.notesBizPhone', { placeholder: or(bizPhone, '(555) 123-4567') })
+          +   _ocwField('Business Address', 'step3.notesBizAddress', { type: 'textarea', placeholder: or(bizAddress, '123 Main St, City, ST 12345') })
           + '</div>')
-      + _ocwSection('Quick Q&amp;A',
+      + _ocwSection('Quick Q&A',
             _ocwYN('Does the business have a checking account?', 'step3.hasBizChecking'))
       + followUps
-      + _ocwSection('Revenue &amp; Existing Credit',
+      + _ocwSection('Revenue & Existing Credit',
             _ocwYN('Does the business have processing revenue (merchant account)?', 'step3.processingRevenue')
           + _ocwYN('Any existing business credit cards or loans?', 'step3.hasBizCredit'))
       + _ocwSection('Notes', _ocwField('Step 3 notes', 'step3.notes', { type: 'textarea' }));
@@ -16245,7 +16249,7 @@
       + '<div class="ocw-step-sub">Critical — this feeds the funding strategy generator. Be thorough.</div>'
       + _ocwSection('Personal Banks', '<div class="ocw-multi-grid">' + personalPills + '</div>')
       + _ocwSection('Business Banks', '<div class="ocw-multi-grid">' + businessPills + '</div>')
-      + _ocwSection('Relationship Quick Q&amp;A',
+      + _ocwSection('Relationship Quick Q&A',
             _ocwYN('Recent denials at any bank?', 'step4.recentDenials')
           + _ocwYN('Existing high credit limits ($25K+) anywhere?', 'step4.existingHighLimits')
           + _ocwYN('Closed accounts recently?', 'step4.closedAccounts')
@@ -16287,7 +16291,7 @@
           +   '<div class="ocw-field"><div class="ocw-field-label">New Accts</div><div style="font-size:13px;font-weight:700;color:var(--navy);padding-top:4px">' + _ocwEsc(String(newAccts)) + '</div></div>'
           +   '<div class="ocw-field"><div class="ocw-field-label">Derogs</div><div style="font-size:13px;font-weight:700;color:var(--navy);padding-top:4px">' + _ocwEsc(String(dero)) + '</div></div>'
           + '</div>')
-      + _ocwSection('Quick Q&amp;A',
+      + _ocwSection('Quick Q&A',
             _ocwYN('Any personal cards above 30% utilization?', 'step5.cardsOver30')
           + utilFlag
           + _ocwYN('New inquiries or accounts in last 6-12 months?', 'step5.recentInquiries')
