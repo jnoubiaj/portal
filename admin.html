@@ -3442,6 +3442,355 @@
     .a-csh-actions { flex-shrink: 0 !important; }
   }
 
+  /* ── ONBOARDING CALL WIZARD ──────────────────────────────────────
+     Guided 10-step onboarding call assistant for clients in Initial
+     Setup. Fully self-contained CSS prefix .ocw-* so it can't collide
+     with anything else in the admin. Triggered by the at-top progress
+     card or the Start Working button. */
+  .ocw-card {
+    background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+    border: 1px solid #c7d2fe;
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 1px 3px rgba(99,102,241,0.08);
+  }
+  .ocw-card-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+  }
+  .ocw-card-body { flex: 1; min-width: 0; }
+  .ocw-card-title {
+    font-family: var(--font-h); font-size: 12px; font-weight: 800;
+    color: #4c1d95; letter-spacing: 0.05em; text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .ocw-card-sub {
+    font-size: 13px; font-weight: 600; color: var(--navy);
+    line-height: 1.35; margin-bottom: 7px;
+  }
+  .ocw-card-progress {
+    width: 100%; height: 5px; background: rgba(99,102,241,0.15);
+    border-radius: 3px; overflow: hidden;
+  }
+  .ocw-card-progress-fill {
+    height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    border-radius: 3px; transition: width 0.3s ease;
+  }
+  .ocw-card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .ocw-card-btn {
+    height: 34px; padding: 0 16px;
+    background: var(--navy); color: #fff;
+    border: none; border-radius: 8px;
+    font-family: var(--font-h); font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: background 0.15s, transform 0.12s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .ocw-card-btn:hover { background: #1a3a6b; transform: translateY(-1px); }
+  .ocw-card-btn.secondary { background: #fff; color: var(--navy); border: 1.5px solid #c7d2fe; }
+  .ocw-card-btn.secondary:hover { background: #f5f3ff; }
+
+  /* ── Wizard overlay + modal ──────────────────────────────────── */
+  .ocw-overlay {
+    position: fixed; inset: 0; z-index: 100000;
+    background: rgba(10, 22, 40, 0.55);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    animation: ocw-fade-in 0.18s ease;
+  }
+  @keyframes ocw-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  .ocw-modal {
+    background: #fff;
+    border-radius: 16px;
+    width: 760px; max-width: 100%;
+    max-height: 92vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 24px 80px rgba(10, 22, 40, 0.45);
+    overflow: hidden;
+  }
+  .ocw-header {
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(180deg, #fff 0%, #fafbff 100%);
+  }
+  .ocw-header-icon {
+    width: 36px; height: 36px; border-radius: 9px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; flex-shrink: 0;
+  }
+  .ocw-header-text { flex: 1; min-width: 0; }
+  .ocw-header-title {
+    font-family: var(--font-h); font-size: 16px; font-weight: 800;
+    color: var(--navy); letter-spacing: -0.01em;
+  }
+  .ocw-header-sub {
+    font-size: 12px; color: var(--gray-500); margin-top: 1px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ocw-header-sub-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--gray-300); }
+  .ocw-header-close {
+    width: 30px; height: 30px;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+    cursor: pointer; color: var(--gray-500);
+    font-size: 18px; line-height: 1;
+    transition: background 0.13s;
+  }
+  .ocw-header-close:hover { background: #f1f5f9; color: var(--navy); }
+  .ocw-progress-bar {
+    height: 4px; background: #f1f5f9;
+  }
+  .ocw-progress-bar-fill {
+    height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    transition: width 0.32s ease;
+  }
+  .ocw-stepper {
+    padding: 12px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .ocw-stepper::-webkit-scrollbar { display: none; }
+  .ocw-step-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #f1f5f9; color: var(--gray-400);
+    font-size: 10px; font-weight: 800; font-family: var(--font-h);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0; cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.15s;
+  }
+  .ocw-step-dot.done {
+    background: #10b981; color: #fff; border-color: #10b981;
+  }
+  .ocw-step-dot.current {
+    background: #6366f1; color: #fff; border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+  }
+  .ocw-step-dot:hover:not(.current) {
+    background: #e0e7ff; color: #4c1d95;
+  }
+  .ocw-step-line {
+    flex: 1; height: 2px; background: #f1f5f9; min-width: 12px; max-width: 36px;
+    border-radius: 1px;
+  }
+  .ocw-step-line.done { background: #10b981; }
+
+  .ocw-body {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    padding: 22px 24px;
+  }
+  .ocw-step-title {
+    font-family: var(--font-h); font-size: 18px; font-weight: 800;
+    color: var(--navy); letter-spacing: -0.015em;
+    margin-bottom: 4px;
+  }
+  .ocw-step-sub {
+    font-size: 13px; color: var(--gray-500); margin-bottom: 18px; line-height: 1.5;
+  }
+  .ocw-script {
+    background: #fefce8;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 18px;
+    font-size: 13px; line-height: 1.55; color: #713f12;
+    font-style: italic;
+    position: relative;
+  }
+  .ocw-script::before {
+    content: '"'; position: absolute; top: -4px; left: 6px;
+    font-size: 30px; color: #f59e0b; font-family: Georgia, serif; line-height: 1; font-style: normal;
+  }
+  .ocw-script-inner { padding-left: 18px; }
+
+  .ocw-section {
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    padding: 14px 16px;
+    background: #fff;
+  }
+  .ocw-section-title {
+    font-family: var(--font-h); font-size: 11.5px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--gray-500);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .ocw-section-title-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #6366f1;
+  }
+  .ocw-check-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 0; cursor: pointer; user-select: none;
+    border-bottom: 1px solid #f8fafc;
+  }
+  .ocw-check-row:last-child { border-bottom: none; }
+  .ocw-check-row input[type="checkbox"] {
+    width: 18px; height: 18px; margin-top: 1px;
+    accent-color: #6366f1;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .ocw-check-row-label {
+    font-size: 13px; font-weight: 500; color: var(--navy);
+    line-height: 1.45;
+  }
+  .ocw-check-row input:checked ~ .ocw-check-row-label {
+    color: var(--gray-500); text-decoration: line-through;
+  }
+
+  .ocw-field-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px;
+  }
+  .ocw-field {
+    display: flex; flex-direction: column;
+  }
+  .ocw-field-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--gray-400);
+    margin-bottom: 4px;
+  }
+  .ocw-field-input, .ocw-field-select, .ocw-field-textarea {
+    height: 36px; padding: 0 11px;
+    background: #f8fafc; border: 1.5px solid #e2e8f0;
+    border-radius: 8px; font-size: 13px;
+    font-family: var(--font-b); color: var(--navy);
+    outline: none; transition: border-color 0.13s, background 0.13s;
+  }
+  .ocw-field-textarea {
+    height: auto; min-height: 70px;
+    padding: 9px 11px; line-height: 1.4;
+    resize: vertical;
+  }
+  .ocw-field-input:focus, .ocw-field-select:focus, .ocw-field-textarea:focus {
+    border-color: #6366f1; background: #fff;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  }
+
+  .ocw-yn-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f8fafc;
+  }
+  .ocw-yn-row:last-child { border-bottom: none; }
+  .ocw-yn-q {
+    font-size: 13px; font-weight: 500; color: var(--navy);
+    flex: 1; line-height: 1.4;
+  }
+  .ocw-yn-btns {
+    display: inline-flex; gap: 4px; flex-shrink: 0;
+    background: #f1f5f9; border-radius: 7px; padding: 3px;
+  }
+  .ocw-yn-btn {
+    height: 28px; padding: 0 12px;
+    border: none; background: transparent;
+    font-size: 11.5px; font-weight: 700; font-family: var(--font-h);
+    color: var(--gray-500); cursor: pointer;
+    border-radius: 5px;
+    transition: all 0.13s;
+  }
+  .ocw-yn-btn:hover { color: var(--navy); }
+  .ocw-yn-btn.active.yes { background: #10b981; color: #fff; box-shadow: 0 1px 3px rgba(16,185,129,0.3); }
+  .ocw-yn-btn.active.no  { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(10,22,40,0.08); }
+
+  .ocw-multi-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
+  }
+  .ocw-multi-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 11px; background: #f8fafc;
+    border: 1.5px solid #e2e8f0; border-radius: 8px;
+    cursor: pointer; user-select: none;
+    font-size: 12.5px; font-weight: 600; color: var(--navy);
+    transition: all 0.13s;
+  }
+  .ocw-multi-pill input[type="checkbox"] {
+    width: 14px; height: 14px; accent-color: #6366f1; cursor: pointer; margin: 0;
+  }
+  .ocw-multi-pill:hover { border-color: #c7d2fe; background: #f5f3ff; }
+  .ocw-multi-pill.checked {
+    background: #e0e7ff; border-color: #6366f1; color: #4c1d95;
+  }
+
+  .ocw-auto-flag {
+    margin-top: 10px;
+    background: #fff7ed; border: 1px solid #fdba74; border-radius: 9px;
+    padding: 9px 12px;
+    display: flex; align-items: flex-start; gap: 9px;
+    font-size: 12px; color: #9a3412; line-height: 1.4;
+  }
+  .ocw-auto-flag-icon {
+    flex-shrink: 0; color: #ea580c; margin-top: 1px;
+  }
+  .ocw-auto-flag strong { color: #7c2d12; font-weight: 700; }
+
+  .ocw-summary-task {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; margin-bottom: 7px;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px;
+  }
+  .ocw-summary-task input[type="checkbox"] {
+    width: 16px; height: 16px; accent-color: #10b981; cursor: pointer;
+  }
+  .ocw-summary-task-text {
+    flex: 1; font-size: 13px; font-weight: 500; color: var(--navy);
+  }
+  .ocw-summary-task-priority {
+    font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .ocw-summary-task-priority.high { background: rgba(239,68,68,0.1); color: #b91c1c; }
+  .ocw-summary-task-priority.med  { background: rgba(245,158,11,0.1); color: #b45309; }
+  .ocw-summary-task-priority.low  { background: rgba(34,167,240,0.1); color: var(--blue); }
+
+  .ocw-footer {
+    padding: 14px 24px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
+  }
+  .ocw-footer-meta {
+    font-size: 11px; color: var(--gray-400);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ocw-footer-meta.saved { color: #059669; }
+  .ocw-footer-spacer { flex: 1; }
+  .ocw-btn {
+    height: 36px; padding: 0 16px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff; color: var(--navy);
+    font-family: var(--font-h); font-size: 12.5px; font-weight: 700;
+    border-radius: 8px; cursor: pointer;
+    transition: all 0.13s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .ocw-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+  .ocw-btn.primary {
+    background: #6366f1; color: #fff; border-color: #6366f1;
+  }
+  .ocw-btn.primary:hover { background: #4f46e5; border-color: #4f46e5; box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+  .ocw-btn.success {
+    background: linear-gradient(135deg, #10b981, #059669); color: #fff; border-color: #10b981;
+  }
+  .ocw-btn.success:hover { box-shadow: 0 4px 14px rgba(16,185,129,0.4); }
+  .ocw-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  @media (max-width: 720px) {
+    .ocw-overlay { padding: 0; }
+    .ocw-modal { border-radius: 0; max-height: 100vh; }
+    .ocw-field-grid { grid-template-columns: 1fr; }
+    .ocw-multi-grid { grid-template-columns: 1fr; }
+  }
+
   /* Safety: prevent horizontal scroll if any descendant misbehaves.
      The main column itself can scroll vertically; we just want to make
      sure a wide table/card never forces the page wider than viewport. */
@@ -5621,6 +5970,13 @@
             try { _mergeIncomingAdminNotes(clientId, data.adminNotes); } catch(e) {}
           }
 
+          // Onboarding-call wizard cross-admin sync. Same _updatedAt LWW
+          // guard. Refreshes the at-top progress card and, if the wizard
+          // is open on this client, re-renders the step body.
+          if (data.onboardingCall && typeof _ocwMergeFromSnapshot === 'function') {
+            try { _ocwMergeFromSnapshot(clientId, data); } catch(e) {}
+          }
+
           // Targeted sidebar update — avoids full re-render and Firestore write loop
           _syncUpdateOpenClient(clientId, 'dashboard-snapshot');
           // Overview pipeline list
@@ -6947,6 +7303,8 @@
                plMarkFinalComplete helpers remain defined in source so the card can
                be reinstated by re-inserting the div above. refreshStageProgressCard
                no-ops when the sp-stage-progress-* element doesn't exist. -->
+
+          ${typeof _ocwRenderProgressCard === 'function' ? _ocwRenderProgressCard(id) : ''}
 
           <!-- Funding Applications (full-width) -->
           <div class="a-card" id="sp-dtab-funding" style="margin-bottom:14px">
@@ -12519,6 +12877,17 @@
       }
       return;
     }
+    // Onboarding-call intercept: if the currently selected client is in
+    // Initial Setup and onboarding isn't complete, open the guided wizard
+    // INSTEAD of the standard Smart Work Queue. Other stages and the
+    // "no client selected" path fall through to the normal flow.
+    try {
+      if (typeof selectedClientId !== 'undefined' && selectedClientId
+          && typeof _ocwInterceptStartWorking === 'function'
+          && _ocwInterceptStartWorking(selectedClientId)) {
+        return;
+      }
+    } catch(e) {}
     _wsOpenModeMenu();
   }
 
@@ -15333,6 +15702,940 @@
       toast.style.opacity = '1';
       setTimeout(() => { toast.style.opacity = '0'; }, 4500);
     }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ── ONBOARDING CALL WIZARD ─────────────────────────────────────────────
+  //
+  // Guided 10-step onboarding call assistant for clients in Initial Setup.
+  // All state lives in dashboards/{clientId}.onboardingCall — that gives us
+  // real-time cross-admin sync for free via the existing dashboards
+  // onSnapshot. Local cache only for synchronous renders.
+  //
+  // Self-contained module. Only public hooks into the rest of admin.html:
+  //   1. _ocwRenderProgressCard(clientId)  → embedded in renderClientDetail
+  //   2. _ocwOpen(clientId, opts?)         → invoked by Start Working when
+  //                                          current client is in Initial Setup
+  //   3. _ocwMergeFromSnapshot(clientId, data) → invoked by dashboards
+  //                                              onSnapshot 'modified' branch
+  // ══════════════════════════════════════════════════════════════════════
+
+  // ── Schema / constants ────────────────────────────────────────────────
+  var _OCW_TOTAL_STEPS = 10;
+  var _OCW_INITIAL_STAGE_INDEX = 0; // currentStage = 1 (1-indexed) = Initial Setup
+
+  function _ocwIsInitialSetup(client, dash) {
+    if (!client) return false;
+    var d = dash || (typeof getDashData === 'function' ? getDashData(client.id) : {});
+    var curIdx = Math.max(0, (d.currentStage || 1) - 1);
+    return curIdx === _OCW_INITIAL_STAGE_INDEX && !client.archived;
+  }
+
+  function _ocwDefaultState() {
+    return {
+      status: 'not-started',
+      currentStep: 1,
+      startedAt: null, startedBy: '',
+      completedAt: null, completedBy: '',
+      answers: {
+        step1: { explainedSequence: false, explainedDeps: false, setExpectations: false, notes: '' },
+        step2: {
+          verified: { fullName: false, dob: false, address: false, state: false, phone: false, email: false, employment: false, income: false, ownership: false },
+          movedRecently: null, fraudAlert: null, bankruptcies: null, redFlags: null,
+          notes: ''
+        },
+        step3: {
+          hasBizChecking: null, bizBanks: '', bizBankBalance: '', bizBankAge: '',
+          processingRevenue: null, hasBizCredit: null,
+          notes: ''
+        },
+        step4: {
+          personalBanks: {}, businessBanks: {},
+          recentDenials: null, existingHighLimits: null, closedAccounts: null,
+          burnedRelationships: null, existingBanker: null,
+          bankerNotes: '',
+          notes: ''
+        },
+        step5: {
+          cardsOver30: null, recentInquiries: null, authorizedUsers: null, negatives: null,
+          notes: ''
+        },
+        step6: {
+          purpose: '', goalAmount: '', minimumAmount: '',
+          notes: ''
+        },
+        step7: { explainedOpt: false, explainedSeq: false, explainedRel: false, explainedApps: false, explainedRecon: false },
+        step8: {
+          rulesAck: { noRandom: false, noVehicles: false, noStoreCards: false, noUtilSpikes: false, noMissed: false },
+          planToFinance: null, planToFinanceNotes: ''
+        },
+        step9: { redFlagText: '' },
+        step10: { summary: '', tasksToCreate: [] }
+      },
+      _updatedAt: 0, _updatedBy: ''
+    };
+  }
+
+  function _ocwLoadState(clientId) {
+    var d = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+    if (d && d.onboardingCall && typeof d.onboardingCall === 'object') {
+      // Deep-merge with defaults so newly-added fields don't crash on old docs.
+      var defaults = _ocwDefaultState();
+      var s = Object.assign({}, defaults, d.onboardingCall);
+      s.answers = Object.assign({}, defaults.answers, d.onboardingCall.answers || {});
+      Object.keys(defaults.answers).forEach(function(k) {
+        s.answers[k] = Object.assign({}, defaults.answers[k], d.onboardingCall.answers && d.onboardingCall.answers[k] || {});
+      });
+      return s;
+    }
+    return _ocwDefaultState();
+  }
+
+  var _ocwSaveTimers = {};
+  var _ocwState = null;       // currently-open wizard state
+  var _ocwClientId = null;    // currently-open client
+  var _ocwLastSavedAt = 0;
+  var _ocwBatchUpdate = false; // suppress autosave during batch state changes
+
+  function _ocwSaveState(clientId, state, opts) {
+    opts = opts || {};
+    var now = Date.now();
+    var me = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
+    state._updatedAt = now;
+    state._updatedBy = me;
+
+    // Local cache via the existing saveDashData (localOnly=true), so the
+    // open client's UI can re-read without a Firestore round-trip.
+    try {
+      if (typeof getDashData === 'function' && typeof saveDashData === 'function') {
+        var d = getDashData(clientId) || {};
+        d.onboardingCall = state;
+        saveDashData(clientId, d, true); // localOnly=true
+      }
+    } catch(e) {}
+
+    // Debounced Firestore mirror — 600ms after the last edit, or immediate
+    // if opts.immediate is set (Step 10 completion writes immediately).
+    if (_ocwSaveTimers[clientId]) clearTimeout(_ocwSaveTimers[clientId]);
+    var doFlush = function() {
+      _ocwSaveTimers[clientId] = null;
+      try {
+        if (typeof fsSetDash === 'function') {
+          fsSetDash(clientId, { onboardingCall: state }).catch(function(){});
+        }
+      } catch(e) {}
+      _ocwLastSavedAt = Date.now();
+      _ocwUpdateFooterMeta('saved');
+    };
+    if (opts.immediate) doFlush();
+    else {
+      _ocwUpdateFooterMeta('saving');
+      _ocwSaveTimers[clientId] = setTimeout(doFlush, 600);
+    }
+  }
+
+  // Called from dashboards onSnapshot 'modified' branch when another admin
+  // edits onboardingCall remotely. Refreshes the at-top progress card and
+  // — if the wizard is open for this client — re-renders the step body.
+  function _ocwMergeFromSnapshot(clientId, data) {
+    if (!data || !data.onboardingCall) return;
+    var incoming = data.onboardingCall;
+    var rTs = Number(incoming._updatedAt || 0);
+    var existing = (typeof getDashData === 'function' && getDashData(clientId) && getDashData(clientId).onboardingCall) || null;
+    var lTs = Number(existing && existing._updatedAt || 0);
+    // Last-writer-wins per the same convention used by funding rows etc.
+    if (rTs && lTs && rTs < lTs) return; // stale echo
+    try {
+      var dd = getDashData(clientId) || {};
+      dd.onboardingCall = incoming;
+      saveDashData(clientId, dd, true);
+    } catch(e) {}
+    // Refresh the at-top progress card if it's mounted.
+    try { _ocwRefreshProgressCard(clientId); } catch(e) {}
+    // If the wizard is open on this client and the incoming state is from
+    // someone else, re-render. Don't yank focus out from a typing admin —
+    // only re-render if the change isn't this admin's own write.
+    if (_ocwClientId === clientId && _ocwState && incoming._updatedBy && incoming._updatedBy !== _ocwState._updatedBy) {
+      _ocwState = _ocwLoadState(clientId);
+      _ocwRenderWizardBody();
+    }
+  }
+
+  // ── Modal scaffolding ──────────────────────────────────────────────────
+  function _ocwOpen(clientId, opts) {
+    if (!clientId) return;
+    var client = (typeof getClient === 'function') ? getClient(clientId) : null;
+    if (!client) return;
+    var state = _ocwLoadState(clientId);
+    // Stamp started state on first open.
+    if (state.status === 'not-started') {
+      state.status = 'in-progress';
+      state.startedAt = Date.now();
+      state.startedBy = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
+    }
+    _ocwState = state;
+    _ocwClientId = clientId;
+    _ocwSaveState(clientId, state, { immediate: true });
+
+    // Remove any existing overlay (in case of double-click).
+    var existing = document.getElementById('ocw-overlay');
+    if (existing) existing.remove();
+
+    var ov = document.createElement('div');
+    ov.id = 'ocw-overlay';
+    ov.className = 'ocw-overlay';
+    ov.innerHTML = _ocwModalShellHTML(client);
+    document.body.appendChild(ov);
+    _ocwRenderStepper();
+    _ocwRenderWizardBody();
+    _ocwRenderProgressBar();
+  }
+
+  function _ocwClose() {
+    var ov = document.getElementById('ocw-overlay');
+    if (ov) ov.remove();
+    _ocwState = null;
+    _ocwClientId = null;
+  }
+
+  function _ocwClientName(client) {
+    if (!client) return 'Client';
+    var fn = (client.fname || client.firstName || '').trim();
+    var ln = (client.lname || client.lastName || '').trim();
+    return (fn + ' ' + ln).trim() || (client.email || 'Client');
+  }
+
+  function _ocwModalShellHTML(client) {
+    var name = _ocwClientName(client);
+    return ''
+      + '<div class="ocw-modal" onclick="event.stopPropagation()">'
+      +   '<div class="ocw-header">'
+      +     '<div class="ocw-header-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg></div>'
+      +     '<div class="ocw-header-text">'
+      +       '<div class="ocw-header-title">Onboarding Call &middot; <span style="color:var(--gray-500);font-weight:600">' + _ocwEsc(name) + '</span></div>'
+      +       '<div class="ocw-header-sub"><span id="ocw-step-label">Step 1 of 10</span><span class="ocw-header-sub-dot"></span><span id="ocw-step-name">Intro &amp; Expectations</span></div>'
+      +     '</div>'
+      +     '<button class="ocw-header-close" onclick="_ocwClose()" title="Close (progress saved)">&times;</button>'
+      +   '</div>'
+      +   '<div class="ocw-progress-bar"><div class="ocw-progress-bar-fill" id="ocw-progress-fill" style="width:10%"></div></div>'
+      +   '<div class="ocw-stepper" id="ocw-stepper"></div>'
+      +   '<div class="ocw-body" id="ocw-body"></div>'
+      +   '<div class="ocw-footer">'
+      +     '<span class="ocw-footer-meta saved" id="ocw-save-meta"><svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg> Saved</span>'
+      +     '<div class="ocw-footer-spacer"></div>'
+      +     '<button class="ocw-btn" onclick="_ocwClose()">Save &amp; Close</button>'
+      +     '<button class="ocw-btn" id="ocw-prev-btn" onclick="_ocwPrev()">&larr; Previous</button>'
+      +     '<button class="ocw-btn primary" id="ocw-next-btn" onclick="_ocwNext()">Next &rarr;</button>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  function _ocwEsc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function _ocwUpdateFooterMeta(state) {
+    var el = document.getElementById('ocw-save-meta');
+    if (!el) return;
+    if (state === 'saving') {
+      el.classList.remove('saved');
+      el.innerHTML = '<svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="animation:ocw-spin 0.8s linear infinite"><circle cx="12" cy="12" r="10"/></svg> Saving...';
+    } else {
+      el.classList.add('saved');
+      el.innerHTML = '<svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg> Saved';
+    }
+  }
+
+  function _ocwRenderStepper() {
+    if (!_ocwState) return;
+    var wrap = document.getElementById('ocw-stepper');
+    if (!wrap) return;
+    var cur = _ocwState.currentStep || 1;
+    var doneStep = function(n) { return _ocwStepIsComplete(n); };
+    var html = '';
+    for (var i = 1; i <= _OCW_TOTAL_STEPS; i++) {
+      var cls = 'ocw-step-dot';
+      if (doneStep(i)) cls += ' done';
+      if (i === cur) cls += ' current';
+      html += '<div class="' + cls + '" onclick="_ocwGoto(' + i + ')" title="Go to step ' + i + '">' + (doneStep(i) && i !== cur ? '<svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>' : i) + '</div>';
+      if (i < _OCW_TOTAL_STEPS) {
+        html += '<div class="ocw-step-line' + (doneStep(i) ? ' done' : '') + '"></div>';
+      }
+    }
+    wrap.innerHTML = html;
+  }
+
+  function _ocwRenderProgressBar() {
+    var fill = document.getElementById('ocw-progress-fill');
+    if (!fill || !_ocwState) return;
+    var doneCount = 0;
+    for (var i = 1; i <= _OCW_TOTAL_STEPS; i++) if (_ocwStepIsComplete(i)) doneCount++;
+    var pct = Math.round(doneCount / _OCW_TOTAL_STEPS * 100);
+    fill.style.width = Math.max(pct, 10) + '%';
+  }
+
+  var _OCW_STEP_NAMES = {
+    1: 'Intro & Expectations',
+    2: 'Personal Information',
+    3: 'Business Information',
+    4: 'Bank Relationships',
+    5: 'Credit Profile Review',
+    6: 'Funding Goal',
+    7: 'Explain Process',
+    8: 'Rules During Process',
+    9: 'Red Flags',
+    10: 'Next Steps & Complete'
+  };
+
+  function _ocwRenderWizardBody() {
+    if (!_ocwState) return;
+    var body = document.getElementById('ocw-body');
+    if (!body) return;
+    var cur = _ocwState.currentStep || 1;
+    var stepLabel = document.getElementById('ocw-step-label');
+    var stepName = document.getElementById('ocw-step-name');
+    if (stepLabel) stepLabel.textContent = 'Step ' + cur + ' of ' + _OCW_TOTAL_STEPS;
+    if (stepName)  stepName.textContent  = _OCW_STEP_NAMES[cur] || '';
+    var fn = window['_ocwRenderStep' + cur];
+    body.innerHTML = (typeof fn === 'function') ? fn(_ocwClientId, _ocwState) : '<div style="padding:40px;text-align:center;color:var(--gray-400)">Step ' + cur + ' not built yet</div>';
+    var prevBtn = document.getElementById('ocw-prev-btn');
+    var nextBtn = document.getElementById('ocw-next-btn');
+    if (prevBtn) prevBtn.style.visibility = (cur === 1) ? 'hidden' : 'visible';
+    if (nextBtn) {
+      if (cur === _OCW_TOTAL_STEPS) {
+        nextBtn.innerHTML = '&#10003; Complete Onboarding';
+        nextBtn.className = 'ocw-btn success';
+      } else {
+        nextBtn.innerHTML = 'Next &rarr;';
+        nextBtn.className = 'ocw-btn primary';
+      }
+    }
+    _ocwRenderStepper();
+    _ocwRenderProgressBar();
+    // Scroll body to top so the user sees the new step header.
+    body.scrollTop = 0;
+  }
+
+  function _ocwGoto(step) {
+    if (!_ocwState) return;
+    step = Math.max(1, Math.min(_OCW_TOTAL_STEPS, step));
+    _ocwState.currentStep = step;
+    _ocwSaveState(_ocwClientId, _ocwState);
+    _ocwRenderWizardBody();
+  }
+  function _ocwPrev() { if (!_ocwState) return; _ocwGoto((_ocwState.currentStep || 1) - 1); }
+  function _ocwNext() {
+    if (!_ocwState) return;
+    var cur = _ocwState.currentStep || 1;
+    if (cur === _OCW_TOTAL_STEPS) { _ocwCompleteWizard(); return; }
+    _ocwGoto(cur + 1);
+  }
+
+  // ── State mutation API ────────────────────────────────────────────────
+  // All steps call _ocwSet(path, value) to update a single field. Path is
+  // a dotted string like 'step2.movedRecently' or 'step4.personalBanks.Chase'.
+  function _ocwSet(path, value) {
+    if (!_ocwState) return;
+    var parts = String(path).split('.');
+    var node = _ocwState.answers;
+    for (var i = 0; i < parts.length - 1; i++) {
+      if (!node[parts[i]] || typeof node[parts[i]] !== 'object') node[parts[i]] = {};
+      node = node[parts[i]];
+    }
+    node[parts[parts.length - 1]] = value;
+    if (!_ocwBatchUpdate) {
+      _ocwSaveState(_ocwClientId, _ocwState);
+      _ocwRenderStepper();
+      _ocwRenderProgressBar();
+    }
+  }
+  function _ocwGet(path) {
+    if (!_ocwState) return undefined;
+    var parts = String(path).split('.');
+    var node = _ocwState.answers;
+    for (var i = 0; i < parts.length; i++) {
+      if (!node || typeof node !== 'object') return undefined;
+      node = node[parts[i]];
+    }
+    return node;
+  }
+
+  // What counts as "step complete" for the dot indicator + progress bar.
+  function _ocwStepIsComplete(n) {
+    if (!_ocwState) return false;
+    var a = _ocwState.answers || {};
+    switch (n) {
+      case 1: return !!(a.step1 && a.step1.explainedSequence && a.step1.explainedDeps && a.step1.setExpectations);
+      case 2: return !!(a.step2 && a.step2.movedRecently != null && a.step2.fraudAlert != null && a.step2.bankruptcies != null && a.step2.redFlags != null);
+      case 3: return !!(a.step3 && a.step3.hasBizChecking != null && a.step3.processingRevenue != null && a.step3.hasBizCredit != null);
+      case 4: return !!(a.step4 && a.step4.recentDenials != null && a.step4.existingHighLimits != null);
+      case 5: return !!(a.step5 && a.step5.cardsOver30 != null && a.step5.recentInquiries != null);
+      case 6: return !!(a.step6 && a.step6.purpose && (a.step6.goalAmount || a.step6.minimumAmount));
+      case 7: return !!(a.step7 && a.step7.explainedOpt && a.step7.explainedSeq && a.step7.explainedRel && a.step7.explainedApps && a.step7.explainedRecon);
+      case 8: return !!(a.step8 && a.step8.rulesAck && a.step8.rulesAck.noRandom && a.step8.rulesAck.noVehicles && a.step8.rulesAck.noStoreCards && a.step8.rulesAck.noUtilSpikes && a.step8.rulesAck.noMissed && a.step8.planToFinance != null);
+      case 9: return !!(a.step9 && a.step9.redFlagText && a.step9.redFlagText.length > 0);
+      case 10: return _ocwState.status === 'completed';
+    }
+    return false;
+  }
+
+  // ── Reusable widget helpers ───────────────────────────────────────────
+  function _ocwCheck(label, path) {
+    var checked = !!_ocwGet(path);
+    return '<label class="ocw-check-row">'
+      + '<input type="checkbox"' + (checked ? ' checked' : '') + ' onchange="_ocwSet(\'' + path + '\', this.checked)">'
+      + '<span class="ocw-check-row-label">' + _ocwEsc(label) + '</span>'
+      + '</label>';
+  }
+  function _ocwYN(question, path) {
+    var v = _ocwGet(path);
+    var yesCls = v === 'yes' ? ' active yes' : '';
+    var noCls  = v === 'no'  ? ' active no'  : '';
+    return '<div class="ocw-yn-row">'
+      + '<div class="ocw-yn-q">' + _ocwEsc(question) + '</div>'
+      + '<div class="ocw-yn-btns">'
+      +   '<button class="ocw-yn-btn' + yesCls + '" onclick="_ocwSet(\'' + path + '\', \'yes\'); _ocwRenderWizardBody();">Yes</button>'
+      +   '<button class="ocw-yn-btn' + noCls + '" onclick="_ocwSet(\'' + path + '\', \'no\'); _ocwRenderWizardBody();">No</button>'
+      + '</div></div>';
+  }
+  function _ocwField(label, path, opts) {
+    opts = opts || {};
+    var v = _ocwGet(path) || '';
+    var ph = opts.placeholder || '';
+    if (opts.type === 'select') {
+      var optionHTML = (opts.options || []).map(function(o){
+        return '<option value="' + _ocwEsc(o) + '"' + (o === v ? ' selected' : '') + '>' + _ocwEsc(o) + '</option>';
+      }).join('');
+      return '<div class="ocw-field"><div class="ocw-field-label">' + _ocwEsc(label) + '</div>'
+        + '<select class="ocw-field-select" onchange="_ocwSet(\'' + path + '\', this.value); _ocwRenderStepper(); _ocwRenderProgressBar();"><option value="">Select...</option>' + optionHTML + '</select></div>';
+    }
+    if (opts.type === 'textarea') {
+      return '<div class="ocw-field" style="grid-column:1/-1"><div class="ocw-field-label">' + _ocwEsc(label) + '</div>'
+        + '<textarea class="ocw-field-textarea" placeholder="' + _ocwEsc(ph) + '" oninput="_ocwSet(\'' + path + '\', this.value)">' + _ocwEsc(v) + '</textarea></div>';
+    }
+    return '<div class="ocw-field"><div class="ocw-field-label">' + _ocwEsc(label) + '</div>'
+      + '<input class="ocw-field-input" type="' + (opts.type || 'text') + '" value="' + _ocwEsc(v) + '" placeholder="' + _ocwEsc(ph) + '" oninput="_ocwSet(\'' + path + '\', this.value)"></div>';
+  }
+  function _ocwMultiPill(label, path) {
+    var v = !!_ocwGet(path);
+    return '<label class="ocw-multi-pill' + (v ? ' checked' : '') + '">'
+      + '<input type="checkbox"' + (v ? ' checked' : '') + ' onchange="_ocwSet(\'' + path + '\', this.checked); _ocwRenderWizardBody();">'
+      + '<span>' + _ocwEsc(label) + '</span>'
+      + '</label>';
+  }
+  function _ocwSection(title, inner) {
+    return '<div class="ocw-section"><div class="ocw-section-title"><span class="ocw-section-title-dot"></span>' + _ocwEsc(title) + '</div>' + inner + '</div>';
+  }
+  function _ocwScript(text) {
+    return '<div class="ocw-script"><div class="ocw-script-inner">' + _ocwEsc(text) + '</div></div>';
+  }
+  function _ocwFlag(text) {
+    return '<div class="ocw-auto-flag"><svg class="ocw-auto-flag-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div>' + text + '</div></div>';
+  }
+
+  // ── Step renderers ────────────────────────────────────────────────────
+
+  window._ocwRenderStep1 = function(clientId, state) {
+    return ''
+      + '<div class="ocw-step-title">Intro &amp; Expectations</div>'
+      + '<div class="ocw-step-sub">Set the tone, explain why we\'re here, and confirm the client understands the process.</div>'
+      + _ocwScript("Today's call is mainly to review your profile, make sure everything looks good from a funding perspective, identify any issues that could hurt approvals, and build out your custom funding strategy.")
+      + _ocwSection('Confirm You Covered',
+            _ocwCheck('Explained custom funding sequence', 'step1.explainedSequence')
+          + _ocwCheck('Explained funding depends on profile, state, and banks', 'step1.explainedDeps')
+          + _ocwCheck('Set expectations for the process and timeline', 'step1.setExpectations'))
+      + _ocwSection('Notes', _ocwField('Anything else from the intro', 'step1.notes', { type: 'textarea', placeholder: 'Free-form notes...' }));
+  };
+
+  window._ocwRenderStep2 = function(clientId, state) {
+    var client = (typeof getClient === 'function') ? getClient(clientId) : {};
+    var dash   = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+    var profile = client || {};
+    // Pull from profile (Edit Profile saves into the client doc).
+    var name = ((profile.fname || profile.firstName || '') + ' ' + (profile.lname || profile.lastName || '')).trim() || '—';
+    var dob = profile.dob || dash.dob || '—';
+    var phone = profile.phone || '—';
+    var email = profile.email || '—';
+    var street = profile.address || profile.street || '—';
+    var state2 = profile.state || '—';
+    var income = profile.annualIncome ? '$' + Number(profile.annualIncome).toLocaleString() : '—';
+    var ownership = profile.ownership || '—';
+    var verifyHTML = ''
+      + '<div class="ocw-field-grid">'
+      +   _ocwField('Full Legal Name', 'step2.notesName', { placeholder: name })
+      +   _ocwField('Date of Birth', 'step2.notesDob', { placeholder: dob })
+      +   _ocwField('Street Address', 'step2.notesAddr', { placeholder: street })
+      +   _ocwField('State', 'step2.notesState', { placeholder: state2 })
+      +   _ocwField('Phone', 'step2.notesPhone', { placeholder: phone })
+      +   _ocwField('Email', 'step2.notesEmail', { placeholder: email })
+      +   _ocwField('Annual Personal Income', 'step2.notesIncome', { placeholder: income })
+      +   _ocwField('Ownership %', 'step2.notesOwnership', { placeholder: String(ownership) })
+      + '</div>'
+      + '<div style="margin-top:8px;font-size:11px;color:var(--gray-400)"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Placeholders show current profile values. Leave blank to keep them, or type to override and we\'ll log the change in the call summary.</div>';
+    var fraudFlag = (_ocwGet('step2.fraudAlert') === 'yes')
+      ? _ocwFlag('<strong>Auto-task queued:</strong> Remove fraud alert before applying — will be added on Complete (Step 10).')
+      : '';
+    return ''
+      + '<div class="ocw-step-title">Personal Information</div>'
+      + '<div class="ocw-step-sub">Verify what we have on file. Anything that doesn\'t match gets flagged in the summary.</div>'
+      + _ocwSection('Verify Profile Fields', verifyHTML)
+      + _ocwSection('Quick Q&amp;A',
+            _ocwYN('Have you moved recently?', 'step2.movedRecently')
+          + _ocwYN('Fraud alerts, freezes, or security blocks on any bureau?', 'step2.fraudAlert')
+          + _ocwYN('Any bankruptcies or negatives not showing on the report?', 'step2.bankruptcies')
+          + _ocwYN('Any major red flags we should know about?', 'step2.redFlags')
+          + fraudFlag)
+      + _ocwSection('Notes', _ocwField('Step 2 notes', 'step2.notes', { type: 'textarea', placeholder: 'Anything to remember...' }));
+  };
+
+  window._ocwRenderStep3 = function(clientId, state) {
+    var client = (typeof getClient === 'function') ? getClient(clientId) : {};
+    var dash = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+    var bizName = client.bizName || dash.bizName || '—';
+    var ein = client.ein || dash.ein || '—';
+    var bizType = client.bizType || dash.bizType || '—';
+    var industry = client.industry || dash.industry || '—';
+    var employees = client.employees || dash.employees || '—';
+    var monthly = client.monthlySales ? '$' + Number(client.monthlySales).toLocaleString() : '—';
+    var bizAddress = client.bizAddress || dash.bizAddress || '—';
+    var bizPhone = client.bizPhone || dash.bizPhone || '—';
+    var dateEst = client.dateEstablished || dash.dateEstablished || '—';
+    var followUps = '';
+    if (_ocwGet('step3.hasBizChecking') === 'yes') {
+      followUps = _ocwSection('Business Checking Details',
+            '<div class="ocw-field-grid">'
+          +   _ocwField('Which Banks', 'step3.bizBanks', { placeholder: 'Chase, BofA...' })
+          +   _ocwField('Average Balance', 'step3.bizBankBalance', { placeholder: '$15,000' })
+          +   _ocwField('How Long Open', 'step3.bizBankAge', { placeholder: '3 years' })
+          + '</div>');
+    }
+    return ''
+      + '<div class="ocw-step-title">Business Information</div>'
+      + '<div class="ocw-step-sub">Confirm what the bank underwriters will see.</div>'
+      + _ocwSection('Verify Profile Fields',
+            '<div class="ocw-field-grid">'
+          +   _ocwField('Business Name', 'step3.notesBizName', { placeholder: bizName })
+          +   _ocwField('Entity Type', 'step3.notesBizType', { placeholder: bizType })
+          +   _ocwField('EIN', 'step3.notesEin', { placeholder: ein })
+          +   _ocwField('Date Established', 'step3.notesDateEst', { placeholder: dateEst })
+          +   _ocwField('Industry', 'step3.notesIndustry', { placeholder: industry })
+          +   _ocwField('Employees', 'step3.notesEmployees', { placeholder: String(employees) })
+          +   _ocwField('Monthly Revenue', 'step3.notesMonthly', { placeholder: monthly })
+          +   _ocwField('Business Phone', 'step3.notesBizPhone', { placeholder: bizPhone })
+          +   _ocwField('Business Address', 'step3.notesBizAddress', { type: 'textarea', placeholder: bizAddress })
+          + '</div>')
+      + _ocwSection('Quick Q&amp;A',
+            _ocwYN('Does the business have a checking account?', 'step3.hasBizChecking'))
+      + followUps
+      + _ocwSection('Revenue &amp; Existing Credit',
+            _ocwYN('Does the business have processing revenue (merchant account)?', 'step3.processingRevenue')
+          + _ocwYN('Any existing business credit cards or loans?', 'step3.hasBizCredit'))
+      + _ocwSection('Notes', _ocwField('Step 3 notes', 'step3.notes', { type: 'textarea' }));
+  };
+
+  var _OCW_BANK_LIST = ['Chase', 'Bank of America', 'American Express', 'Wells Fargo', 'US Bank', 'Navy Federal', 'PNC', 'Truist', 'Comerica', 'Capital One', 'Citi', 'Discover', 'Other'];
+
+  window._ocwRenderStep4 = function(clientId, state) {
+    var personalPills = _OCW_BANK_LIST.map(function(b) { return _ocwMultiPill(b, 'step4.personalBanks.' + b); }).join('');
+    var businessPills = _OCW_BANK_LIST.map(function(b) { return _ocwMultiPill(b, 'step4.businessBanks.' + b); }).join('');
+    var bankerExtra = (_ocwGet('step4.existingBanker') === 'yes')
+      ? _ocwField('Banker contact info / notes', 'step4.bankerNotes', { type: 'textarea', placeholder: 'Name, branch, last contacted...' }) : '';
+    return ''
+      + '<div class="ocw-step-title">Bank Relationships</div>'
+      + '<div class="ocw-step-sub">Critical — this feeds the funding strategy generator. Be thorough.</div>'
+      + _ocwSection('Personal Banks', '<div class="ocw-multi-grid">' + personalPills + '</div>')
+      + _ocwSection('Business Banks', '<div class="ocw-multi-grid">' + businessPills + '</div>')
+      + _ocwSection('Relationship Quick Q&amp;A',
+            _ocwYN('Recent denials at any bank?', 'step4.recentDenials')
+          + _ocwYN('Existing high credit limits ($25K+) anywhere?', 'step4.existingHighLimits')
+          + _ocwYN('Closed accounts recently?', 'step4.closedAccounts')
+          + _ocwYN('Any burned relationships we should avoid?', 'step4.burnedRelationships')
+          + _ocwYN('Existing banker contact we can leverage?', 'step4.existingBanker')
+          + (bankerExtra ? '<div style="margin-top:8px">' + bankerExtra + '</div>' : ''))
+      + _ocwSection('Notes', _ocwField('Step 4 notes', 'step4.notes', { type: 'textarea' }));
+  };
+
+  window._ocwRenderStep5 = function(clientId, state) {
+    var dash = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+    var credit = {};
+    try { credit = JSON.parse(localStorage.getItem('cq_credit_' + clientId) || '{}') || {}; } catch(e) {}
+    var ex = credit.experian || dash.fico || '—';
+    var eq = credit.equifax || '—';
+    var tu = credit.transunion || '—';
+    var util = (credit.utilization != null) ? (credit.utilization + '%') : '—';
+    var inqs = credit.inquiries != null ? credit.inquiries : '—';
+    var newAccts = credit.newAccounts != null ? credit.newAccounts : '—';
+    var dero = credit.derogatories != null ? credit.derogatories : '—';
+    var utilFlag = '';
+    if (typeof credit.utilization === 'number' && credit.utilization > 30 && _ocwGet('step5.cardsOver30') === 'yes') {
+      utilFlag = _ocwFlag('<strong>Auto-recommendation queued:</strong> Pay utilization down below 30% before applying.');
+    }
+    var inqFlag = (_ocwGet('step5.recentInquiries') === 'yes')
+      ? _ocwFlag('<strong>Caution flag queued:</strong> Recent inquiries may reduce approval odds — note in funding strategy.') : '';
+    return ''
+      + '<div class="ocw-step-title">Credit Profile</div>'
+      + '<div class="ocw-step-sub">Pulled from the credit analyzer if available. Confirm with the client during the call.</div>'
+      + _ocwSection('Current Bureau Snapshot',
+          '<div class="ocw-field-grid" style="grid-template-columns:repeat(3,1fr)">'
+          +   '<div class="ocw-field"><div class="ocw-field-label">Experian</div><div style="height:36px;display:flex;align-items:center;font-size:15px;font-weight:800;color:var(--navy)">' + _ocwEsc(ex) + '</div></div>'
+          +   '<div class="ocw-field"><div class="ocw-field-label">Equifax</div><div style="height:36px;display:flex;align-items:center;font-size:15px;font-weight:800;color:var(--navy)">' + _ocwEsc(eq) + '</div></div>'
+          +   '<div class="ocw-field"><div class="ocw-field-label">TransUnion</div><div style="height:36px;display:flex;align-items:center;font-size:15px;font-weight:800;color:var(--navy)">' + _ocwEsc(tu) + '</div></div>'
+          + '</div>'
+          + '<div class="ocw-field-grid" style="margin-top:10px;grid-template-columns:repeat(4,1fr)">'
+          +   '<div class="ocw-field"><div class="ocw-field-label">Util %</div><div style="font-size:13px;font-weight:700;color:var(--navy);padding-top:4px">' + _ocwEsc(util) + '</div></div>'
+          +   '<div class="ocw-field"><div class="ocw-field-label">Inquiries</div><div style="font-size:13px;font-weight:700;color:var(--navy);padding-top:4px">' + _ocwEsc(String(inqs)) + '</div></div>'
+          +   '<div class="ocw-field"><div class="ocw-field-label">New Accts</div><div style="font-size:13px;font-weight:700;color:var(--navy);padding-top:4px">' + _ocwEsc(String(newAccts)) + '</div></div>'
+          +   '<div class="ocw-field"><div class="ocw-field-label">Derogs</div><div style="font-size:13px;font-weight:700;color:var(--navy);padding-top:4px">' + _ocwEsc(String(dero)) + '</div></div>'
+          + '</div>')
+      + _ocwSection('Quick Q&amp;A',
+            _ocwYN('Any personal cards above 30% utilization?', 'step5.cardsOver30')
+          + utilFlag
+          + _ocwYN('New inquiries or accounts in last 6-12 months?', 'step5.recentInquiries')
+          + inqFlag
+          + _ocwYN('Any authorized user accounts on the report?', 'step5.authorizedUsers')
+          + _ocwYN('Any negatives we should know about?', 'step5.negatives'))
+      + _ocwSection('Notes', _ocwField('Step 5 notes', 'step5.notes', { type: 'textarea' }));
+  };
+
+  var _OCW_FUNDING_PURPOSES = ['Working Capital', 'Marketing', 'Equipment', 'Inventory', 'Expansion', 'Real Estate', 'Payroll', 'Debt Consolidation', 'Other'];
+
+  window._ocwRenderStep6 = function(clientId, state) {
+    return ''
+      + '<div class="ocw-step-title">Funding Goal</div>'
+      + '<div class="ocw-step-sub">This sets the goal at the top of the client view and feeds the funding strategy generator on Complete.</div>'
+      + _ocwSection('What Are The Funds For',
+          _ocwField('Use of funds', 'step6.purpose', { type: 'select', options: _OCW_FUNDING_PURPOSES }))
+      + _ocwSection('Amount',
+          '<div class="ocw-field-grid">'
+          +   _ocwField('Ideal Goal', 'step6.goalAmount', { placeholder: '$75,000' })
+          +   _ocwField('Minimum Acceptable', 'step6.minimumAmount', { placeholder: '$40,000' })
+          + '</div>')
+      + _ocwSection('Notes', _ocwField('Step 6 notes', 'step6.notes', { type: 'textarea' }));
+  };
+
+  window._ocwRenderStep7 = function(clientId, state) {
+    return ''
+      + '<div class="ocw-step-title">Explain Process</div>'
+      + '<div class="ocw-step-sub">Walk the client through what happens next. Check off each topic as you cover it.</div>'
+      + _ocwSection('Topics Covered',
+            _ocwCheck('Explained credit optimization phase', 'step7.explainedOpt')
+          + _ocwCheck('Explained the funding sequence (which banks, in what order)', 'step7.explainedSeq')
+          + _ocwCheck('Explained why bank relationships matter', 'step7.explainedRel')
+          + _ocwCheck('Explained the application + reconsideration process', 'step7.explainedApps')
+          + _ocwCheck('Explained reconsideration calls if denied', 'step7.explainedRecon'));
+  };
+
+  window._ocwRenderStep8 = function(clientId, state) {
+    var planFlag = (_ocwGet('step8.planToFinance') === 'yes') ? _ocwFlag('<strong>Warning flag queued:</strong> Client plans to finance something — could impact approval odds. Discuss timing.') : '';
+    var planNotes = (_ocwGet('step8.planToFinance') === 'yes')
+      ? _ocwField('What are they planning?', 'step8.planToFinanceNotes', { type: 'textarea' }) : '';
+    return ''
+      + '<div class="ocw-step-title">Rules During Process</div>'
+      + '<div class="ocw-step-sub">Confirm the client understands what NOT to do while we\'re working their file.</div>'
+      + _ocwSection('Client Acknowledges',
+            _ocwCheck('No random credit applications', 'step8.rulesAck.noRandom')
+          + _ocwCheck('No financing vehicles', 'step8.rulesAck.noVehicles')
+          + _ocwCheck('No store cards', 'step8.rulesAck.noStoreCards')
+          + _ocwCheck('No utilization spikes', 'step8.rulesAck.noUtilSpikes')
+          + _ocwCheck('No missed payments', 'step8.rulesAck.noMissed'))
+      + _ocwSection('Upcoming Plans',
+            _ocwYN('Do you plan to finance anything in the next 30-60 days?', 'step8.planToFinance')
+          + planFlag
+          + (planNotes ? '<div style="margin-top:8px">' + planNotes + '</div>' : ''));
+  };
+
+  window._ocwRenderStep9 = function(clientId, state) {
+    return ''
+      + '<div class="ocw-step-title">Red Flag Question</div>'
+      + '<div class="ocw-step-sub">Open-ended. Anything the client thinks could be a problem — better to surface now than during underwriting.</div>'
+      + _ocwScript('Is there anything on your profile or situation you think the banks may question before we move forward?')
+      + _ocwSection('Their Answer',
+          _ocwField('Capture exactly what they said', 'step9.redFlagText', { type: 'textarea', placeholder: 'Type their answer here — this gets saved to the internal notes timeline.' }));
+  };
+
+  // Step 10: build the auto-task list from prior answers, allow edit, show summary.
+  function _ocwComputeAutoTasks(clientId, state) {
+    var a = state && state.answers || {};
+    var tasks = [];
+    if (a.step2 && a.step2.fraudAlert === 'yes')           tasks.push({ title: 'Remove fraud alert before applying', priority: 'high', source: 'onboarding-call' });
+    if (a.step2 && a.step2.bankruptcies === 'yes')         tasks.push({ title: 'Review bankruptcy details — may need waiver letter', priority: 'high', source: 'onboarding-call' });
+    if (a.step3 && a.step3.hasBizChecking === 'no')        tasks.push({ title: 'Open business checking account', priority: 'high', source: 'onboarding-call' });
+    if (a.step3 && a.step3.hasBizCredit === 'no')          tasks.push({ title: 'Establish first business credit tradeline', priority: 'medium', source: 'onboarding-call' });
+    if (a.step5 && a.step5.cardsOver30 === 'yes')          tasks.push({ title: 'Pay utilization down below 30%', priority: 'high', source: 'onboarding-call' });
+    if (a.step5 && a.step5.recentInquiries === 'yes')      tasks.push({ title: 'Wait for inquiries to age before applying (caution flag)', priority: 'medium', source: 'onboarding-call' });
+    if (a.step5 && a.step5.negatives === 'yes')            tasks.push({ title: 'Document and address known negatives', priority: 'high', source: 'onboarding-call' });
+    if (a.step8 && a.step8.planToFinance === 'yes')        tasks.push({ title: 'Discuss timing of planned financing — may delay our process', priority: 'medium', source: 'onboarding-call' });
+    return tasks;
+  }
+
+  window._ocwRenderStep10 = function(clientId, state) {
+    var auto = _ocwComputeAutoTasks(clientId, state);
+    // Initialize the task list on first render if empty.
+    if (!state.answers.step10) state.answers.step10 = { summary: '', tasksToCreate: [] };
+    if (!state.answers.step10.tasksToCreate || !state.answers.step10.tasksToCreate.length) {
+      state.answers.step10.tasksToCreate = auto.map(function(t){ return Object.assign({ selected: true }, t); });
+      _ocwSaveState(clientId, state);
+    }
+    var tasksHTML = state.answers.step10.tasksToCreate.map(function(t, idx) {
+      var pcls = t.priority === 'high' ? 'high' : (t.priority === 'medium' ? 'med' : 'low');
+      return '<div class="ocw-summary-task">'
+        + '<input type="checkbox"' + (t.selected ? ' checked' : '') + ' onchange="_ocwToggleTask(' + idx + ', this.checked)">'
+        + '<div class="ocw-summary-task-text">' + _ocwEsc(t.title) + '</div>'
+        + '<span class="ocw-summary-task-priority ' + pcls + '">' + _ocwEsc(t.priority) + '</span>'
+        + '</div>';
+    }).join('');
+    if (!tasksHTML) tasksHTML = '<div style="text-align:center;padding:18px;color:var(--gray-400);font-size:12px">No auto-tasks suggested. Add manually below if needed.</div>';
+    return ''
+      + '<div class="ocw-step-title">Next Steps</div>'
+      + '<div class="ocw-step-sub">Review what gets created on Complete. Uncheck anything you don\'t want.</div>'
+      + _ocwSection('Required Tasks Before Applying', tasksHTML
+          + '<div style="margin-top:10px;display:flex;gap:6px">'
+          +   '<input id="ocw-new-task-input" type="text" class="ocw-field-input" placeholder="Add another task..." style="flex:1" onkeydown="if(event.key===\'Enter\'){_ocwAddTask();event.preventDefault();}">'
+          +   '<button class="ocw-btn" onclick="_ocwAddTask()">+ Add</button>'
+          + '</div>')
+      + _ocwSection('Call Summary', _ocwField('Auto-generated summary (editable)', 'step10.summary', { type: 'textarea', placeholder: 'A summary will be auto-generated from your answers. Add anything else here — this goes to the client\'s internal notes timeline.' }))
+      + '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-top:8px;font-size:12.5px;color:#166534;line-height:1.5">'
+      +   '<strong>On Complete, this wizard will:</strong>'
+      +   '<ul style="margin:6px 0 0 18px;padding:0">'
+      +     '<li>Save the call summary to internal notes</li>'
+      +     '<li>Create the selected tasks (with the priorities shown)</li>'
+      +     '<li>Update the client\'s funding goal &amp; loan purpose</li>'
+      +     '<li>Mark onboarding call complete</li>'
+      +     '<li>Offer to advance the client to Credit Optimization stage</li>'
+      +   '</ul>'
+      + '</div>';
+  };
+
+  window._ocwToggleTask = function(idx, checked) {
+    if (!_ocwState || !_ocwState.answers.step10 || !_ocwState.answers.step10.tasksToCreate) return;
+    var t = _ocwState.answers.step10.tasksToCreate[idx];
+    if (!t) return;
+    t.selected = checked;
+    _ocwSaveState(_ocwClientId, _ocwState);
+  };
+  window._ocwAddTask = function() {
+    var inp = document.getElementById('ocw-new-task-input');
+    if (!inp || !inp.value.trim()) return;
+    if (!_ocwState.answers.step10) _ocwState.answers.step10 = { summary: '', tasksToCreate: [] };
+    _ocwState.answers.step10.tasksToCreate.push({ title: inp.value.trim(), priority: 'medium', source: 'onboarding-call', selected: true });
+    inp.value = '';
+    _ocwSaveState(_ocwClientId, _ocwState);
+    _ocwRenderWizardBody();
+  };
+
+  // ── Completion: write summary, create tasks, update funding, advance stage ──
+  function _ocwGenerateSummary(state) {
+    var a = state.answers || {};
+    var lines = [];
+    lines.push('=== Onboarding Call Summary ===');
+    if (state.startedBy) lines.push('Conducted by: ' + state.startedBy);
+    lines.push('');
+    if (a.step1 && a.step1.notes) lines.push('Intro notes: ' + a.step1.notes);
+    if (a.step2) {
+      var yn2 = [];
+      if (a.step2.movedRecently === 'yes') yn2.push('moved recently');
+      if (a.step2.fraudAlert === 'yes')    yn2.push('FRAUD ALERT on file');
+      if (a.step2.bankruptcies === 'yes')  yn2.push('bankruptcy/negative not on report');
+      if (a.step2.redFlags === 'yes')      yn2.push('client-disclosed red flags');
+      if (yn2.length) lines.push('Personal flags: ' + yn2.join('; '));
+      if (a.step2.notes) lines.push('Personal notes: ' + a.step2.notes);
+    }
+    if (a.step3) {
+      var biz = [];
+      biz.push('Business checking: ' + (a.step3.hasBizChecking || '—'));
+      if (a.step3.bizBanks) biz.push('Banks: ' + a.step3.bizBanks);
+      biz.push('Processing revenue: ' + (a.step3.processingRevenue || '—'));
+      biz.push('Existing biz credit: ' + (a.step3.hasBizCredit || '—'));
+      lines.push('Business: ' + biz.join(' | '));
+      if (a.step3.notes) lines.push('Business notes: ' + a.step3.notes);
+    }
+    if (a.step4) {
+      var pbList = Object.keys(a.step4.personalBanks || {}).filter(function(k){ return a.step4.personalBanks[k]; });
+      var bbList = Object.keys(a.step4.businessBanks || {}).filter(function(k){ return a.step4.businessBanks[k]; });
+      if (pbList.length) lines.push('Personal banks: ' + pbList.join(', '));
+      if (bbList.length) lines.push('Business banks: ' + bbList.join(', '));
+      var rels = [];
+      if (a.step4.recentDenials === 'yes')        rels.push('recent denials');
+      if (a.step4.existingHighLimits === 'yes')   rels.push('existing high limits');
+      if (a.step4.burnedRelationships === 'yes')  rels.push('burned relationships');
+      if (a.step4.existingBanker === 'yes')       rels.push('existing banker contact');
+      if (rels.length) lines.push('Relationship notes: ' + rels.join('; '));
+      if (a.step4.bankerNotes) lines.push('Banker: ' + a.step4.bankerNotes);
+      if (a.step4.notes) lines.push('Bank notes: ' + a.step4.notes);
+    }
+    if (a.step5) {
+      var cr = [];
+      if (a.step5.cardsOver30 === 'yes')     cr.push('utilization above 30%');
+      if (a.step5.recentInquiries === 'yes') cr.push('recent inquiries');
+      if (a.step5.authorizedUsers === 'yes') cr.push('authorized user accounts');
+      if (a.step5.negatives === 'yes')       cr.push('known negatives');
+      if (cr.length) lines.push('Credit flags: ' + cr.join('; '));
+      if (a.step5.notes) lines.push('Credit notes: ' + a.step5.notes);
+    }
+    if (a.step6) {
+      lines.push('Funding: ' + (a.step6.goalAmount || '?') + ' for ' + (a.step6.purpose || '?') + (a.step6.minimumAmount ? ' (min ' + a.step6.minimumAmount + ')' : ''));
+      if (a.step6.notes) lines.push('Funding notes: ' + a.step6.notes);
+    }
+    if (a.step8 && a.step8.planToFinance === 'yes') lines.push('PLANS TO FINANCE in 30-60d: ' + (a.step8.planToFinanceNotes || 'unspecified'));
+    if (a.step9 && a.step9.redFlagText) lines.push('Client-disclosed red flag: ' + a.step9.redFlagText);
+    if (a.step10 && a.step10.summary)   lines.push('Admin summary: ' + a.step10.summary);
+    return lines.join('\n');
+  }
+
+  function _ocwCompleteWizard() {
+    if (!_ocwState || !_ocwClientId) return;
+    if (!confirm('Complete onboarding call?\n\nThis will:\n  • Save the summary to notes\n  • Create the selected tasks\n  • Update funding goal & purpose\n  • Mark onboarding done')) return;
+    var clientId = _ocwClientId;
+    var state = _ocwState;
+    state.status = 'completed';
+    state.completedAt = Date.now();
+    state.completedBy = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
+
+    // 1. Save summary to notes (via addSystemNote so it appears in the
+    // timeline like every other auto-event).
+    try {
+      var summary = (state.answers.step10 && state.answers.step10.summary) || '';
+      var fullSummary = _ocwGenerateSummary(state) + (summary ? '\n\n--- Admin notes ---\n' + summary : '');
+      if (typeof addSystemNote === 'function') {
+        addSystemNote(clientId, 'onboarding-call', 'milestone', 'Onboarding call completed', fullSummary, { step: 10, completedBy: state.completedBy });
+      }
+    } catch(e) { console.warn('[OCW] note save failed', e); }
+
+    // 2. Create selected tasks via existing createOpsTask.
+    try {
+      var tasks = (state.answers.step10 && state.answers.step10.tasksToCreate) || [];
+      tasks.forEach(function(t) {
+        if (!t || !t.selected) return;
+        if (typeof createOpsTask === 'function') {
+          createOpsTask(clientId, {
+            title: t.title,
+            priority: t.priority || 'medium',
+            source: 'onboarding-call',
+            status: 'pending',
+            createdBy: state.completedBy
+          });
+        }
+      });
+    } catch(e) { console.warn('[OCW] task creation failed', e); }
+
+    // 3. Update funding goal + purpose on the dash doc — both are
+    // displayed at the top of the client view and read by the strategy
+    // generator. Uses the existing saveDashData write path.
+    try {
+      var goal = state.answers.step6 && state.answers.step6.goalAmount;
+      var purpose = state.answers.step6 && state.answers.step6.purpose;
+      if (goal || purpose) {
+        var d = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+        if (goal)    d.fundingGoal = parseFloat(String(goal).replace(/[^0-9.]/g, '')) || d.fundingGoal;
+        if (purpose) d.loanReason  = purpose;
+        if (typeof saveDashData === 'function') saveDashData(clientId, d);
+      }
+    } catch(e) { console.warn('[OCW] funding update failed', e); }
+
+    // 4. Save the wizard state itself (status=completed) — immediate flush.
+    _ocwSaveState(clientId, state, { immediate: true });
+
+    // 5. Close the modal first, THEN prompt about stage advance.
+    _ocwClose();
+    setTimeout(function() {
+      try {
+        var advance = confirm('Onboarding complete — move client to Credit Optimization stage now?');
+        if (advance && typeof _applyStageChange === 'function') {
+          _applyStageChange(clientId, 1); // Credit Optimization is stage index 1
+        }
+      } catch(e) {}
+      // Refresh the client detail so the at-top progress card disappears.
+      try { if (typeof renderClientDetail === 'function') renderClientDetail(clientId); } catch(e) {}
+      try { if (typeof refreshClientUI === 'function') refreshClientUI(clientId); } catch(e) {}
+    }, 250);
+  }
+
+  // ── At-top progress card (rendered inside renderClientDetail) ─────────
+  // Returns the HTML for the card, or '' if the client isn't eligible.
+  function _ocwRenderProgressCard(clientId) {
+    var client = (typeof getClient === 'function') ? getClient(clientId) : null;
+    if (!client) return '';
+    var dash = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+    if (!_ocwIsInitialSetup(client, dash)) return '';
+    var state = _ocwLoadState(clientId);
+    if (state.status === 'completed') return '';
+    var doneCount = 0;
+    for (var i = 1; i <= _OCW_TOTAL_STEPS; i++) if (_ocwStepIsComplete.call({ _ocwState: state }, i)) doneCount++;
+    // _ocwStepIsComplete reads _ocwState — temporarily bind it for the loop
+    // above so we can compute progress for a NON-OPEN client too. Cheaper:
+    // inline the logic.
+    doneCount = 0;
+    if (state.answers) {
+      var a = state.answers;
+      if (a.step1 && a.step1.explainedSequence && a.step1.explainedDeps && a.step1.setExpectations) doneCount++;
+      if (a.step2 && a.step2.movedRecently != null && a.step2.fraudAlert != null && a.step2.bankruptcies != null && a.step2.redFlags != null) doneCount++;
+      if (a.step3 && a.step3.hasBizChecking != null && a.step3.processingRevenue != null && a.step3.hasBizCredit != null) doneCount++;
+      if (a.step4 && a.step4.recentDenials != null && a.step4.existingHighLimits != null) doneCount++;
+      if (a.step5 && a.step5.cardsOver30 != null && a.step5.recentInquiries != null) doneCount++;
+      if (a.step6 && a.step6.purpose && (a.step6.goalAmount || a.step6.minimumAmount)) doneCount++;
+      if (a.step7 && a.step7.explainedOpt && a.step7.explainedSeq && a.step7.explainedRel && a.step7.explainedApps && a.step7.explainedRecon) doneCount++;
+      if (a.step8 && a.step8.rulesAck && a.step8.rulesAck.noRandom && a.step8.rulesAck.noVehicles && a.step8.rulesAck.noStoreCards && a.step8.rulesAck.noUtilSpikes && a.step8.rulesAck.noMissed && a.step8.planToFinance != null) doneCount++;
+      if (a.step9 && a.step9.redFlagText) doneCount++;
+    }
+    var pct = Math.round(doneCount / _OCW_TOTAL_STEPS * 100);
+    var inProgress = state.status === 'in-progress';
+    var subText = inProgress
+      ? ('On Step ' + (state.currentStep || 1) + ' of 10 &middot; ' + doneCount + ' completed')
+      : 'Guided 10-step call assistant for new clients';
+    var btnLabel = inProgress ? 'Resume Call' : 'Start Call';
+    return ''
+      + '<div class="ocw-card" id="ocw-progress-card-' + clientId + '">'
+      +   '<div class="ocw-card-icon"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>'
+      +   '<div class="ocw-card-body">'
+      +     '<div class="ocw-card-title">Onboarding Call</div>'
+      +     '<div class="ocw-card-sub">' + subText + '</div>'
+      +     '<div class="ocw-card-progress"><div class="ocw-card-progress-fill" style="width:' + Math.max(pct, 2) + '%"></div></div>'
+      +   '</div>'
+      +   '<div class="ocw-card-actions">'
+      +     '<button class="ocw-card-btn" onclick="_ocwOpen(\'' + clientId + '\')">' + btnLabel + ' &rarr;</button>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  // Re-render just the at-top card without rebuilding the whole client view.
+  function _ocwRefreshProgressCard(clientId) {
+    var el = document.getElementById('ocw-progress-card-' + clientId);
+    if (!el) return;
+    var fresh = _ocwRenderProgressCard(clientId);
+    if (fresh) {
+      var wrap = document.createElement('div');
+      wrap.innerHTML = fresh;
+      var newEl = wrap.firstChild;
+      el.parentNode.replaceChild(newEl, el);
+    } else {
+      // Onboarding completed remotely — remove the card.
+      el.remove();
+    }
+  }
+
+  // ── Start Working intercept ───────────────────────────────────────────
+  // Called from _wqStartWorkingButton (see hook). If the current client is
+  // in Initial Setup AND onboarding isn't complete, open the wizard and
+  // return true (skip the normal Smart Work Queue). Otherwise return false
+  // (let Start Working proceed as usual).
+  function _ocwInterceptStartWorking(clientId) {
+    if (!clientId) return false;
+    var client = (typeof getClient === 'function') ? getClient(clientId) : null;
+    if (!client) return false;
+    var dash = (typeof getDashData === 'function') ? getDashData(clientId) : {};
+    if (!_ocwIsInitialSetup(client, dash)) return false;
+    var state = _ocwLoadState(clientId);
+    if (state.status === 'completed') return false;
+    _ocwOpen(clientId);
+    return true;
+  }
+
+  // Add spin keyframe for the saving spinner.
+  if (!document.getElementById('ocw-keyframes')) {
+    var st = document.createElement('style');
+    st.id = 'ocw-keyframes';
+    st.textContent = '@keyframes ocw-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+    document.head.appendChild(st);
   }
 
   // ── GHL FORM DATA IMPORT ─────────────────────────────────────────────────
