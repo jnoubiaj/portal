@@ -5296,15 +5296,45 @@
     try { localStorage.setItem('cq_funding_reports', JSON.stringify(reports)); } catch(e) {}
   }
 
-  function calcMonthlyFunding() {
-    const now = new Date();
-    const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    return clients.reduce((sum, c) => {
-      if (c.status === 'approved' && c.isActive && c.fundingApprovedDate) {
-        const d = new Date(c.fundingApprovedDate);
-        if (d >= cutoff) return sum + (c.fundingApprovedAmount || 0);
-      }
-      return sum;
+  // Funding Approved This Month — sums every funding APPLICATION row
+  // (dashData.fundingRows[]) across every active client whose status is
+  // 'approved' AND whose approvedAt timestamp falls in the target
+  // calendar month. Default target is the current month.
+  //
+  // Previously: used a single per-client c.fundingApprovedAmount with a
+  // 30-day rolling window — wrong for the per-application case (David
+  // having Amex \$2k + Amex \$15k + another \$12k in June was invisible).
+  //
+  // Cross-admin sync is automatic: fundingRows lives in dashboards/{id},
+  // the dashboards onSnapshot already calls renderOverview() on every
+  // modified snapshot, and renderOvCards calls this function. So when
+  // Sam approves a row, Ali's overview re-totals within seconds.
+  //
+  // monthOffset: 0 = current month, -1 = last month, etc. monthKey
+  // ('YYYY-MM') takes precedence if provided.
+  function calcMonthlyFunding(opts) {
+    opts = opts || {};
+    var target;
+    if (opts.monthKey && /^\d{4}-\d{2}$/.test(opts.monthKey)) {
+      target = { year: parseInt(opts.monthKey.slice(0, 4), 10), month: parseInt(opts.monthKey.slice(5, 7), 10) - 1 };
+    } else {
+      var now = new Date();
+      now.setMonth(now.getMonth() + (Number(opts.monthOffset) || 0));
+      target = { year: now.getFullYear(), month: now.getMonth() };
+    }
+    return (clients || []).reduce(function(sum, c) {
+      if (!c || c.archived) return sum;
+      var d = null;
+      try { d = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) { d = null; }
+      var rows = (d && d.fundingRows) || [];
+      return sum + rows.reduce(function(s, r) {
+        if (!r || r.status !== 'approved') return s;
+        var ts = Number(r.approvedAt || 0);
+        if (!ts) return s; // row approved before this fix shipped — won't count until re-approved
+        var dd = new Date(ts);
+        if (dd.getFullYear() !== target.year || dd.getMonth() !== target.month) return s;
+        return s + (Number(r.amount) || 0);
+      }, 0);
     }, 0);
   }
 
@@ -5314,11 +5344,20 @@
     const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     if (reports.find(r => r.monthKey === monthKey)) return; // already saved this month
     const total = calcMonthlyFunding();
-    const funded = clients.filter(c => {
-      if (c.status !== 'approved' || !c.isActive || !c.fundingApprovedDate) return false;
-      const d = new Date(c.fundingApprovedDate);
-      const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      return d >= cutoff;
+    // Count distinct clients with at least one approved funding row in
+    // the current calendar month (per-application logic, same as the
+    // new total calc — replaces the old client-level c.fundingApprovedDate
+    // path that never gets populated by the per-row UI).
+    const funded = (clients || []).filter(c => {
+      if (!c || c.archived) return false;
+      let dd = null;
+      try { dd = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) {}
+      const rows = (dd && dd.fundingRows) || [];
+      return rows.some(r => {
+        if (!r || r.status !== 'approved' || !r.approvedAt) return false;
+        const ts = new Date(Number(r.approvedAt));
+        return ts.getFullYear() === now.getFullYear() && ts.getMonth() === now.getMonth();
+      });
     }).length;
     reports.unshift({
       monthKey,
@@ -21194,6 +21233,18 @@
     row[field] = value;
 
     if (field === 'status') {
+      // Stamp approval audit trail the FIRST time a row's status flips
+      // to 'approved'. This is what powers the Overview "Funding Approved
+      // This Month" metric — without an approvedAt timestamp the row is
+      // invisible to that calc. We preserve any existing approvedAt so
+      // an admin editing the amount later doesn't reset the date; if the
+      // status moves AWAY from approved we keep the timestamp too so the
+      // historical audit trail stays intact (only re-approval after a
+      // clear approvedAt would re-stamp).
+      if (value === 'approved' && !row.approvedAt) {
+        row.approvedAt = Date.now();
+        row.approvedBy = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || '';
+      }
       // Status: compute fundingApproved right now → one consistent Firestore write
       const newTotal = d.fundingRows
         .filter(r => r.status === 'approved')
