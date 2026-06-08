@@ -5343,6 +5343,76 @@
     }, 0);
   }
 
+  // Revenue This Month — sum of (approvedAmount × client.feePercent / 100)
+  // across every approved row whose approvedAt timestamp falls in the
+  // target calendar month. Includes archived clients (they get Mark
+  // Funded'd immediately after final approval). Returns 0 if no eligible
+  // approvals, or when fee % is unset (NaN/0) for the matching client.
+  function calcMonthlyRevenue(opts) {
+    opts = opts || {};
+    var target;
+    if (opts.monthKey && /^\d{4}-\d{2}$/.test(opts.monthKey)) {
+      target = { year: parseInt(opts.monthKey.slice(0, 4), 10), month: parseInt(opts.monthKey.slice(5, 7), 10) - 1 };
+    } else {
+      var now = new Date();
+      now.setMonth(now.getMonth() + (Number(opts.monthOffset) || 0));
+      target = { year: now.getFullYear(), month: now.getMonth() };
+    }
+    return (clients || []).reduce(function(sum, c) {
+      if (!c) return sum;
+      var d = null;
+      try { d = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) { d = null; }
+      if (!d) return sum;
+      var fp = Number(d.feePercent) || 0;
+      if (fp <= 0) return sum; // no fee set → no revenue from this client
+      var rows = d.fundingRows || [];
+      var clientApprovedThisMonth = rows.reduce(function(s, r) {
+        if (!r || r.status !== 'approved') return s;
+        var ts = Number(r.approvedAt || 0);
+        if (!ts) return s;
+        var dd = new Date(ts);
+        if (dd.getFullYear() !== target.year || dd.getMonth() !== target.month) return s;
+        return s + (Number(r.amount) || 0);
+      }, 0);
+      return sum + (clientApprovedThisMonth * fp / 100);
+    }, 0);
+  }
+
+  // Save the funding fee % for a client. Persists to dashData (rides the
+  // dashboards onSnapshot for cross-admin sync), recomputes Revenue Made
+  // on the open client view, and triggers an Overview refresh so the
+  // Revenue This Month KPI updates instantly. Accepts strings like "6",
+  // "7.5", "10%" — strips non-numeric chars first.
+  function _saveClientFeePercent(clientId, raw) {
+    if (!clientId) return;
+    var num = parseFloat(String(raw || '').replace(/[^0-9.]/g, '')) || 0;
+    if (num < 0) num = 0;
+    if (num > 100) num = 100;
+    try {
+      var d = (typeof getDashData === 'function') ? getDashData(clientId) : null;
+      if (!d) return;
+      if ((Number(d.feePercent) || 0) === num) return; // no change
+      d.feePercent = num;
+      saveDashData(clientId, d); // mirrors to Firestore + triggers listener fan-out
+    } catch(e) {}
+    // Repaint the open client's Revenue Made stat immediately (don't wait
+    // for the listener echo).
+    try {
+      var revEl = document.getElementById('cmd-revenue-' + clientId);
+      if (revEl) {
+        var dd = getDashData(clientId);
+        var apps = (dd && dd.fundingRows) || [];
+        var total = apps.filter(function(a){ return a.status === 'approved'; }).reduce(function(s,a){ return s + (Number(a.amount)||0); }, 0);
+        var rev = num > 0 ? total * (num / 100) : 0;
+        revEl.textContent = rev > 0 ? '$' + Number(rev).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
+      }
+    } catch(e) {}
+    // Refresh Overview so the Revenue This Month KPI updates without a
+    // tab switch. renderOvCards reads calcMonthlyRevenue() against the
+    // freshly-saved feePercent.
+    try { if (typeof renderOvCards === 'function') renderOvCards(); } catch(e) {}
+  }
+
   function checkAndSaveMonthlyReport() {
     const reports = getFundingReports();
     const now = new Date();
@@ -6240,6 +6310,7 @@
     var progress = active.filter(function(c){ return c.status === 'progress'; }).length;
     var total    = active.length;
     var monthly  = (function(){ try { return calcMonthlyFunding(); } catch(e) { return 0; } })();
+    var revenue  = (function(){ try { return calcMonthlyRevenue(); } catch(e) { return 0; } })();
 
     // Stuck: in-progress with no activity in 48h
     var cutoff48 = Date.now() - 48 * 3600000;
@@ -6281,8 +6352,11 @@
     var kpiDefs = [
       { key:null,       count:fmtMoney(monthly), label:'This Month',      sub:'Funding approved',   color:'#10b981', iconBg:'#d1fae5',
         icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>' },
-      { key:'progress', count:progress,           label:'Active Deals',   sub:'In progress',        color:'#22A7F0', iconBg:'#e0f2fe',
-        icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#22A7F0" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' },
+      // Revenue This Month — replaces the old "Active Deals" card per
+      // user spec. Sum of approved funding × per-client feePercent / 100
+      // for every approvedAt in the current calendar month.
+      { key:null,       count:fmtMoney(revenue), label:'Revenue This Month', sub:'From approved apps', color:'#059669', iconBg:'#d1fae5',
+        icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#059669" stroke-width="2.5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/><polyline points="14 5 19 5 19 10"/></svg>' },
       { key:'pending',  count:pending,            label:'Pending Review', sub:'Awaiting action',    color:'#f59e0b', iconBg:'#fef3c7',
         icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
       { key:null,       count:stuck,              label:'Stuck 48h+',     sub:'No recent activity', color:stuck>0?'#ef4444':'#94a3b8', iconBg:stuck>0?'#fee2e2':'#f1f5f9', alert:stuck>0?'kpi-alert-red':'',
@@ -7164,6 +7238,11 @@
     const _appDenied    = _apps.filter(a => a.status === 'denied').length;
     const _appPending   = _apps.filter(a => a.status === 'pending' || a.status === 'applied').length;
     const _totalFunded  = _apps.filter(a => a.status === 'approved').reduce((s,a) => s + (Number(a.amount)||0), 0);
+    // Per-client funding fee % (stored on dashData). Blank/0 means we
+    // haven't set one for this client yet — Revenue Made displays as
+    // dash and the user can click to edit.
+    const _feePercent   = Number(_d.feePercent) || 0;
+    const _revenueMade  = _feePercent > 0 ? _totalFunded * (_feePercent / 100) : 0;
     // Canonical funding goal: dashboard editor value (if set) → profile
     // loanAmount → client roster loanAmount. One formula everywhere so
     // Goal / Approved / Remaining stay consistent across screens.
@@ -7327,6 +7406,20 @@
                 <span class="a-cmd-stat-lbl">Credit</span>
                 <span class="a-cmd-stat-val a-cr-status-${_crStatusCls}">${_crStatusLabel}</span>
               </div>` : ''}
+              <div class="a-cmd-stat-sep"></div>
+              <div class="a-cmd-stat" title="Funding fee × approved amount. Click the % to edit the fee.">
+                <span class="a-cmd-stat-lbl">Revenue Made</span>
+                <span class="a-cmd-stat-val" id="cmd-revenue-${id}" style="color:#059669">${_revenueMade > 0 ? '$' + Number(_revenueMade).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
+                <span style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-size:10px;color:var(--gray-400);font-weight:600">
+                  <input type="text" id="cmd-fee-${id}" value="${_feePercent || ''}" placeholder="0" inputmode="decimal" maxlength="5"
+                    style="width:34px;height:18px;padding:0 4px;border:1px solid #e2e8f0;border-radius:4px;font-size:10.5px;font-weight:700;color:var(--navy);text-align:right;background:#fff"
+                    onfocus="this.style.borderColor='#10b981';this.select()"
+                    onblur="this.style.borderColor='#e2e8f0';_saveClientFeePercent('${id}', this.value)"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+                    title="Funding fee percent for this client (e.g. 6 = 6%)">
+                  <span>% fee</span>
+                </span>
+              </div>
             </div>
             <div class="a-cmd-prog" id="cmd-prog-wrap-${id}" style="${_fundGoal > 0 || _totalFunded > 0 ? '' : 'display:none'}">
               <div class="a-fund-prog-bar" style="height:8px">
@@ -12355,6 +12448,26 @@
         fundedEl.style.display = '';
       } else {
         fundedEl.style.display = 'none';
+      }
+    }
+    // Revenue Made — recomputed against fresh approved total + current
+    // feePercent. Triggered by both faUpdateRow's amount/status edits AND
+    // remote cross-admin fee % changes propagated through the dashboards
+    // listener. The fee % input itself is updated only when the value
+    // changed on the wire (don't yank a focused input mid-edit).
+    var revEl = document.getElementById('cmd-revenue-' + clientId);
+    var feeEl = document.getElementById('cmd-fee-' + clientId);
+    if (revEl) {
+      var _apps2 = (_d.fundingRows || []);
+      var _approvedTotal = _apps2.filter(function(a){ return a.status === 'approved'; }).reduce(function(s,a){ return s + (Number(a.amount)||0); }, 0);
+      var _fp = Number(_d.feePercent) || 0;
+      var _rev = _fp > 0 ? _approvedTotal * (_fp / 100) : 0;
+      revEl.textContent = _rev > 0 ? '$' + Number(_rev).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
+    }
+    if (feeEl) {
+      var _fpNow = String(Number(_d.feePercent) || '');
+      if (document.activeElement !== feeEl && feeEl.value !== _fpNow) {
+        feeEl.value = _fpNow;
       }
     }
 
