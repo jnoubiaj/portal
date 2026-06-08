@@ -16167,7 +16167,7 @@
       +   _ocwField('Full Legal Name', 'step2.notesName', { placeholder: or(name, 'First Last') })
       +   _ocwField('Date of Birth', 'step2.notesDob', { placeholder: or(dob, 'MM/DD/YYYY') })
       +   _ocwField('Street Address', 'step2.notesAddr', { placeholder: or(street, '123 Main St') })
-      +   _ocwField('State', 'step2.notesState', { placeholder: or(state2, 'NC') })
+      +   _ocwField('State', 'step2.notesState', { type: 'select', options: _OCW_US_STATES })
       +   _ocwField('Phone', 'step2.notesPhone', { placeholder: or(phone, '(555) 123-4567') })
       +   _ocwField('Email', 'step2.notesEmail', { placeholder: or(email, 'name@domain.com') })
       +   _ocwField('Annual Personal Income', 'step2.notesIncome', { placeholder: or(income, '$150,000') })
@@ -16199,11 +16199,39 @@
     var industry = client.industry || dash.industry || '';
     var employees = client.employees || dash.employees || '';
     var monthly = client.monthlySales ? '$' + Number(client.monthlySales).toLocaleString() : '';
-    var bizAddress = client.bizAddress || dash.bizAddress || '';
+    var bizAddressRaw = client.bizAddress || dash.bizAddress || '';
     var bizPhone = client.bizPhone || dash.bizPhone || '';
     var dateEst = client.dateEstablished || dash.dateEstablished || '';
     // Show profile value when present; format example when empty.
     var or = function(v, fmt) { return v && v !== '—' ? String(v) : fmt; };
+    // Try to split the existing bizAddress ("123 Main St, City, ST 12345")
+    // into street / city / state / zip for the four split inputs. Falls
+    // back gracefully when the format doesn't match — placeholders just
+    // show format examples for the empty parts.
+    var bizSplit = (function() {
+      if (!bizAddressRaw) return { street: '', city: '', state: '', zip: '' };
+      var s = String(bizAddressRaw).trim();
+      // Try: "Street, City, ST ZIP" or "Street, City, ST, ZIP".
+      var m = s.match(/^(.+?),\s*(.+?),\s*([A-Za-z]{2})[\s,]+(\d{5}(?:-\d{4})?)\s*$/);
+      if (m) return { street: m[1].trim(), city: m[2].trim(), state: m[3].toUpperCase(), zip: m[4] };
+      // Try: zip + state somewhere in the tail.
+      var zipM = s.match(/\b(\d{5}(?:-\d{4})?)\b\s*$/);
+      var stateM = s.match(/\b([A-Z]{2})\b\s+\d{5}/);
+      if (zipM || stateM) {
+        var trimmed = s;
+        if (zipM) trimmed = trimmed.replace(zipM[0], '').trim();
+        if (stateM) trimmed = trimmed.replace(stateM[0], '').trim();
+        var parts = trimmed.split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+        return {
+          street: parts[0] || '',
+          city: parts[1] || '',
+          state: stateM ? stateM[1] : '',
+          zip: zipM ? zipM[1] : ''
+        };
+      }
+      // Couldn't parse — drop the whole thing into street.
+      return { street: s, city: '', state: '', zip: '' };
+    })();
     var followUps = '';
     if (_ocwGet('step3.hasBizChecking') === 'yes') {
       followUps = _ocwSection('Business Checking Details',
@@ -16219,14 +16247,20 @@
       + _ocwSection('Verify Profile Fields',
             '<div class="ocw-field-grid">'
           +   _ocwField('Business Name', 'step3.notesBizName', { placeholder: or(bizName, 'Acme LLC') })
-          +   _ocwField('Entity Type', 'step3.notesBizType', { placeholder: or(bizType, 'LLC') })
+          +   _ocwField('Entity Type', 'step3.notesBizType', { type: 'select', options: _OCW_ENTITY_TYPES_LIST })
           +   _ocwField('EIN', 'step3.notesEin', { placeholder: or(ein, 'XX-XXXXXXX') })
           +   _ocwField('Date Established', 'step3.notesDateEst', { placeholder: or(dateEst, 'MM/DD/YYYY') })
           +   _ocwField('Industry', 'step3.notesIndustry', { placeholder: or(industry, 'Real Estate') })
           +   _ocwField('Employees', 'step3.notesEmployees', { placeholder: or(String(employees), '5') })
           +   _ocwField('Monthly Revenue', 'step3.notesMonthly', { placeholder: or(monthly, '$15,000') })
           +   _ocwField('Business Phone', 'step3.notesBizPhone', { placeholder: or(bizPhone, '(555) 123-4567') })
-          +   _ocwField('Business Address', 'step3.notesBizAddress', { type: 'textarea', placeholder: or(bizAddress, '123 Main St, City, ST 12345') })
+          + '</div>'
+          + '<div style="margin-top:10px;font-family:var(--font-h);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--gray-400);margin-bottom:6px">Business Address</div>'
+          + '<div class="ocw-field-grid" style="grid-template-columns:2fr 1fr 80px 110px">'
+          +   _ocwField('Street', 'step3.notesBizStreet', { placeholder: or(bizSplit.street, '123 Main St') })
+          +   _ocwField('City', 'step3.notesBizCity', { placeholder: or(bizSplit.city, 'Charlotte') })
+          +   _ocwField('State', 'step3.notesBizState', { type: 'select', options: _OCW_US_STATES })
+          +   _ocwField('ZIP', 'step3.notesBizZip', { placeholder: or(bizSplit.zip, '12345') })
           + '</div>')
       + _ocwSection('Quick Q&A',
             _ocwYN('Does the business have a checking account?', 'step3.hasBizChecking'))
@@ -16238,6 +16272,34 @@
   };
 
   var _OCW_BANK_LIST = ['Chase', 'Bank of America', 'American Express', 'Wells Fargo', 'US Bank', 'Navy Federal', 'PNC', 'Truist', 'Comerica', 'Capital One', 'Citi', 'Discover', 'Other'];
+
+  // Common business entity types for the Step 3 Entity Type dropdown.
+  // Covers ~99% of small-business legal structures admins will encounter.
+  var _OCW_ENTITY_TYPES_LIST = [
+    'Sole Proprietorship',
+    'LLC',
+    'Single-Member LLC',
+    'Multi-Member LLC',
+    'S-Corp',
+    'C-Corp',
+    'Partnership',
+    'Limited Partnership (LP)',
+    'Limited Liability Partnership (LLP)',
+    'PLLC',
+    'Professional Corporation (PC)',
+    'Non-Profit',
+    'Trust',
+    'Other'
+  ];
+
+  // US states + DC for the address state dropdowns (Step 2 Home Address,
+  // Step 3 Business Address).
+  var _OCW_US_STATES = [
+    'AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA',
+    'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM',
+    'NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA',
+    'WV','WI','WY'
+  ];
 
   window._ocwRenderStep4 = function(clientId, state) {
     var personalPills = _OCW_BANK_LIST.map(function(b) { return _ocwMultiPill(b, 'step4.personalBanks.' + b); }).join('');
@@ -16451,6 +16513,12 @@
       biz.push('Processing revenue: ' + (a.step3.processingRevenue || '—'));
       biz.push('Existing biz credit: ' + (a.step3.hasBizCredit || '—'));
       lines.push('Business: ' + biz.join(' | '));
+      // Build a combined address line from the split fields if any are set.
+      var bizAddrParts = [];
+      if (a.step3.notesBizStreet) bizAddrParts.push(a.step3.notesBizStreet);
+      var cityStateZip = [a.step3.notesBizCity, a.step3.notesBizState, a.step3.notesBizZip].filter(Boolean).join(' ');
+      if (cityStateZip) bizAddrParts.push(cityStateZip);
+      if (bizAddrParts.length) lines.push('Business address: ' + bizAddrParts.join(', '));
       if (a.step3.notes) lines.push('Business notes: ' + a.step3.notes);
     }
     if (a.step4) {
