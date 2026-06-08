@@ -3410,14 +3410,25 @@
     .a-sp-ab { padding: 6px 14px; gap: 6px; }
   }
 
-  /* Extra-tight for 1280px (13" MacBook Air base resolution) */
-  @media (min-width: 1024px) and (max-width: 1340px) {
+  /* Extra-tight for 1280-1400px (covers 13" MacBook Air base + most
+     1366x768 Windows laptops). Previously stopped at 1340px which left
+     standard 1366px laptops with a too-roomy layout — the right rail
+     was 320px and content felt cramped. */
+  @media (min-width: 1024px) and (max-width: 1400px) {
     :root { --sidebar-w: 200px; }
     .a-content { padding: 16px 18px 28px !important; }
-    .a-sp-workspace { grid-template-columns: 1fr 290px !important; }
+    .a-sp-workspace { grid-template-columns: 1fr 290px !important; gap: 14px !important; }
     .a-sp-right { width: 290px !important; }
     .ov-main-grid { grid-template-columns: 1fr 240px !important; }
     .a-clients-wrap { grid-template-columns: 240px 1fr !important; }
+    /* Long client names (e.g. "Karolina Lekarczyk") in the sticky
+       header can otherwise push the action buttons off-screen. min-width:0
+       lets the flex item shrink below its content width so the existing
+       text-overflow:ellipsis on .a-ch2-name-text actually triggers. */
+    .a-ch2 { padding: 10px 14px !important; gap: 8px !important; }
+    .a-ch2-name { min-width: 0 !important; flex: 1 1 auto !important; }
+    .a-ch2-name-text { font-size: 15px !important; min-width: 0 !important; }
+    .a-csh-actions { flex-shrink: 0 !important; }
   }
 
 </style>
