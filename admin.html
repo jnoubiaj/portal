@@ -3411,9 +3411,7 @@
   }
 
   /* Extra-tight for 1280-1400px (covers 13" MacBook Air base + most
-     1366x768 Windows laptops). Previously stopped at 1340px which left
-     standard 1366px laptops with a too-roomy layout — the right rail
-     was 320px and content felt cramped. */
+     1366x768 Windows laptops). */
   @media (min-width: 1024px) and (max-width: 1400px) {
     :root { --sidebar-w: 200px; }
     .a-content { padding: 16px 18px 28px !important; }
@@ -3421,15 +3419,34 @@
     .a-sp-right { width: 290px !important; }
     .ov-main-grid { grid-template-columns: 1fr 240px !important; }
     .a-clients-wrap { grid-template-columns: 240px 1fr !important; }
-    /* Long client names (e.g. "Karolina Lekarczyk") in the sticky
-       header can otherwise push the action buttons off-screen. min-width:0
-       lets the flex item shrink below its content width so the existing
-       text-overflow:ellipsis on .a-ch2-name-text actually triggers. */
     .a-ch2 { padding: 10px 14px !important; gap: 8px !important; }
     .a-ch2-name { min-width: 0 !important; flex: 1 1 auto !important; }
     .a-ch2-name-text { font-size: 15px !important; min-width: 0 !important; }
     .a-csh-actions { flex-shrink: 0 !important; }
   }
+
+  /* 1401-1700px range — covers 1440x900 MacBook Pros, 1536x864 Windows
+     laptops at 125% DPI scaling, 1600x900 standard. The default 380px
+     right rail was clipping content here. Trim to 310px and tighten
+     padding so the page fits cleanly without horizontal scroll. */
+  @media (min-width: 1401px) and (max-width: 1700px) {
+    :root { --sidebar-w: 215px; }
+    .a-content { padding: 18px 20px 32px !important; }
+    .a-sp-workspace { grid-template-columns: 1fr 310px !important; gap: 14px !important; }
+    .a-sp-right { width: 310px !important; }
+    .ov-main-grid { grid-template-columns: 1fr 280px !important; gap: 12px !important; }
+    .a-clients-wrap { grid-template-columns: 270px 1fr !important; }
+    .a-ch2 { padding: 12px 16px !important; gap: 10px !important; }
+    .a-ch2-name { min-width: 0 !important; flex: 1 1 auto !important; }
+    .a-ch2-name-text { min-width: 0 !important; }
+    .a-csh-actions { flex-shrink: 0 !important; }
+  }
+
+  /* Safety: prevent horizontal scroll if any descendant misbehaves.
+     The main column itself can scroll vertically; we just want to make
+     sure a wide table/card never forces the page wider than viewport. */
+  #admin-app { overflow-x: hidden; }
+  .a-main { overflow-x: hidden; }
 
 </style>
 </head>
