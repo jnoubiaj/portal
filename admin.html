@@ -5363,18 +5363,46 @@
       var d = null;
       try { d = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) { d = null; }
       if (!d) return sum;
-      var fp = Number(d.feePercent) || 0;
-      if (fp <= 0) return sum; // no fee set → no revenue from this client
+      var fpct  = Number(d.feePercent) || 0;
+      var fflat = Number(d.feeFlat) || 0;
+      var ftype = String(d.feeType || '').toLowerCase();
+      // Infer type when blank (back-compat for clients set up before the
+      // feeType field shipped).
+      if (!ftype) {
+        if (fflat > 0) ftype = 'flat';
+        else if (fpct > 0) ftype = 'percent';
+      }
+      if (ftype !== 'percent' && ftype !== 'flat') return sum;
       var rows = d.fundingRows || [];
+
+      // FLAT fee: earned once, counted in the month of the EARLIEST
+      // approval (when the engagement starts realizing revenue). Stays
+      // in that month regardless of subsequent approvals.
+      if (ftype === 'flat') {
+        if (fflat <= 0) return sum;
+        var earliest = null;
+        rows.forEach(function(r) {
+          if (!r || r.status !== 'approved' || !r.approvedAt) return;
+          var ts = Number(r.approvedAt);
+          if (!earliest || ts < earliest) earliest = ts;
+        });
+        if (!earliest) return sum;
+        var dd = new Date(earliest);
+        if (dd.getFullYear() !== target.year || dd.getMonth() !== target.month) return sum;
+        return sum + fflat;
+      }
+
+      // PERCENT fee: sum of (this-month approved × percent / 100).
+      if (fpct <= 0) return sum;
       var clientApprovedThisMonth = rows.reduce(function(s, r) {
         if (!r || r.status !== 'approved') return s;
         var ts = Number(r.approvedAt || 0);
         if (!ts) return s;
-        var dd = new Date(ts);
-        if (dd.getFullYear() !== target.year || dd.getMonth() !== target.month) return s;
+        var dd2 = new Date(ts);
+        if (dd2.getFullYear() !== target.year || dd2.getMonth() !== target.month) return s;
         return s + (Number(r.amount) || 0);
       }, 0);
-      return sum + (clientApprovedThisMonth * fp / 100);
+      return sum + (clientApprovedThisMonth * fpct / 100);
     }, 0);
   }
 
@@ -7238,11 +7266,18 @@
     const _appDenied    = _apps.filter(a => a.status === 'denied').length;
     const _appPending   = _apps.filter(a => a.status === 'pending' || a.status === 'applied').length;
     const _totalFunded  = _apps.filter(a => a.status === 'approved').reduce((s,a) => s + (Number(a.amount)||0), 0);
-    // Per-client funding fee % (stored on dashData). Blank/0 means we
-    // haven't set one for this client yet — Revenue Made displays as
-    // dash and the user can click to edit.
+    // Per-client funding fee — supports two billing models. Set in Edit
+    // Profile → Internal Pricing (admin-only, never mirrored to client).
+    //   feeType='percent' → revenueMade = approvedTotal × feePercent / 100
+    //   feeType='flat'    → revenueMade = feeFlat (one-time, regardless of total)
+    // Empty type infers from whichever value is set, for backward compat.
     const _feePercent   = Number(_d.feePercent) || 0;
-    const _revenueMade  = _feePercent > 0 ? _totalFunded * (_feePercent / 100) : 0;
+    const _feeFlat      = Number(_d.feeFlat) || 0;
+    let _feeType        = String(_d.feeType || '').toLowerCase();
+    if (!_feeType) { _feeType = _feeFlat > 0 ? 'flat' : (_feePercent > 0 ? 'percent' : ''); }
+    let _revenueMade = 0;
+    if (_feeType === 'flat')        _revenueMade = _feeFlat;
+    else if (_feeType === 'percent') _revenueMade = _totalFunded * (_feePercent / 100);
     // Canonical funding goal: dashboard editor value (if set) → profile
     // loanAmount → client roster loanAmount. One formula everywhere so
     // Goal / Approved / Remaining stay consistent across screens.
@@ -7407,18 +7442,9 @@
                 <span class="a-cmd-stat-val a-cr-status-${_crStatusCls}">${_crStatusLabel}</span>
               </div>` : ''}
               <div class="a-cmd-stat-sep"></div>
-              <div class="a-cmd-stat" title="Funding fee × approved amount. Click the % to edit the fee.">
+              <div class="a-cmd-stat" title="Funding fee × approved amount — set the fee type and amount in Edit Profile → Internal Pricing (admin only)">
                 <span class="a-cmd-stat-lbl">Revenue Made</span>
                 <span class="a-cmd-stat-val" id="cmd-revenue-${id}" style="color:#059669">${_revenueMade > 0 ? '$' + Number(_revenueMade).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
-                <span style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-size:10px;color:var(--gray-400);font-weight:600">
-                  <input type="text" id="cmd-fee-${id}" value="${_feePercent || ''}" placeholder="0" inputmode="decimal" maxlength="5"
-                    style="width:34px;height:18px;padding:0 4px;border:1px solid #e2e8f0;border-radius:4px;font-size:10.5px;font-weight:700;color:var(--navy);text-align:right;background:#fff"
-                    onfocus="this.style.borderColor='#10b981';this.select()"
-                    onblur="this.style.borderColor='#e2e8f0';_saveClientFeePercent('${id}', this.value)"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
-                    title="Funding fee percent for this client (e.g. 6 = 6%)">
-                  <span>% fee</span>
-                </span>
               </div>
             </div>
             <div class="a-cmd-prog" id="cmd-prog-wrap-${id}" style="${_fundGoal > 0 || _totalFunded > 0 ? '' : 'display:none'}">
@@ -12451,24 +12477,21 @@
       }
     }
     // Revenue Made — recomputed against fresh approved total + current
-    // feePercent. Triggered by both faUpdateRow's amount/status edits AND
-    // remote cross-admin fee % changes propagated through the dashboards
-    // listener. The fee % input itself is updated only when the value
-    // changed on the wire (don't yank a focused input mid-edit).
+    // fee config (type/percent/flat). Triggered by faUpdateRow's amount/
+    // status edits AND remote cross-admin fee changes propagated through
+    // the dashboards listener.
     var revEl = document.getElementById('cmd-revenue-' + clientId);
-    var feeEl = document.getElementById('cmd-fee-' + clientId);
     if (revEl) {
       var _apps2 = (_d.fundingRows || []);
       var _approvedTotal = _apps2.filter(function(a){ return a.status === 'approved'; }).reduce(function(s,a){ return s + (Number(a.amount)||0); }, 0);
-      var _fp = Number(_d.feePercent) || 0;
-      var _rev = _fp > 0 ? _approvedTotal * (_fp / 100) : 0;
+      var _fpct  = Number(_d.feePercent) || 0;
+      var _fflat = Number(_d.feeFlat) || 0;
+      var _ftype = String(_d.feeType || '').toLowerCase();
+      if (!_ftype) { _ftype = _fflat > 0 ? 'flat' : (_fpct > 0 ? 'percent' : ''); }
+      var _rev = 0;
+      if (_ftype === 'flat')         _rev = _fflat;
+      else if (_ftype === 'percent') _rev = _approvedTotal * _fpct / 100;
       revEl.textContent = _rev > 0 ? '$' + Number(_rev).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
-    }
-    if (feeEl) {
-      var _fpNow = String(Number(_d.feePercent) || '');
-      if (document.activeElement !== feeEl && feeEl.value !== _fpNow) {
-        feeEl.value = _fpNow;
-      }
     }
 
     // 2. Update Next Actions / Tasks card (targeted — never touches messages)
@@ -14377,6 +14400,13 @@
   function showAdminProfileEdit(clientId, _recovered) {
     const _c = getClient(clientId) || {};
     const o = getOnboardDataForClient(clientId);
+    // Read fee fields from dashData (admin-only, not on the onboarding
+    // doc that mirrors to the client portal). Used by the Internal
+    // Pricing section below.
+    const _feeDash = (typeof getDashData === 'function') ? (getDashData(clientId) || {}) : {};
+    const _initFeeType    = String(_feeDash.feeType || '').toLowerCase();
+    const _initFeePercent = Number(_feeDash.feePercent) || '';
+    const _initFeeFlat    = Number(_feeDash.feeFlat) || '';
     // Pre-fill any blank onboarding fields with the canonical client record values
     if (!o.firstName  && _c.fname) o.firstName  = _c.fname;
     if (!o.lastName   && _c.lname) o.lastName   = _c.lname;
@@ -14584,7 +14614,37 @@
             <div style="margin-top:10px;padding:7px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;font-size:11px;color:#166534">Separate multiple entries with commas</div>
           `)}
 
-          <!-- 5. Experian Access & Security -->
+          <!-- 5. Internal Pricing (Admin Only) -->
+          ${sCard('<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>','Internal Pricing (Admin Only)', `
+            <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:7px;padding:7px 12px;margin-bottom:12px;font-size:11px;color:#78350f;display:flex;align-items:center;gap:7px">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              These fields are visible to admins only and never appear on the client portal.
+            </div>
+            ${grid2(`
+              <div>
+                <div style="${lStyle}">Fee Type</div>
+                <select id="ape-feeType" style="${iStyle}" ${iFocus}
+                  onchange="(function(){var t=document.getElementById('ape-feeType').value;var p=document.getElementById('ape-feeRow-percent');var f=document.getElementById('ape-feeRow-flat');if(p)p.style.display=t==='percent'?'':'none';if(f)f.style.display=t==='flat'?'':'none';})()">
+                  <option value=""${_initFeeType ? '' : ' selected'}>— No fee set —</option>
+                  <option value="percent"${_initFeeType === 'percent' ? ' selected' : ''}>Percentage of approved funding</option>
+                  <option value="flat"${_initFeeType === 'flat' ? ' selected' : ''}>Flat fee</option>
+                </select>
+              </div>
+              <div></div>
+              <div id="ape-feeRow-percent" style="display:${_initFeeType === 'percent' ? '' : 'none'}">
+                <div style="${lStyle}">Fee Percentage (%)</div>
+                <input id="ape-feePercent" value="${_initFeePercent}" placeholder="e.g. 6 (= 6%)" inputmode="decimal" style="${iStyle}" ${iFocus}>
+                <div style="margin-top:4px;font-size:11px;color:var(--gray-400)">Revenue = approved total × percent ÷ 100</div>
+              </div>
+              <div id="ape-feeRow-flat" style="display:${_initFeeType === 'flat' ? '' : 'none'}">
+                <div style="${lStyle}">Flat Fee Amount ($)</div>
+                <input id="ape-feeFlat" value="${_initFeeFlat}" placeholder="e.g. 1500" inputmode="decimal" style="${iStyle}" ${iFocus}>
+                <div style="margin-top:4px;font-size:11px;color:var(--gray-400)">Revenue = this amount (counted once, in the month of the first approval)</div>
+              </div>
+            `)}
+          `)}
+
+          <!-- 6. Experian Access & Security -->
           ${sCard('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>','Experian Access & Security', `
             ${grid2(`
               ${fld('Experian Email', inp('experianEmail', o.experianEmail, 'email@experian.com'))}
@@ -14759,6 +14819,26 @@
       pin: g('pin'), secQuestion: g('secQuestion'), secAnswer: g('secAnswer'),
       _updatedAt: Date.now(),
     });
+
+    // Internal Pricing (admin-only). Stored on dashData — NOT on the
+    // onboarding doc that mirrors to dashboards.profileData (which the
+    // client portal can read). Persisted via saveDashData so the new
+    // values ride the dashboards onSnapshot for cross-admin sync, and
+    // the Overview Revenue This Month KPI repaints via the existing
+    // renderOverview() call inside the listener fan-out.
+    try {
+      const _feeType = (g('feeType') || '').toLowerCase();
+      let _feePct  = parseFloat(String(g('feePercent') || '').replace(/[^0-9.]/g, '')) || 0;
+      let _feeFlat = parseFloat(String(g('feeFlat')    || '').replace(/[^0-9.]/g, '')) || 0;
+      if (_feePct  < 0)   _feePct  = 0;
+      if (_feePct  > 100) _feePct  = 100;
+      if (_feeFlat < 0)   _feeFlat = 0;
+      const _dashFee = (typeof getDashData === 'function') ? (getDashData(clientId) || {}) : {};
+      _dashFee.feeType    = (_feeType === 'percent' || _feeType === 'flat') ? _feeType : '';
+      _dashFee.feePercent = _feePct;
+      _dashFee.feeFlat    = _feeFlat;
+      if (typeof saveDashData === 'function') saveDashData(clientId, _dashFee);
+    } catch(e) {}
 
     // Sanitize for Firestore: strip undefined / NaN / functions anywhere in
     // the object. invalid-argument errors come from undefined values nested
