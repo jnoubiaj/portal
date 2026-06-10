@@ -5327,14 +5327,10 @@
     // drop just-funded deals from the metric. The approvedAt timestamp
     // is per-application, so an archived client's June approval still
     // correctly counts toward June's total.
-    // Whether to include undated approved rows (those approved before the
-    // approvedAt fix shipped) in the CURRENT month. Default true: makes the
-    // KPI match the per-client Revenue Made when an admin first looks at it.
-    // Going forward every new approval is properly dated, so the bucket
-    // naturally shrinks. Pass {strict:true} to enforce dated-only semantics.
-    var _includeUndatedAsCurrentMonth = !opts.strict;
-    var _now = new Date();
-    var _isCurrentMonth = (target.year === _now.getFullYear() && target.month === _now.getMonth());
+    // STRICT dated-only: only count rows whose approvedAt timestamp falls
+    // in the target calendar month. Rows approved before the approvedAt-
+    // stamping fix shipped (commit 1996380) have no date and are NOT
+    // counted — re-click Approved on the row to stamp today's date.
     return (clients || []).reduce(function(sum, c) {
       if (!c) return sum;
       var d = null;
@@ -5343,14 +5339,7 @@
       return sum + rows.reduce(function(s, r) {
         if (!r || r.status !== 'approved') return s;
         var ts = Number(r.approvedAt || 0);
-        if (!ts) {
-          // Undated approval. Count it only when we're computing the
-          // current calendar month AND the includeUndated flag is on.
-          if (_includeUndatedAsCurrentMonth && _isCurrentMonth) {
-            return s + (Number(r.amount) || 0);
-          }
-          return s;
-        }
+        if (!ts) return s;
         var dd = new Date(ts);
         if (dd.getFullYear() !== target.year || dd.getMonth() !== target.month) return s;
         return s + (Number(r.amount) || 0);
@@ -5389,42 +5378,31 @@
       }
       if (ftype !== 'percent' && ftype !== 'flat') return sum;
       var rows = d.fundingRows || [];
-      var includeUndatedHere = !opts.strict && (target.year === (new Date()).getFullYear() && target.month === (new Date()).getMonth());
 
-      // FLAT fee: earned once. If we have any dated approval, anchor the
-      // flat fee to the month of the EARLIEST dated approval. If no dated
-      // approvals exist but at least one undated approval does, anchor to
-      // current month (mirrors the percent-fee treatment).
+      // FLAT fee: anchored to the month of the EARLIEST dated approval.
+      // Undated approvals don't anchor anywhere — admin can re-click
+      // Approved on a row to date it.
       if (ftype === 'flat') {
         if (fflat <= 0) return sum;
         var earliest = null;
-        var hasUndatedApproval = false;
         rows.forEach(function(r) {
-          if (!r || r.status !== 'approved') return;
-          if (!r.approvedAt) { hasUndatedApproval = true; return; }
+          if (!r || r.status !== 'approved' || !r.approvedAt) return;
           var ts = Number(r.approvedAt);
           if (!earliest || ts < earliest) earliest = ts;
         });
-        if (earliest) {
-          var dd = new Date(earliest);
-          if (dd.getFullYear() !== target.year || dd.getMonth() !== target.month) return sum;
-          return sum + fflat;
-        }
-        if (hasUndatedApproval && includeUndatedHere) return sum + fflat;
-        return sum;
+        if (!earliest) return sum;
+        var dd = new Date(earliest);
+        if (dd.getFullYear() !== target.year || dd.getMonth() !== target.month) return sum;
+        return sum + fflat;
       }
 
-      // PERCENT fee: sum of (approved-this-month × percent / 100). Undated
-      // approvals are bucketed to current month so the KPI matches the
-      // per-client Revenue Made on first view.
+      // PERCENT fee: STRICT dated-only. Rows without approvedAt don't
+      // count — re-click Approved on the row to stamp today's date.
       if (fpct <= 0) return sum;
       var clientApprovedThisMonth = rows.reduce(function(s, r) {
         if (!r || r.status !== 'approved') return s;
         var ts = Number(r.approvedAt || 0);
-        if (!ts) {
-          if (includeUndatedHere) return s + (Number(r.amount) || 0);
-          return s;
-        }
+        if (!ts) return s;
         var dd2 = new Date(ts);
         if (dd2.getFullYear() !== target.year || dd2.getMonth() !== target.month) return s;
         return s + (Number(r.amount) || 0);
@@ -5484,11 +5462,7 @@
       try { dd = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) {}
       const rows = (dd && dd.fundingRows) || [];
       return rows.some(r => {
-        if (!r || r.status !== 'approved') return false;
-        // Undated approvals count as current month — same convention as
-        // calcMonthlyFunding/Revenue so the historical reports view agrees
-        // with the live KPIs.
-        if (!r.approvedAt) return true;
+        if (!r || r.status !== 'approved' || !r.approvedAt) return false;
         const ts = new Date(Number(r.approvedAt));
         return ts.getFullYear() === now.getFullYear() && ts.getMonth() === now.getMonth();
       });
@@ -6561,8 +6535,7 @@
       try { dd = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) {}
       const rows = (dd && dd.fundingRows) || [];
       return rows.some(r => {
-        if (!r || r.status !== 'approved') return false;
-        if (!r.approvedAt) return true; // undated counts as current month
+        if (!r || r.status !== 'approved' || !r.approvedAt) return false;
         const ts = new Date(Number(r.approvedAt));
         return ts.getFullYear() === now.getFullYear() && ts.getMonth() === now.getMonth();
       });
