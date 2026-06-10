@@ -5776,7 +5776,8 @@
             // Seed dashboard data fields from Firestore — gated by _updatedAt
             // so a stale snapshot can never roll back a freshly-saved currentStage,
             // funding state, or score.
-            if (data.currentStage !== undefined || data.fundingRows || data.applyingBanks || data.fundingApproved) {
+            if (data.currentStage !== undefined || data.fundingRows || data.applyingBanks || data.fundingApproved
+                || data.feeType !== undefined || data.feePercent !== undefined || data.feeFlat !== undefined) {
               try {
                 var _exD = JSON.parse(localStorage.getItem('cq_dash_' + clientId) || '{}');
                 var _exDTs = _exD._updatedAt || 0;
@@ -5793,6 +5794,14 @@
                   if (data.fundingApproved !== undefined && !_typingAdded) _exD.fundingApproved = data.fundingApproved;
                   if (data.fundingSecured  !== undefined && !_typingAdded) _exD.fundingSecured  = data.fundingSecured;
                   if (data.creditScore     !== undefined) _exD.creditScore     = data.creditScore;
+                  // Internal Pricing — admin-only fee config. Without these
+                  // merges the listener would silently drop fee settings on
+                  // every browser reload (cold cache + incoming snapshot
+                  // rebuilds LS without fee fields). That's why Sam saw the
+                  // fees go to empty the day after setting them.
+                  if (data.feeType    !== undefined) _exD.feeType    = data.feeType;
+                  if (data.feePercent !== undefined) _exD.feePercent = data.feePercent;
+                  if (data.feeFlat    !== undefined) _exD.feeFlat    = data.feeFlat;
                   _exD._updatedAt = _rTs;
                   localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exD));
                 }
@@ -5963,7 +5972,8 @@
               }
             } catch(e) {}
           }
-          if (data.currentStage !== undefined || data.fundingRows || data.applyingBanks || data.fundingApproved) {
+          if (data.currentStage !== undefined || data.fundingRows || data.applyingBanks || data.fundingApproved
+              || data.feeType !== undefined || data.feePercent !== undefined || data.feeFlat !== undefined) {
             try {
               var _exDm = JSON.parse(localStorage.getItem('cq_dash_' + clientId) || '{}');
               var _exDmTs = _exDm._updatedAt || 0;
@@ -5980,6 +5990,13 @@
                 if (data.fundingApproved !== undefined && !_typingMod) _exDm.fundingApproved = data.fundingApproved;
                 if (data.fundingSecured  !== undefined && !_typingMod) _exDm.fundingSecured  = data.fundingSecured;
                 if (data.creditScore     !== undefined)  _exDm.creditScore     = data.creditScore;
+                // Internal Pricing — admin-only fee config. Same rationale
+                // as the 'added' branch: without these merges, a snapshot
+                // refresh rebuilds the local cache without fee fields and
+                // Revenue Made + Revenue This Month drop to \$0.
+                if (data.feeType    !== undefined) _exDm.feeType    = data.feeType;
+                if (data.feePercent !== undefined) _exDm.feePercent = data.feePercent;
+                if (data.feeFlat    !== undefined) _exDm.feeFlat    = data.feeFlat;
                 _exDm._updatedAt = _rTsM;
                 localStorage.setItem('cq_dash_' + clientId, JSON.stringify(_exDm));
               }
@@ -7444,7 +7461,9 @@
               <div class="a-cmd-stat-sep"></div>
               <div class="a-cmd-stat" title="Funding fee × approved amount — set the fee type and amount in Edit Profile → Internal Pricing (admin only)">
                 <span class="a-cmd-stat-lbl">Revenue Made</span>
-                <span class="a-cmd-stat-val" id="cmd-revenue-${id}" style="color:#059669">${_revenueMade > 0 ? '$' + Number(_revenueMade).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
+                ${_revenueMade > 0
+                  ? `<span class="a-cmd-stat-val" id="cmd-revenue-${id}" style="color:#059669">$${Number(_revenueMade).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>`
+                  : `<span class="a-cmd-stat-val" id="cmd-revenue-${id}" style="color:#059669;cursor:pointer;display:inline-flex;align-items:center;gap:6px" onclick="showAdminProfileEdit('${id}')" title="No fee set yet — click to open Edit Profile and configure Internal Pricing">—<span style="font-size:10px;font-weight:700;color:#22A7F0;background:#eff6ff;padding:2px 7px;border-radius:5px;letter-spacing:0.02em;border:1px solid #bfdbfe">Set fee →</span></span>`}
               </div>
             </div>
             <div class="a-cmd-prog" id="cmd-prog-wrap-${id}" style="${_fundGoal > 0 || _totalFunded > 0 ? '' : 'display:none'}">
