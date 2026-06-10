@@ -3382,64 +3382,62 @@
      viewports between 1024-1500px so content doesn't get crushed
      into a narrow column. Layout structure unchanged — only
      dimensions. */
-  @media (min-width: 1024px) and (max-width: 1500px) {
-    :root { --sidebar-w: 210px; }
-    .a-content { padding: 20px 22px 32px !important; }
-    .a-sp-workspace { grid-template-columns: 1fr 320px !important; gap: 16px !important; }
-    .a-sp-right { width: 320px !important; }
-    .a-sp-right .a-card { padding: 12px 14px !important; }
-    .a-card { padding: 14px 16px; }
-    .a-card-hdr { padding-bottom: 8px; margin-bottom: 10px; }
-    .ov-main-grid { grid-template-columns: 1fr 260px !important; gap: 12px !important; }
-    .a-msgs-layout { grid-template-columns: 240px 1fr 230px !important; gap: 14px !important; }
-    .ghl-inbox-layout { grid-template-columns: 260px 1fr 240px !important; }
-    .a-info-grid { gap: 12px !important; }
-    .a-credit-grid { gap: 10px !important; }
-    .cr-metrics-row { gap: 6px !important; }
-    .anl-grid { gap: 10px !important; }
-    .bnk-kpi-row { gap: 8px !important; }
-    .ov-cards-row { gap: 10px !important; }
-    .a-clients-wrap { grid-template-columns: 260px 1fr !important; }
-    .a-sb-logo { padding: 22px 16px 18px; }
-    .a-sb-logo img { height: 36px; }
-    .a-sb-user { padding: 12px 16px; }
-    .a-sb-nav-item { padding: 8px 14px; font-size: 13px; }
-    /* Tighter top header so client name + actions don't wrap */
-    .a-ch2 { padding: 14px 18px; gap: 10px; }
-    .a-csh-actions { gap: 4px; }
-    .a-sp-ab { padding: 6px 14px; gap: 6px; }
-  }
+  /* ════════════════════════════════════════════════════════════════════
+     FLUID RESPONSIVE LAYOUT (desktop ≥1024px)
+     ════════════════════════════════════════════════════════════════════
+     Replaces the prior stepped media queries (1024-1400, 1401-1700, etc)
+     with continuous clamp()-based sizing. Sidebar / right rail / content
+     padding scale SMOOTHLY with viewport width, so every screen size
+     between 1024px and 1920px+ gets a layout proportioned for it
+     instead of suddenly snapping to a tier.
 
-  /* Extra-tight for 1280-1400px (covers 13" MacBook Air base + most
-     1366x768 Windows laptops). */
-  @media (min-width: 1024px) and (max-width: 1400px) {
-    :root { --sidebar-w: 200px; }
-    .a-content { padding: 16px 18px 28px !important; }
-    .a-sp-workspace { grid-template-columns: 1fr 290px !important; gap: 14px !important; }
-    .a-sp-right { width: 290px !important; }
-    .ov-main-grid { grid-template-columns: 1fr 240px !important; }
-    .a-clients-wrap { grid-template-columns: 240px 1fr !important; }
-    .a-ch2 { padding: 10px 14px !important; gap: 8px !important; }
-    .a-ch2-name { min-width: 0 !important; flex: 1 1 auto !important; }
-    .a-ch2-name-text { font-size: 15px !important; min-width: 0 !important; }
-    .a-csh-actions { flex-shrink: 0 !important; }
-  }
+     Math used:
+       --sidebar-w:   clamp(190px, 13vw, 240px)  → 200 @1366, 220 @1680, 240 @1920+
+       --rail-w:      clamp(280px, 20vw, 380px)  → 280 @1366, 336 @1680, 380 @1920+
+       --content-pad: clamp(16px, 1.4vw, 28px)   → 19 @1366, 24 @1680, 28 @2000+
 
-  /* 1401-1700px range — covers 1440x900 MacBook Pros, 1536x864 Windows
-     laptops at 125% DPI scaling, 1600x900 standard. The default 380px
-     right rail was clipping content here. Trim to 310px and tighten
-     padding so the page fits cleanly without horizontal scroll. */
-  @media (min-width: 1401px) and (max-width: 1700px) {
-    :root { --sidebar-w: 215px; }
-    .a-content { padding: 18px 20px 32px !important; }
-    .a-sp-workspace { grid-template-columns: 1fr 310px !important; gap: 14px !important; }
-    .a-sp-right { width: 310px !important; }
-    .ov-main-grid { grid-template-columns: 1fr 280px !important; gap: 12px !important; }
-    .a-clients-wrap { grid-template-columns: 270px 1fr !important; }
-    .a-ch2 { padding: 12px 16px !important; gap: 10px !important; }
+     Total fixed columns at any given viewport:
+       sidebar + (content-pad × 2) + rail-w + gap(14)
+       e.g. @1366: 200 + 38 + 280 + 14 = 532px → main column gets 834px ✓
+       e.g. @1536: 200 + 43 + 307 + 14 = 564px → main column gets 972px ✓
+       e.g. @1920: 240 + 56 + 380 + 14 = 690px → main column gets 1230px ✓ */
+  @media (min-width: 1024px) {
+    :root {
+      --sidebar-w: clamp(190px, 13vw, 240px);
+      --rail-w:    clamp(280px, 20vw, 380px);
+    }
+    .a-content { padding: clamp(16px, 1.4vw, 28px) clamp(16px, 1.4vw, 28px) clamp(28px, 2vw, 40px) !important; }
+    .a-sp-workspace {
+      grid-template-columns: minmax(0, 1fr) var(--rail-w) !important;
+      gap: clamp(12px, 1vw, 20px) !important;
+    }
+    .a-sp-right { width: var(--rail-w) !important; min-width: 0 !important; }
+    .a-sp-right .a-card { padding: clamp(11px, 0.9vw, 16px) clamp(13px, 1.1vw, 18px) !important; }
+    .ov-main-grid {
+      grid-template-columns: minmax(0, 1fr) clamp(240px, 17vw, 320px) !important;
+      gap: clamp(10px, 0.9vw, 16px) !important;
+    }
+    .a-msgs-layout {
+      grid-template-columns: clamp(220px, 16vw, 280px) minmax(0, 1fr) clamp(220px, 16vw, 280px) !important;
+      gap: clamp(12px, 1vw, 20px) !important;
+    }
+    .ghl-inbox-layout {
+      grid-template-columns: clamp(240px, 17vw, 300px) minmax(0, 1fr) clamp(220px, 16vw, 280px) !important;
+    }
+    .a-clients-wrap { grid-template-columns: clamp(240px, 17vw, 300px) minmax(0, 1fr) !important; }
+    .a-ch2 { padding: clamp(10px, 0.9vw, 18px) clamp(14px, 1.2vw, 22px) !important; gap: clamp(8px, 0.7vw, 12px) !important; }
     .a-ch2-name { min-width: 0 !important; flex: 1 1 auto !important; }
     .a-ch2-name-text { min-width: 0 !important; }
-    .a-csh-actions { flex-shrink: 0 !important; }
+    .a-csh-actions { flex-shrink: 0 !important; gap: clamp(4px, 0.4vw, 8px) !important; }
+    .a-sp-ab { padding: clamp(6px, 0.5vw, 10px) clamp(12px, 1vw, 18px) !important; gap: clamp(6px, 0.5vw, 10px) !important; }
+    /* Grid gap tightening so multi-column data grids breathe at large
+       widths but pack tightly on small ones. */
+    .a-info-grid    { gap: clamp(10px, 0.9vw, 16px) !important; }
+    .a-credit-grid  { gap: clamp(8px,  0.7vw, 14px) !important; }
+    .cr-metrics-row { gap: clamp(6px,  0.5vw, 10px) !important; }
+    .anl-grid       { gap: clamp(8px,  0.7vw, 14px) !important; }
+    .bnk-kpi-row    { gap: clamp(8px,  0.7vw, 14px) !important; }
+    .ov-cards-row   { gap: clamp(8px,  0.7vw, 14px) !important; }
   }
 
   /* ── ONBOARDING CALL WIZARD ──────────────────────────────────────
