@@ -5493,10 +5493,12 @@
         return ts.getFullYear() === now.getFullYear() && ts.getMonth() === now.getMonth();
       });
     }).length;
+    const revenue = (function(){ try { return calcMonthlyRevenue(); } catch(e) { return 0; } })();
     reports.unshift({
       monthKey,
       month: now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
       total,
+      revenue,
       funded,
       generatedAt: now.toISOString()
     });
@@ -6542,35 +6544,62 @@
   }
 
   function renderOvKpi() {
-    const monthly = calcMonthlyFunding();
-    const reports = getFundingReports();
-    const approvedCount = clients.filter(c => {
-      if (c.status !== 'approved' || !c.isActive || !c.fundingApprovedDate) return false;
-      return new Date(c.fundingApprovedDate) >= new Date(Date.now() - 30*24*60*60*1000);
+    const now = new Date();
+    const currentMonthKey   = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    // CURRENT month is computed LIVE — using the same calcs that drive the
+    // top KPIs. Previously the table showed whatever value got snapshotted
+    // by checkAndSaveMonthlyReport (which could be \$0 if it fired before
+    // any approval landed). Now the current month row always reflects
+    // reality.
+    const liveTotal   = (function(){ try { return calcMonthlyFunding(); } catch(e) { return 0; } })();
+    const liveRevenue = (function(){ try { return calcMonthlyRevenue(); } catch(e) { return 0; } })();
+    const liveFunded  = (clients || []).filter(c => {
+      if (!c) return false;
+      let dd = null;
+      try { dd = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) {}
+      const rows = (dd && dd.fundingRows) || [];
+      return rows.some(r => {
+        if (!r || r.status !== 'approved') return false;
+        if (!r.approvedAt) return true; // undated counts as current month
+        const ts = new Date(Number(r.approvedAt));
+        return ts.getFullYear() === now.getFullYear() && ts.getMonth() === now.getMonth();
+      });
     }).length;
+
+    // For older months, use the saved snapshot (excluding the current
+    // month so we don't show stale data alongside the live row).
+    const saved = (getFundingReports() || []).filter(r => r.monthKey !== currentMonthKey);
+
+    const allRows = [
+      { monthKey: currentMonthKey, month: currentMonthLabel, total: liveTotal, revenue: liveRevenue, funded: liveFunded, generatedAt: Date.now(), live: true },
+      ...saved
+    ];
 
     document.getElementById('ov-kpi-row').innerHTML = `
       <div class="ov-table-card">
         <div class="ov-table-header">
           <div>
             <div class="ov-table-title">Monthly Funding Report</div>
-            <div style="font-size:11px;color:var(--gray-400);margin-top:2px">Auto-saved every 30 days</div>
+            <div style="font-size:11px;color:var(--gray-400);margin-top:2px">Current month is live · older months auto-saved</div>
           </div>
         </div>
         <div class="ov-table-wrap">
           <table class="ov-table">
             <thead><tr>
-              <th>Month</th><th>Total Approved</th><th>Clients Funded</th><th>Generated</th>
+              <th>Month</th><th>Total Approved</th><th>Revenue</th><th>Clients Funded</th><th>Generated</th>
             </tr></thead>
             <tbody>
-              ${reports.length === 0
-                ? `<tr><td colspan="4" class="ov-no-rows">No reports yet — first saves at end of month</td></tr>`
-                : reports.map(r => `<tr>
-                    <td style="font-weight:700;color:var(--navy)">${r.month}</td>
-                    <td style="font-weight:700;color:var(--success)">${fmtMoney(r.total)}</td>
-                    <td>${r.funded} client${r.funded!==1?'s':''}</td>
-                    <td style="color:var(--gray-400)">${fmtDate(r.generatedAt)}</td>
-                  </tr>`).join('')}
+              ${allRows.map(r => `<tr>
+                <td style="font-weight:700;color:var(--navy)">
+                  ${r.month}${r.live ? ' <span style="display:inline-block;font-size:9px;font-weight:700;color:#fff;background:#10b981;padding:1px 6px;border-radius:4px;margin-left:4px;vertical-align:1px">LIVE</span>' : ''}
+                </td>
+                <td style="font-weight:700;color:var(--success)">${fmtMoney(r.total)}</td>
+                <td style="font-weight:700;color:#059669">${fmtMoney(r.revenue || 0)}</td>
+                <td>${r.funded} client${r.funded!==1?'s':''}</td>
+                <td style="color:var(--gray-400)">${r.live ? 'in real time' : fmtDate(r.generatedAt)}</td>
+              </tr>`).join('')}
             </tbody>
           </table>
         </div>
