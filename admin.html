@@ -25013,8 +25013,27 @@
     if (newStageIdx < 0 || newStageIdx >= PIPELINE_STAGES.length) return false;
     opts = opts || {};
     var t = initClientTasks(clientId);
-    var prevStage = (typeof t.stage === 'number') ? t.stage : 0;
-    if (prevStage === newStageIdx && !opts.force) return false;
+    var d = getDashData(clientId);
+    // Read prevStage from BOTH sources — they're supposed to mirror each
+    // other (t.stage is 0-indexed in cq_tasks_, d.currentStage is 1-indexed
+    // in cq_dash_) but they can drift apart from past write failures, GHL
+    // sync echoes, or cross-admin races. When they disagree, the button
+    // visible to the admin reads from d.currentStage (line 7356) — so the
+    // user-facing intent is "advance from whatever currentStage shows".
+    //
+    // Old behavior: only checked t.stage. If t.stage === newStageIdx but
+    // d.currentStage was 1 LESS, the button rendered "Move to <next>" but
+    // the function early-returned false and the click appeared dead.
+    //
+    // New behavior: only early-return when BOTH sources already agree on
+    // the target. Otherwise proceed — the writes below will sync both
+    // stores to newStageIdx, healing the drift.
+    var prevFromTasks = (typeof t.stage === 'number') ? t.stage : 0;
+    var prevFromDash  = Math.max(0, (Number(d.currentStage) || 1) - 1);
+    if (prevFromTasks === newStageIdx && prevFromDash === newStageIdx && !opts.force) return false;
+    // Use the lower of the two for downstream log/note messaging — that's
+    // the stage the client was "really" at before this sync.
+    var prevStage = Math.min(prevFromTasks, prevFromDash);
 
     // 1. cq_tasks_${id}.stage (0-indexed) — drives LEFT SIDEBAR grouping
     t.stage = newStageIdx;
@@ -25024,7 +25043,6 @@
 
     // 2. cq_dash_${id}.currentStage (1-indexed) — drives header pill, stage
     //    slider, dashboard editor, client portal
-    var d = getDashData(clientId);
     d.currentStage = newStageIdx + 1;
     saveDashData(clientId, d);
 
