@@ -5050,7 +5050,51 @@
   }
 
   // ── INIT ──────────────────────────────────────────────────────────────
+  // ── ONE-SHOT FORCED RESYNC ────────────────────────────────────────────
+  // Wipes per-client localStorage caches that may have drifted away from
+  // Firestore (e.g. after the localOnly _updatedAt bug fixed in c5c6689
+  // left Sam's portal stuck on stale data). Runs ONCE per admin on the
+  // next page load after this version ships — gated by a per-version
+  // marker so it never re-runs unless we explicitly bump the version.
+  // Authoritative Firestore data is then re-pulled by the existing
+  // dashboards/clients/messages onSnapshot listeners on the same load.
+  var _CQ_RESYNC_VERSION = 'v1-fix-sam-stale-2026-06-12';
+  function _cqOneShotResync() {
+    try {
+      if (localStorage.getItem('cq_resync_version') === _CQ_RESYNC_VERSION) return;
+      var keep = { 'cq_admin_user': 1, 'cq_resync_version': 1 };
+      var wipePrefixes = [
+        'cq_dash_',           // dashboards data per client (fundingRows, currentStage, fees…)
+        'cq_ops_tasks_',      // per-client ops tasks
+        'cq_ops_done_',       // completion ledger
+        'cq_ops_done_ts_',    // ledger timestamps
+        'cq_tasks_',          // legacy pipeline tasks
+        'cq_notes_',          // admin notes
+        'cq_activity_',       // activity log per client
+        'cq_bank_apps_',      // bank applications
+        'cq_bankrels_',       // bank relationships
+        'cq_fsg_overrides_',  // funding-strategy overrides
+        'cq_fse_sent_',       // funding-sequence email tracking
+        'cq_onboard_data_'    // onboarding data cache
+      ];
+      var exactWipe = ['cq_dash_data', 'cq_client_creds', 'cq_admin_clients'];
+      var removed = 0;
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (!k || keep[k]) continue;
+        if (k.indexOf('cq_dash_email_') === 0) { localStorage.removeItem(k); removed++; continue; }
+        if (exactWipe.indexOf(k) >= 0) { localStorage.removeItem(k); removed++; continue; }
+        for (var p = 0; p < wipePrefixes.length; p++) {
+          if (k.indexOf(wipePrefixes[p]) === 0) { localStorage.removeItem(k); removed++; break; }
+        }
+      }
+      localStorage.setItem('cq_resync_version', _CQ_RESYNC_VERSION);
+      console.log('[Resync] cleared', removed, 'stale local keys — Firestore listeners will repopulate this session');
+    } catch(e) { console.warn('[Resync] aborted', e); }
+  }
+
   function initAdminApp() {
+    _cqOneShotResync();
     loadClients();
     _syncFsCreds();
     try { if (typeof _adminPhotosInit === 'function') _adminPhotosInit(); } catch(e) {}
