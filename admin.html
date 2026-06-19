@@ -20965,10 +20965,46 @@
     // listener has no way to tell that a local write is newer than an inbound
     // Firestore snapshot — and stale snapshots silently revert just-saved
     // fields like currentStage on the next refresh.
+    //
+    // CRITICAL — DIFFERENT RULES FOR localOnly vs FIRESTORE WRITES:
+    //
+    // For FIRESTORE writes (localOnly=false): bump to NOW. The same NOW
+    // becomes both the LS and Firestore _updatedAt below, so the listener
+    // echo of our own write sees them equal and merges correctly.
+    //
+    // For localOnly writes (typing buffers, wizard caches, poll-fallback
+    // re-seeds): we MUST NOT bump _updatedAt. Doing so caused the bug
+    // where Sam's admin stayed stuck on stale data — typing one character
+    // in a funding amount field stamped LS with NOW. If Sam then refreshed
+    // before the 700ms debounce flushed to Firestore, ALL future Firestore
+    // snapshots arrived with _updatedAt < Sam's local NOW, failed the
+    // listener's freshness gate (rTs >= localTs), and got silently dropped.
+    // Symptom: Sam couldn't see funding apps Ali added until Sam manually
+    // typed and triggered another Firestore write.
+    //
+    // Same bug hit the poll-fallback path (line 5250) which writes a
+    // Firestore doc back to LS — the old code clobbered fsD._updatedAt
+    // (the actual Firestore freshness stamp) with NOW.
+    //
+    // FIX: for localOnly, prefer data._updatedAt if set (caller knows what
+    // freshness to preserve), else fall back to whatever LS already had.
     const _writeTs = Date.now();
+    let _lsTs = _writeTs;
+    if (localOnly) {
+      if (typeof data._updatedAt === 'number' && data._updatedAt > 0) {
+        _lsTs = data._updatedAt;
+      } else {
+        try {
+          const _prev = JSON.parse(localStorage.getItem('cq_dash_'+clientId) || '{}');
+          if (typeof _prev._updatedAt === 'number' && _prev._updatedAt > 0) {
+            _lsTs = _prev._updatedAt;
+          }
+        } catch(e) {}
+      }
+    }
     const lsData = Object.assign({}, data, {
       adminDocs: _stripB64(data.adminDocs),
-      _updatedAt: _writeTs
+      _updatedAt: _lsTs
     });
     try {
       localStorage.setItem('cq_dash_'+clientId, JSON.stringify(lsData));
