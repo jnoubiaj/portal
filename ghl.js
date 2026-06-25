@@ -9,29 +9,76 @@ window.GHL = (function () {
 
   const API        = 'https://services.leadconnectorhq.com';
   const PROXY      = 'https://ghl-proxy.sam-e5a.workers.dev';  // Cloudflare (contact search)
-  const LOCAL_PROXY= 'http://localhost:3001/api/ghl';           // local Node proxy (all calls)
+  const LOCAL_PROXY_BASE = 'http://localhost:3001';            // local Node proxy (dev only)
   const VER        = '2021-07-28';
 
-  // ── LOCAL PROXY DETECTION ────────────────────────────────────────────────
-  let _proxyReady = null; // null=unchecked, true=available, false=unavailable
-
-  async function _checkProxy() {
-    if (_proxyReady !== null) return _proxyReady;
+  // ── PROXY RESOLUTION ─────────────────────────────────────────────────────
+  // Resolution order (each only used when reachable):
+  //   1. Railway URL from admin's GHL Settings (localStorage.cq_scheduler_remote_url)
+  //      — REQUIRED for production use because the browser can't reach
+  //        localhost:3001 from a real domain AND can't call GHL directly
+  //        (CORS). Without this, every Send via GHL fails with the generic
+  //        "Message send failed — check sync log".
+  //   2. Local Node proxy at localhost:3001 — dev path.
+  //   3. Direct GHL API — last resort, will hit CORS in a browser.
+  //
+  // _proxyReady caches the resolved BASE URL (the part before /api/ghl) so
+  // every subsequent call uses the same proxy. Pass force=true to re-check
+  // after the admin pastes a new Railway URL.
+  let _proxyReady = null;     // null=unchecked, false=no proxy, string=base URL
+  let _proxyCheckedAt = 0;
+  function _getRailwayProxyBase() {
     try {
-      let timer;
-      const done = fetch(LOCAL_PROXY + '/health', { method: 'GET' }).then(r => r.ok);
-      const out  = await Promise.race([
-        done,
-        new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), 1500); }),
-      ]);
-      clearTimeout(timer);
-      _proxyReady = !!out;
-    } catch(e) {
-      _proxyReady = false;
+      const u = (localStorage.getItem('cq_scheduler_remote_url') || '').trim();
+      return u && /^https?:\/\//.test(u) ? u.replace(/\/+$/, '') : '';
+    } catch(e) { return ''; }
+  }
+  async function _pingHealth(base) {
+    try {
+      const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      const timer = ctl ? setTimeout(function() { ctl.abort(); }, 2500) : null;
+      const r = await fetch(base + '/api/ghl/health', ctl ? { method: 'GET', signal: ctl.signal } : { method: 'GET' });
+      if (timer) clearTimeout(timer);
+      return r.ok ? base : '';
+    } catch(e) { return ''; }
+  }
+  async function _checkProxy(force) {
+    // Re-check at most every 60s unless forced.
+    if (!force && _proxyReady !== null && (Date.now() - _proxyCheckedAt) < 60000) return _proxyReady;
+    _proxyReady = null;
+    const railway = _getRailwayProxyBase();
+    if (railway) {
+      const ok = await _pingHealth(railway);
+      if (ok) {
+        _proxyReady = ok;
+        _proxyCheckedAt = Date.now();
+        console.log('[GHL] Proxy: ✓ Railway (' + ok + ')');
+        if (typeof window !== 'undefined') window._ghlProxyReady = _proxyReady;
+        return _proxyReady;
+      }
     }
-    console.log('[GHL] Local proxy (localhost:3001):', _proxyReady ? '✓ available' : '✗ not running (using direct API)');
+    // Fallback to localhost (dev). Only reachable when the page itself is
+    // also on http://localhost or running via file:// in a permissive context.
+    const local = await _pingHealth(LOCAL_PROXY_BASE);
+    _proxyReady = local || false;
+    _proxyCheckedAt = Date.now();
+    console.log('[GHL] Proxy:', _proxyReady ? '✓ localhost' : '✗ none (will hit CORS on direct API)');
     if (typeof window !== 'undefined') window._ghlProxyReady = _proxyReady;
     return _proxyReady;
+  }
+  // Backward-compat alias for the rest of the file — wherever LOCAL_PROXY
+  // was used, we now look up the resolved proxy base + '/api/ghl'.
+  function _proxyUrlForPath(path) {
+    const base = (typeof _proxyReady === 'string' && _proxyReady) ? _proxyReady : LOCAL_PROXY_BASE;
+    if (path && path.startsWith('/')) return base + '/api/ghl' + path;
+    return base + '/api/ghl' + (path ? '/' + path : '');
+  }
+  // Constant kept for any legacy references. New code should call _proxyUrlForPath.
+  const LOCAL_PROXY = LOCAL_PROXY_BASE + '/api/ghl';
+  // Expose a manual re-check so the Settings 'Check Connection' button can
+  // refresh after the admin pastes a new Railway URL.
+  if (typeof window !== 'undefined') {
+    window._ghlReCheckProxy = function() { return _checkProxy(true); };
   }
 
   // Expose so admin.html can show proxy status without re-checking
@@ -140,11 +187,11 @@ window.GHL = (function () {
       body = Object.assign({}, body, { _testMode: true });
     }
 
-    // Determine URL: proxy (preferred) or direct
-    const useProxy = s.useProxy !== false && await _checkProxy();
+    // Determine URL: proxy (preferred — Railway in prod, localhost in dev) or direct
+    const useProxy = s.useProxy !== false && !!(await _checkProxy());
     let url;
     if (useProxy) {
-      url = path.startsWith('http') ? path : LOCAL_PROXY + path;
+      url = path.startsWith('http') ? path : _proxyUrlForPath(path);
     } else {
       url = path.startsWith('http') ? path : API + path;
     }
@@ -440,9 +487,10 @@ window.GHL = (function () {
       console.log('[GHL sendMessage] Email | from:', fromAddr || '(none)', '| subj:', emailSubject || '(none)');
     }
 
-    // When proxy is running, use the validated shortcut endpoints
-    const proxyOk = await _checkProxy();
-    if (proxyOk) {
+    // When proxy is running, use the validated shortcut endpoints.
+    // proxyBase = Railway URL (prod) OR localhost (dev) OR false.
+    const proxyBase = await _checkProxy();
+    if (proxyBase) {
       const endpoint = type === 'SMS' ? '/api/ghl/send-sms' : '/api/ghl/send-email';
       const payload  = type === 'SMS'
         ? { contactId, message: text, fromPhone: body.phone, conversationId: convId || undefined,
@@ -450,8 +498,8 @@ window.GHL = (function () {
         : { contactId, subject: body.subject || emailSubject, html: text, body: text,
             fromEmail: body.from, conversationId: convId || undefined,
             _testMode: s.testMode || undefined };
-      console.log('[GHL sendMessage] Using proxy shortcut:', endpoint);
-      const res = await fetch(LOCAL_PROXY.replace('/api/ghl', '') + endpoint, {
+      console.log('[GHL sendMessage] Using proxy shortcut:', proxyBase + endpoint);
+      const res = await fetch(proxyBase + endpoint, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', 'X-GHL-Api-Key': s.apiKey, 'X-GHL-Location-Id': s.locationId },
         body:    JSON.stringify(payload),
@@ -466,10 +514,26 @@ window.GHL = (function () {
       return d;
     }
 
-    // Proxy not available: fall back to direct GHL call
+    // No proxy available — try the direct GHL API. This will fail with CORS
+    // when called from a browser on a real domain. Surface the underlying
+    // sync-log entry instead of the generic "Message send failed" so the
+    // admin knows whether to paste a Railway URL or run the local proxy.
     const d = await _fetch('POST', '/conversations/messages', body,
       { id: 'sm_' + contactId + '_' + Date.now(), type: 'send_message', contactId, text });
-    if (!d) throw new Error('Message send failed — check sync log for details');
+    if (!d) {
+      const isProd = (typeof location !== 'undefined' && location.protocol === 'https:'
+                       && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1');
+      const railwaySet = !!_getRailwayProxyBase();
+      let hint = '';
+      if (isProd && !railwaySet) {
+        hint = '\n\nNo Railway proxy URL is set. Open Settings → GoHighLevel → Cloud Deployment (Railway) and paste your Railway Worker URL, then click Check Connection.';
+      } else if (isProd && railwaySet) {
+        hint = '\n\nRailway URL is set but the proxy did not respond. Open Settings → Check Connection — if it shows red, the Railway app may be sleeping or down.';
+      } else {
+        hint = '\n\nNo local proxy detected. Run `node worker.mjs` in the portal folder, or paste a Railway Worker URL in Settings → GoHighLevel.';
+      }
+      throw new Error('GHL message send failed.' + hint);
+    }
     _logSync('message', !!d, type + ' sent to contact ' + contactId);
     return d;
   }
