@@ -136,12 +136,20 @@ window.GHL = (function () {
   let _log = [];
   try { _log = JSON.parse(localStorage.getItem('cq_ghl_log') || '[]'); } catch (e) {}
 
+  // Module-scoped buffer of the last failure detail — so generic "Send
+  // failed" alerts can include the underlying cause (CORS, 401, no proxy
+  // configured, etc) instead of telling the admin to "check the sync log".
+  let _lastApiError = '';
+  function _setLastApiError (msg) { _lastApiError = String(msg || '').substring(0, 400); }
+  function getLastApiError () { return _lastApiError; }
+
   function _logSync (type, ok, detail) {
     const e = { type, ok, detail: (detail || '').substring(0, 200), ts: Date.now() };
     _log.unshift(e);
     if (_log.length > 300) _log.length = 300;
     try { localStorage.setItem('cq_ghl_log', JSON.stringify(_log.slice(0, 100))); } catch (err) {}
     _setBadge(!ok);
+    if (!ok) _setLastApiError(detail);
     return e;
   }
 
@@ -532,7 +540,11 @@ window.GHL = (function () {
       } else {
         hint = '\n\nNo local proxy detected. Run `node worker.mjs` in the portal folder, or paste a Railway Worker URL in Settings → GoHighLevel.';
       }
-      throw new Error('GHL message send failed.' + hint);
+      // Surface the underlying _fetch failure too (CORS, 401, 400, network).
+      // _logSync already captured it into _lastApiError when the call failed.
+      const last = getLastApiError();
+      const underlying = last ? ('\n\nUnderlying error:\n' + last) : '';
+      throw new Error('GHL message send failed.' + hint + underlying);
     }
     _logSync('message', !!d, type + ' sent to contact ' + contactId);
     return d;
@@ -1964,7 +1976,7 @@ window.GHL = (function () {
     // High-level sync
     pushClient, syncStage, syncNote, syncTask,
     // Queue & logging
-    processQueue, startRetryProcessor, getSyncLog, getRetryQueue,
+    processQueue, startRetryProcessor, getSyncLog, getRetryQueue, getLastApiError,
     clearBadgeError,
     // Polling
     startPolling, stopPolling,
