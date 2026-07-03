@@ -6670,45 +6670,76 @@
     setTimeout(() => selectClient(id), 50);
   }
 
+  // For a given calendar month, roll up EVERY client whose c.fundedAt
+  // timestamp falls in that month (set by plMarkFinalComplete when the
+  // admin clicked "Mark Funded"). Sums each such client's approved
+  // funding total + calculates revenue via their per-client fee config.
+  // This is the RIGHT source of truth for the Monthly Funding Report:
+  // - "Clients Funded" = clients marked-funded that month
+  // - "Total Approved" = sum of their approved amounts
+  // - "Revenue"        = sum of (each client's approved × their fee)
+  function _calcMonthFundedByClient(target) {
+    let total = 0;
+    let revenue = 0;
+    let fundedCount = 0;
+    (clients || []).forEach(c => {
+      if (!c || !c.fundedAt) return;
+      const d = new Date(Number(c.fundedAt));
+      if (d.getFullYear() !== target.year || d.getMonth() !== target.month) return;
+      fundedCount++;
+      let dd = null;
+      try { dd = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) {}
+      if (!dd) return;
+      // Prefer summing approved fundingRows (the authoritative per-app data).
+      // Fall back to the cached dd.fundingApproved if fundingRows is empty
+      // (some legacy docs only have the cached number).
+      const rows = dd.fundingRows || [];
+      let approvedAmt = rows.filter(r => r && r.status === 'approved')
+                            .reduce((s, r) => s + (Number(r.amount) || 0), 0);
+      if (!approvedAmt) approvedAmt = Number(dd.fundingApproved) || 0;
+      total += approvedAmt;
+      // Revenue per this client's fee (percent or flat, admin-only stored on dashData).
+      const fpct  = Number(dd.feePercent) || 0;
+      const fflat = Number(dd.feeFlat) || 0;
+      let   ftype = String(dd.feeType || '').toLowerCase();
+      if (!ftype) ftype = fflat > 0 ? 'flat' : (fpct > 0 ? 'percent' : '');
+      if (ftype === 'flat')         revenue += fflat;
+      else if (ftype === 'percent') revenue += approvedAmt * fpct / 100;
+    });
+    return { total, revenue, funded: fundedCount };
+  }
+
   function renderOvKpi() {
     const now = new Date();
     const currentMonthKey   = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const currentMonthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-    // CURRENT month is computed LIVE — using the same calcs that drive the
-    // top KPIs. Previously the table showed whatever value got snapshotted
-    // by checkAndSaveMonthlyReport (which could be \$0 if it fired before
-    // any approval landed). Now the current month row always reflects
-    // reality.
-    const liveTotal   = (function(){ try { return calcMonthlyFunding(); } catch(e) { return 0; } })();
-    const liveRevenue = (function(){ try { return calcMonthlyRevenue(); } catch(e) { return 0; } })();
-    const liveFunded  = (clients || []).filter(c => {
-      if (!c) return false;
-      let dd = null;
-      try { dd = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) {}
-      const rows = (dd && dd.fundingRows) || [];
-      return rows.some(r => {
-        if (!r || r.status !== 'approved' || !r.approvedAt) return false;
-        const ts = new Date(Number(r.approvedAt));
-        return ts.getFullYear() === now.getFullYear() && ts.getMonth() === now.getMonth();
+    // Build 6 months of report data using c.fundedAt as the source of
+    // truth. Current month is LIVE (updates in real time as admins click
+    // Mark Funded); older months use the same calc but never change.
+    const allRows = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const target = { year: d.getFullYear(), month: d.getMonth() };
+      const monthKey   = `${target.year}-${String(target.month + 1).padStart(2, '0')}`;
+      const monthLabel = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const data = _calcMonthFundedByClient(target);
+      allRows.push({
+        monthKey,
+        month: monthLabel,
+        total: data.total,
+        revenue: data.revenue,
+        funded: data.funded,
+        generatedAt: Date.now(),
+        live: (i === 0)
       });
-    }).length;
-
-    // For older months, use the saved snapshot (excluding the current
-    // month so we don't show stale data alongside the live row).
-    const saved = (getFundingReports() || []).filter(r => r.monthKey !== currentMonthKey);
-
-    const allRows = [
-      { monthKey: currentMonthKey, month: currentMonthLabel, total: liveTotal, revenue: liveRevenue, funded: liveFunded, generatedAt: Date.now(), live: true },
-      ...saved
-    ];
+    }
 
     document.getElementById('ov-kpi-row').innerHTML = `
       <div class="ov-table-card">
         <div class="ov-table-header">
           <div>
             <div class="ov-table-title">Monthly Funding Report</div>
-            <div style="font-size:11px;color:var(--gray-400);margin-top:2px">Current month is live · older months auto-saved</div>
+            <div style="font-size:11px;color:var(--gray-400);margin-top:2px">Grouped by month a client was Mark Funded'd · every row updates live</div>
           </div>
         </div>
         <div class="ov-table-wrap">
