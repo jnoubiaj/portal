@@ -5093,8 +5093,63 @@
     } catch(e) { console.warn('[Resync] aborted', e); }
   }
 
+  // ── ONE-SHOT approvedAt BACKFILL ──────────────────────────────────────
+  // Stamps approvedAt on approved funding-rows that were marked approved
+  // BEFORE the auto-stamp fix shipped (commit 1996380) and therefore never
+  // got a date. Without a date, the Overview KPIs and Monthly Funding
+  // Report treat them as invisible — you see \$0 for June even though June
+  // had \$XXk of approvals.
+  //
+  // Uses the doc's own _updatedAt as the timestamp (best proxy for when
+  // the row was actually approved — the dashboards doc was almost
+  // certainly last touched at approval time). Falls back to Date.now()
+  // only if the doc has no _updatedAt at all.
+  //
+  // Runs ONCE per browser, gated by cq_backfill_version. Never overwrites
+  // an existing approvedAt — so rows that DO have a date keep it. Only
+  // touched clients get a Firestore write; the rest are untouched.
+  var _CQ_BACKFILL_VERSION = 'v1-approvedAt-2026-07';
+  function _cqOneShotApprovedBackfill() {
+    try {
+      if (localStorage.getItem('cq_backfill_version') === _CQ_BACKFILL_VERSION) return;
+    } catch(e) { return; }
+    // Wait for the dashboards listener to hydrate local caches from Firestore
+    // before we start reading + writing. 4s is a comfortable buffer that
+    // still runs well before the admin can meaningfully interact.
+    setTimeout(function() {
+      try {
+        var totalStamped = 0;
+        var docsWritten = 0;
+        (clients || []).forEach(function(c) {
+          if (!c) return;
+          var d = null;
+          try { d = getDashData(c.id); } catch(e) {}
+          if (!d || !Array.isArray(d.fundingRows) || !d.fundingRows.length) return;
+          var docTs = Number(d._updatedAt) || Date.now();
+          var changed = false;
+          d.fundingRows.forEach(function(r) {
+            if (!r || r.status !== 'approved') return;
+            if (r.approvedAt) return; // preserve existing date
+            r.approvedAt = docTs;
+            if (!r.approvedBy) r.approvedBy = 'backfill';
+            totalStamped++;
+            changed = true;
+          });
+          if (changed) {
+            try { saveDashData(c.id, d); docsWritten++; } catch(e) {}
+          }
+        });
+        localStorage.setItem('cq_backfill_version', _CQ_BACKFILL_VERSION);
+        console.log('[Backfill] approvedAt stamped on', totalStamped, 'rows across', docsWritten, 'clients — Overview will now count them');
+        // Repaint the KPIs so the numbers update without a manual refresh.
+        try { if (typeof renderOverview === 'function') renderOverview(); } catch(e) {}
+      } catch(e) { console.warn('[Backfill] aborted', e); }
+    }, 4000);
+  }
+
   function initAdminApp() {
     _cqOneShotResync();
+    _cqOneShotApprovedBackfill();
     loadClients();
     _syncFsCreds();
     try { if (typeof _adminPhotosInit === 'function') _adminPhotosInit(); } catch(e) {}
