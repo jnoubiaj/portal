@@ -6683,8 +6683,18 @@
     let revenue = 0;
     let fundedCount = 0;
     (clients || []).forEach(c => {
-      if (!c || !c.fundedAt) return;
-      const d = new Date(Number(c.fundedAt));
+      if (!c) return;
+      // Prefer c.fundedAt (set by plMarkFinalComplete). Fall back to
+      // c.updatedAt for legacy clients that were Mark Funded'd before
+      // the fundedAt field was added — those have archived=true and
+      // status='approved' but no fundedAt, and updatedAt is the closest
+      // timestamp we have to when the archive happened.
+      let ts = Number(c.fundedAt);
+      if (!ts && c.archived && c.status === 'approved' && c.updatedAt) {
+        ts = Number(c.updatedAt);
+      }
+      if (!ts) return;
+      const d = new Date(ts);
       if (d.getFullYear() !== target.year || d.getMonth() !== target.month) return;
       fundedCount++;
       let dd = null;
@@ -6713,24 +6723,42 @@
     const now = new Date();
     const currentMonthKey   = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
-    // Build 6 months of report data using c.fundedAt as the source of
-    // truth. Current month is LIVE (updates in real time as admins click
-    // Mark Funded); older months use the same calc but never change.
+    // Build 6 months of report data. Two calcs, chosen by row:
+    //
+    // CURRENT MONTH ("LIVE"): uses calcMonthlyFunding + calcMonthlyRevenue
+    // (approvedAt-based, same numbers as the top KPI cards). This shows
+    // the CURRENT ACTIVITY — what's been approved this month, whether or
+    // not the client is fully funded/archived yet. Clients Funded still
+    // uses c.fundedAt for consistency with past months.
+    //
+    // PAST MONTHS: use _calcMonthFundedByClient (c.fundedAt-based). These
+    // show the clients who were FULLY funded in that month + their total
+    // approved amount + revenue. This is the "closed deals" view.
+    //
+    // The two views measure different things but they're aligned so a
+    // client that gets Mark Funded'd this month moves cleanly from the
+    // current LIVE row (activity) into the past-month row (closed).
     const allRows = [];
     for (let i = 0; i < 6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const target = { year: d.getFullYear(), month: d.getMonth() };
       const monthKey   = `${target.year}-${String(target.month + 1).padStart(2, '0')}`;
       const monthLabel = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      const data = _calcMonthFundedByClient(target);
+      const isLive = (i === 0);
+      let total, revenue, funded;
+      if (isLive) {
+        total   = (function(){ try { return calcMonthlyFunding(); } catch(e) { return 0; } })();
+        revenue = (function(){ try { return calcMonthlyRevenue(); } catch(e) { return 0; } })();
+        funded  = _calcMonthFundedByClient(target).funded;
+      } else {
+        const data = _calcMonthFundedByClient(target);
+        total = data.total; revenue = data.revenue; funded = data.funded;
+      }
       allRows.push({
-        monthKey,
-        month: monthLabel,
-        total: data.total,
-        revenue: data.revenue,
-        funded: data.funded,
+        monthKey, month: monthLabel,
+        total, revenue, funded,
         generatedAt: Date.now(),
-        live: (i === 0)
+        live: isLive
       });
     }
 
@@ -6739,7 +6767,7 @@
         <div class="ov-table-header">
           <div>
             <div class="ov-table-title">Monthly Funding Report</div>
-            <div style="font-size:11px;color:var(--gray-400);margin-top:2px">Grouped by month a client was Mark Funded'd · every row updates live</div>
+            <div style="font-size:11px;color:var(--gray-400);margin-top:2px">Current month: activity this month · Older months: clients closed that month</div>
           </div>
         </div>
         <div class="ov-table-wrap">
