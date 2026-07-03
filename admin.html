@@ -5108,11 +5108,22 @@
   // Runs ONCE per browser, gated by cq_backfill_version. Never overwrites
   // an existing approvedAt — so rows that DO have a date keep it. Only
   // touched clients get a Firestore write; the rest are untouched.
-  // Bumped to v2 because v1 could set the version flag before Firestore
-  // data had hydrated (4s delay was too aggressive on a fresh page load
-  // after the resync wiped local caches). Any browser that ran v1 with
-  // stale data will re-run here.
-  var _CQ_BACKFILL_VERSION = 'v2-approvedAt-2026-07';
+  // v3: v2 stamped approvedAt = dashData._updatedAt (whole-doc timestamp),
+  // which pushed every historical approval into whatever month the doc
+  // was LAST touched (usually the current month), not the month the app
+  // was actually approved. Result: June's Overview stayed at \$0 because
+  // v2 attributed all June approvals to July.
+  //
+  // v3 uses row.createdAt as the timestamp — set when addFundingRow first
+  // added the row (line 21635). It's the closest proxy to when the row
+  // was actually approved (admins typically approve apps shortly after
+  // creating them). Falls back to dashData._updatedAt only when the row
+  // has no createdAt at all.
+  //
+  // v3 also RE-STAMPS rows we backfilled with v1/v2 (identified by
+  // approvedBy === 'backfill') so those get their date corrected. Rows
+  // with real approvedBy (a real admin email) are still preserved.
+  var _CQ_BACKFILL_VERSION = 'v3-approvedAt-createdAt-2026-07';
   function _cqOneShotApprovedBackfill() {
     try {
       if (localStorage.getItem('cq_backfill_version') === _CQ_BACKFILL_VERSION) return;
@@ -5163,9 +5174,20 @@
           var changed = false;
           d.fundingRows.forEach(function(r) {
             if (!r || r.status !== 'approved') return;
-            if (r.approvedAt) return; // preserve existing date
-            r.approvedAt = docTs;
-            if (!r.approvedBy) r.approvedBy = 'backfill';
+            // Preserve REAL admin-set approvedAt (approvedBy is a real
+            // admin email, not the 'backfill' marker). Only stamp/restamp
+            // rows that are either missing approvedAt entirely OR were
+            // stamped by a previous backfill run with a bad date.
+            var isBackfillStamped = r.approvedBy === 'backfill';
+            if (r.approvedAt && !isBackfillStamped) return;
+            // Best proxy: the row's own createdAt from addFundingRow. Way
+            // better than dashData._updatedAt (whole-doc timestamp) which
+            // typically reflects the LAST time the doc was touched, not
+            // when this row was approved. Fall back to docTs only when
+            // the row has no createdAt at all.
+            var rowTs = Number(r.createdAt) || Number(r.updatedAt) || docTs;
+            r.approvedAt = rowTs;
+            if (!r.approvedBy || isBackfillStamped) r.approvedBy = 'backfill';
             totalStamped++;
             changed = true;
           });
