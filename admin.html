@@ -5108,23 +5108,23 @@
   // Runs ONCE per browser, gated by cq_backfill_version. Never overwrites
   // an existing approvedAt — so rows that DO have a date keep it. Only
   // touched clients get a Firestore write; the rest are untouched.
-  // v4: v3 pushed rows to their row.createdAt, which for pre-June rows
-  // (added before June) landed OUTSIDE the visible reporting window
-  // entirely — so both June AND July showed \$0. The user wants June to
-  // show \$XX,XXX for the approvals that are visibly sitting on client
-  // pages.
+  // v5: REVERTS every prior backfill attempt (v1-v4). v4 stamped ALL
+  // approved rows across ALL clients with current-month timestamps —
+  // including old approvals from other clients that shouldn't count as
+  // "this month". User's Overview showed \$50K when the real this-month
+  // number was \$35K (2 visible apps × \$25K + \$10K).
   //
-  // Without a real approval date on any given row, we can't reconstruct
-  // the actual month of approval. So v4 does the pragmatic thing: stamp
-  // every backfill-managed row with Date.now() when the migration runs,
-  // which lands them in the CURRENT calendar month. Real admin-set dates
-  // (approvedBy is an email, not 'backfill') are still preserved untouched.
+  // v5 removes approvedAt and approvedBy from every row that was
+  // backfill-stamped (approvedBy === 'backfill'). Real admin-set dates
+  // (approvedBy is a real email) are still preserved untouched.
   //
-  // If the user is on this page in June, June's KPI populates. If they're
-  // on this page in July, July populates. Once faUpdateRow's normal auto-
-  // stamp kicks in for future approvals, those get real dates and stop
-  // needing this backfill.
-  var _CQ_BACKFILL_VERSION = 'v4-approvedAt-currentMonth-2026-07';
+  // Going forward, calcMonthlyFunding / calcMonthlyRevenue use the strict
+  // dated-only calc — only rows with a real approvedAt (from faUpdateRow's
+  // auto-stamp when status flips to approved) count in the Overview KPIs.
+  // To count a previously-approved row in the current month, just click
+  // Approved on it again — faUpdateRow will stamp Date.now() as the
+  // approval date and it'll count.
+  var _CQ_BACKFILL_VERSION = 'v5-clear-backfill-2026-07';
   function _cqOneShotApprovedBackfill() {
     try {
       if (localStorage.getItem('cq_backfill_version') === _CQ_BACKFILL_VERSION) return;
@@ -5174,21 +5174,20 @@
           var docTs = Number(d._updatedAt) || Date.now();
           var changed = false;
           d.fundingRows.forEach(function(r) {
-            if (!r || r.status !== 'approved') return;
-            // Preserve REAL admin-set approvedAt (approvedBy is a real
-            // admin email, not the 'backfill' marker). Only stamp/restamp
-            // rows that are either missing approvedAt entirely OR were
-            // stamped by a previous backfill run with a bad date.
-            var isBackfillStamped = r.approvedBy === 'backfill';
-            if (r.approvedAt && !isBackfillStamped) return;
-            // v4: stamp with Date.now() so the row shows in the CURRENT
-            // calendar month. See the version-comment block above for
-            // rationale — createdAt often lands outside the reporting
-            // window entirely.
-            r.approvedAt = Date.now();
-            r.approvedBy = 'backfill';
-            totalStamped++;
-            changed = true;
+            if (!r) return;
+            // v5: REVERSE prior backfill stamps. If approvedBy is
+            // 'backfill', the previous migration invented this date and
+            // it's inflating the Overview KPIs. Clear it so the row goes
+            // back to being uncounted until a real admin explicitly
+            // clicks Approved on it (which triggers faUpdateRow's real
+            // auto-stamp with the actual approval time and the real
+            // admin email).
+            if (r.approvedBy === 'backfill') {
+              delete r.approvedAt;
+              delete r.approvedBy;
+              totalStamped++;
+              changed = true;
+            }
           });
           if (changed) {
             try { saveDashData(c.id, d); docsWritten++; } catch(e) {}
