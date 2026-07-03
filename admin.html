@@ -5108,23 +5108,57 @@
   // Runs ONCE per browser, gated by cq_backfill_version. Never overwrites
   // an existing approvedAt — so rows that DO have a date keep it. Only
   // touched clients get a Firestore write; the rest are untouched.
-  var _CQ_BACKFILL_VERSION = 'v1-approvedAt-2026-07';
+  // Bumped to v2 because v1 could set the version flag before Firestore
+  // data had hydrated (4s delay was too aggressive on a fresh page load
+  // after the resync wiped local caches). Any browser that ran v1 with
+  // stale data will re-run here.
+  var _CQ_BACKFILL_VERSION = 'v2-approvedAt-2026-07';
   function _cqOneShotApprovedBackfill() {
     try {
       if (localStorage.getItem('cq_backfill_version') === _CQ_BACKFILL_VERSION) return;
     } catch(e) { return; }
-    // Wait for the dashboards listener to hydrate local caches from Firestore
-    // before we start reading + writing. 4s is a comfortable buffer that
-    // still runs well before the admin can meaningfully interact.
-    setTimeout(function() {
+
+    // Poll until at least one client's dashboards doc has hydrated in local
+    // cache (fundingRows is a decent proxy). We won't mark the migration
+    // done until we've actually seen data — so if Firestore is slow on this
+    // load, we just wait longer instead of no-op'ing and setting the flag.
+    var attempts = 0;
+    var MAX_ATTEMPTS = 30; // 30 × 1s = 30s hard cap; usually finishes in 2-5s
+    function _tryRun() {
+      attempts++;
+      var haveClients = Array.isArray(clients) && clients.length > 0;
+      var anyDashHydrated = false;
+      if (haveClients) {
+        for (var i = 0; i < clients.length; i++) {
+          var _c = clients[i];
+          if (!_c) continue;
+          try {
+            var _d = getDashData(_c.id);
+            if (_d && Array.isArray(_d.fundingRows) && _d.fundingRows.length > 0) {
+              anyDashHydrated = true;
+              break;
+            }
+          } catch(_e) {}
+        }
+      }
+      if (!haveClients || !anyDashHydrated) {
+        if (attempts >= MAX_ATTEMPTS) {
+          console.log('[Backfill] gave up after', attempts, 'attempts — no funding rows found in any client cache. Will retry on next page load.');
+          return; // do NOT set version flag, so we retry next reload
+        }
+        return setTimeout(_tryRun, 1000);
+      }
+      // Data is hydrated. Actually run the migration now.
       try {
         var totalStamped = 0;
         var docsWritten = 0;
-        (clients || []).forEach(function(c) {
+        var clientsWithRows = 0;
+        clients.forEach(function(c) {
           if (!c) return;
           var d = null;
           try { d = getDashData(c.id); } catch(e) {}
           if (!d || !Array.isArray(d.fundingRows) || !d.fundingRows.length) return;
+          clientsWithRows++;
           var docTs = Number(d._updatedAt) || Date.now();
           var changed = false;
           d.fundingRows.forEach(function(r) {
@@ -5139,12 +5173,14 @@
             try { saveDashData(c.id, d); docsWritten++; } catch(e) {}
           }
         });
-        localStorage.setItem('cq_backfill_version', _CQ_BACKFILL_VERSION);
-        console.log('[Backfill] approvedAt stamped on', totalStamped, 'rows across', docsWritten, 'clients — Overview will now count them');
-        // Repaint the KPIs so the numbers update without a manual refresh.
+        try { localStorage.setItem('cq_backfill_version', _CQ_BACKFILL_VERSION); } catch(e) {}
+        console.log('[Backfill] scanned', clientsWithRows, 'clients with funding rows — stamped approvedAt on', totalStamped, 'rows across', docsWritten, 'docs. Overview KPIs should now include them.');
         try { if (typeof renderOverview === 'function') renderOverview(); } catch(e) {}
-      } catch(e) { console.warn('[Backfill] aborted', e); }
-    }, 4000);
+      } catch(e) { console.warn('[Backfill] aborted mid-run', e); }
+    }
+    // Kick off the first check after 2s (let loadClients + initial dashboards
+    // 'added' events settle), then poll every second up to the cap.
+    setTimeout(_tryRun, 2000);
   }
 
   function initAdminApp() {
