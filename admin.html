@@ -4893,12 +4893,35 @@
           } catch(e) {}
           return merged;
         });
-        // Add any local-only clients not yet in Firestore
+        // Add any local-only clients not yet in Firestore — but ONLY when
+        // there's no Firestore client with the same email. If two records
+        // share an email with different ids, they're the same client that
+        // got split (Sam created it locally with id A, Firestore had it
+        // under id B) — treat Firestore's copy as canonical and drop the
+        // local-only one so we don't render duplicates. Prevents the
+        // "Danny Im duplicated after login" bug.
+        const fsByEmail = {};
+        fsFiltered.forEach(fc => {
+          if (fc && fc.email) fsByEmail[String(fc.email).toLowerCase()] = fc;
+        });
         Object.keys(localMap).forEach(id => {
-          if (!fsFiltered.find(fc => fc.id === id) && !ids.includes(id)) {
-            clients.push(localMap[id]);
-            fsSaveClient(localMap[id]).catch(() => {});
+          if (fsFiltered.find(fc => fc.id === id)) return;    // already merged above
+          if (ids.includes(id)) return;                       // deleted
+          const lc = localMap[id];
+          if (!lc) return;
+          const lcEmail = lc.email ? String(lc.email).toLowerCase() : '';
+          if (lcEmail && fsByEmail[lcEmail]) {
+            // Duplicate email with a different Firestore id — Firestore
+            // record already merged into clients[] above, drop the local
+            // orphan. Log so we can see when this fires.
+            console.warn('[loadClients] dropping local-only duplicate (email match, different id):', lcEmail, '| local id:', id, '| fs id:', fsByEmail[lcEmail].id);
+            return;
           }
+          // Genuinely local-only client (created in this browser but
+          // Firestore write may have failed). Push locally AND retry the
+          // Firestore write so it doesn't vanish.
+          clients.push(lc);
+          fsSaveClient(lc).catch(() => {});
         });
         try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
         renderClientList();
@@ -5058,39 +5081,17 @@
   // marker so it never re-runs unless we explicitly bump the version.
   // Authoritative Firestore data is then re-pulled by the existing
   // dashboards/clients/messages onSnapshot listeners on the same load.
-  var _CQ_RESYNC_VERSION = 'v1-fix-sam-stale-2026-06-12';
+  // DISABLED — was causing new-client data loss. If Sam added a client
+  // and refreshed before the async fsSaveClient completed, this wiped
+  // cq_admin_clients from LS while the client wasn't yet in Firestore.
+  // Result: client vanished on next load. Kept as a no-op so the version
+  // marker set on prior runs doesn't cause any issue, and so future code
+  // that references the function name doesn't break. If we ever need to
+  // force-resync from Firestore again, do it as a manual admin-triggered
+  // action (button in Settings) — NEVER auto-run on init.
   function _cqOneShotResync() {
-    try {
-      if (localStorage.getItem('cq_resync_version') === _CQ_RESYNC_VERSION) return;
-      var keep = { 'cq_admin_user': 1, 'cq_resync_version': 1 };
-      var wipePrefixes = [
-        'cq_dash_',           // dashboards data per client (fundingRows, currentStage, fees…)
-        'cq_ops_tasks_',      // per-client ops tasks
-        'cq_ops_done_',       // completion ledger
-        'cq_ops_done_ts_',    // ledger timestamps
-        'cq_tasks_',          // legacy pipeline tasks
-        'cq_notes_',          // admin notes
-        'cq_activity_',       // activity log per client
-        'cq_bank_apps_',      // bank applications
-        'cq_bankrels_',       // bank relationships
-        'cq_fsg_overrides_',  // funding-strategy overrides
-        'cq_fse_sent_',       // funding-sequence email tracking
-        'cq_onboard_data_'    // onboarding data cache
-      ];
-      var exactWipe = ['cq_dash_data', 'cq_client_creds', 'cq_admin_clients'];
-      var removed = 0;
-      for (var i = localStorage.length - 1; i >= 0; i--) {
-        var k = localStorage.key(i);
-        if (!k || keep[k]) continue;
-        if (k.indexOf('cq_dash_email_') === 0) { localStorage.removeItem(k); removed++; continue; }
-        if (exactWipe.indexOf(k) >= 0) { localStorage.removeItem(k); removed++; continue; }
-        for (var p = 0; p < wipePrefixes.length; p++) {
-          if (k.indexOf(wipePrefixes[p]) === 0) { localStorage.removeItem(k); removed++; break; }
-        }
-      }
-      localStorage.setItem('cq_resync_version', _CQ_RESYNC_VERSION);
-      console.log('[Resync] cleared', removed, 'stale local keys — Firestore listeners will repopulate this session');
-    } catch(e) { console.warn('[Resync] aborted', e); }
+    // No-op. See comment above.
+    return;
   }
 
   // ── ONE-SHOT approvedAt BACKFILL ──────────────────────────────────────
@@ -20858,7 +20859,21 @@
     });
   }
 
-  function saveNewClient() {
+  // Stable, collision-proof client ID. Never derives from name/email/phone
+  // (any of which can change and would break every task/note/dashData link).
+  // Uses crypto.randomUUID when available (all evergreen browsers), falls
+  // back to a timestamp + high-entropy random suffix. Prefix 'c_' so ids
+  // are visually distinguishable from the legacy 'cN' format in old data.
+  function _genClientId() {
+    try {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return 'c_' + crypto.randomUUID().replace(/-/g, '');
+      }
+    } catch(_e) {}
+    return 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+  }
+
+  async function saveNewClient() {
     const email  = document.getElementById('nc-email').value.trim().toLowerCase();
     const phone  = document.getElementById('nc-phone').value.trim();
     const service = document.getElementById('nc-service').value;
@@ -20881,7 +20896,7 @@
     }
 
     const color = AVATAR_COLORS[clients.length % AVATAR_COLORS.length];
-    const clientId = 'c'+Date.now();
+    const clientId = _genClientId();
     // Name resolution: prefer the name typed/selected in the search box
     // ("philippe vaamonde"), parsed into first + last. Only fall back to the
     // email prefix when no real name was entered. Previously this ALWAYS used
@@ -20934,17 +20949,45 @@
     localStorage.setItem('cq_contract_'+clientId, contractType);
     localStorage.setItem('cq_amount_'+clientId, contractAmount);
     localStorage.setItem('cq_pct_'+clientId, contractPct);
+
+    // CRITICAL — write to Firestore FIRST and AWAIT it. Only add to the
+    // in-memory clients[] and LS cache after the write succeeds. If we
+    // pushed to local state first (the old behavior) and Firestore
+    // failed silently (.catch(()=>{})), the client existed only in this
+    // browser's LS. A later refresh could see the client vanish if
+    // anything wiped LS before Firestore accepted the write.
+    //
+    // On success: the dashboards/clients onSnapshot listener will fire
+    // an 'added' event for this doc — the listener already dedupes by
+    // id so our local push below can't create a duplicate.
+    //
+    // On failure: surface the actual error and bail without mutating any
+    // shared state.
+    const _createBtn = document.querySelector('button[onclick^="saveNewClient"]');
+    const _createBtnLabel = _createBtn ? _createBtn.textContent : '';
+    if (_createBtn) { _createBtn.disabled = true; _createBtn.textContent = 'Saving...'; }
+    try {
+      await db.collection('clients').doc(clientId).set(newClient);
+    } catch(err) {
+      console.error('[saveNewClient] Firestore write failed:', err);
+      if (_createBtn) { _createBtn.disabled = false; _createBtn.textContent = _createBtnLabel; }
+      alert('Could not save client to the database:\n\n' + (err && err.message ? err.message : String(err)) + '\n\nThe client was NOT created. Check your connection and try again.');
+      return;
+    }
+
+    // Firestore write confirmed. Now safe to mutate local state.
     clients.push(newClient);
     saveClients();
+    if (_createBtn) { _createBtn.disabled = false; _createBtn.textContent = _createBtnLabel; }
 
     // Store credentials in shared cq_client_creds object
     let creds = {};
     try { creds = JSON.parse(localStorage.getItem('cq_client_creds') || '{}'); } catch(e) {}
     creds[email] = { clientId, password: TEMP_PASSWORD, mustChange: true };
     try { localStorage.setItem('cq_client_creds', JSON.stringify(creds)); } catch(e) {}
-    // Sync to Firestore so client can log in from any device
+    // Sync credentials to Firestore (async, non-blocking — credential
+    // recovery isn't as time-critical as the client record itself).
     fsSetCred(email, { clientId, password: TEMP_PASSWORD, mustChange: true }).catch(() => {});
-    fsSaveClient(newClient).catch(() => {});
     // If contract skipped, pre-mark it as signed in Firestore so onboarding bypasses it
     if (skipContract) {
       fsSetOnboarding(clientId, { contractSigned: 'signed', contractSkipped: true }).catch(() => {});
