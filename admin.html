@@ -18227,7 +18227,7 @@
     const summHtml=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="section-card" style="margin:0"><div class="card-header" style="padding-bottom:10px"><div class="card-title" style="font-size:12px">Account Summary</div></div><div class="card-body" style="padding-top:0"><div class="ca-summ-grid">
         <span class="ca-summ-label">Open Accounts</span><span class="ca-summ-val">${d.openCount||openAccts.length}</span>
-        <span class="ca-summ-label">Closed Accounts</span><span class="ca-summ-val">${d.closedCount||closedAccts.length}</span>
+        <span class="ca-summ-label">Closed Accounts</span><span class="ca-summ-val">${closedAccts.length||d.closedCount||0}</span>
         <span class="ca-summ-label">Collections</span><span class="ca-summ-val ${d.collections?'ca-summ-bad':''}">${d.collections||0}</span>
         <span class="ca-summ-label">Avg Account Age</span><span class="ca-summ-val">${d.avgAge||'—'}</span>
         <span class="ca-summ-label">Oldest Account</span><span class="ca-summ-val">${d.oldAge||'—'}</span>
@@ -18941,10 +18941,16 @@
     const ccM=t.match(/closed accounts\s+(\d+)/i); if(ccM)d.closedCount=+ccM[1];
     const cuM=t.match(/credit used:?\s*\$([0-9,]+)/i); if(cuM)d.creditUsed=+cuM[1].replace(/,/g,'');
     const clM=t.match(/credit limit:?\s*\$([0-9,]+)/i); if(clM)d.creditLimit=+clM[1].replace(/,/g,'');
-    if(d.creditLimit>0){
+    // Utilization: prefer Experian's OFFICIAL "Overall credit usage" % from page 1.
+    // Only calculate manually when the report does not display an official percentage.
+    // (Experian rounds its own way — e.g. shows 46% where used/limit would compute 48%.)
+    const officialUtilM=t.match(/overall credit usage[\s\S]{0,60}?(\d{1,3})\s*%/i);
+    if(officialUtilM){
+      d.util=+officialUtilM[1];
+    } else if(d.creditLimit>0){
       d.util=Math.round((d.creditUsed/d.creditLimit)*100);
     } else {
-      const um=t.match(/overall credit usage[\s\S]{0,60}?(\d{1,3})\s*%/i)||t.match(/(\d{1,3})\s*%[\s\S]{0,40}?credit\s*(?:used|usage|limit)/i)||t.match(/revolving balances to.*?credit limits.*?:\s*(\d{1,3})%/i);
+      const um=t.match(/(\d{1,3})\s*%[\s\S]{0,40}?credit\s*(?:used|usage|limit)/i)||t.match(/revolving balances to.*?credit limits.*?:\s*(\d{1,3})%/i);
       if(um)d.util=+um[1];
     }
     const ccdM=t.match(/credit card(?:\s+and credit line)?\s+\$([0-9,]+)/i); if(ccdM)d.ccDebt=+ccdM[1].replace(/,/g,'');
