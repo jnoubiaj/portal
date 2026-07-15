@@ -4944,13 +4944,52 @@
     }).catch(() => {});
   }
   let _adminLocalChanged = false;
+  // Tracks the wall-clock at which saveClients was last called locally.
+  // Used below to determine which clients were genuinely modified vs
+  // which are just sitting in memory from a listener merge.
+  let _lastSaveClientsCallAt = 0;
   function saveClients() {
     _adminLocalChanged = true;
     const now = Date.now();
     const by = (currentAdmin && currentAdmin.email) || 'admin';
+    // Stamp updatedAt on clients that don't have one — these are the ones
+    // being newly modified in this call. Clients that already have an
+    // updatedAt were either freshly modified (and stamped by the caller)
+    // or came in from the listener merge with an existing timestamp.
     clients.forEach(c => { if (c && !c.updatedAt) { c.updatedAt = now; c.updatedBy = by; } });
     try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
-    clients.forEach(c => fsSaveClient(c).catch(() => {}));
+
+    // ROOT-CAUSE FIX (2026-07): only write clients that were modified in
+    // the last 5 seconds — the "locally dirty" ones. The old code wrote
+    // EVERY client in the array on every call, which meant Sam's edit to
+    // Adriana pushed Sam's stale copy of David back to Firestore and
+    // silently overwrote Ali's morning update to David. This one loop
+    // was the biggest cross-admin data-loss vector in the app.
+    //
+    // Also surface fsSaveClient errors instead of swallowing them
+    // silently — the previous ".catch(()=>{})" hid network/permission
+    // failures from admins. When a write fails, log with client id +
+    // error so the sync problem is visible.
+    const _dirtyWindowMs = 5000;
+    const _dirtyThreshold = now - _dirtyWindowMs;
+    const _dirty = clients.filter(c => c && typeof c.updatedAt === 'number' && c.updatedAt >= _dirtyThreshold);
+    if (_dirty.length === 0) {
+      // Fallback: no clients were touched in the last 5s. That's usually
+      // a caller mistake (saveClients called with no actual mutation).
+      // Log so we can spot it in the console and skip the write.
+      console.warn('[saveClients] no clients modified in the last', _dirtyWindowMs, 'ms — skipping Firestore bulk write to prevent stale-data overwrite');
+    } else {
+      _dirty.forEach(c => {
+        fsSaveClient(c).catch(err => {
+          console.error('[saveClients] Firestore write FAILED for client', c.id, '(' + (c.fname || '') + ' ' + (c.lname || '') + ')', '| error:', err && err.message ? err.message : err);
+        });
+      });
+      if (_dirty.length < clients.length) {
+        console.log('[saveClients] wrote', _dirty.length, 'of', clients.length, 'clients to Firestore (only recently-modified) — prevents stale overwrite');
+      }
+    }
+    _lastSaveClientsCallAt = now;
+
     // Sync to scheduler cache (fire-and-forget — localhost + Railway if configured)
     fetch('http://localhost:3001/api/data/clients', {
       method: 'POST',
