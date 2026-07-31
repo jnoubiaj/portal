@@ -4365,7 +4365,8 @@
                     2. Create Project (or use existing) → <em>Create Credentials → OAuth client ID → Web application</em><br>
                     3. Under <em>Authorized JavaScript origins</em>, add:<br>
                     &nbsp;&nbsp;&nbsp;&nbsp;<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">https://portal.capitalquestfunding.com</code><br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">http://localhost:3000</code> (for local dev)<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#94a3b8">(optional) <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">http://localhost:3000</code> — only if you run the portal locally for dev</span><br>
+                    <span style="color:#94a3b8;font-style:italic">These are just Google's permission list — nothing is sent to localhost.</span><br>
                     4. Enable <em>Google Calendar API</em> at <a href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" style="color:#4285f4">API Library</a><br>
                     5. Copy the Client ID into the field above, click <strong>Connect</strong>, sign in with the Google account you want tasks on.<br><br>
                     Once connected: any ops task with a due date auto-creates a calendar event. Editing the date/time updates the event. Completing or deleting the task removes the event.
