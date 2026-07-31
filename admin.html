@@ -29164,6 +29164,11 @@
     var cfg   = _gcalLoadConfig();
     if (typed) { cfg.clientId = typed; _gcalSaveConfig(cfg); }
     if (!cfg.clientId) { alert('Enter your Google OAuth Client ID first.'); return; }
+    // Sanity-check the format before we bounce off Google.
+    if (!/\.apps\.googleusercontent\.com$/.test(cfg.clientId)) {
+      alert('That doesn\'t look like a valid Google OAuth Client ID.\n\nA valid ID ends with:\n  .apps.googleusercontent.com\n\nExample:\n  123456789-abc...xyz.apps.googleusercontent.com\n\nDouble-check you copied the "Client ID" field (not the API Key, Project Number, or Client Secret) from Google Cloud Console → Credentials → OAuth 2.0 Client IDs → click your client name.');
+      return;
+    }
     try {
       await _gcalLoadGISLib();
       return new Promise(function(resolve, reject) {
@@ -29172,7 +29177,15 @@
           scope:     _GCAL_SCOPE,
           callback:  async function(response) {
             if (response.error) {
-              alert('Google Calendar connection failed: ' + response.error);
+              var friendly = response.error;
+              if (response.error === 'invalid_client' || /invalid.*client/i.test(response.error)) {
+                friendly = 'Google says this Client ID doesn\'t exist (invalid_client).\n\nFix:\n1. Go to https://console.cloud.google.com/apis/credentials\n2. Make sure the project selector (top-left) shows the RIGHT project.\n3. Scroll to "OAuth 2.0 Client IDs" — do you see a row? If not, you never finished creating one.\n4. Click the row, copy the ID from the top-right (📋 button), paste it here.\n\nThe ID must end in .apps.googleusercontent.com';
+              } else if (response.error === 'access_denied') {
+                friendly = 'You cancelled the Google sign-in (or your account isn\'t on the OAuth "test users" list if the project is in Testing mode).\n\nIf the project is in Testing mode: go to Google Cloud Console → OAuth consent screen → Test users → add your Google account.';
+              } else if (response.error === 'popup_closed_by_user' || response.error === 'popup_closed') {
+                friendly = 'Sign-in window was closed before finishing. Click Connect again.';
+              }
+              alert('Google Calendar connection failed:\n\n' + friendly);
               return reject(new Error(response.error));
             }
             _gcalAccessToken    = response.access_token;
