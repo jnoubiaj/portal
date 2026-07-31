@@ -4342,6 +4342,38 @@
               </div>
             </div>
 
+            <!-- Google Calendar Sync Card -->
+            <div class="a-card" style="margin-bottom:18px" oninit="_gcalInitSettingsUI && _gcalInitSettingsUI()">
+              <div class="a-card-hdr">
+                <div class="a-card-hdrl">
+                  <div class="a-card-title">Google Calendar Sync</div>
+                  <div class="a-card-sub">Auto-add client tasks with a due date to your Google Calendar</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <button class="a-card-btn" id="gcal-connect-btn" onclick="_gcalConnectClick()" style="background:#4285f4;color:white;border-color:#4285f4">Connect</button>
+                  <button class="a-card-btn" id="gcal-disconnect-btn" onclick="_gcalDisconnectClick()" style="display:none">Disconnect</button>
+                </div>
+              </div>
+              <div style="padding:0 16px 16px">
+                <div style="margin-bottom:12px;font-size:13px" id="gcal-status">Not connected. Enter your Google OAuth Client ID and click Connect.</div>
+                <div style="margin-bottom:10px">
+                  <div class="ghl-settings-label">Google OAuth Client ID</div>
+                  <input class="ghl-settings-input" id="gcal-client-id-input" placeholder="123…-abc.apps.googleusercontent.com" autocomplete="off" style="font-family:ui-monospace,monospace;font-size:12px">
+                  <div style="font-size:11px;color:var(--gray-400);margin-top:5px;line-height:1.5">
+                    <strong>Setup (one time, ~5 min):</strong><br>
+                    1. Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#4285f4">Google Cloud Console → Credentials</a><br>
+                    2. Create Project (or use existing) → <em>Create Credentials → OAuth client ID → Web application</em><br>
+                    3. Under <em>Authorized JavaScript origins</em>, add:<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">https://portal.capitalquestfunding.com</code><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">http://localhost:3000</code> (for local dev)<br>
+                    4. Enable <em>Google Calendar API</em> at <a href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" style="color:#4285f4">API Library</a><br>
+                    5. Copy the Client ID into the field above, click <strong>Connect</strong>, sign in with the Google account you want tasks on.<br><br>
+                    Once connected: any ops task with a due date auto-creates a calendar event. Editing the date/time updates the event. Completing or deleting the task removes the event.
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Required GHL Scopes Card -->
             <div class="a-card" style="margin-bottom:18px">
               <div class="a-card-hdr">
@@ -5465,6 +5497,7 @@
     if (name === 'analytics') renderAnalytics();
     if (name === 'relationships') renderRelationshipsTab();
     if (name === 'todo') { try { if (typeof _adInit === 'function') _adInit(); } catch(e) {} }
+    if (name === 'settings') { try { if (typeof _gcalInitSettingsUI === 'function') _gcalInitSettingsUI(); } catch(e) {} }
     // Persist so refresh returns to same section
     try { localStorage.setItem('cq_admin_section', name); } catch(e) {}
   }
@@ -26266,6 +26299,7 @@
     tasks.push(task);
     _saveOpsTasks(clientId, tasks);
     _logActivity(clientId, 'task_created', task.title + (task.dueDate ? ' · due ' + task.dueDate : ''));
+    try { if (typeof _gcalSyncTask === 'function') _gcalSyncTask(clientId, task, 'create'); } catch(e) {}
     return task;
   }
   function updateOpsTask(clientId, taskId, updates) {
@@ -26274,12 +26308,14 @@
     if (idx === -1) return null;
     tasks[idx] = Object.assign({}, tasks[idx], updates);
     _saveOpsTasks(clientId, tasks);
+    try { if (typeof _gcalSyncTask === 'function') _gcalSyncTask(clientId, tasks[idx], 'update'); } catch(e) {}
     return tasks[idx];
   }
   function deleteOpsTask(clientId, taskId) {
     var _t = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
     _saveOpsTasks(clientId, getOpsTasks(clientId).filter(function(t) { return t.id !== taskId; }));
     if (_t) _logActivity(clientId, 'task_deleted', _t.title);
+    try { if (_t && typeof _gcalSyncTask === 'function') _gcalSyncTask(clientId, _t, 'delete'); } catch(e) {}
   }
   function completeOpsTask(clientId, taskId) {
     var _t = getOpsTasks(clientId).find(function(t) { return t.id === taskId; });
@@ -26311,6 +26347,7 @@
     if (wasFollowUp && typeof _fuMarkContacted === 'function') {
       try { _fuMarkContacted(clientId, 'followup_completed'); } catch(e) {}
     }
+    try { if (typeof _gcalSyncTask === 'function') _gcalSyncTask(clientId, _t, 'complete'); } catch(e) {}
     return result;
   }
   function getAllOpsTasks() {
@@ -29016,6 +29053,278 @@
     // Back-compat alias so the nav onclick (_adInit) still boots the workspace
     window._adInit             = _cqwInit;
   })();
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // GOOGLE CALENDAR SYNC — per-admin OAuth, task→calendar one-way
+  // ═════════════════════════════════════════════════════════════════════════
+  // When enabled, ops tasks with a dueDate (and optional dueTime) create/
+  // update/delete corresponding events in the connected admin's Google
+  // Calendar. State stored per-browser in localStorage (cq_gcal_config).
+  // Requires a Google Cloud OAuth Client ID with the portal origin in
+  // "Authorized JavaScript origins".
+  var _GCAL_STORAGE_KEY   = 'cq_gcal_config';
+  var _GCAL_SCOPE         = 'https://www.googleapis.com/auth/calendar.events';
+  var _GCAL_USERINFO_URL  = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json';
+  var _GCAL_EVENTS_URL    = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+  var _gcalTokenClient    = null;
+  var _gcalAccessToken    = null;
+  var _gcalTokenExpiresAt = 0;
+
+  function _gcalLoadConfig() {
+    var defaults = { clientId: '', linkedEmail: '', enabled: false };
+    try { return Object.assign(defaults, JSON.parse(localStorage.getItem(_GCAL_STORAGE_KEY) || '{}')); }
+    catch(e) { return defaults; }
+  }
+  function _gcalSaveConfig(cfg) {
+    try { localStorage.setItem(_GCAL_STORAGE_KEY, JSON.stringify(cfg)); } catch(e) {}
+  }
+  function _gcalHasValidToken() {
+    return !!(_gcalAccessToken && Date.now() < _gcalTokenExpiresAt);
+  }
+  function _gcalLoadGISLib() {
+    return new Promise(function(resolve, reject) {
+      if (window.google && window.google.accounts && window.google.accounts.oauth2) return resolve();
+      var existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+      if (existing) {
+        existing.addEventListener('load', function() { resolve(); });
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true; s.defer = true;
+      s.onload = function() { resolve(); };
+      s.onerror = function() { reject(new Error('Failed to load Google Identity Services library')); };
+      document.head.appendChild(s);
+    });
+  }
+  function _gcalPad2(n) { n = String(n); return n.length < 2 ? '0' + n : n; }
+  function _gcalAddMinutes(hhmm, mins) {
+    var p = String(hhmm || '00:00').split(':');
+    var total = ((parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0) + mins);
+    var h = Math.floor(total / 60) % 24; if (h < 0) h += 24;
+    var m = ((total % 60) + 60) % 60;
+    return _gcalPad2(h) + ':' + _gcalPad2(m);
+  }
+  function _gcalNextDate(ymd) {
+    var d = new Date(ymd + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return d.getFullYear() + '-' + _gcalPad2(d.getMonth() + 1) + '-' + _gcalPad2(d.getDate());
+  }
+  function _gcalGetTimeZone() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York'; }
+    catch(e) { return 'America/New_York'; }
+  }
+  function _gcalBuildEvent(clientId, task) {
+    var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+    var names = (c && typeof _getClientNames === 'function') ? _getClientNames(c) : { fn: '', ln: '' };
+    var clientName = ((names.fn || '') + ' ' + (names.ln || '')).trim() || 'Client';
+    var timed = !!(task.dueTime && /^\d{1,2}:\d{2}$/.test(task.dueTime));
+    var start, end;
+    if (timed) {
+      var tz = _gcalGetTimeZone();
+      start = { dateTime: task.dueDate + 'T' + task.dueTime + ':00', timeZone: tz };
+      end   = { dateTime: task.dueDate + 'T' + _gcalAddMinutes(task.dueTime, 30) + ':00', timeZone: tz };
+    } else {
+      start = { date: task.dueDate };
+      end   = { date: _gcalNextDate(task.dueDate) };
+    }
+    var priority = (task.priority || 'medium').toUpperCase();
+    return {
+      summary:     '[' + priority + '] ' + (task.title || 'Task') + ' — ' + clientName,
+      description: 'Client: ' + clientName + '\nPriority: ' + priority + '\n' +
+                   (task.description ? '\n' + task.description + '\n' : '') +
+                   '\nFrom CapitalQuest Funding Portal',
+      start: start,
+      end: end,
+      source: { title: 'CapitalQuest Portal', url: 'https://portal.capitalquestfunding.com/admin.html' }
+    };
+  }
+  function _gcalRenderSettingsStatus() {
+    var el = document.getElementById('gcal-status');
+    if (!el) return;
+    var cfg = _gcalLoadConfig();
+    if (cfg.enabled && cfg.linkedEmail) {
+      el.innerHTML = '<span style="color:#10b981;font-weight:600;">&#10003; Connected</span> as <strong>' + cfg.linkedEmail + '</strong>';
+    } else if (cfg.clientId) {
+      el.innerHTML = '<span style="color:#f59e0b;">Client ID saved — click Connect to authorize.</span>';
+    } else {
+      el.innerHTML = '<span style="color:#94a3b8;">Not connected. Enter your Google OAuth Client ID and click Connect.</span>';
+    }
+    var connectBtn    = document.getElementById('gcal-connect-btn');
+    var disconnectBtn = document.getElementById('gcal-disconnect-btn');
+    if (connectBtn)    connectBtn.style.display    = cfg.enabled ? 'none' : '';
+    if (disconnectBtn) disconnectBtn.style.display = cfg.enabled ? ''     : 'none';
+    var cid = document.getElementById('gcal-client-id-input');
+    if (cid && cfg.clientId && !cid.value) cid.value = cfg.clientId;
+  }
+  async function _gcalConnect() {
+    var input = document.getElementById('gcal-client-id-input');
+    var typed = input ? input.value.trim() : '';
+    var cfg   = _gcalLoadConfig();
+    if (typed) { cfg.clientId = typed; _gcalSaveConfig(cfg); }
+    if (!cfg.clientId) { alert('Enter your Google OAuth Client ID first.'); return; }
+    try {
+      await _gcalLoadGISLib();
+      return new Promise(function(resolve, reject) {
+        _gcalTokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: cfg.clientId,
+          scope:     _GCAL_SCOPE,
+          callback:  async function(response) {
+            if (response.error) {
+              alert('Google Calendar connection failed: ' + response.error);
+              return reject(new Error(response.error));
+            }
+            _gcalAccessToken    = response.access_token;
+            _gcalTokenExpiresAt = Date.now() + ((response.expires_in || 3600) * 1000) - 60000;
+            try {
+              var res  = await fetch(_GCAL_USERINFO_URL, { headers: { Authorization: 'Bearer ' + _gcalAccessToken } });
+              var data = await res.json();
+              var cur  = _gcalLoadConfig();
+              cur.linkedEmail = data.email || '';
+              cur.enabled     = true;
+              _gcalSaveConfig(cur);
+              _gcalRenderSettingsStatus();
+              alert('Google Calendar connected!\n\nSigned in as: ' + (data.email || '(unknown)') +
+                    '\n\nFrom now on, tasks with a due date will appear on your calendar automatically.');
+              resolve(data.email);
+            } catch(e) {
+              alert('Connected to Google, but couldn\'t fetch your email: ' + (e.message || e));
+              reject(e);
+            }
+          }
+        });
+        _gcalTokenClient.requestAccessToken({ prompt: 'consent' });
+      });
+    } catch(e) {
+      alert('Google Calendar setup failed: ' + (e.message || e));
+    }
+  }
+  function _gcalDisconnect() {
+    if (!confirm('Disconnect Google Calendar? Events already on your calendar stay, but new task changes won\'t sync.')) return;
+    if (_gcalAccessToken && window.google && google.accounts && google.accounts.oauth2) {
+      try { google.accounts.oauth2.revoke(_gcalAccessToken, function(){}); } catch(e) {}
+    }
+    _gcalAccessToken = null;
+    _gcalTokenExpiresAt = 0;
+    var cfg = _gcalLoadConfig();
+    cfg.linkedEmail = '';
+    cfg.enabled     = false;
+    _gcalSaveConfig(cfg);
+    _gcalRenderSettingsStatus();
+  }
+  async function _gcalEnsureToken() {
+    if (_gcalHasValidToken()) return true;
+    var cfg = _gcalLoadConfig();
+    if (!cfg.enabled || !cfg.clientId) return false;
+    try {
+      await _gcalLoadGISLib();
+      return new Promise(function(resolve) {
+        var tc = google.accounts.oauth2.initTokenClient({
+          client_id: cfg.clientId,
+          scope:     _GCAL_SCOPE,
+          callback:  function(response) {
+            if (response.error) return resolve(false);
+            _gcalAccessToken    = response.access_token;
+            _gcalTokenExpiresAt = Date.now() + ((response.expires_in || 3600) * 1000) - 60000;
+            resolve(true);
+          }
+        });
+        tc.requestAccessToken({ prompt: '' });
+      });
+    } catch(e) { return false; }
+  }
+  async function _gcalCreateEvent(clientId, task) {
+    if (!(await _gcalEnsureToken())) return null;
+    try {
+      var res = await fetch(_GCAL_EVENTS_URL, {
+        method:  'POST',
+        headers: { 'Authorization': 'Bearer ' + _gcalAccessToken, 'Content-Type': 'application/json' },
+        body:    JSON.stringify(_gcalBuildEvent(clientId, task))
+      });
+      if (!res.ok) throw new Error('Calendar API create ' + res.status + ' — ' + (await res.text()));
+      var data = await res.json();
+      console.log('[gcal] created event', data.id, 'for task', task.id, '"' + task.title + '"');
+      return data.id;
+    } catch(e) { console.error('[gcal] create failed:', e); return null; }
+  }
+  async function _gcalUpdateEvent(eventId, clientId, task) {
+    if (!(await _gcalEnsureToken())) return false;
+    try {
+      var res = await fetch(_GCAL_EVENTS_URL + '/' + encodeURIComponent(eventId), {
+        method:  'PATCH',
+        headers: { 'Authorization': 'Bearer ' + _gcalAccessToken, 'Content-Type': 'application/json' },
+        body:    JSON.stringify(_gcalBuildEvent(clientId, task))
+      });
+      if (res.status === 404 || res.status === 410) return false;
+      if (!res.ok) throw new Error('Calendar API update ' + res.status);
+      console.log('[gcal] updated event', eventId, 'for task', task.id);
+      return true;
+    } catch(e) { console.error('[gcal] update failed:', e); return false; }
+  }
+  async function _gcalDeleteEvent(eventId) {
+    if (!(await _gcalEnsureToken())) return false;
+    try {
+      var res = await fetch(_GCAL_EVENTS_URL + '/' + encodeURIComponent(eventId), {
+        method:  'DELETE',
+        headers: { 'Authorization': 'Bearer ' + _gcalAccessToken }
+      });
+      if (!res.ok && res.status !== 404 && res.status !== 410) throw new Error('Calendar API delete ' + res.status);
+      console.log('[gcal] deleted event', eventId);
+      return true;
+    } catch(e) { console.error('[gcal] delete failed:', e); return false; }
+  }
+  // Persist a googleEventId onto a task WITHOUT triggering another sync (would loop).
+  function _gcalStampEventId(clientId, taskId, eventId) {
+    if (typeof getOpsTasks !== 'function' || typeof _saveOpsTasks !== 'function') return;
+    var tasks = getOpsTasks(clientId);
+    var idx = tasks.findIndex(function(t) { return t.id === taskId; });
+    if (idx === -1) return;
+    tasks[idx].googleEventId = eventId;
+    _saveOpsTasks(clientId, tasks);
+  }
+  // Called from createOpsTask / updateOpsTask / deleteOpsTask / completeOpsTask / _saveOpsExtend
+  // after they mutate the task array. Fire-and-forget — never blocks the caller,
+  // never throws, silently no-ops when the admin isn't connected.
+  async function _gcalSyncTask(clientId, task, action) {
+    try {
+      var cfg = _gcalLoadConfig();
+      if (!cfg.enabled) return;
+      if (!task) return;
+      if (action === 'delete' || action === 'complete') {
+        if (task.googleEventId) {
+          await _gcalDeleteEvent(task.googleEventId);
+          if (action === 'complete') _gcalStampEventId(clientId, task.id, null);
+        }
+        return;
+      }
+      // create/update path — task must have a dueDate to appear on calendar
+      if (!task.dueDate) {
+        if (task.googleEventId) {
+          await _gcalDeleteEvent(task.googleEventId);
+          _gcalStampEventId(clientId, task.id, null);
+        }
+        return;
+      }
+      if (task.googleEventId) {
+        var ok = await _gcalUpdateEvent(task.googleEventId, clientId, task);
+        if (!ok) {
+          // Event was deleted from the calendar side — recreate.
+          var newId = await _gcalCreateEvent(clientId, task);
+          if (newId) _gcalStampEventId(clientId, task.id, newId);
+        }
+      } else {
+        var id = await _gcalCreateEvent(clientId, task);
+        if (id) _gcalStampEventId(clientId, task.id, id);
+      }
+    } catch(e) { console.error('[gcal] sync failed:', e); }
+  }
+  // Expose for onclick handlers in settings HTML.
+  window._gcalConnectClick    = function() { _gcalConnect(); };
+  window._gcalDisconnectClick = function() { _gcalDisconnect(); };
+  window._gcalInitSettingsUI  = function() { _gcalRenderSettingsStatus(); };
+  window._gcalSyncTask        = _gcalSyncTask;
+  // Auto-render status on load (settings panel may already be visible).
+  try { setTimeout(_gcalRenderSettingsStatus, 500); } catch(e) {}
 
 </script>
 </body>

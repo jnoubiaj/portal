@@ -27,9 +27,10 @@ async function fsGetClients() {
 }
 
 async function fsSaveClient(client) {
-  try {
-    await db.collection('clients').doc(client.id).set(client);
-  } catch(e) {}
+  // No inner try/catch — let errors propagate so callers can log/surface them.
+  // Silent swallowing hid every Firestore write failure and caused invisible
+  // cross-admin sync problems.
+  await db.collection('clients').doc(client.id).set(client);
 }
 
 async function fsDeleteClient(clientId) {
