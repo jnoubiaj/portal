@@ -4350,6 +4350,7 @@
                   <div class="a-card-sub">Auto-add client tasks with a due date to your Google Calendar</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px">
+                  <button class="a-card-btn" id="gcal-test-btn" onclick="_gcalTestSyncClick()" style="display:none">Test Sync</button>
                   <button class="a-card-btn" id="gcal-connect-btn" onclick="_gcalConnectClick()" style="background:#4285f4;color:white;border-color:#4285f4">Connect</button>
                   <button class="a-card-btn" id="gcal-disconnect-btn" onclick="_gcalDisconnectClick()" style="display:none">Disconnect</button>
                 </div>
@@ -29064,7 +29065,11 @@
   // Requires a Google Cloud OAuth Client ID with the portal origin in
   // "Authorized JavaScript origins".
   var _GCAL_STORAGE_KEY   = 'cq_gcal_config';
-  var _GCAL_SCOPE         = 'https://www.googleapis.com/auth/calendar.events';
+  // MUST request userinfo.email alongside calendar.events — otherwise the
+  // userinfo endpoint returns 401 insufficient_scope and we never get the
+  // email back, which leaves the settings UI in a broken "connected but no
+  // email" state.
+  var _GCAL_SCOPE         = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email';
   var _GCAL_USERINFO_URL  = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json';
   var _GCAL_EVENTS_URL    = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
   var _gcalTokenClient    = null;
@@ -29153,8 +29158,10 @@
     }
     var connectBtn    = document.getElementById('gcal-connect-btn');
     var disconnectBtn = document.getElementById('gcal-disconnect-btn');
+    var testBtn       = document.getElementById('gcal-test-btn');
     if (connectBtn)    connectBtn.style.display    = cfg.enabled ? 'none' : '';
     if (disconnectBtn) disconnectBtn.style.display = cfg.enabled ? ''     : 'none';
+    if (testBtn)       testBtn.style.display       = cfg.enabled ? ''     : 'none';
     var cid = document.getElementById('gcal-client-id-input');
     if (cid && cfg.clientId && !cid.value) cid.value = cfg.clientId;
   }
@@ -29190,21 +29197,30 @@
             }
             _gcalAccessToken    = response.access_token;
             _gcalTokenExpiresAt = Date.now() + ((response.expires_in || 3600) * 1000) - 60000;
+            var linkedEmail = '';
             try {
               var res  = await fetch(_GCAL_USERINFO_URL, { headers: { Authorization: 'Bearer ' + _gcalAccessToken } });
-              var data = await res.json();
-              var cur  = _gcalLoadConfig();
-              cur.linkedEmail = data.email || '';
-              cur.enabled     = true;
-              _gcalSaveConfig(cur);
-              _gcalRenderSettingsStatus();
-              alert('Google Calendar connected!\n\nSigned in as: ' + (data.email || '(unknown)') +
-                    '\n\nFrom now on, tasks with a due date will appear on your calendar automatically.');
-              resolve(data.email);
+              if (res.ok) {
+                var data = await res.json();
+                linkedEmail = data.email || '';
+              } else {
+                console.warn('[gcal] userinfo fetch failed:', res.status);
+              }
             } catch(e) {
-              alert('Connected to Google, but couldn\'t fetch your email: ' + (e.message || e));
-              reject(e);
+              console.warn('[gcal] userinfo fetch error:', e);
             }
+            // Fall back to a placeholder if userinfo didn't return an email —
+            // the calendar.events scope may have worked even if userinfo.email
+            // didn't. Still mark enabled so the UI reflects the working token.
+            var cur = _gcalLoadConfig();
+            cur.linkedEmail = linkedEmail || '(email unavailable — Calendar still connected)';
+            cur.enabled     = true;
+            _gcalSaveConfig(cur);
+            _gcalRenderSettingsStatus();
+            alert('Google Calendar connected!\n\nSigned in as: ' + (linkedEmail || 'your Google account') +
+                  '\n\nFrom now on, tasks with a due date will appear on your calendar automatically.\n\n' +
+                  'Tip: click Test Sync in Settings to verify with a dummy event.');
+            resolve(linkedEmail);
           }
         });
         _gcalTokenClient.requestAccessToken({ prompt: 'consent' });
@@ -29332,9 +29348,52 @@
       }
     } catch(e) { console.error('[gcal] sync failed:', e); }
   }
+  // Diagnostic: create a dummy calendar event for tomorrow at 3pm.
+  // Reports back exactly what happened so we can pinpoint any failure.
+  async function _gcalTestSync() {
+    var cfg = _gcalLoadConfig();
+    if (!cfg.enabled || !cfg.clientId) { alert('Not connected. Click Connect first.'); return; }
+    var tokenOk = await _gcalEnsureToken();
+    if (!tokenOk) {
+      alert('Could not get a valid Google access token.\n\nTry:\n1. Click Disconnect\n2. Click Connect again\n3. Complete the Google sign-in popup');
+      return;
+    }
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    var ymd = tomorrow.getFullYear() + '-' + _gcalPad2(tomorrow.getMonth() + 1) + '-' + _gcalPad2(tomorrow.getDate());
+    var fakeTask = { id: 'test_' + Date.now(), title: 'CQF Portal Test — safe to delete', dueDate: ymd, dueTime: '15:00', priority: 'medium', description: 'This is a test event created from the CapitalQuest Portal to verify Google Calendar sync is working. Safe to delete.' };
+    // Bypass client lookup by inlining a fake event body.
+    var tz = _gcalGetTimeZone();
+    var body = {
+      summary: 'CQF Portal Test — safe to delete',
+      description: 'Test event from CapitalQuest Portal. If you can see this on your Google Calendar, sync is working. Safe to delete.',
+      start: { dateTime: ymd + 'T15:00:00', timeZone: tz },
+      end:   { dateTime: ymd + 'T15:30:00', timeZone: tz }
+    };
+    try {
+      var res = await fetch(_GCAL_EVENTS_URL, {
+        method:  'POST',
+        headers: { 'Authorization': 'Bearer ' + _gcalAccessToken, 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body)
+      });
+      var text = await res.text();
+      if (!res.ok) {
+        console.error('[gcal] test sync failed:', res.status, text);
+        alert('Test sync FAILED.\n\nHTTP ' + res.status + '\n\n' + text.slice(0, 500) + '\n\nMost common cause: Google Calendar API not enabled for this project.\nFix: go to https://console.cloud.google.com/apis/library/calendar-json.googleapis.com and click Enable.');
+        return;
+      }
+      var data = JSON.parse(text);
+      console.log('[gcal] TEST event created:', data.id, data.htmlLink);
+      alert('Test sync SUCCESS.\n\nEvent created on your Google Calendar for tomorrow at 3pm.\nTitle: "CQF Portal Test — safe to delete"\n\nOpen calendar.google.com to see it, then delete it when done.');
+    } catch(e) {
+      console.error('[gcal] test sync error:', e);
+      alert('Test sync FAILED: ' + (e.message || e) + '\n\nOpen browser DevTools console (F12) for details.');
+    }
+  }
   // Expose for onclick handlers in settings HTML.
   window._gcalConnectClick    = function() { _gcalConnect(); };
   window._gcalDisconnectClick = function() { _gcalDisconnect(); };
+  window._gcalTestSyncClick   = function() { _gcalTestSync(); };
   window._gcalInitSettingsUI  = function() { _gcalRenderSettingsStatus(); };
   window._gcalSyncTask        = _gcalSyncTask;
   // Auto-render status on load (settings panel may already be visible).
