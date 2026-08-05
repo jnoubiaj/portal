@@ -4978,53 +4978,88 @@
     }).catch(() => {});
   }
   let _adminLocalChanged = false;
-  // Tracks the wall-clock at which saveClients was last called locally.
-  // Used below to determine which clients were genuinely modified vs
-  // which are just sitting in memory from a listener merge.
-  let _lastSaveClientsCallAt = 0;
+
+  // ── DIRTY-TRACKING FOR CROSS-ADMIN SYNC ────────────────────────────────
+  // _fsClientSnapshot[clientId] = fingerprint of what Firestore last told
+  // us this client looked like. Updated by:
+  //   • the clients listener on every 'added' / 'modified' event
+  //   • saveClients itself after a successful write
+  // saveClients compares each local client to its snapshot; only ones that
+  // differ get written back to Firestore. This:
+  //   (a) fixes the original bulk-overwrite bug (Sam's edit to Adriana no
+  //       longer pushes stale David back over Ali's fresh David), and
+  //   (b) fixes the "archives come back" bug — my earlier "5-second dirty
+  //       window" filter skipped writes whose updatedAt was already stale
+  //       (archiveClient never bumped it), silently dropping the archive
+  //       write on the floor.
+  var _fsClientSnapshot = {};
+  function _fpClient(c) {
+    if (!c || !c.id) return '';
+    try {
+      // Strip timestamp fields so a bare-echo (same data, new timestamp)
+      // doesn't count as dirty. Any real field change still shows.
+      var clone = {};
+      Object.keys(c).forEach(function(k) {
+        if (k === 'updatedAt' || k === 'updatedBy' || k === '_updatedAt' || k === '_updatedBy') return;
+        clone[k] = c[k];
+      });
+      return JSON.stringify(clone);
+    } catch(e) { return ''; }
+  }
+  function _fsSnapUpdate(clientId, data) { if (clientId) _fsClientSnapshot[clientId] = _fpClient(data); }
+  function _fsSnapDelete(clientId) { if (clientId) delete _fsClientSnapshot[clientId]; }
+
   function saveClients() {
     _adminLocalChanged = true;
     const now = Date.now();
     const by = (currentAdmin && currentAdmin.email) || 'admin';
-    // Stamp updatedAt on clients that don't have one — these are the ones
-    // being newly modified in this call. Clients that already have an
-    // updatedAt were either freshly modified (and stamped by the caller)
-    // or came in from the listener merge with an existing timestamp.
-    clients.forEach(c => { if (c && !c.updatedAt) { c.updatedAt = now; c.updatedBy = by; } });
+
+    // 1. Detect dirty clients — those whose current in-memory data differs
+    //    from what Firestore last told us. Includes clients we've never
+    //    seen a snapshot for (e.g. a brand-new local-only client).
+    var dirtyIds = new Set();
+    clients.forEach(function(c) {
+      if (!c || !c.id) return;
+      var prev = _fsClientSnapshot[c.id];
+      var curr = _fpClient(c);
+      if (prev !== curr) dirtyIds.add(c.id);
+    });
+
+    // 2. Stamp updatedAt/By on every dirty client — even if their existing
+    //    timestamp is stale. THIS is the fix for archives coming back:
+    //    archiveClient doesn't stamp updatedAt itself, so the old dirty-
+    //    window filter treated the archive as "not dirty" and skipped the
+    //    write. Now we detect archive as a data change and stamp it here.
+    clients.forEach(function(c) {
+      if (!c || !c.id) return;
+      if (dirtyIds.has(c.id) || !c.updatedAt) {
+        c.updatedAt = now;
+        c.updatedBy = by;
+      }
+    });
+
     try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
 
-    // ROOT-CAUSE FIX (2026-07): only write clients that were modified in
-    // the last 5 seconds — the "locally dirty" ones. The old code wrote
-    // EVERY client in the array on every call, which meant Sam's edit to
-    // Adriana pushed Sam's stale copy of David back to Firestore and
-    // silently overwrote Ali's morning update to David. This one loop
-    // was the biggest cross-admin data-loss vector in the app.
-    //
-    // Also surface fsSaveClient errors instead of swallowing them
-    // silently — the previous ".catch(()=>{})" hid network/permission
-    // failures from admins. When a write fails, log with client id +
-    // error so the sync problem is visible.
-    const _dirtyWindowMs = 5000;
-    const _dirtyThreshold = now - _dirtyWindowMs;
-    const _dirty = clients.filter(c => c && typeof c.updatedAt === 'number' && c.updatedAt >= _dirtyThreshold);
-    if (_dirty.length === 0) {
-      // Fallback: no clients were touched in the last 5s. That's usually
-      // a caller mistake (saveClients called with no actual mutation).
-      // Log so we can spot it in the console and skip the write.
-      console.warn('[saveClients] no clients modified in the last', _dirtyWindowMs, 'ms — skipping Firestore bulk write to prevent stale-data overwrite');
+    // 3. Write ONLY dirty clients to Firestore + refresh snapshot.
+    var dirtyClients = clients.filter(function(c) { return c && dirtyIds.has(c.id); });
+    if (dirtyClients.length === 0) {
+      // No local changes since last sync — nothing to write. Prevents
+      // any accidental mass-overwrite of Ali's data.
     } else {
-      _dirty.forEach(c => {
-        fsSaveClient(c).catch(err => {
-          console.error('[saveClients] Firestore write FAILED for client', c.id, '(' + (c.fname || '') + ' ' + (c.lname || '') + ')', '| error:', err && err.message ? err.message : err);
+      dirtyClients.forEach(function(c) {
+        fsSaveClient(c).catch(function(err) {
+          console.error('[saveClients] Firestore write FAILED for client', c.id,
+            '(' + (c.fname || '') + ' ' + (c.lname || '') + ')',
+            '| error:', err && err.message ? err.message : err);
         });
+        // Immediately refresh snapshot to reflect what we just wrote — otherwise
+        // the very next saveClients would see the same delta and rewrite it.
+        _fsSnapUpdate(c.id, c);
       });
-      if (_dirty.length < clients.length) {
-        console.log('[saveClients] wrote', _dirty.length, 'of', clients.length, 'clients to Firestore (only recently-modified) — prevents stale overwrite');
-      }
+      console.log('[saveClients] wrote', dirtyClients.length, 'dirty of', clients.length, 'total clients');
     }
-    _lastSaveClientsCallAt = now;
 
-    // Sync to scheduler cache (fire-and-forget — localhost + Railway if configured)
+    // Sync to scheduler cache (unchanged)
     fetch('http://localhost:3001/api/data/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -6522,6 +6557,7 @@
               try { localStorage.setItem('cq_admin_clients', JSON.stringify(clients)); } catch(e) {}
             }
             clientPrev[clientId] = data;
+            _fsSnapUpdate(clientId, data);
             return;
           }
 
@@ -6540,6 +6576,7 @@
               }
             }
             delete clientPrev[clientId];
+            _fsSnapDelete(clientId);
             return;
           }
 
@@ -6560,6 +6597,7 @@
             console.log('[Sync] client modified | clientId:', clientId, '| by:', data.updatedBy||'?', '| at:', data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString() : '?');
           }
           clientPrev[clientId] = data;
+          _fsSnapUpdate(clientId, data);
         });
         // Single coalesced re-render after the whole batch — avoids
         // hammering renderClientList N times for an initial snapshot of
