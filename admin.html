@@ -28640,12 +28640,24 @@
     function _cqwBlankBlock() { return { id:_cqwBid(), type:'text', html:'' }; }
 
     function _cqwDefaultDailyBlocks() {
-      var titles = ['Today’s Priorities','Funding Follow-Ups','Credit Reports','Client Work','Meeting Notes','Quick Notes','Wins Today','Problems to Solve','Tomorrow’s Plan'];
+      // AUDIT (Daily To-Do) #1: dedupe. The auto-box 'Client Tasks Due
+      // Today' already groups tasks into Today's Priorities / Funding
+      // Follow-Ups / Credit Reports / Client Work — duplicating those
+      // names as manual Notion sections created empty dead-weight
+      // sections that made admins guess which one to use, and the manual
+      // versions didn't create real tasks. Seed now includes ONLY the
+      // free-form sections that don't collide with the auto-box.
+      var freeform = [
+        { title: 'Quick Notes',       type: 'todo' },
+        { title: 'Wins Today',        type: 'text' },
+        { title: 'Problems to Solve', type: 'text' },
+        { title: 'Tomorrow’s Plan',   type: 'text' }
+      ];
       var blocks = [];
-      titles.forEach(function(t, i) {
-        blocks.push({ id:_cqwBid(), type:'h3', html:t });
-        if (i < 6) blocks.push({ id:_cqwBid(), type:'todo', html:'', checked:false });
-        else blocks.push({ id:_cqwBid(), type:'text', html:'' });
+      freeform.forEach(function(f) {
+        blocks.push({ id:_cqwBid(), type:'h3', html:f.title });
+        if (f.type === 'todo') blocks.push({ id:_cqwBid(), type:'todo', html:'', checked:false });
+        else                   blocks.push({ id:_cqwBid(), type:'text', html:'' });
       });
       return blocks;
     }
@@ -28930,48 +28942,107 @@
     }
 
     // Live client-tasks panel for daily pages — derived, never persisted.
-    // Pulls overdue + due-today opsTasks across all active clients and maps
-    // them into Notion-style sections. Each row's checkbox calls the
-    // canonical completeOpsTask so completion syncs to every other view.
+    // Pulls overdue + due-today opsTasks across ALL clients (including
+    // archived — audit #2 fix) and maps them into Notion-style sections.
+    // Each row's checkbox calls the canonical completeOpsTask so
+    // completion syncs to every other view.
     function _cqwLiveTasksHTML() {
       if (typeof clients === 'undefined' || !Array.isArray(clients) || typeof getOpsTasks !== 'function') return '';
       var today = _cqwTodayKey();
+      // AUDIT (Daily To-Do) #3: pin Overdue as its own top group so items
+      // past due can never hide inside a category bucket. Categories now
+      // hold DUE TODAY only. Uncategorized bucket added (#2) so a task
+      // with an unexpected shape still surfaces instead of vanishing.
       var SECTIONS = [
-        { key:'priorities', label:'Today’s Priorities', icon:'⭐' },
-        { key:'followups',  label:'Funding Follow-Ups', icon:'💰' },
-        { key:'credit',     label:'Credit Reports',     icon:'📊' },
-        { key:'client',     label:'Client Work',        icon:'👥' }
+        { key:'overdue',    label:'Overdue',              icon:'⚠️' },
+        { key:'priorities', label:'Today’s Priorities',   icon:'⭐' },
+        { key:'followups',  label:'Funding Follow-Ups',   icon:'💰' },
+        { key:'credit',     label:'Credit Reports',       icon:'📊' },
+        { key:'client',     label:'Client Work',          icon:'👥' },
+        { key:'uncategorized', label:'Uncategorized',     icon:'📄' }
       ];
-      var buckets = { priorities:[], followups:[], credit:[], client:[] };
+      var buckets = { overdue:[], priorities:[], followups:[], credit:[], client:[], uncategorized:[] };
       var isTerminal = function(s){ return s==='completed'||s==='complete'||s==='done'||s==='archived'||s==='cancelled'||s==='skipped'; };
+      var doneToday = 0;
+      // Total funding-in-progress = sum of every active client's approved
+      // funding — powers the header summary strip (#7).
+      var fundingInProgress = 0;
       clients.forEach(function(c){
-        if (!c || c.archived) return;
+        if (!c) return;
+        // AUDIT #2: DON'T skip archived clients — they can still have
+        // legitimate due-today tasks and silently dropping them is
+        // exactly what caused '11 created but only 5 shown'.
+        try {
+          if (!c.archived) {
+            var d = (typeof getDashData === 'function') ? getDashData(c.id) : null;
+            fundingInProgress += Number((d && (d.fundingSecured || d.fundingApproved)) || 0) || 0;
+          }
+        } catch(e) {}
         var ops = getOpsTasks(c.id) || [];
         ops.forEach(function(t){
-          if (!t || isTerminal(t.status)) return;
+          if (!t) return;
+          if (isTerminal(t.status)) {
+            // Count today's completions for the summary strip.
+            if (t.completedAt) {
+              var doneDate = new Date(t.completedAt);
+              var y = doneDate.getFullYear() + '-' + String(doneDate.getMonth()+1).padStart(2,'0') + '-' + String(doneDate.getDate()).padStart(2,'0');
+              if (y === today) doneToday++;
+            }
+            return;
+          }
           if (!t.dueDate || t.dueDate > today) return; // due today or overdue only
           var title = (t.title||'').toLowerCase();
+          var overdue = t.dueDate < today;
           var bucket;
-          if (t.type === 'client') bucket = 'client';
-          else if (t.source === 'auto_followup' || /follow.?up/.test(title)) bucket = 'followups';
-          else if (/credit|bureau|report|inquir/.test(title)) bucket = 'credit';
-          else if (/fund|appl|bank|amex|chase|card|loan|sequence/.test(title)) bucket = 'followups';
-          else bucket = 'priorities';
-          buckets[bucket].push({ c:c, t:t });
+          if (overdue) {
+            bucket = 'overdue';
+          } else if (t.type === 'client') {
+            bucket = 'client';
+          } else if (t.source === 'auto_followup' || /follow.?up/.test(title)) {
+            bucket = 'followups';
+          } else if (/credit|bureau|report|inquir/.test(title)) {
+            bucket = 'credit';
+          } else if (/fund|appl|bank|amex|chase|card|loan|sequence/.test(title)) {
+            bucket = 'followups';
+          } else if (/today.?s priorit|priority|top/.test(title)) {
+            bucket = 'priorities';
+          } else {
+            // AUDIT #2: Uncategorized fallback so an unexpected-shape task
+            // is still visible instead of silently disappearing. Old code
+            // dumped everything unmatched into 'priorities' which meant
+            // an admin couldn't tell what was truly high-priority vs
+            // just uncategorized.
+            bucket = 'uncategorized';
+          }
+          buckets[bucket].push({ c:c, t:t, overdue:overdue });
         });
       });
-      var total = buckets.priorities.length + buckets.followups.length + buckets.credit.length + buckets.client.length;
+      var total = buckets.overdue.length + buckets.priorities.length + buckets.followups.length + buckets.credit.length + buckets.client.length + buckets.uncategorized.length;
+      var overdueCount = buckets.overdue.length;
+      var dueTodayCount = total - overdueCount;
+
       var html = '<div style="background:#f7f9fc;border:1px solid var(--gray-100);border-radius:12px;padding:14px 16px;margin:6px 0 18px">';
-      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">'
         + '<span style="font-family:var(--font-h);font-size:13px;font-weight:800;color:var(--navy)">📋 Client Tasks Due Today</span>'
         + '<span style="font-size:11px;font-weight:700;color:#fff;background:' + (total?'var(--blue)':'var(--gray-300)') + ';border-radius:999px;padding:1px 8px">' + total + '</span>'
         + '<span style="margin-left:auto;font-size:10.5px;color:var(--gray-400)">Live from your task system · complete here = complete everywhere</span>'
+        + '</div>';
+      // AUDIT #7 — one-glance summary strip: due today · overdue · done today · $ funding in progress.
+      var fmtM = function(n) { return n >= 1000 ? '$' + Math.round(n/1000) + 'k' : '$' + n; };
+      html += '<div style="display:flex;gap:14px;flex-wrap:wrap;padding:6px 2px 12px;border-bottom:1px dashed var(--gray-200);margin-bottom:10px;font-size:11.5px">'
+        + '<span><strong style="color:var(--navy);font-size:14px">' + dueTodayCount + '</strong> <span style="color:var(--gray-500)">due today</span></span>'
+        + '<span><strong style="color:' + (overdueCount>0?'#dc2626':'var(--navy)') + ';font-size:14px">' + overdueCount + '</strong> <span style="color:var(--gray-500)">overdue</span></span>'
+        + '<span><strong style="color:#10b981;font-size:14px">' + doneToday + '</strong> <span style="color:var(--gray-500)">done today</span></span>'
+        + '<span style="margin-left:auto"><strong style="color:#0369a1;font-size:14px">' + fmtM(fundingInProgress) + '</strong> <span style="color:var(--gray-500)">funding in progress</span></span>'
         + '</div>';
       if (!total) {
         html += '<div style="font-size:12.5px;color:var(--gray-400);padding:6px 2px">Nothing due today. New client tasks land here automatically.</div></div>';
         return html;
       }
       var pri = { critical:0, high:1, medium:2, low:3 };
+      // AUDIT #4 — sort by priority, then oldest-overdue first within a bucket.
+      // Overdue bucket already has overdue rows; sort by dueDate ascending so
+      // the oldest-overdue lands at top (most urgent).
       SECTIONS.forEach(function(sec){
         var rows = buckets[sec.key];
         if (!rows.length) return;
@@ -28980,22 +29051,49 @@
           if (pa!==pb) return pa-pb;
           return (a.t.dueDate||'') < (b.t.dueDate||'') ? -1 : 1;
         });
-        html += '<div style="margin-top:8px"><div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray-500);margin:6px 0 3px">' + sec.icon + ' ' + sec.label + ' · ' + rows.length + '</div>';
+        var isOverdueSec = sec.key === 'overdue';
+        html += '<div style="margin-top:8px' + (isOverdueSec ? ';background:rgba(220,38,38,0.04);border:1px solid rgba(220,38,38,0.15);border-radius:8px;padding:6px 8px' : '') + '">'
+          + '<div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:' + (isOverdueSec ? '#dc2626' : 'var(--gray-500)') + ';margin:6px 0 3px">' + sec.icon + ' ' + sec.label + ' · ' + rows.length + '</div>';
         rows.forEach(function(r){
           var c=r.c, t=r.t;
           var nm = ((c.fname||'')+' '+(c.lname||'')).trim() || c.email || 'Client';
-          var overdue = t.dueDate < today;
+          var overdue = r.overdue;
           var stageIdx = (typeof getCanonicalStage==='function') ? getCanonicalStage(c.id) : -1;
           var stageName = (typeof PIPELINE_STAGES!=='undefined' && PIPELINE_STAGES[stageIdx]) ? PIPELINE_STAGES[stageIdx].name : '';
           var priColor = t.priority==='critical'?'#dc2626':t.priority==='high'?'#f59e0b':t.priority==='low'?'#94a3b8':'#22A7F0';
+          // AUDIT #4 — $/8% impact hint: for funding-shaped tasks, show the
+          // client's approved funding + estimated fee revenue so the admin
+          // can prioritize by dollar impact rather than by task alone.
+          var impactHint = '';
+          try {
+            var isFundingish = /fund|appl|bank|amex|chase|card|loan|sequence|approved/.test((t.title||'').toLowerCase()) || (t.source === 'auto_followup');
+            if (isFundingish) {
+              var d = (typeof getDashData === 'function') ? getDashData(c.id) : null;
+              var approved = Number((d && (d.fundingSecured || d.fundingApproved)) || 0) || 0;
+              if (approved > 0) {
+                var feeType = String((d && d.feeType) || '').toLowerCase();
+                var feePct  = Number((d && d.feePercent) || 0) || 0;
+                var feeFlat = Number((d && d.feeFlat) || 0) || 0;
+                var rev = feeType === 'flat' ? feeFlat : (feePct > 0 ? approved * feePct / 100 : approved * 0.08);
+                impactHint = '<span style="color:#0369a1;font-weight:700" title="Approved funding for this client · estimated revenue">' + fmtM(approved) + ' · ~' + fmtM(rev) + ' rev</span>';
+              }
+            }
+          } catch(e) {}
           html += '<div class="cqw-livetask" style="display:flex;align-items:flex-start;gap:9px;padding:7px 6px;border-radius:7px" onmouseover="this.style.background=\'rgba(10,22,40,0.03)\'" onmouseout="this.style.background=\'\'">'
             + '<span onclick="_cqwCompleteLiveTask(\'' + c.id + '\',\'' + t.id + '\')" title="Complete task" style="width:17px;height:17px;border-radius:4px;border:1.6px solid var(--gray-300);background:#fff;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center"></span>'
             + '<div style="flex:1;min-width:0">'
-              + '<div style="font-size:13px;color:var(--navy);font-weight:600;line-height:1.4"><span style="cursor:pointer;text-decoration:underline;text-underline-offset:2px" onclick="selectClient(\'' + c.id + '\')">' + _cqwEsc(nm) + '</span> — ' + _cqwEsc(t.title||'Task') + '</div>'
+              + '<div style="font-size:13px;color:' + (overdue?'#7f1d1d':'var(--navy)') + ';font-weight:600;line-height:1.4"><span style="cursor:pointer;text-decoration:underline;text-underline-offset:2px" onclick="selectClient(\'' + c.id + '\')">' + _cqwEsc(nm) + '</span>' + (c.archived ? ' <span style="font-size:9px;font-weight:700;background:#f1f5f9;color:#64748b;padding:1px 5px;border-radius:6px;margin-left:3px">archived</span>' : '') + ' — ' + _cqwEsc(t.title||'Task') + '</div>'
               + '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:2px;font-size:10.5px;color:var(--gray-500)">'
                 + '<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:5px;height:5px;border-radius:50%;background:' + priColor + '"></span>' + (t.priority||'medium') + '</span>'
                 + (overdue ? '<span style="color:#dc2626;font-weight:700">Overdue · ' + _cqwEsc(t.dueDate) + '</span>' : '<span>Due today</span>')
                 + (stageName ? '<span>· ' + _cqwEsc(stageName) + '</span>' : '')
+                + (impactHint ? '<span>· ' + impactHint + '</span>' : '')
+              + '</div>'
+              // AUDIT #5 — inline actions row: snooze +1 day, reschedule, open client.
+              + '<div class="cqw-livetask-actions" style="display:flex;gap:6px;margin-top:5px;opacity:0.55;transition:opacity 0.12s">'
+                + '<button onclick="_cqwSnoozeLiveTask(\'' + c.id + '\',\'' + t.id + '\')" title="Push to tomorrow" style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-600);cursor:pointer">Snooze +1d</button>'
+                + '<button onclick="_cqwRescheduleLiveTask(\'' + c.id + '\',\'' + t.id + '\')" title="Pick a new due date" style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-600);cursor:pointer">Reschedule</button>'
+                + '<button onclick="selectClient(\'' + c.id + '\')" title="Open client profile" style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-600);cursor:pointer">Open Client</button>'
               + '</div>'
             + '</div>'
           + '</div>';
@@ -29012,6 +29110,41 @@
       var host = document.getElementById('cqw-livetasks');
       if (host) host.innerHTML = _cqwLiveTasksHTML();
     }
+    // AUDIT #5 — snooze +1 day: bump the due date forward one day using
+    // the SAME updateOpsTask path Start Working / Reschedule modal uses.
+    // Preserves 'complete here = complete everywhere' since we're not
+    // changing writes — just calling updateOpsTask.
+    function _cqwSnoozeLiveTask(clientId, taskId) {
+      try {
+        if (typeof getOpsTasks !== 'function' || typeof updateOpsTask !== 'function') return;
+        var t = getOpsTasks(clientId).find(function(x) { return x && x.id === taskId; });
+        if (!t) return;
+        var base = t.dueDate ? new Date(t.dueDate + 'T00:00:00') : new Date();
+        base.setDate(base.getDate() + 1);
+        var ymd = base.getFullYear() + '-' + String(base.getMonth()+1).padStart(2,'0') + '-' + String(base.getDate()).padStart(2,'0');
+        updateOpsTask(clientId, taskId, { dueDate: ymd, status: 'pending' });
+      } catch(e) {}
+      var host = document.getElementById('cqw-livetasks');
+      if (host) host.innerHTML = _cqwLiveTasksHTML();
+    }
+    function _cqwRescheduleLiveTask(clientId, taskId) {
+      try {
+        if (typeof getOpsTasks !== 'function' || typeof updateOpsTask !== 'function') return;
+        var t = getOpsTasks(clientId).find(function(x) { return x && x.id === taskId; });
+        if (!t) return;
+        var current = t.dueDate || (new Date()).toISOString().slice(0,10);
+        var picked = prompt('New due date (YYYY-MM-DD):', current);
+        if (!picked) return;
+        var m = String(picked).trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (!m) { alert('Use YYYY-MM-DD format, e.g. 2026-08-15'); return; }
+        var iso = m[1] + '-' + String(parseInt(m[2],10)).padStart(2,'0') + '-' + String(parseInt(m[3],10)).padStart(2,'0');
+        updateOpsTask(clientId, taskId, { dueDate: iso, status: 'pending' });
+      } catch(e) {}
+      var host = document.getElementById('cqw-livetasks');
+      if (host) host.innerHTML = _cqwLiveTasksHTML();
+    }
+    window._cqwSnoozeLiveTask     = _cqwSnoozeLiveTask;
+    window._cqwRescheduleLiveTask = _cqwRescheduleLiveTask;
 
     function _cqwBlockHTML(b) {
       var t = b.type || 'text';
@@ -29039,7 +29172,7 @@
         return '<div class="' + blockCls + '" data-bid="' + b.id + '">' + handle
           + '<span class="cqw-callout-emoji" onclick="_cqwCalloutEmoji(\'' + b.id + '\')">' + (b.emoji || '💡') + '</span>'
           + '<div class="cqw-block-main"><div class="' + ceCls + '" contenteditable="true" data-ph="' + ph + '" data-bid="' + b.id + '"'
-          + ' oninput="_cqwBlockInput(this,\'' + b.id + '\')" onkeydown="_cqwBlockKey(event,\'' + b.id + '\')" onkeyup="_cqwCaretWatch(event,\'' + b.id + '\')" onmouseup="_cqwSelWatch()">' + (b.html||'') + '</div></div></div>';
+          + ' oninput="_cqwBlockInput(this,\'' + b.id + '\')" onkeydown="_cqwBlockKey(event,\'' + b.id + '\')" onkeyup="_cqwCaretWatch(event,\'' + b.id + '\')" onmouseup="_cqwSelWatch()" onpaste="_cqwBlockPaste(event,\'' + b.id + '\')">' + (b.html||'') + '</div></div></div>';
       }
       return '<div class="' + blockCls + '" data-bid="' + b.id + '">' + handle + lead
         + '<div class="cqw-block-main"><div class="' + ceCls + '" contenteditable="true" data-ph="' + ph + '" data-bid="' + b.id + '"'
@@ -29120,6 +29253,65 @@
       var e = prompt('Callout emoji:', f.block.emoji || '💡');
       if (e !== null) { f.block.emoji = e.trim() || '💡'; _cqwSave(f.page.scope); _cqwRenderPage(); }
     }
+    // AUDIT (Daily To-Do) #6 — fix multi-line paste. Old behavior:
+    // pasting several lines into a contenteditable dumped the browser's
+    // raw HTML (mix of <div>/<br>/newlines) which often merged lines
+    // together and dropped leading characters from subsequent lines.
+    // New behavior mirrors Notion: read plain text from the clipboard,
+    // split on newlines, insert the FIRST line inline at the caret,
+    // then spawn a new block for each subsequent line inheriting the
+    // current block's type (todo/bullet/text). Guard: we call
+    // preventDefault so the browser never gets to inject its own HTML.
+    function _cqwBlockPaste(ev, id) {
+      var cb = ev && (ev.clipboardData || window.clipboardData);
+      if (!cb) return; // let browser do default
+      var txt = '';
+      try { txt = cb.getData('text/plain') || ''; } catch(e) { txt = ''; }
+      if (!txt) return; // no text — let browser handle images/other formats
+      ev.preventDefault();
+      // Normalize newlines and split. Drop trailing empty line so a
+      // pasted block ending in \n doesn't spawn an empty trailer.
+      var lines = txt.replace(/\r\n?/g, '\n').split('\n');
+      while (lines.length && lines[lines.length - 1] === '') lines.pop();
+      if (lines.length === 0) return;
+      var f = _cqwFindBlock(id);
+      if (!f) return;
+      // Insert the first line at the caret via execCommand — preserves
+      // caret position and any surrounding text the user already typed.
+      try {
+        var first = lines[0].replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        document.execCommand('insertText', false, lines[0]);
+      } catch(_) {
+        // Fallback: append to block html.
+        f.block.html = (f.block.html || '') + (lines[0].replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+      }
+      if (lines.length === 1) {
+        // Single-line paste — persist and done.
+        var el = ev.target;
+        if (el && el.innerHTML !== undefined) f.block.html = el.innerHTML;
+        _cqwSave(f.page.scope);
+        return;
+      }
+      // Multi-line: persist current block, then insert new blocks for the rest.
+      var el2 = ev.target;
+      if (el2 && el2.innerHTML !== undefined) f.block.html = el2.innerHTML;
+      var contType = (f.block.type === 'todo' || f.block.type === 'bullet' || f.block.type === 'numbered') ? f.block.type : 'text';
+      var newBlocks = [];
+      for (var i = 1; i < lines.length; i++) {
+        var nb = { id:_cqwBid(), type:contType, html:(lines[i] || '').replace(/</g,'&lt;').replace(/>/g,'&gt;') };
+        if (contType === 'todo') nb.checked = false;
+        newBlocks.push(nb);
+      }
+      var args = [f.idx + 1, 0].concat(newBlocks);
+      Array.prototype.splice.apply(f.page.blocks, args);
+      _cqwSave(f.page.scope);
+      _cqwRenderPage();
+      // Focus the last inserted block, caret at end.
+      var lastId = newBlocks[newBlocks.length - 1].id;
+      setTimeout(function() { _cqwFocusBlock(lastId, false); }, 20);
+    }
+    window._cqwBlockPaste = _cqwBlockPaste;
+
     function _cqwBlockKey(ev, id) {
       var f = _cqwFindBlock(id); if (!f) return;
       // Slash menu open: route nav keys to it
