@@ -5773,6 +5773,58 @@
     return `<span class="ov-pill ${map[s]||''}">${labels[s]||s}</span>`;
   }
 
+  // ── AUDIT #1: derive STATUS from stage + funding state ───────────────
+  // A client's status field can drift from reality — Alejandrina reached
+  // S6 "Decision / Results" yet still read "New Lead" because status is
+  // only set at creation and via manual pill clicks. This function returns
+  // the status that BEST describes the client right now, using explicit
+  // signals from stage and funding activity.
+  //
+  // GUARD (audit): if the admin has manually overridden status via
+  // updateStatus(), c.statusOverridden is true — we return the stored
+  // status unchanged. Derive only when no override is in play.
+  function _deriveClientStatus(c) {
+    if (!c) return 'new';
+    if (c.statusOverridden) return c.status || 'new';
+    if (c.status === 'disqualified') return 'disqualified';
+    // Peek at dashboard state for stage + funding rows.
+    var d = null;
+    try { d = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) {}
+    var stage = (d && Number(d.currentStage)) || 0;
+    var rows  = (d && Array.isArray(d.fundingRows)) ? d.fundingRows : [];
+    var hasApproved = rows.some(function(r) { return (r.status || '').toLowerCase() === 'approved'; });
+    var hasFunded   = c.fundedAt || rows.some(function(r) { return (r.status || '').toLowerCase() === 'funded'; });
+    if (hasFunded)   return 'approved';   // Portal has no 'funded' status — 'approved' is the closest
+    if (hasApproved) return 'approved';
+    if (stage >= 4)  return 'progress';   // Bank Relationships or later
+    if (stage >= 2 || (rows && rows.length > 0)) return 'progress';
+    if (c.status && c.status !== 'new') return c.status; // respect any explicit non-new value
+    return 'new';
+  }
+  function statusPillDerived(c) { return statusPill(_deriveClientStatus(c)); }
+
+  // ── AUDIT #2: last_activity touch ─────────────────────────────────────
+  // Any meaningful event on a client (contact, task create/complete, note
+  // add, app-status change, message sent, stage move) MUST refresh
+  // c.lastActivity so the Overview LAST ACTIVITY column reflects reality.
+  // Legacy code only wrote lastActivity at creation / import.
+  //
+  // GUARD (audit): the "days since contact" red-flag logic reads from
+  // getLastContact()/lastContactAt — a SEPARATE field — so touching
+  // lastActivity here doesn't reset the overdue-contact warning.
+  // "Mark Contacted" still updates lastContactAt through its own path.
+  function _touchLastActivity(clientId) {
+    if (!clientId) return;
+    var c = (typeof getClient === 'function') ? getClient(clientId) : null;
+    if (!c) return;
+    var nowIso = new Date().toISOString();
+    c.lastActivity = nowIso;
+    c.updatedAt = Date.now();
+    c.updatedBy = (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'admin';
+    try { saveClients(); } catch(e) {}
+  }
+  window._touchLastActivity = _touchLastActivity;
+
   // ══════════════════════════════════════════════
   //  NOTIFICATION SYSTEM
   // ══════════════════════════════════════════════
@@ -6775,7 +6827,7 @@
                     </td>
                     <td>${svcBadge(c.serviceType)}</td>
                     <td><span style="font-size:12px;font-weight:600;color:var(--gray-600)">${c.assignedTo||'—'}</span></td>
-                    <td>${statusPill(c.status)}</td>
+                    <td>${statusPillDerived(c)}</td>
                     <td style="color:var(--gray-400)">${fmtDate(c.lastActivity)}</td>
                   </tr>`; }).join('')}
             </tbody>
@@ -8485,8 +8537,13 @@
     if (!c) return;
     const old = c.status;
     c.status = status;
+    // AUDIT #1 guard: mark the manual override so _deriveClientStatus
+    // respects the admin's explicit choice instead of computing from stage.
+    c.statusOverridden = true;
     saveClients();
     logActivity(`${c.fname} ${c.lname} status changed to <strong>${statusLabel(status)}</strong>`, statusColor(status));
+    // AUDIT #2: status change is a meaningful activity — refresh lastActivity.
+    try { _touchLastActivity(id); } catch(e) {}
     renderClientList();
     renderClientDetail(id);
     renderOverview();
@@ -12706,6 +12763,8 @@
     if (typeof renderClientList === 'function') renderClientList();
     if (typeof renderOverview === 'function') renderOverview();
     refreshStageProgressCard(clientId);
+    // AUDIT #2: marking funded is a major event.
+    try { _touchLastActivity(clientId); } catch(e) {}
   }
 
   function refreshSidebarTasks(clientId) {
@@ -19358,6 +19417,8 @@
     if (hdr) hdr.textContent = msgs.length + ' total';
     // Bump last-contact timestamp — sending a message counts as contact
     try { if (typeof _fuMarkContacted === 'function') _fuMarkContacted(clientId, 'message'); } catch(e) {}
+    // AUDIT #2: sending a message is a meaningful event.
+    try { _touchLastActivity(clientId); } catch(e) {}
   }
 
   // ── MESSAGES SECTION ──────────────────────────────────────────────────
@@ -21924,6 +21985,8 @@
       saveDashData(clientId, d);          // immediate Firestore write
       autoCalcFundingApproved(clientId);  // update display + standard debounce
       refreshClientUI(clientId);
+      // AUDIT #2: status change on an application is a meaningful event.
+      try { _touchLastActivity(clientId); } catch(e) {}
     } else if (field === 'amount') {
       // Amount: localStorage only while typing, NO debouncedPublish from autoCalc.
       //
@@ -25511,6 +25574,8 @@
       }, 0);
     }
 
+    // AUDIT #2: stage advance is a meaningful event.
+    try { _touchLastActivity(clientId); } catch(e) {}
     return true;
   }
 
@@ -25879,6 +25944,8 @@
       try { if (typeof refreshSidebarTasks === 'function') refreshSidebarTasks(clientId); } catch (e) {}
       try { if (typeof _wqRenderBanner === 'function') _wqRenderBanner(); } catch (e) {}
     }
+    // AUDIT #2: marking contacted is a meaningful event.
+    try { _touchLastActivity(clientId); } catch(e) {}
   }
 
   function _fuCloseOpenFollowUps(clientId, source) {
@@ -26350,6 +26417,7 @@
     _saveOpsTasks(clientId, tasks);
     _logActivity(clientId, 'task_created', task.title + (task.dueDate ? ' · due ' + task.dueDate : ''));
     try { if (typeof _gcalSyncTask === 'function') _gcalSyncTask(clientId, task, 'create'); } catch(e) {}
+    try { _touchLastActivity(clientId); } catch(e) {}
     return task;
   }
   function updateOpsTask(clientId, taskId, updates) {
@@ -26398,6 +26466,7 @@
       try { _fuMarkContacted(clientId, 'followup_completed'); } catch(e) {}
     }
     try { if (typeof _gcalSyncTask === 'function') _gcalSyncTask(clientId, _t, 'complete'); } catch(e) {}
+    try { _touchLastActivity(clientId); } catch(e) {}
     return result;
   }
   function getAllOpsTasks() {
