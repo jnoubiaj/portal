@@ -2618,6 +2618,12 @@
   .a-sp-ab-v2 {
     display:flex; gap:8px; padding:8px 20px; background:var(--white);
     border-bottom:1px solid var(--gray-100); flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
+    /* AUDIT #7: sticky within the profile pane so scrolling never leaves
+       Add Task / Add Application / Request Docs out of reach. Sits below
+       any header rows, above the scrolling profile body. z-index kept
+       low enough not to overlap modals (default modal z-index is 1000+). */
+    position:sticky; top:0; z-index:20;
+    box-shadow:0 1px 0 var(--gray-100), 0 2px 6px -2px rgba(15,23,42,0.04);
   }
   .a-sp-ab-v2::-webkit-scrollbar { display:none; }
   .a-sp-ab-v2-btn {
@@ -8068,8 +8074,8 @@
                 ${renderSidebarNotes(id)}
               </div>
               <div class="a-sn-input-row">
-                <textarea class="a-sn-input" id="sidebar-note-input-${id}" rows="2" placeholder="Add an internal note…" onkeydown="if(event.key==='Enter' && (event.metaKey||event.ctrlKey)){event.preventDefault();addSidebarNote('${id}');}"></textarea>
-                <button class="a-sn-add" onclick="addSidebarNote('${id}')">Add Note</button>
+                <textarea class="a-sn-input" id="sidebar-note-input-${id}" rows="2" placeholder="Add an internal note…" oninput="_snStashDraft('${id}',this.value)" onkeydown="if(event.key==='Enter' && (event.metaKey||event.ctrlKey)){event.preventDefault();addSidebarNote('${id}');}"></textarea>
+                <button class="a-sn-add" id="sidebar-note-save-${id}" onclick="addSidebarNote('${id}')">Save Note</button>
               </div>
             </div>
           </div>
@@ -8086,6 +8092,10 @@
 
     // Restore the admin's per-card collapse choices for this sidebar
     try { _aRestoreSidebarCollapse(); } catch(e) {}
+    // Restore any in-progress note draft the admin was typing before the
+    // last re-render — prevents lost notes when a listener echo repaints
+    // the sidebar mid-typing.
+    try { _snRestoreDraft(id); } catch(e) {}
 
     // Start real-time message listener for this client
     _listenMsgs(id);
@@ -26962,8 +26972,42 @@
   function refreshSidebarNotes(clientId) {
     var el = document.getElementById('sidebar-notes-list-' + clientId);
     if (el) el.innerHTML = renderSidebarNotes(clientId);
+    try { _snRestoreDraft(clientId); } catch(e) {}
   }
 
+  // Preserve the in-progress draft across sidebar re-renders. Any listener
+  // echo or client-detail refresh rebuilds the sidebar HTML and wipes the
+  // textarea's value. Auto-saving each keystroke to a per-client draft slot
+  // and restoring on render prevents lost notes.
+  function _snStashDraft(clientId, val) {
+    try { localStorage.setItem('cq_note_draft_' + clientId, val || ''); } catch(e) {}
+  }
+  function _snLoadDraft(clientId) {
+    try { return localStorage.getItem('cq_note_draft_' + clientId) || ''; } catch(e) { return ''; }
+  }
+  function _snClearDraft(clientId) {
+    try { localStorage.removeItem('cq_note_draft_' + clientId); } catch(e) {}
+  }
+  // Restore draft into the textarea after a re-render. Called from
+  // refreshSidebarNotes and after client detail card renders.
+  function _snRestoreDraft(clientId) {
+    var inp = document.getElementById('sidebar-note-input-' + clientId);
+    if (!inp) return;
+    var draft = _snLoadDraft(clientId);
+    if (draft && !inp.value) inp.value = draft;
+  }
+  // Flash a "Saved ✓" confirmation on the Save button after a successful save.
+  function _snFlashSaved(clientId) {
+    var btn = document.getElementById('sidebar-note-save-' + clientId);
+    if (!btn) return;
+    var orig = btn.textContent;
+    btn.textContent = 'Saved ✓';
+    btn.style.background = '#10b981';
+    setTimeout(function() {
+      btn.textContent = orig;
+      btn.style.background = '';
+    }, 1200);
+  }
   function addSidebarNote(clientId) {
     var inp = document.getElementById('sidebar-note-input-' + clientId);
     if (!inp) return;
@@ -26988,11 +27032,19 @@
     };
     saveClientNote(clientId, note);
     inp.value = '';
+    _snClearDraft(clientId);
+    _snFlashSaved(clientId);
     refreshSidebarNotes(clientId);
     if (typeof refreshClientTimeline === 'function') {
       try { refreshClientTimeline(clientId); } catch(e) {}
     }
+    // Update last_activity for #2 audit fix so the Overview LAST ACTIVITY
+    // column reflects the note we just wrote.
+    try { _touchLastActivity(clientId); } catch(e) {}
   }
+  // Expose helpers for the inline HTML handler + render-time restore.
+  window._snStashDraft = _snStashDraft;
+  window._snRestoreDraft = _snRestoreDraft;
 
   function addSystemNote(clientId, type, category, title, body, metadata) {
     if (!clientId) return;
