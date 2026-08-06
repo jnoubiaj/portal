@@ -4343,7 +4343,7 @@
                 <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Load GHL Messages</div><div class="ghl-toggle-sub">Show GHL SMS/email history in client workspace</div></div><input type="checkbox" id="ghl-tog-msgs" checked></div>
                 <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">SMS on Overdue Tasks</div><div class="ghl-toggle-sub">Send GHL SMS when a task becomes overdue</div></div><input type="checkbox" id="ghl-tog-overdue-sms" checked></div>
                 <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Email on Overdue Tasks</div><div class="ghl-toggle-sub">Send GHL email when a task becomes overdue</div></div><input type="checkbox" id="ghl-tog-overdue-email" checked></div>
-                <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Use Backend Proxy (Recommended)</div><div class="ghl-toggle-sub">Route API calls through ghl-server.mjs on localhost:3001 — eliminates CORS errors</div></div><input type="checkbox" id="ghl-tog-proxy" checked></div>
+                <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Use Backend Proxy (Recommended)</div><div class="ghl-toggle-sub">Route API calls through a proxy — eliminates CORS. Prefers your Railway URL (see below) when set; falls back to <code>localhost:3001</code> in dev. <strong style="color:#b45309">Texts fail silently for hosted admins unless a Railway URL is configured.</strong></div></div><input type="checkbox" id="ghl-tog-proxy" checked></div>
                 <div class="ghl-toggle-row" style="border-bottom:none"><div><div class="ghl-toggle-label" style="color:#b45309">Test Mode — Simulate Sends</div><div class="ghl-toggle-sub" style="color:#92400e">Messages are NOT sent to GHL. Use to test UI without sending real SMS/email.</div></div><input type="checkbox" id="ghl-tog-testmode"></div>
               </div>
             </div>
@@ -5773,6 +5773,89 @@
     return `<span class="ov-pill ${map[s]||''}">${labels[s]||s}</span>`;
   }
 
+  // ── AUDIT #10: seasoning summary — top-of-profile compact indicator ──
+  // Surfaces the seasoning tracker already inside "Bank Relationship
+  // Intelligence" up to the sticky action toolbar so an admin can see
+  // at a glance how many bank relationships are ready to apply and when
+  // the next one comes off seasoning — without opening the BRI card.
+  function _seasoningSummary(clientId) {
+    if (!clientId) return null;
+    var rels = [];
+    try { rels = JSON.parse(localStorage.getItem('cq_bankrels_' + clientId) || '[]'); } catch(e) { rels = []; }
+    if (!Array.isArray(rels) || rels.length === 0) return null;
+    var ready = 0, seasoning = 0, nextReadyDays = null;
+    rels.forEach(function(rel) {
+      if (!rel) return;
+      var required = Number(rel.seasoningRequiredDays || 0) || 0;
+      var ageDays  = Number(rel.relationshipAgeDays || 0) || 0;
+      var done = rel.seasoningComplete || rel.seasoningStatus === 'complete' || rel.seasoningStatus === 'manual_override' || (required > 0 && ageDays >= required) || required === 0;
+      if (done) { ready++; return; }
+      seasoning++;
+      var remaining = Math.max(0, required - ageDays);
+      if (nextReadyDays === null || remaining < nextReadyDays) nextReadyDays = remaining;
+    });
+    return { ready: ready, seasoning: seasoning, nextReadyDays: nextReadyDays, total: rels.length };
+  }
+  function _seasoningBadge(clientId) {
+    var s = _seasoningSummary(clientId);
+    if (!s) return '';
+    // Nothing to show if the client has no bank relationships tracked.
+    if (s.total === 0) return '';
+    var readyPart = s.ready > 0
+      ? '<span style="color:#059669;font-weight:700">' + s.ready + ' ready</span>'
+      : '';
+    var seasPart = s.seasoning > 0
+      ? '<span style="color:#b45309;font-weight:700">' + s.seasoning + ' seasoning' + (s.nextReadyDays !== null ? ' · next in ' + s.nextReadyDays + 'd' : '') + '</span>'
+      : '';
+    var joiner = (readyPart && seasPart) ? '<span style="color:var(--gray-300)">·</span>' : '';
+    return '<span title="Bank seasoning · click BRI card for details" style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:8px;border:1.5px solid rgba(180,131,9,0.25);background:rgba(254,243,199,0.35);font-size:11px;font-family:var(--font-b);white-space:nowrap;margin-left:auto">'
+      + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.5" style="opacity:0.75"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+      + readyPart + joiner + seasPart
+      + '</span>';
+  }
+  window._seasoningBadge = _seasoningBadge;
+
+  // ── AUDIT #8: stage-ahead-of-activity check ──────────────────────────
+  // Detects when a client's current stage assumes prerequisites that
+  // haven't happened yet. Purely diagnostic — returns a short label
+  // (e.g. 'No credit report') the render layer can show as a badge.
+  // Returns null when the stage matches the activity.
+  //
+  // GUARD (audit): non-blocking. We do NOT move the stage back, we do
+  // NOT prevent future advances — this just surfaces the mismatch so
+  // admins can catch drift from prior manual moves.
+  function _stageIssue(c) {
+    if (!c) return null;
+    var d = null;
+    try { d = (typeof getDashData === 'function') ? getDashData(c.id) : null; } catch(e) {}
+    var stage = (d && Number(d.currentStage)) || 0;
+    if (stage <= 0) return null;
+    var rows = (d && Array.isArray(d.fundingRows)) ? d.fundingRows : [];
+    var hasCredit = !!(c.fico || (function(){ try { var cr = (typeof getCreditData === 'function') ? getCreditData(c.id) : null; return cr && cr.fico; } catch(e) { return false; }})());
+    // Stage 5 (1-indexed) = Application Phase — should have credit + goal.
+    if (stage >= 5) {
+      if (!hasCredit) return 'No credit report';
+      var goal = 0;
+      try {
+        var ob = (typeof getOnboardDataForClient === 'function') ? getOnboardDataForClient(c.id) : null;
+        goal = Number((d && d.fundingGoal) || (ob && ob.loanAmount) || c.loanAmount || 0) || 0;
+      } catch(e) {}
+      if (!goal) return 'No funding goal';
+    }
+    // Stage 6 = Decision / Results — should have at least one non-queued app.
+    if (stage >= 6) {
+      var apps = rows.filter(function(r) { return r && r.status && r.status !== 'queued'; });
+      if (apps.length === 0) return 'No applications submitted';
+    }
+    return null;
+  }
+  function _stageIssueBadge(c) {
+    var issue = _stageIssue(c);
+    if (!issue) return '';
+    return '<span title="Stage looks ahead of activity: ' + issue + '" style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;margin-left:5px;white-space:nowrap">⚠ ' + issue + '</span>';
+  }
+  window._stageIssueBadge = _stageIssueBadge;
+
   // ── AUDIT #3: single source of truth for client task counts ──────────
   // The Overview snapshot table's TASKS column previously used
   // plGetProgress() — a stage-scoped counter that only saw pipeline tasks
@@ -6786,6 +6869,33 @@
         icon:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#64748b" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>' }
     ];
 
+    // AUDIT #10: Portfolio Funding rollup — total $ funded vs $ goal
+    // summed across every active client. Uses each client's dashboard
+    // fundingApproved/Secured and fundingGoal (or onboarding loanAmount /
+    // client roster loanAmount fallback), matching the per-client bar.
+    (function() {
+      var pfFunded = 0, pfGoal = 0;
+      active.forEach(function(c) {
+        try {
+          var d = (typeof getDashData === 'function') ? getDashData(c.id) : null;
+          var ob = (typeof getOnboardDataForClient === 'function') ? getOnboardDataForClient(c.id) : null;
+          var funded = Number((d && (d.fundingSecured || d.fundingApproved)) || 0) || 0;
+          var goal   = Number((d && d.fundingGoal) || (ob && ob.loanAmount) || c.loanAmount || 0) || 0;
+          pfFunded += funded;
+          pfGoal   += goal;
+        } catch(e) {}
+      });
+      var pfPct = pfGoal > 0 ? Math.min(100, Math.round(pfFunded / pfGoal * 100)) : 0;
+      kpiDefs.push({
+        key: null,
+        count: fmtMoney(pfFunded),
+        label: 'Portfolio Funded',
+        sub: pfGoal > 0 ? ('of ' + fmtMoney(pfGoal) + ' goal · ' + pfPct + '%') : 'across all clients',
+        color: '#0369a1', iconBg: '#e0f2fe',
+        icon: '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#0369a1" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>'
+      });
+    })();
+
     document.getElementById('ov-cards-row').innerHTML = kpiDefs.map(function(c) {
       var isActive = c.key && ovActiveFilter === c.key;
       var alertClass = c.alert || '';
@@ -7035,7 +7145,7 @@
           var pct  = (p && p.total) ? Math.round(p.done / p.total * 100) : 0;
 
           var stageBadge = stage
-            ? '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:' + stage.light + ';color:' + stage.color + ';border:1px solid ' + stage.border + ';white-space:nowrap">S' + (si+1) + ' ' + stage.name + '</span>'
+            ? '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:' + stage.light + ';color:' + stage.color + ';border:1px solid ' + stage.border + ';white-space:nowrap">S' + (si+1) + ' ' + stage.name + '</span>' + _stageIssueBadge(c)
             : '<span style="font-size:10px;color:#cbd5e1">—</span>';
 
           var tasksCell = (p && p.total > 0)
@@ -7879,7 +7989,8 @@
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           Send Message
         </button>
-        ${ghlLinkPillHTML(c) ? `<span style="margin-left:auto">${ghlLinkPillHTML(c)}</span>` : ''}
+        ${_seasoningBadge(id)}
+        ${ghlLinkPillHTML(c) ? `<span${_seasoningBadge(id) ? '' : ' style="margin-left:auto"'}>${ghlLinkPillHTML(c)}</span>` : ''}
       </div>
 
       <!-- WORKSPACE: 60/40 GRID -->
