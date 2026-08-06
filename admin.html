@@ -1802,13 +1802,25 @@
     min-width: 0; width: 380px;
     position: sticky; top: calc(var(--header-h) + 28px);
     align-self: start; justify-self: end;
-    height: calc(100vh - var(--header-h) - 56px);
-    overflow: hidden;
+    /* Cap at viewport but allow the sidebar to scroll internally when its
+       cards genuinely overflow (Snapshot with many "Recently Completed"
+       tasks + Next Actions + Notes on a long-history client like Adriana).
+       Prevents Notes from being clipped off the bottom on long profiles. */
+    max-height: calc(100vh - var(--header-h) - 56px);
+    overflow-y: auto;
     display: flex; flex-direction: column; gap: 12px;
   }
   .a-sp-right > .a-card { flex-shrink: 0; margin-bottom: 0 !important; }
-  /* Notes card expands to fill remaining sidebar height */
-  .a-sp-right > #sp-right-notes { flex: 1 !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden; }
+  /* Notes card fills remaining sidebar height, but ALWAYS keeps room for
+     its input + Save button. min-height: 240px guarantees the note field
+     never collapses to zero when cards above grow tall — so Sam can leave
+     an internal note on ANY client regardless of column history depth. */
+  .a-sp-right > #sp-right-notes {
+    flex: 1 1 auto !important;
+    min-height: 240px !important;
+    display: flex !important; flex-direction: column !important;
+    overflow: hidden;
+  }
   .a-sp-right > #sp-right-notes > .a-sn-body { flex: 1 !important; min-height: 0 !important; height: auto !important; }
 
   /* ── Collapsible right-sidebar cards ────────────────────────────────────
@@ -9395,17 +9407,20 @@
         </div>` : ''}
       </div>
 
-      <!-- INTERNAL NOTES -->
+      <!-- CLIENT SUMMARY (pinned single note — distinct from sidebar Notes & Activity timeline) -->
       <div class="prof-section">
-        ${sectionHeader(`<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#627090" stroke-width="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`,'Internal Notes','#627090')}
-        <div style="padding:14px 16px 16px">
-          <textarea id="notes-${clientId}" placeholder="Private notes about this client (not visible to client)…" rows="4"
+        ${sectionHeader(`<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#627090" stroke-width="2"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/></svg>`,'Client Summary (pinned)','#627090')}
+        <div style="padding:8px 16px 4px;font-size:11px;color:var(--gray-400);line-height:1.5">
+          Single always-visible pinned note. For dated timeline entries, use <strong>Notes &amp; Activity</strong> in the right sidebar.
+        </div>
+        <div style="padding:6px 16px 16px">
+          <textarea id="notes-${clientId}" placeholder="Quick summary or heads-up (pinned to the top of this client's profile)…" rows="4"
             style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-family:var(--font-b);font-size:13px;color:var(--navy);resize:vertical;outline:none;transition:border-color 0.15s"
             onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-200)'"
           >${getClientNote(clientId)}</textarea>
           <button onclick="_saveClientSimpleNote('${clientId}')"
             style="margin-top:8px;height:34px;padding:0 18px;background:var(--navy);border:none;border-radius:8px;font-family:var(--font-h);font-size:12px;font-weight:700;color:white;cursor:pointer">
-            Save Note
+            Save Summary
           </button>
         </div>
       </div>`;
@@ -9999,8 +10014,51 @@
       { k:'goldman sachs',   id:'goldman',      n:'Goldman Sachs' },
       { k:'apple card',      id:'goldman',      n:'Goldman Sachs' }
     ];
+    // AUDIT (Bugs & UX) Issue #6 — Distinguish deposit/checking relationships
+    // from credit tradelines. Hennah bug: engine detected a CLOSED past auto
+    // loan with US Bank and reported "Existing relationship with US Bank" +
+    // counted her 5 credit-card lenders as "5 bank relationships — strong
+    // network". A closed loan and credit-card tradelines are NOT deposit
+    // relationships — they don't move approval odds or limits the way an
+    // open checking/savings account does.
+    //
+    // Fix: only auto-detect from OPEN credit-card / revolving accounts. Skip
+    // any account whose status looks closed / paid-off, and skip loan-type
+    // accounts (auto loan, personal loan, mortgage, student loan). Deposit
+    // relationships must be entered by staff (Dashboard Editor → Bank
+    // Relationships) — auto-detection only surfaces "past-customer /
+    // recon-friendly" tier signals, not full relationships.
+    //
+    // GUARD (audit): bureau-pull mapping and round sequencing untouched —
+    // only the relationship-detection input list is filtered.
+    var _isClosedStatus = function(s) {
+      s = String(s || '').toLowerCase();
+      if (!s) return false;
+      return s.indexOf('closed') !== -1
+          || s.indexOf('paid off') !== -1
+          || s.indexOf('paid, closed') !== -1
+          || s.indexOf('paid and closed') !== -1
+          || s === 'inactive'
+          || s === 'terminated';
+    };
+    var _isLoanType = function(t) {
+      t = String(t || '').toLowerCase();
+      if (!t) return false;
+      return t.indexOf('loan') !== -1
+          || t.indexOf('mortgage') !== -1
+          || t.indexOf('auto') !== -1
+          || t.indexOf('student') !== -1
+          || t.indexOf('installment') !== -1;
+    };
     var _detectedRelIds = [];
     crAccounts.forEach(function(a) {
+      if (!a) return;
+      // Filter #1: skip closed / paid-off / inactive accounts — a past
+      // customer isn't an active relationship.
+      if (_isClosedStatus(a.status)) return;
+      // Filter #2: skip loan-type accounts entirely — they aren't
+      // deposit-side relationships even when open.
+      if (_isLoanType(a.type)) return;
       var nm = (a.name || '').toLowerCase();
       _CARD_BANK_PATTERNS.forEach(function(p) {
         if (_detectedRelIds.indexOf(p.id) === -1 && nm.indexOf(p.k) !== -1) {
@@ -10549,7 +10607,26 @@
     // 10. Relationship bank available that hasn't been applied
     var relBank = roundsResult.sequence.find(function(b) { return b.hasRelationship && !b.isUsed && !b.isDenied; });
     if (relBank) {
-      return { happened: 'Existing relationship with ' + relBank.name + ' detected', next: 'Prioritize ' + relBank.name + ' application — relationship significantly improves approval odds and credit limits', why: 'Banks approve existing customers at 2–3x the rate of new applicants and offer 30–50% higher credit limits' };
+      // AUDIT Issue #6: some stored relationships were auto-detected from
+      // credit-report tradelines rather than confirmed deposit accounts.
+      // Flag that so the admin verifies before prioritizing — a credit
+      // card with a bank isn't the same as an open checking relationship
+      // and doesn't move approval odds or limits the same way.
+      var _stored = (typeof getDashData === 'function' ? (getDashData(profile.clientId) || {}) : {}).bankRelationships || [];
+      var _rel = _stored.find(function(x) {
+        if (!x) return false;
+        var xid = typeof x === 'string' ? x.toLowerCase() : String(x.id || x.name || '').toLowerCase();
+        return xid === (relBank.id || '').toLowerCase();
+      });
+      var _isTradelineOnly = _rel && typeof _rel === 'object' && (_rel.tier === 'credit_tradeline' || _rel.depositRelationship === false || _rel.source === 'credit_report');
+      if (_isTradelineOnly) {
+        return {
+          happened: 'Possible ' + relBank.name + ' relationship (detected from a credit-report tradeline — VERIFY it is an active checking/savings account, not a credit card or closed loan)',
+          next: 'Confirm the deposit relationship in Dashboard Editor before prioritizing ' + relBank.name + '. If it is only a credit card, treat as recon-friendly, not a full relationship.',
+          why: 'A credit-card tradeline with a bank does NOT move approval odds like an active deposit account. Only checking/savings relationships get the 2–3x approval boost and 30–50% higher limits.'
+        };
+      }
+      return { happened: 'Existing deposit relationship with ' + relBank.name + ' detected', next: 'Prioritize ' + relBank.name + ' application — relationship significantly improves approval odds and credit limits', why: 'Banks approve existing customers at 2–3x the rate of new applicants and offer 30–50% higher credit limits' };
     }
 
     // 11. Gap remaining but banks available
@@ -11339,7 +11416,19 @@
           var newRels = [];
           cached.profile.detectedBankRelationships.forEach(function(id) {
             if (storedRels.indexOf(id) === -1) {
-              newRels.push({ id: id, name: _relNameMap[id] || id, source: 'credit_report', detectedAt: Date.now() });
+              // AUDIT Issue #6: mark as credit-tradeline tier — NOT a full
+              // deposit relationship. Downstream logic + UI can treat this
+              // as "past customer / recon-friendly" without inflating the
+              // relationship-strength score. Deposit relationships are
+              // added manually via Dashboard Editor with source='manual'.
+              newRels.push({
+                id: id,
+                name: _relNameMap[id] || id,
+                source: 'credit_report',
+                tier: 'credit_tradeline',   // not a deposit relationship
+                depositRelationship: false, // explicit for score gates
+                detectedAt: Date.now()
+              });
             }
           });
           if (newRels.length) {
