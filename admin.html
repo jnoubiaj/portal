@@ -5773,6 +5773,49 @@
     return `<span class="ov-pill ${map[s]||''}">${labels[s]||s}</span>`;
   }
 
+  // ── AUDIT #3: single source of truth for client task counts ──────────
+  // The Overview snapshot table's TASKS column previously used
+  // plGetProgress() — a stage-scoped counter that only saw pipeline tasks
+  // for the client's CURRENT stage. Result: a client with 3 ops tasks
+  // outside that stage read as "0/0" or "0/5" depending on the accident.
+  //
+  // Definition (per audit): total = every non-deleted, non-terminal task
+  // that belongs to this client from any source (modern ops tasks +
+  // legacy dashboard tasks). done = completed. One counter, one truth,
+  // reused everywhere.
+  //
+  // GUARD (audit): Daily To-Do / Next Actions render individual tasks,
+  // they never show a done/total badge — they filter open tasks with
+  // getOpenClientTasks() and _isOpsTaskTerminal(). This new helper uses
+  // the same filter (_isOpsTaskTerminal) so all three surfaces reason
+  // about "done" the same way. No behavior change to those panels.
+  function _countClientTasks(clientId) {
+    var done = 0, total = 0;
+    if (!clientId) return { done: 0, total: 0 };
+    try {
+      var ops = (typeof getOpsTasks === 'function') ? getOpsTasks(clientId) : [];
+      ops.forEach(function(t) {
+        if (!t) return;
+        total++;
+        if (typeof _isOpsTaskTerminal === 'function' ? _isOpsTaskTerminal(t)
+                                                    : (t.status === 'completed' || t.status === 'done')) done++;
+      });
+    } catch(e) {}
+    try {
+      // Legacy dashboard tasks (older subsystem) — still counted so any
+      // client migrated from the old model shows an accurate ratio.
+      var d = (typeof getDashData === 'function') ? getDashData(clientId) : null;
+      var legacy = (d && Array.isArray(d.tasks)) ? d.tasks : [];
+      legacy.forEach(function(t) {
+        if (!t) return;
+        total++;
+        if (t.status === 'done' || t.status === 'completed') done++;
+      });
+    } catch(e) {}
+    return { done: done, total: total };
+  }
+  window._countClientTasks = _countClientTasks;
+
   // ── AUDIT #1: derive STATUS from stage + funding state ───────────────
   // A client's status field can drift from reality — Alejandrina reached
   // S6 "Decision / Results" yet still read "New Lead" because status is
@@ -6982,7 +7025,12 @@
           var t  = getClientTasks(c.id);
           var si = t ? t.stage : null;
           var stage = si !== null ? PIPELINE_STAGES[si] : null;
-          var p  = (t && si !== null) ? plGetProgress(c.id, si) : null;
+          // AUDIT #3: count ALL client tasks (ops + legacy dashboard),
+          // not just the ones scoped to the current pipeline stage.
+          // Old behavior showed 0/0 or 0/5 because plGetProgress only
+          // saw tasks assigned to c.stage even when the client had lots
+          // of ops tasks in other stages.
+          var p    = _countClientTasks(c.id);
           var days = (t && si !== null) ? plDaysInStage(c.id, si) : 0;
           var pct  = (p && p.total) ? Math.round(p.done / p.total * 100) : 0;
 
@@ -6990,7 +7038,7 @@
             ? '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:' + stage.light + ';color:' + stage.color + ';border:1px solid ' + stage.border + ';white-space:nowrap">S' + (si+1) + ' ' + stage.name + '</span>'
             : '<span style="font-size:10px;color:#cbd5e1">—</span>';
 
-          var tasksCell = p
+          var tasksCell = (p && p.total > 0)
             ? '<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:4px;background:#e2e8f0;border-radius:99px;overflow:hidden;min-width:36px"><div style="height:100%;background:' + (stage ? stage.color : '#64748b') + ';border-radius:99px;width:' + pct + '%"></div></div><span style="font-size:11px;color:#64748b;white-space:nowrap">' + p.done + '/' + p.total + '</span></div>'
             : '<span style="font-size:11px;color:#cbd5e1">—</span>';
 
@@ -7818,6 +7866,10 @@
         <button class="a-sp-ab-v2-btn" onclick="opsOpenCreate('${id}')">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           Add Task
+        </button>
+        <button class="a-sp-ab-v2-btn" style="border-color:rgba(16,185,129,0.35);color:#059669;background:rgba(16,185,129,0.05)" onclick="openLogApprovalModal('${id}')" title="Log an approval that already happened — bank, card, limit, date">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>
+          Log Approval
         </button>
         <button class="a-sp-ab-v2-btn" onclick="(function(){var s=document.getElementById('sp-dtab-documents');if(s){s.classList.remove('collapsed');s.scrollIntoView({behavior:'smooth'});}setTimeout(function(){var e=document.getElementById('new-req-input-${id}');if(e)e.focus();},350)})()">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -21962,6 +22014,33 @@
     if (!d.fundingRows) return;
     const row = d.fundingRows.find(r => r.id === rowId);
     if (!row) return;
+
+    // AUDIT #4: block an approval when the amount is missing or $0.
+    // A card marked Approved with no limit is invisible to Total Approved
+    // and Revenue rollups — that's how August read $0 even though real
+    // approvals happened. Prompt for the limit right here; if the admin
+    // cancels or enters a non-positive value, revert the selector so the
+    // row stays in its prior status.
+    if (field === 'status' && value === 'approved') {
+      var _existingAmt = parseFloat(row.amount);
+      if (!_existingAmt || _existingAmt <= 0) {
+        var _promptTxt = 'Approval limit for ' + (row.bank || 'this card') + ' — ' + (row.cardName || 'card') + ' ($):';
+        var _entered = prompt(_promptTxt, '');
+        var _n = parseFloat((_entered || '').replace(/[$,\s]/g, ''));
+        if (!_entered || isNaN(_n) || _n <= 0) {
+          // Revert the visible selector to the previous status.
+          try {
+            var _sel = document.querySelector('select[data-fa-status-row="' + rowId + '"]') ||
+                       document.querySelector('#fa-status-' + rowId);
+            if (_sel) _sel.value = row.status || 'queued';
+          } catch(e) {}
+          alert('Approval needs a limit greater than $0. Add the amount, then mark Approved.');
+          return;
+        }
+        row.amount = _n;
+      }
+    }
+
     row[field] = value;
 
     if (field === 'status') {
@@ -22016,6 +22095,113 @@
       saveDashData(clientId, d);
     }
   }
+
+  // ── AUDIT #9: fast Log Approval flow ──────────────────────────────────
+  // One click. Bank, card, limit, date. Creates a fundingRow with status
+  // 'approved' + amount set + approvedAt/By stamped in a single write, so
+  // Total Approved and Revenue rollups pick it up immediately.
+  function openLogApprovalModal(clientId) {
+    if (!clientId) return;
+    // Remove any prior instance (edge case: reopened without close).
+    var existing = document.getElementById('log-approval-modal');
+    if (existing) existing.remove();
+    var banks = Object.keys(CARD_LIBRARY || {}).sort();
+    var bankOpts = banks.map(function(b) { return '<option value="' + b + '">' + b + '</option>'; }).join('');
+    var todayIso = (function() {
+      var d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    })();
+    var html =
+      '<div id="log-approval-modal" style="position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)closeLogApprovalModal()">'
+      + '<div style="background:#fff;border-radius:14px;width:min(460px,92vw);max-height:90vh;overflow:auto;padding:22px 22px 18px;box-shadow:0 20px 60px -20px rgba(15,23,42,0.35)" onclick="event.stopPropagation()">'
+      +   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+      +     '<div style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--navy)">Log Approval</div>'
+      +     '<button onclick="closeLogApprovalModal()" style="background:none;border:none;font-size:20px;color:var(--gray-400);cursor:pointer;padding:0;line-height:1">×</button>'
+      +   '</div>'
+      +   '<div style="display:flex;flex-direction:column;gap:11px">'
+      +     '<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;color:var(--gray-500);margin-bottom:4px">Bank</label>'
+      +       '<select id="la-bank" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--gray-200);font-size:13px;font-family:inherit" onchange="_laPopulateCards()"><option value="">— select bank —</option>' + bankOpts + '</select></div>'
+      +     '<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;color:var(--gray-500);margin-bottom:4px">Card</label>'
+      +       '<input id="la-card" list="la-card-options" placeholder="Card name" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--gray-200);font-size:13px;font-family:inherit">'
+      +       '<datalist id="la-card-options"></datalist></div>'
+      +     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">'
+      +       '<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;color:var(--gray-500);margin-bottom:4px">Approved Limit ($)</label>'
+      +         '<input id="la-amount" type="number" min="0" step="100" placeholder="e.g. 12000" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--gray-200);font-size:13px;font-family:inherit"></div>'
+      +       '<div><label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;color:var(--gray-500);margin-bottom:4px">Date Approved</label>'
+      +         '<input id="la-date" type="date" value="' + todayIso + '" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--gray-200);font-size:13px;font-family:inherit"></div>'
+      +     '</div>'
+      +     '<div style="display:flex;gap:8px;margin-top:10px">'
+      +       '<button onclick="closeLogApprovalModal()" style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-600);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>'
+      +       '<button onclick="submitLogApproval(\'' + clientId + '\')" style="flex:1;padding:9px 12px;border-radius:8px;border:none;background:#10b981;color:#fff;font-size:13px;font-weight:700;cursor:pointer">Log Approval</button>'
+      +     '</div>'
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+    setTimeout(function() { var b = document.getElementById('la-bank'); if (b) b.focus(); }, 40);
+  }
+  function _laPopulateCards() {
+    var bank = (document.getElementById('la-bank') || {}).value || '';
+    var dl   = document.getElementById('la-card-options');
+    if (!dl) return;
+    var lib  = (CARD_LIBRARY && CARD_LIBRARY[bank]) || [];
+    dl.innerHTML = lib.map(function(c) { return '<option value="' + (c.name || '') + '">'; }).join('');
+  }
+  function closeLogApprovalModal() {
+    var m = document.getElementById('log-approval-modal');
+    if (m) m.remove();
+  }
+  function submitLogApproval(clientId) {
+    var bank   = ((document.getElementById('la-bank')   || {}).value || '').trim();
+    var card   = ((document.getElementById('la-card')   || {}).value || '').trim();
+    var amount = parseFloat(((document.getElementById('la-amount') || {}).value || '').replace(/[$,\s]/g, ''));
+    var date   = ((document.getElementById('la-date')   || {}).value || '').trim();
+    if (!bank)   { alert('Select a bank.'); return; }
+    if (!card)   { alert('Enter the card name.'); return; }
+    if (!amount || amount <= 0) { alert('Approved limit must be greater than $0.'); return; }
+    if (!date)   { alert('Pick the approval date.'); return; }
+    var libCards = (CARD_LIBRARY && CARD_LIBRARY[bank]) || [];
+    var libCard  = libCards.find(function(c) { return c.name === card; });
+    var meta     = (typeof getBankProductMetadata === 'function') ? getBankProductMetadata(bank) : null;
+    var approvedAt = new Date(date + 'T12:00:00').getTime(); // noon UTC to avoid DST edges
+    var d = getDashData(clientId);
+    if (!d.fundingRows) d.fundingRows = [];
+    var row = {
+      id:            'fr_' + Date.now(),
+      bankId:        meta ? meta.bankId : '',
+      bank:          bank,
+      cardName:      card,
+      introPeriod:   libCard ? libCard.introPeriod : 'N/A',
+      status:        'approved',
+      amount:        amount,
+      category:      meta ? meta.category : '',
+      bureau:        meta ? meta.bureau : '',
+      riskLevel:     meta ? meta.riskLevel : 'medium',
+      prerequisites: meta ? meta.prerequisites : '',
+      instructions: meta ? meta.instructions : '',
+      clientNote:   '',
+      visible:      true,
+      round:        meta ? meta.round : 1,
+      source:       'log_approval',
+      createdAt:    Date.now(),
+      approvedAt:   approvedAt,
+      approvedBy:   (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.email) || 'admin'
+    };
+    d.fundingRows.push(row);
+    // Recompute rollups so the Overview + KPI cards reflect this immediately.
+    var approvedTotal = d.fundingRows.filter(function(r){return r.status==='approved';}).reduce(function(s,r){return s + (+r.amount||0);},0);
+    if (approvedTotal > 0) { d.fundingApproved = approvedTotal; d.fundingSecured = approvedTotal; }
+    saveDashData(clientId, d);
+    try { autoCalcFundingApproved(clientId); } catch(e) {}
+    try { refreshClientUI(clientId); } catch(e) {}
+    try { _touchLastActivity(clientId); } catch(e) {}
+    try { if (typeof renderOverview === 'function') renderOverview(); } catch(e) {}
+    closeLogApprovalModal();
+  }
+  window.openLogApprovalModal  = openLogApprovalModal;
+  window._laPopulateCards      = _laPopulateCards;
+  window.closeLogApprovalModal = closeLogApprovalModal;
+  window.submitLogApproval     = submitLogApproval;
 
   function faRemove(clientId, rowId) {
     const d = getDashData(clientId);
