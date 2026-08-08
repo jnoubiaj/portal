@@ -204,10 +204,14 @@ window.GHL = (function () {
       url = path.startsWith('http') ? path : API + path;
     }
 
+    // Round 2 security fix: stop echoing the API token to the browser
+    // console. It's a Private Integration Token — anything printed to
+    // console lands in devtools history + any browser-extension console
+    // capture. Log presence, not value.
     console.log('[GHL API →]', method, url,
       useProxy ? '[proxy]' : '[direct]',
       s.testMode ? '[TEST]' : '',
-      '| apiKey:', s.apiKey ? s.apiKey.substring(0,12)+'…' : '(none)');
+      '| apiKey:', s.apiKey ? '(set)' : '(none)');
 
     try {
       const hdrs = _hdrs();
@@ -646,14 +650,23 @@ window.GHL = (function () {
   async function getContactFormSubmissions (contactId) {
     const { locationId } = getSettings();
     const all = [];
-    // Try the canonical Forms endpoint first.
+    // Round 2 diagnosis: the previous
+    //   /forms/submissions?locationId=X&contactId=Y&limit=50
+    // returned 422 — GHL doesn't accept that param combo. The endpoint
+    // requires ONLY locationId (contactId is not a valid filter here);
+    // we filter to this contact client-side. limit still works.
     try {
-      const d = await _fetch('GET', '/forms/submissions?locationId=' + locationId + '&contactId=' + contactId + '&limit=50');
-      const subs = (d && (d.submissions || d.formSubmissions)) || [];
+      const d = await _fetch('GET', '/forms/submissions?locationId=' + locationId + '&limit=100');
+      const rawSubs = (d && (d.submissions || d.formSubmissions)) || [];
+      const subs = rawSubs.filter(function(s) {
+        if (!s) return false;
+        var sid = s.contactId || (s.contact && s.contact.id);
+        return sid === contactId;
+      });
       subs.forEach(s => { all.push(Object.assign({ _source: 'form' }, s)); });
       try {
         if (localStorage.getItem('cq_ghl_quiet') !== '1') {
-          console.log('[GHL] forms/submissions →', subs.length, 'submission(s)', subs.length ? subs : '');
+          console.log('[GHL] forms/submissions →', rawSubs.length, 'total,', subs.length, 'for contact');
         }
       } catch (e) {}
     } catch (e) {
@@ -674,51 +687,36 @@ window.GHL = (function () {
       // Surveys endpoint may not be enabled on the location — non-fatal.
       console.warn('[GHL] surveys/submissions failed (may not be enabled):', e.message);
     }
-    // Also try the Documents/Proposals endpoints — GHL's Payments →
-    // Documents & Contracts product stores completed-document field values
-    // here, not under /forms or /surveys. The public LeadConnector API
-    // has moved through several paths for this product across versions,
-    // so we try each in order and use whichever one returns docs. Every
-    // attempt is logged so the admin can see which endpoint their account
-    // exposes without guessing.
-    //
-    // Endpoint candidates (v1 & v2, in most-recent-first order):
-    //   /proposals-and-estimates/     — current v2 name (invoicing rebrand)
-    //   /proposals/                   — earlier v2 name
-    //   /documents/                   — original v1 style
-    //   /payments/documents/          — payments-scoped variant
-    const _DOC_ENDPOINTS = [
-      '/proposals-and-estimates/?locationId=' + locationId + '&contactId=' + contactId + '&limit=50&status=completed',
-      '/proposals-and-estimates/?locationId=' + locationId + '&contactId=' + contactId + '&limit=50',
-      '/proposals/?locationId='       + locationId + '&contactId=' + contactId + '&limit=50',
-      '/documents/?locationId='       + locationId + '&contactId=' + contactId + '&limit=50',
-      '/payments/documents/?locationId=' + locationId + '&contactId=' + contactId + '&limit=50'
-    ];
-    let _foundDocs = null, _foundVia = null;
-    for (const ep of _DOC_ENDPOINTS) {
-      try {
-        const r = await _fetch('GET', ep);
-        const docs = (r && (r.documents || r.proposals || r.proposalsAndEstimates || r.items || r.data)) || [];
-        try {
-          if (localStorage.getItem('cq_ghl_quiet') !== '1') {
-            console.log('[GHL doc-fetch]', ep, '→', docs.length, 'doc(s)');
-          }
-        } catch (e) {}
-        if (docs.length > 0) {
-          _foundDocs = docs;
-          _foundVia  = ep;
-          break;
-        }
-      } catch (e) {
-        console.warn('[GHL doc-fetch] failed for', ep, ':', e.message);
-      }
-    }
-    if (_foundDocs && _foundDocs.length) {
+    // Documents & Contracts (proposals-and-estimates) — the ONE endpoint.
+    // Round 2 diagnosis confirmed:
+    //   /proposals-and-estimates/  → real endpoint (CORS-blocked direct;
+    //                                 works ONLY through ghl-server.mjs proxy)
+    //   /proposals/                → 404
+    //   /documents/                → 404
+    //   /payments/documents/       → 404
+    // The 404 fallbacks were pure noise + wasted requests. Also required:
+    //   • proxy MUST be running (or hosted at cq_scheduler_remote_url) —
+    //     GHL doesn't return CORS headers for this endpoint, so a direct
+    //     browser call always fails with "Failed to fetch".
+    //   • Private Integration Token must include the Documents & Contracts
+    //     (Proposals/Estimates) READ scope. Without it we get 401.
+    // status=completed filters to signed docs (~46 for this workspace).
+    const _DOC_ENDPOINT = '/proposals-and-estimates/?locationId=' + locationId
+                        + '&contactId=' + contactId + '&limit=50&status=completed';
+    let _foundDocs = null;
+    try {
+      const r = await _fetch('GET', _DOC_ENDPOINT);
+      const docs = (r && (r.documents || r.proposals || r.proposalsAndEstimates || r.items || r.data)) || [];
       try {
         if (localStorage.getItem('cq_ghl_quiet') !== '1') {
-          console.log('[GHL] documents via', _foundVia, '→', _foundDocs.length, 'doc(s):', _foundDocs);
+          console.log('[GHL doc-fetch]', _DOC_ENDPOINT, '→', docs.length, 'doc(s)');
         }
       } catch (e) {}
+      if (docs.length > 0) _foundDocs = docs;
+    } catch (e) {
+      console.warn('[GHL doc-fetch] failed:', e.message);
+    }
+    if (_foundDocs && _foundDocs.length) {
       _foundDocs.forEach(doc => {
         // Prefer completed / signed docs. Include others but tag their status
         // so downstream can filter if needed.
@@ -1133,7 +1131,23 @@ window.GHL = (function () {
       monthlySales:   ['average_monthly_sales', 'monthly_sales', 'avg_monthly_sales', 'monthly_revenue'],
       maidenName:     ['mothers_maiden_name', 'mother_maiden_name', 'maiden_name'],
       citizen:        ['us_citizen', 'american_citizen', 'are_you_a_us_citizen', 'citizenship'],
-      annualIncome:   ['personal_annual_income', 'annual_income', 'yearly_income']
+      annualIncome:   ['personal_annual_income', 'annual_income', 'yearly_income'],
+      // Round 2 additions — these already parse from the contact's custom
+      // fields (10 answers land in mappedFields per the diagnosis) but
+      // didn't route to portal fields because they weren't in the map.
+      newCreditAccts: [
+        'new_credit_accounts_opened', 'new_credit_accounts',
+        'recently_opened_accounts',   'new_accounts_opened',
+        'how_many_new_credit_accounts_have_you_opened'
+      ],
+      // "How much credit do you have currently = More than $50k" comes back
+      // under one of these slugs — map to the Banking & Credit summary field.
+      personalCreditSummary: [
+        'how_much_credit_do_you_have_currently',
+        'current_credit_available',
+        'current_available_credit',
+        'total_personal_credit_limit'
+      ]
     };
     Object.keys(GHL_KEY_MAP).forEach(portalKey => {
       if (out[portalKey]) return; // don't overwrite values already pulled from standard contact fields

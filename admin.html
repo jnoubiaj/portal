@@ -20663,7 +20663,7 @@
     if (!window.GHL || !GHL.getSettings().apiKey) return;
     var s = GHL.getSettings();
     console.log('[GHL Channel] Loading channels. Settings:', {
-      apiKey:             s.apiKey ? s.apiKey.substring(0,12) + '…' : '(none)',
+      apiKey:             s.apiKey ? '(set)' : '(none)',
       locationId:         s.locationId,
       defaultSmsNumber:   s.defaultSmsNumber,
       defaultEmailAddress:s.defaultEmailAddress,
@@ -20882,7 +20882,7 @@
     if (btn) { btn.disabled = true; btn.textContent = 'Testing…'; }
 
     var s = GHL.getSettings();
-    console.log('[GHL Test] Starting connection test. apiKey:', s.apiKey ? s.apiKey.substring(0,12)+'…' : '(none)', '| locationId:', s.locationId);
+    console.log('[GHL Test] Starting connection test. apiKey:', s.apiKey ? '(set)' : '(none)', '| locationId:', s.locationId);
 
     if (!s.apiKey) {
       if (sub) sub.textContent = '✗ No API key set — enter your GHL Private Integration Token above';
@@ -28402,7 +28402,7 @@
     if (badge && GHL.getSettings().enabled) badge.style.display = 'inline-flex';
     _ghlLoadSettingsUI();
     var s = GHL.getSettings();
-    console.log('[GHL Init] apiKey:', s.apiKey ? s.apiKey.substring(0,12)+'…' : '(none)',
+    console.log('[GHL Init] apiKey:', s.apiKey ? '(set)' : '(none)',
       '| locationId:', s.locationId,
       '| defaultSmsNumber:', s.defaultSmsNumber,
       '| defaultEmailAddress:', s.defaultEmailAddress,
