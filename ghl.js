@@ -241,6 +241,26 @@ window.GHL = (function () {
         // env var) and this header is unnecessary.
         if (s.portalSecret) hdrs['X-CQ-Portal-Secret'] = s.portalSecret;
       }
+      // Defensive: strip any non-ISO-8859-1 characters from every header value
+      // before handing them to fetch(). A single Unicode char (smart quote, em
+      // dash, non-breaking space picked up from a copy-paste) makes the browser
+      // reject the ENTIRE request with 'String contains non ISO-8859-1 code
+      // point.' — invisibly breaking every GHL call. Sanitizing keeps calls
+      // working and logs a warning naming the offending header so the admin
+      // knows to fix the setting value at its source.
+      Object.keys(hdrs).forEach(function(k) {
+        var v = hdrs[k];
+        if (v == null) return;
+        var str = String(v);
+        // ISO-8859-1 range is 0x00–0xFF. Any code point > 0xFF is invalid.
+        if (/[^\x00-\xff]/.test(str)) {
+          var cleaned = str.replace(/[^\x00-\xff]/g, '');
+          console.warn('[GHL] Header "' + k + '" contained non-ISO-8859-1 characters and was sanitized. ' +
+            'Fix the source value in Settings (likely a smart quote or hidden character from copy-paste). ' +
+            'Original length ' + str.length + ' -> ' + cleaned.length);
+          hdrs[k] = cleaned;
+        }
+      });
       const opts = { method, headers: hdrs };
       if (body && method !== 'GET') opts.body = JSON.stringify(body);
       const res = await fetch(url, opts);
