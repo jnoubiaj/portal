@@ -4360,6 +4360,7 @@
                 <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">SMS on Overdue Tasks</div><div class="ghl-toggle-sub">Send GHL SMS when a task becomes overdue</div></div><input type="checkbox" id="ghl-tog-overdue-sms" checked></div>
                 <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Email on Overdue Tasks</div><div class="ghl-toggle-sub">Send GHL email when a task becomes overdue</div></div><input type="checkbox" id="ghl-tog-overdue-email" checked></div>
                 <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Use Backend Proxy (Recommended)</div><div class="ghl-toggle-sub">Route API calls through a proxy — eliminates CORS. Prefers your Railway URL (see below) when set; falls back to <code>localhost:3001</code> in dev. <strong style="color:#b45309">Texts fail silently for hosted admins unless a Railway URL is configured.</strong></div></div><input type="checkbox" id="ghl-tog-proxy" checked></div>
+                <div class="ghl-toggle-row"><div><div class="ghl-toggle-label">Proxy holds API token (server-side)</div><div class="ghl-toggle-sub">When ON, the browser stops sending the PIT token to the proxy — the proxy uses its own <code>GHL_API_KEY</code> env var. <strong>Only flip this AFTER</strong> the Railway proxy is deployed with <code>GHL_API_KEY</code> set. Recommended for production; keeps the token off the browser entirely.</div></div><input type="checkbox" id="ghl-tog-proxy-holds-token"></div>
                 <div class="ghl-toggle-row" style="border-bottom:none"><div><div class="ghl-toggle-label" style="color:#b45309">Test Mode — Simulate Sends</div><div class="ghl-toggle-sub" style="color:#92400e">Messages are NOT sent to GHL. Use to test UI without sending real SMS/email.</div></div><input type="checkbox" id="ghl-tog-testmode"></div>
               </div>
             </div>
@@ -27845,6 +27846,7 @@
     setChk('ghl-tog-overdue-sms',  s.overdueTaskSMS);
     setChk('ghl-tog-overdue-email',s.overdueTaskEmail);
     setChk('ghl-tog-proxy',        s.useProxy !== false);
+    setChk('ghl-tog-proxy-holds-token', s.proxyHoldsToken === true);
     setChk('ghl-tog-testmode',     s.testMode === true);
     _ghlCheckProxy();
     var pill = document.getElementById('ghl-enabled-pill');
@@ -27886,6 +27888,7 @@
     s.overdueTaskSMS    = c('ghl-tog-overdue-sms');
     s.overdueTaskEmail  = c('ghl-tog-overdue-email');
     s.useProxy          = c('ghl-tog-proxy');
+    s.proxyHoldsToken   = c('ghl-tog-proxy-holds-token');
     s.testMode          = c('ghl-tog-testmode');
     if (s.testMode) { addNotif('admin', null, '⚠ Test Mode ON — messages will NOT be sent to GHL'); }
     GHL.saveSettings(s);

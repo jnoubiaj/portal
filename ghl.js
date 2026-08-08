@@ -110,6 +110,13 @@ window.GHL = (function () {
         enabled:              s.enabled              !== false,
         testMode:             s.testMode             === true,
         useProxy:             s.useProxy             !== false,   // default ON when proxy available
+        // Round 2 security fix (opt-in): when true, the browser stops
+        // sending the X-GHL-Api-Key header to the proxy — the proxy uses
+        // its GHL_API_KEY env var instead. Default OFF so existing setups
+        // keep working; flip ON only after deploying ghl-server.mjs with
+        // GHL_API_KEY set as an env var on the host. Once ON, the PIT
+        // token never leaves the server.
+        proxyHoldsToken:      s.proxyHoldsToken      === true,
       };
     } catch (e) {
       return { apiKey: window.GHL_API_KEY || '', locationId: window.GHL_LOCATION_ID || '', enabled: true };
@@ -215,9 +222,15 @@ window.GHL = (function () {
 
     try {
       const hdrs = _hdrs();
-      // When using proxy: forward key + locationId as headers (proxy reads these)
+      // When using proxy: forward key + locationId as headers (proxy reads these).
+      // When proxyHoldsToken is enabled, we OMIT X-GHL-Api-Key entirely so the
+      // proxy uses its own GHL_API_KEY env var — the token never rides in the
+      // browser -> proxy request. locationId still forwarded (not sensitive).
+      // Also drop the Authorization header the browser would otherwise send
+      // (harmless — GHL only reads what the proxy chooses to forward).
       if (useProxy) {
-        hdrs['X-GHL-Api-Key']      = s.apiKey;
+        if (!s.proxyHoldsToken) hdrs['X-GHL-Api-Key'] = s.apiKey;
+        else delete hdrs['Authorization'];
         hdrs['X-GHL-Location-Id']  = s.locationId;
       }
       const opts = { method, headers: hdrs };
