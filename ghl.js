@@ -728,57 +728,93 @@ window.GHL = (function () {
       // Surveys endpoint may not be enabled on the location — non-fatal.
       console.warn('[GHL] surveys/submissions failed (may not be enabled):', e.message);
     }
-    // Documents & Contracts fetch — DISABLED BY DEFAULT (Round 3 diagnosis).
-    // /proposals-and-estimates/ returns 404 on Sam's GHL account even
-    // through the proxy — the endpoint isn't part of his API version.
-    // GHL's Documents & Contracts product doesn't reliably expose filled
-    // field values via a public API anyway; the right path is to have
-    // the onboarding form write its answers to CONTACT CUSTOM FIELDS
-    // (either by making the form a GHL Form, or a workflow that copies
-    // document answers to the contact). The contact custom-field values
-    // already load via /contacts/{id}, and _parseGhlFields/
-    // mapGhlToPortalFields already turn them into portal fields.
+    // Documents & Contracts — the REAL source for onboarding answers.
+    // Round 3 probing (live via Railway proxy) confirmed:
+    //   /documents/                        → 404 (doesn't exist)
+    //   /proposals-and-estimates/          → 404 (doesn't exist)
+    //   /proposals/                        → 404 (doesn't exist)
+    //   /contacts/{id}/documents           → 404 (doesn't exist)
+    //   /proposals/document/               → 401 (exists! just needs scope)
+    // A 401 (not 404) means the endpoint IS real — the Private Integration
+    // Token just needs the Documents & Contracts / Proposals READ scope.
     //
-    // Kept as an opt-in path — set localStorage.cq_ghl_try_docs = '1'
-    // to re-enable if you later validate the endpoint works for your
-    // GHL location.
+    // Also — this newer API uses altId/altType, NOT locationId. Passing
+    // locationId here would fail validation.
+    //
+    // Two-step: list documents for this contact → filter to the completed
+    // "Onboarding" doc → GET its detail for entered field values.
     let _foundDocs = null;
-    if ((function(){ try { return localStorage.getItem('cq_ghl_try_docs') === '1'; } catch(e) { return false; } })()) {
-      const _DOC_ENDPOINT = '/proposals-and-estimates/?locationId=' + locationId
-                          + '&contactId=' + contactId + '&limit=50&status=completed';
+    const _DOC_LIST = '/proposals/document/?altId=' + locationId
+                    + '&altType=location&contactId=' + contactId + '&limit=50';
+    try {
+      const r = await _fetch('GET', _DOC_LIST);
+      const docs = (r && (r.documents || r.proposals || r.data || r.items)) || [];
       try {
-        const r = await _fetch('GET', _DOC_ENDPOINT);
-        const docs = (r && (r.documents || r.proposals || r.proposalsAndEstimates || r.items || r.data)) || [];
-        try {
-          if (localStorage.getItem('cq_ghl_quiet') !== '1') {
-            console.log('[GHL doc-fetch]', _DOC_ENDPOINT, '→', docs.length, 'doc(s)');
-          }
-        } catch (e) {}
-        if (docs.length > 0) _foundDocs = docs;
-      } catch (e) {
-        console.warn('[GHL doc-fetch] failed:', e.message);
-      }
+        if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+          console.log('[GHL doc-fetch]', _DOC_LIST, '→', docs.length, 'doc(s)',
+            docs.length ? docs.map(function(d){ return (d.name||d.title||'(no name)') + '/' + (d.status||d.state||'?'); }) : '');
+        }
+      } catch (e) {}
+      if (docs.length > 0) _foundDocs = docs;
+    } catch (e) {
+      console.warn('[GHL doc-fetch] list failed:', e.message);
     }
     if (_foundDocs && _foundDocs.length) {
-      _foundDocs.forEach(doc => {
-        // Prefer completed / signed docs. Include others but tag their status
-        // so downstream can filter if needed.
+      // Rank docs so onboarding + completed rise to the top; hydrate up to
+      // 3 (cover multiple onboarding attempts) with a GET on each id to
+      // pull entered field values, since the list endpoint typically
+      // returns metadata only.
+      const _ranked = _foundDocs.slice().sort(function(a, b) {
+        const rank = function(d) {
+          const nm  = String(d.name || d.title || '').toLowerCase();
+          const st  = String(d.status || d.state || '').toLowerCase();
+          let s = 0;
+          if (/onboard/.test(nm))                                      s += 4;
+          if (st === 'completed' || st === 'signed' || st === 'accepted') s += 2;
+          if (d.updatedAt || d.dateUpdated || d.lastUpdated)           s += 1;
+          return -s;
+        };
+        return rank(a) - rank(b);
+      });
+      const _toHydrate = _ranked.slice(0, 3);
+      const hydrated = await Promise.all(_toHydrate.map(async function(doc) {
+        const docId = doc.id || doc._id || doc.documentId;
+        // If the list result already includes fields, skip the extra call.
+        const preFields = _extractDocFields(doc);
+        if (preFields.length > 0 || !docId) return { doc: doc, fields: preFields };
+        try {
+          const dq = '/proposals/document/' + encodeURIComponent(docId)
+                   + '?altId=' + locationId + '&altType=location';
+          const detail = await _fetch('GET', dq);
+          const body = (detail && (detail.document || detail.proposal || detail.data || detail)) || {};
+          const fields = _extractDocFields(body);
+          try {
+            if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+              console.log('[GHL doc-detail]', docId, '→', fields.length, 'field(s)');
+            }
+          } catch (e) {}
+          return { doc: Object.assign({}, doc, body), fields: fields };
+        } catch (e) {
+          console.warn('[GHL doc-detail] failed for', docId, ':', e.message);
+          return { doc: doc, fields: preFields };
+        }
+      }));
+      hydrated.forEach(function(pair) {
+        const doc  = pair.doc;
         const status = String(doc.status || doc.state || '').toLowerCase();
         const isDone = !status || status === 'completed' || status === 'signed' || status === 'accepted' || status === 'paid';
         const name   = doc.name || doc.title || doc.documentName || '';
-        // Extract field/answer values from any of the known doc shapes.
-        const flat   = _extractDocFields(doc);
-        const subLike = {
+        all.push({
           _source: 'document',
           _documentId: doc.id || doc._id || doc.documentId,
           _documentName: name,
           _documentStatus: status,
           _documentComplete: isDone,
-          // formFields lets the existing parser at ghl.js:857 pick these
-          // up unchanged — it iterates arrays for {id/fieldId, name, value}.
-          formFields: flat
-        };
-        all.push(subLike);
+          // Existing _parseGhlFields at ~ghl.js:857 iterates formFields
+          // for {id/fieldId, name, value} — same shape our extractor
+          // returns, so downstream mapping needs no changes.
+          formFields: pair.fields
+        });
       });
     }
     return all;
