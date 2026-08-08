@@ -728,34 +728,36 @@ window.GHL = (function () {
       // Surveys endpoint may not be enabled on the location — non-fatal.
       console.warn('[GHL] surveys/submissions failed (may not be enabled):', e.message);
     }
-    // Documents & Contracts (proposals-and-estimates) — the ONE endpoint.
-    // Round 2 diagnosis confirmed:
-    //   /proposals-and-estimates/  → real endpoint (CORS-blocked direct;
-    //                                 works ONLY through ghl-server.mjs proxy)
-    //   /proposals/                → 404
-    //   /documents/                → 404
-    //   /payments/documents/       → 404
-    // The 404 fallbacks were pure noise + wasted requests. Also required:
-    //   • proxy MUST be running (or hosted at cq_scheduler_remote_url) —
-    //     GHL doesn't return CORS headers for this endpoint, so a direct
-    //     browser call always fails with "Failed to fetch".
-    //   • Private Integration Token must include the Documents & Contracts
-    //     (Proposals/Estimates) READ scope. Without it we get 401.
-    // status=completed filters to signed docs (~46 for this workspace).
-    const _DOC_ENDPOINT = '/proposals-and-estimates/?locationId=' + locationId
-                        + '&contactId=' + contactId + '&limit=50&status=completed';
+    // Documents & Contracts fetch — DISABLED BY DEFAULT (Round 3 diagnosis).
+    // /proposals-and-estimates/ returns 404 on Sam's GHL account even
+    // through the proxy — the endpoint isn't part of his API version.
+    // GHL's Documents & Contracts product doesn't reliably expose filled
+    // field values via a public API anyway; the right path is to have
+    // the onboarding form write its answers to CONTACT CUSTOM FIELDS
+    // (either by making the form a GHL Form, or a workflow that copies
+    // document answers to the contact). The contact custom-field values
+    // already load via /contacts/{id}, and _parseGhlFields/
+    // mapGhlToPortalFields already turn them into portal fields.
+    //
+    // Kept as an opt-in path — set localStorage.cq_ghl_try_docs = '1'
+    // to re-enable if you later validate the endpoint works for your
+    // GHL location.
     let _foundDocs = null;
-    try {
-      const r = await _fetch('GET', _DOC_ENDPOINT);
-      const docs = (r && (r.documents || r.proposals || r.proposalsAndEstimates || r.items || r.data)) || [];
+    if ((function(){ try { return localStorage.getItem('cq_ghl_try_docs') === '1'; } catch(e) { return false; } })()) {
+      const _DOC_ENDPOINT = '/proposals-and-estimates/?locationId=' + locationId
+                          + '&contactId=' + contactId + '&limit=50&status=completed';
       try {
-        if (localStorage.getItem('cq_ghl_quiet') !== '1') {
-          console.log('[GHL doc-fetch]', _DOC_ENDPOINT, '→', docs.length, 'doc(s)');
-        }
-      } catch (e) {}
-      if (docs.length > 0) _foundDocs = docs;
-    } catch (e) {
-      console.warn('[GHL doc-fetch] failed:', e.message);
+        const r = await _fetch('GET', _DOC_ENDPOINT);
+        const docs = (r && (r.documents || r.proposals || r.proposalsAndEstimates || r.items || r.data)) || [];
+        try {
+          if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+            console.log('[GHL doc-fetch]', _DOC_ENDPOINT, '→', docs.length, 'doc(s)');
+          }
+        } catch (e) {}
+        if (docs.length > 0) _foundDocs = docs;
+      } catch (e) {
+        console.warn('[GHL doc-fetch] failed:', e.message);
+      }
     }
     if (_foundDocs && _foundDocs.length) {
       _foundDocs.forEach(doc => {

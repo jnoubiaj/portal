@@ -17718,7 +17718,7 @@
         return;
       }
 
-      const { contact, mappedFields, matchInfo, formSubmissions } = result;
+      const { contact, mappedFields, matchInfo, formSubmissions, parsedFields } = result;
       const fieldKeys = Object.keys(mappedFields);
 
       if (fieldKeys.length === 0) {
@@ -17734,6 +17734,7 @@
         contact,
         matchInfo,
         formSubmissions,
+        _parsedFields: parsedFields,
         metadata: {
           ghlContactId:   contact.id,
           ghlFormId:      matchInfo.ghlFormId  || null,
@@ -17854,6 +17855,39 @@
     const docCompleteCnt = docSubs.filter(function(s){ return s && s._documentComplete; }).length;
     const ccfCount       = ((contact && (contact.customFields || contact.customField)) || []).length;
 
+    // Round 3: unmapped custom-field surface. mapGhlToPortalFields routes
+    // fields into portal keys via a fixed alias table — but any GHL custom
+    // field whose fieldKey/label doesn't match an alias is invisible in
+    // the dialog. Now every parsed field is listed here (with its value)
+    // even when unmapped, so the admin can see what data GHL has for the
+    // contact + know which portal fields to alias to (via
+    // localStorage.cq_ghl_field_overrides).
+    var _mappedGhlValues = {};
+    fieldKeys.forEach(function(k) { _mappedGhlValues[String(mappedFields[k]).trim()] = true; });
+    var _parsedEntries = [];
+    try {
+      // pending.parsedFields is attached below via the fetch return; fall
+      // back to the raw custom-fields array on the contact if not present.
+      var _p = pending && pending._parsedFields ? pending._parsedFields : null;
+      if (!_p && contact) {
+        var _cf = contact.customFields || contact.customField || [];
+        _cf.forEach(function(cf) {
+          _parsedEntries.push({ name: (cf.fieldKey || cf.id || ''), fieldKey: cf.fieldKey || '', value: cf.value });
+        });
+      } else if (_p && _p._entries) {
+        _parsedEntries = _p._entries;
+      }
+    } catch(e) {}
+    var _unmappedRows = _parsedEntries.filter(function(e) {
+      if (!e || e.value == null || e.value === '') return false;
+      if (e.source === 'standard') return false; // firstName/lastName/email/etc already visible
+      var v = String(e.value).trim();
+      if (!v) return false;
+      // Filter out values already surfaced by the mapper (avoid duplicates).
+      if (_mappedGhlValues[v]) return false;
+      return true;
+    });
+
     const modal = document.createElement('div');
     modal.id = 'ghl-import-preview-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,0.72);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
@@ -17919,8 +17953,8 @@
             '</div>' +
             '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px">' +
               '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Contact ID</div><div style="font-size:10px;font-family:monospace;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + contact.id + '</div></div>' +
-              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Submissions</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + formSubCount + ' form · ' + surveySubCount + ' survey · ' + docSubCount + ' doc' + (docSubCount === 1 ? '' : 's') + (docCompleteCnt > 0 ? ' <span style="color:#059669">(' + docCompleteCnt + ' completed)</span>' : '') + '</div></div>' +
-              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Fields Detected</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + fieldKeys.length + ' total <span style="font-weight:500;color:#64748b;font-size:11px">(' + ccfCount + ' custom on contact)</span></div></div>' +
+              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Submissions</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + formSubCount + ' form · ' + surveySubCount + ' survey' + (docSubCount > 0 ? ' · ' + docSubCount + ' doc' + (docSubCount === 1 ? '' : 's') + (docCompleteCnt > 0 ? ' <span style="color:#059669">(' + docCompleteCnt + ' completed)</span>' : '') : '') + '</div></div>' +
+              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Custom Fields</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + ccfCount + ' on contact <span style="font-weight:500;color:#64748b;font-size:11px">(' + fieldKeys.length + ' mapped' + (_unmappedRows.length > 0 ? ', <span style="color:#b45309">' + _unmappedRows.length + ' unmapped</span>' : '') + ')</span></div></div>' +
             '</div>' +
             (ccfCount === 0 && submCount === 0 ?
               '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:11px 13px;margin-top:10px;font-size:11.5px;color:#92400e;line-height:1.5">'
@@ -17957,6 +17991,42 @@
               '<tbody>' + rows + '</tbody>' +
             '</table>' +
           '</div>' +
+
+          // Round 3: Unmapped custom fields section — shows every GHL
+          // custom-field value that wasn't routed to a portal field, so
+          // the admin can (a) see what data GHL has, (b) know what to
+          // add to cq_ghl_field_overrides to make it import next time.
+          (_unmappedRows.length > 0
+            ? '<div style="background:#fffbeb;border-radius:12px;border:1px solid #fde68a;overflow:hidden;margin-bottom:14px">'
+              + '<div style="background:#fef3c7;padding:10px 16px;border-bottom:1px solid #fde68a;display:flex;align-items:center;gap:8px">'
+              +   '<span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#92400e">Additional GHL Fields (Unmapped) · ' + _unmappedRows.length + '</span>'
+              + '</div>'
+              + '<div style="padding:8px 16px 4px;font-size:11px;color:#78350f;line-height:1.5">'
+              +   'These values live on the GHL contact but the portal doesn\'t know which profile field to route them to. '
+              +   'Copy the <code style="background:#fef3c7;padding:1px 4px;border-radius:3px">fieldKey</code> and pin it to a portal field via '
+              +   '<code style="background:#fef3c7;padding:1px 4px;border-radius:3px">localStorage.setItem(\'cq_ghl_field_overrides\', JSON.stringify({...}))</code> '
+              +   '(see console for exact syntax).'
+              + '</div>'
+              + '<table style="width:100%;border-collapse:collapse">'
+              +   '<thead><tr style="background:#fef3c7">'
+              +     '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#92400e">GHL Field</th>'
+              +     '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#92400e">fieldKey</th>'
+              +     '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#92400e">Value</th>'
+              +   '</tr></thead>'
+              +   '<tbody>' + _unmappedRows.map(function(e) {
+                    var nm = String(e.name || e.fieldKey || '(unnamed)');
+                    var fk = String(e.fieldKey || '(no fieldKey)');
+                    var vv = String(e.value == null ? '' : e.value);
+                    var esc = function(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+                    return '<tr style="border-bottom:1px solid #fef3c7">'
+                      + '<td style="padding:7px 10px;font-size:11px;font-weight:700;color:#0f172a">' + esc(nm) + '</td>'
+                      + '<td style="padding:7px 10px;font-size:11px;font-family:monospace;color:#78350f">' + esc(fk) + '</td>'
+                      + '<td style="padding:7px 10px;font-size:12px;color:#78350f;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(vv) + '">' + esc(vv.slice(0, 100)) + (vv.length > 100 ? '…' : '') + '</td>'
+                      + '</tr>';
+                  }).join('') + '</tbody>'
+              + '</table>'
+              + '</div>'
+            : '') +
 
         '</div>' +
 
