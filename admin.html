@@ -2610,11 +2610,15 @@
   }
   .btn-more:hover { border-color:var(--gray-300); background:var(--gray-50); color:var(--navy); }
   .a-more-drop {
-    position:fixed; min-width:192px; background:var(--white);
+    /* Force fixed + top-of-viewport rendering with !important so no
+       ancestor stacking context (sticky sidebar, sticky action bar,
+       card layers) can visually cover the menu. z-index at signed-int32
+       max — no other element on the page can beat it. */
+    position:fixed !important; min-width:192px; background:var(--white);
     border:1.5px solid var(--gray-100); border-radius:12px; box-shadow:0 8px 32px rgba(10,22,40,0.12);
-    z-index:99999; overflow:hidden; display:none;
+    z-index:2147483647 !important; overflow:hidden; display:none;
   }
-  .a-more-drop.open { display:block; animation:dropIn 0.15s ease; }
+  .a-more-drop.open { display:block !important; animation:dropIn 0.15s ease; }
   @keyframes dropIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
   .a-more-item {
     display:flex; align-items:center; gap:10px; padding:10px 14px; font-size:13px;
@@ -8587,6 +8591,12 @@
   }
 
   // ── MORE ACTIONS DROPDOWN ─────────────────────────────────────────────
+  // Uses a body-portal pattern: on open, the dropdown is DETACHED from its
+  // in-tree parent (the client header) and appended directly to
+  // document.body. Position:fixed + top-of-body means no ancestor stacking
+  // context (sticky sidebar, sticky action bar, overflow:auto scroll
+  // containers) can visually trap or clip it. On close it's moved back so
+  // the DOM structure is unchanged when the menu isn't visible.
   function toggleMoreActions(id, e) {
     if (e) e.stopPropagation();
     var drop = document.getElementById('more-drop-' + id);
@@ -8594,8 +8604,15 @@
     var isOpen = drop.classList.contains('open');
     closeMoreActions();
     if (!isOpen) {
-      // Use fixed positioning based on button's viewport rect — escapes all stacking contexts
-      var btn = e && (e.currentTarget || e.target.closest('.btn-more'));
+      // Remember where the dropdown came from so we can put it back on close.
+      var wrap = document.getElementById('more-wrap-' + id);
+      if (wrap && drop.parentNode !== document.body) {
+        drop.dataset.originWrap = 'more-wrap-' + id;
+        document.body.appendChild(drop);
+      }
+      // Position via the button's viewport rect.
+      var btn = e && (e.currentTarget || (e.target && e.target.closest && e.target.closest('.btn-more')));
+      if (!btn && wrap) btn = wrap.querySelector('.btn-more');
       if (btn) {
         var r = btn.getBoundingClientRect();
         drop.style.top  = (r.bottom + 6) + 'px';
@@ -8606,7 +8623,19 @@
     }
   }
   function closeMoreActions() {
-    document.querySelectorAll('.a-more-drop.open').forEach(function(d) { d.classList.remove('open'); });
+    document.querySelectorAll('.a-more-drop.open').forEach(function(d) {
+      d.classList.remove('open');
+      // Return the dropdown to its origin wrapper so subsequent re-renders
+      // find it in the expected place in the DOM tree.
+      var originId = d.dataset.originWrap;
+      if (originId) {
+        var origin = document.getElementById(originId);
+        if (origin && d.parentNode !== origin) {
+          origin.appendChild(d);
+        }
+        delete d.dataset.originWrap;
+      }
+    });
   }
 
   // ── DELETE CLIENT ─────────────────────────────────────────────────────
