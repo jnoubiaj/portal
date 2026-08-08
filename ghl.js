@@ -674,36 +674,123 @@ window.GHL = (function () {
       // Surveys endpoint may not be enabled on the location — non-fatal.
       console.warn('[GHL] surveys/submissions failed (may not be enabled):', e.message);
     }
-    // Also try the Documents/Proposals endpoint — GHL's Documents & Contracts
-    // product stores completed-document field values here, not under /forms
-    // or /surveys. Requires the `documents.readonly` scope on the integration
-    // and Documents/Proposals enabled on the location.
-    try {
-      const d3 = await _fetch('GET', '/documents/?locationId=' + locationId + '&contactId=' + contactId + '&limit=50');
-      const docs = (d3 && (d3.documents || d3.proposals)) || [];
-      docs.forEach(doc => {
-        // Each completed document has filled-in field values in either
-        // `fields`, `data`, or `formFields` depending on GHL version.
+    // Also try the Documents/Proposals endpoints — GHL's Payments →
+    // Documents & Contracts product stores completed-document field values
+    // here, not under /forms or /surveys. The public LeadConnector API
+    // has moved through several paths for this product across versions,
+    // so we try each in order and use whichever one returns docs. Every
+    // attempt is logged so the admin can see which endpoint their account
+    // exposes without guessing.
+    //
+    // Endpoint candidates (v1 & v2, in most-recent-first order):
+    //   /proposals-and-estimates/     — current v2 name (invoicing rebrand)
+    //   /proposals/                   — earlier v2 name
+    //   /documents/                   — original v1 style
+    //   /payments/documents/          — payments-scoped variant
+    const _DOC_ENDPOINTS = [
+      '/proposals-and-estimates/?locationId=' + locationId + '&contactId=' + contactId + '&limit=50&status=completed',
+      '/proposals-and-estimates/?locationId=' + locationId + '&contactId=' + contactId + '&limit=50',
+      '/proposals/?locationId='       + locationId + '&contactId=' + contactId + '&limit=50',
+      '/documents/?locationId='       + locationId + '&contactId=' + contactId + '&limit=50',
+      '/payments/documents/?locationId=' + locationId + '&contactId=' + contactId + '&limit=50'
+    ];
+    let _foundDocs = null, _foundVia = null;
+    for (const ep of _DOC_ENDPOINTS) {
+      try {
+        const r = await _fetch('GET', ep);
+        const docs = (r && (r.documents || r.proposals || r.proposalsAndEstimates || r.items || r.data)) || [];
+        try {
+          if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+            console.log('[GHL doc-fetch]', ep, '→', docs.length, 'doc(s)');
+          }
+        } catch (e) {}
+        if (docs.length > 0) {
+          _foundDocs = docs;
+          _foundVia  = ep;
+          break;
+        }
+      } catch (e) {
+        console.warn('[GHL doc-fetch] failed for', ep, ':', e.message);
+      }
+    }
+    if (_foundDocs && _foundDocs.length) {
+      try {
+        if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+          console.log('[GHL] documents via', _foundVia, '→', _foundDocs.length, 'doc(s):', _foundDocs);
+        }
+      } catch (e) {}
+      _foundDocs.forEach(doc => {
+        // Prefer completed / signed docs. Include others but tag their status
+        // so downstream can filter if needed.
+        const status = String(doc.status || doc.state || '').toLowerCase();
+        const isDone = !status || status === 'completed' || status === 'signed' || status === 'accepted' || status === 'paid';
+        const name   = doc.name || doc.title || doc.documentName || '';
+        // Extract field/answer values from any of the known doc shapes.
+        const flat   = _extractDocFields(doc);
         const subLike = {
           _source: 'document',
-          _documentId: doc.id || doc._id,
-          _documentName: doc.name || doc.title,
-          _status: doc.status,
-          formFields: doc.fields || doc.formFields || doc.data || []
+          _documentId: doc.id || doc._id || doc.documentId,
+          _documentName: name,
+          _documentStatus: status,
+          _documentComplete: isDone,
+          // formFields lets the existing parser at ghl.js:857 pick these
+          // up unchanged — it iterates arrays for {id/fieldId, name, value}.
+          formFields: flat
         };
         all.push(subLike);
       });
-      try {
-        if (localStorage.getItem('cq_ghl_quiet') !== '1') {
-          console.log('[GHL] documents/ →', docs.length, 'document(s)', docs.length ? docs : '');
-        }
-      } catch (e) {}
-    } catch (e) {
-      // Documents endpoint typically requires a separate scope. Non-fatal —
-      // many integrations don't have it enabled.
-      console.warn('[GHL] documents/ failed (likely missing documents.readonly scope or feature not enabled):', e.message);
     }
     return all;
+  }
+
+  // Normalize a GHL document/proposal/estimate object into a flat array of
+  // {id, name, value} field entries. GHL returns filled-in document field
+  // values in several shapes depending on which endpoint served the record:
+  //   • doc.formFields    — canonical array [{id,name,value}]
+  //   • doc.fields        — same shape, older
+  //   • doc.answers       — array on completed proposals
+  //   • doc.data          — object keyed by fieldKey / label / UUID
+  //   • doc.variables     — merge-tag key/value map
+  //   • doc.sections[].fields — nested in template-based documents
+  //   • doc.customFields  — contact-style field array
+  // Returns [] if nothing is found so callers can safely iterate.
+  function _extractDocFields (doc) {
+    const out = [];
+    const seen = {};
+    const push = (id, name, value) => {
+      if (value == null || value === '') return;
+      const key = String(id || '') + '|' + String(name || '').toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push({ id: id || null, fieldId: id || null, name: name || '', value: value });
+    };
+    const flatArr = (arr) => {
+      if (!Array.isArray(arr)) return;
+      arr.forEach(f => {
+        if (!f || typeof f !== 'object') return;
+        const id   = f.id || f.fieldId || f.customFieldId || null;
+        const name = f.name || f.label || f.fieldKey || f.key || '';
+        const val  = f.value != null ? f.value : (f.fieldValue != null ? f.fieldValue : f.answer);
+        push(id, name, val);
+      });
+    };
+    const flatObj = (obj) => {
+      if (!obj || typeof obj !== 'object') return;
+      Object.entries(obj).forEach(([k, v]) => push(null, k, v));
+    };
+    flatArr(doc.formFields);
+    flatArr(doc.fields);
+    flatArr(doc.answers);
+    flatArr(doc.customFields);
+    flatObj(doc.data);
+    flatObj(doc.variables);
+    // Nested sections (template-based documents)
+    if (Array.isArray(doc.sections)) {
+      doc.sections.forEach(sec => {
+        if (sec) flatArr(sec.fields);
+      });
+    }
+    return out;
   }
 
   function _buildFieldDefsMap (defs) {

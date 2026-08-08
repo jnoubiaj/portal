@@ -17770,13 +17770,41 @@
       signatureName:'Signature Name', signedDate:'Date Signed',
     };
 
+    // AUDIT (Import From GHL) sub-bugs:
+    //  (a) Phone false-positive CONFLICT: portal stores "(812) 698-1066"
+    //      and GHL returns "8126981066" — same number, different formatting.
+    //      Strip everything except digits AND drop a leading US "1".
+    //  (b) Business Type dropdown-option-list-as-value: when the GHL field
+    //      is empty the API sometimes returns the SELECT's option list as
+    //      a string like "LLC,S-Corp,C-Corp,Sole Prop,Trust". That's the
+    //      form's placeholder, not a real answer — treat it as empty and
+    //      skip the row so it isn't presented as importable data.
+    const _normPhone = function(v) {
+      var s = String(v == null ? '' : v).replace(/\D+/g, '');
+      if (s.length === 11 && s.charAt(0) === '1') s = s.slice(1);
+      return s;
+    };
+    var _BIZTYPE_PLACEHOLDER_RE = /^\s*llc\s*,\s*s.?corp\s*,\s*c.?corp\s*,\s*sole.?prop/i;
+    var _isBizTypePlaceholder = function(v) {
+      if (v == null) return false;
+      return _BIZTYPE_PLACEHOLDER_RE.test(String(v));
+    };
+    var _isPhoneKey = function(key) { return key === 'phone' || key === 'bizPhone'; };
+
     const rows = fieldKeys.map(function(key, i) {
       const ghlVal    = mappedFields[key];
       const curVal    = currentOnboard[key];
+      var ghlIsPlaceholder = (key === 'bizType' && _isBizTypePlaceholder(ghlVal));
+      // Skip placeholder-only GHL values entirely — they aren't real
+      // answers so we don't want them offered as importable data.
+      if (ghlIsPlaceholder) return '';
       const hasValue  = curVal !== undefined && curVal !== null && curVal !== '' && !(Array.isArray(curVal) && curVal.length === 0);
       const curStr    = hasValue ? (Array.isArray(curVal) ? curVal.join(', ') : String(curVal)) : '';
       const ghlStr    = String(ghlVal);
-      const conflict  = hasValue && curStr !== ghlStr;
+      // Digits-only compare for phone fields; string-compare otherwise.
+      var conflict = _isPhoneKey(key)
+        ? (hasValue && _normPhone(curStr) !== _normPhone(ghlStr))
+        : (hasValue && curStr !== ghlStr);
       const isEmpty   = !hasValue;
       const defaultCk = isEmpty ? 'checked' : '';
       const label     = FIELD_LABELS[key] || key;
@@ -17806,6 +17834,14 @@
     const submCount = (formSubmissions || []).length;
     const formSubCount   = (formSubmissions || []).filter(function(s){ return s && s._source === 'form'; }).length;
     const surveySubCount = (formSubmissions || []).filter(function(s){ return s && s._source === 'survey'; }).length;
+    // AUDIT (Import From GHL fix): documents from GHL's Documents & Contracts
+    // product (proposals-and-estimates) are counted separately so admins can
+    // see when the completed onboarding form was pulled successfully. Old
+    // dialog only showed 'form · survey' and stayed at '0 · 0' even after
+    // the onboarding-doc extract worked, hiding the real state.
+    const docSubs        = (formSubmissions || []).filter(function(s){ return s && s._source === 'document'; });
+    const docSubCount    = docSubs.length;
+    const docCompleteCnt = docSubs.filter(function(s){ return s && s._documentComplete; }).length;
     const ccfCount       = ((contact && (contact.customFields || contact.customField)) || []).length;
 
     const modal = document.createElement('div');
@@ -17873,7 +17909,7 @@
             '</div>' +
             '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px">' +
               '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Contact ID</div><div style="font-size:10px;font-family:monospace;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + contact.id + '</div></div>' +
-              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Submissions</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + formSubCount + ' form · ' + surveySubCount + ' survey</div></div>' +
+              '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Submissions</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + formSubCount + ' form · ' + surveySubCount + ' survey · ' + docSubCount + ' doc' + (docSubCount === 1 ? '' : 's') + (docCompleteCnt > 0 ? ' <span style="color:#059669">(' + docCompleteCnt + ' completed)</span>' : '') + '</div></div>' +
               '<div><div style="font-size:10px;color:#94a3b8;margin-bottom:2px">Fields Detected</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + fieldKeys.length + ' total <span style="font-weight:500;color:#64748b;font-size:11px">(' + ccfCount + ' custom on contact)</span></div></div>' +
             '</div>' +
             (ccfCount === 0 && submCount === 0 ?
