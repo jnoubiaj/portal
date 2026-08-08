@@ -752,96 +752,125 @@ window.GHL = (function () {
     //
     // Two-step: list documents for this contact → filter to the completed
     // "Onboarding" doc → GET its detail for entered field values.
-    // Round 3 param fix: /proposals/document/ returns 422 when contactId is
-    // passed as a query param — GHL's List Documents endpoint doesn't
-    // support filter-by-contact, so passing it triggers validation
-    // rejection. Fetch by altId+altType only, filter to this contact
-    // client-side using the contactId embedded on each returned document.
-    let _foundDocs = null;
-    const _DOC_LIST = '/proposals/document/?altId=' + locationId
-                    + '&altType=location&limit=100';
-    try {
-      const r = await _fetch('GET', _DOC_LIST);
-      const rawDocs = (r && (r.documents || r.proposals || r.data || r.items)) || [];
-      // Match to this contact by contactId embedded on each doc. GHL
-      // shapes vary: some responses expose contactId at the top level,
-      // some nest as contact.id, some use recipientId/customerId. Cover
-      // all common variants.
-      const docs = rawDocs.filter(function(d) {
+    // Round 4 (Aug 8) — SOLVED. Verified working call:
+    //   GET /proposals/document/?locationId={loc}&limit=20
+    //   Version: 2021-07-28 (already sent by _hdrs)
+    // Params gotchas confirmed via GHL 422 responses:
+    //   • Uses locationId — NOT altId/altType (altId → "required field
+    //     'locationId' is missing")
+    //   • limit ≤ 21 — 100 triggers "limit must not be greater than 21"
+    //   • contactId NOT accepted as filter — match by doc.recipients[]
+    //     client-side (docs have no top-level contactId)
+    // Response shape: { documents: [...], total: N }. Docs carry
+    // fillableFields[{ value, fieldId, type, ... }] — all filled answers.
+    // No offset support; pagination via startAfter/startAfterId cursors.
+    let _foundDocs = [];
+    const _pageLimit = 20;
+    let _startAfterId = '';
+    let _startAfter   = '';
+    let _pagesFetched = 0;
+    const _MAX_PAGES  = 10; // safety cap — 10 pages × 20 = 200 docs
+    while (_pagesFetched < _MAX_PAGES) {
+      let _q = '/proposals/document/?locationId=' + locationId + '&limit=' + _pageLimit;
+      if (_startAfterId) _q += '&startAfterId=' + encodeURIComponent(_startAfterId);
+      if (_startAfter)   _q += '&startAfter='   + encodeURIComponent(_startAfter);
+      let r;
+      try {
+        r = await _fetch('GET', _q);
+      } catch (e) {
+        console.warn('[GHL doc-fetch] page failed:', e.message);
+        break;
+      }
+      if (!r) break;
+      const pageDocs = (r.documents || r.proposals || r.data || r.items) || [];
+      _pagesFetched++;
+      try {
+        if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+          console.log('[GHL doc-fetch] page', _pagesFetched, _q, '→', pageDocs.length, 'doc(s), total:', r.total || '?');
+        }
+      } catch (e) {}
+      if (pageDocs.length === 0) break;
+      // Filter to this contact by walking recipients[] (docs carry no
+      // top-level contactId — the receiver is on recipients).
+      const matched = pageDocs.filter(function(d) {
         if (!d) return false;
+        if (Array.isArray(d.recipients)) {
+          for (var i = 0; i < d.recipients.length; i++) {
+            var rp = d.recipients[i];
+            if (!rp) continue;
+            if (rp.contactId === contactId) return true;
+            if (rp.id === contactId) return true;
+            if (rp.contact && (rp.contact.id === contactId || rp.contact._id === contactId)) return true;
+          }
+        }
+        // Fallbacks for older doc shapes.
         var did = d.contactId
               || (d.contact && (d.contact.id || d.contact._id))
               || d.recipientId
-              || d.customerId
-              || (d.recipient && d.recipient.contactId);
+              || d.customerId;
         return did === contactId;
       });
+      matched.forEach(function(d) { _foundDocs.push(d); });
+      // Stop early if we already have the completed onboarding doc.
+      const gotOnboarding = _foundDocs.some(function(d) {
+        var st = String(d.status || d.state || '').toLowerCase();
+        var nm = String(d.name || d.title || '').toLowerCase();
+        return /onboard/.test(nm) && (st === 'completed' || st === 'signed' || st === 'accepted');
+      });
+      if (gotOnboarding) break;
+      // Advance cursor. GHL uses startAfterId + startAfter (id + timestamp).
+      const last = pageDocs[pageDocs.length - 1];
+      const nextId = last && (last.id || last._id);
+      const nextTs = last && (last.updatedAt || last.dateUpdated || last.createdAt || last.dateAdded);
+      if (!nextId || nextId === _startAfterId) break; // no cursor advance = done
+      _startAfterId = nextId;
+      if (nextTs) _startAfter = String(nextTs);
+      // If total is known and we've walked past it, stop.
+      if (r.total && (_pagesFetched * _pageLimit) >= r.total) break;
+    }
+    if (_foundDocs.length) {
       try {
         if (localStorage.getItem('cq_ghl_quiet') !== '1') {
-          console.log('[GHL doc-fetch]', _DOC_LIST,
-            '→', rawDocs.length, 'total,', docs.length, 'for contact',
-            docs.length ? docs.map(function(d){ return (d.name||d.title||'(no name)') + '/' + (d.status||d.state||'?'); }) : '');
+          console.log('[GHL doc-fetch] found', _foundDocs.length, 'doc(s) for contact after', _pagesFetched, 'page(s):',
+            _foundDocs.map(function(d){ return (d.name||d.title||'(no name)') + '/' + (d.status||d.state||'?'); }));
         }
       } catch (e) {}
-      if (docs.length > 0) _foundDocs = docs;
-    } catch (e) {
-      console.warn('[GHL doc-fetch] list failed:', e.message);
-    }
-    if (_foundDocs && _foundDocs.length) {
-      // Rank docs so onboarding + completed rise to the top; hydrate up to
-      // 3 (cover multiple onboarding attempts) with a GET on each id to
-      // pull entered field values, since the list endpoint typically
-      // returns metadata only.
+      // Rank: onboarding + completed first.
       const _ranked = _foundDocs.slice().sort(function(a, b) {
         const rank = function(d) {
           const nm  = String(d.name || d.title || '').toLowerCase();
           const st  = String(d.status || d.state || '').toLowerCase();
           let s = 0;
-          if (/onboard/.test(nm))                                      s += 4;
+          if (/onboard/.test(nm))                                       s += 4;
           if (st === 'completed' || st === 'signed' || st === 'accepted') s += 2;
-          if (d.updatedAt || d.dateUpdated || d.lastUpdated)           s += 1;
+          if (d.updatedAt || d.dateUpdated || d.lastUpdated)            s += 1;
           return -s;
         };
         return rank(a) - rank(b);
       });
-      const _toHydrate = _ranked.slice(0, 3);
-      const hydrated = await Promise.all(_toHydrate.map(async function(doc) {
-        const docId = doc.id || doc._id || doc.documentId;
-        // If the list result already includes fields, skip the extra call.
-        const preFields = _extractDocFields(doc);
-        if (preFields.length > 0 || !docId) return { doc: doc, fields: preFields };
-        try {
-          const dq = '/proposals/document/' + encodeURIComponent(docId)
-                   + '?altId=' + locationId + '&altType=location';
-          const detail = await _fetch('GET', dq);
-          const body = (detail && (detail.document || detail.proposal || detail.data || detail)) || {};
-          const fields = _extractDocFields(body);
-          try {
-            if (localStorage.getItem('cq_ghl_quiet') !== '1') {
-              console.log('[GHL doc-detail]', docId, '→', fields.length, 'field(s)');
-            }
-          } catch (e) {}
-          return { doc: Object.assign({}, doc, body), fields: fields };
-        } catch (e) {
-          console.warn('[GHL doc-detail] failed for', docId, ':', e.message);
-          return { doc: doc, fields: preFields };
-        }
-      }));
-      hydrated.forEach(function(pair) {
-        const doc  = pair.doc;
+      // Round 4 verified: the LIST response already includes
+      // fillableFields[{ value, fieldId, type, ... }] with the entered
+      // answers on the top-ranked onboarding doc. No detail-hydrate
+      // needed — _extractDocFields consumes fillableFields directly
+      // (see the updated extractor below).
+      const _toUse = _ranked.slice(0, 3);
+      _toUse.forEach(function(doc) {
         const status = String(doc.status || doc.state || '').toLowerCase();
         const isDone = !status || status === 'completed' || status === 'signed' || status === 'accepted' || status === 'paid';
         const name   = doc.name || doc.title || doc.documentName || '';
+        const fields = _extractDocFields(doc);
+        try {
+          if (localStorage.getItem('cq_ghl_quiet') !== '1') {
+            console.log('[GHL doc-fields]', doc.id || '?', name, 'status:', status, '→', fields.length, 'field(s)');
+          }
+        } catch (e) {}
         all.push({
           _source: 'document',
           _documentId: doc.id || doc._id || doc.documentId,
           _documentName: name,
           _documentStatus: status,
           _documentComplete: isDone,
-          // Existing _parseGhlFields at ~ghl.js:857 iterates formFields
-          // for {id/fieldId, name, value} — same shape our extractor
-          // returns, so downstream mapping needs no changes.
-          formFields: pair.fields
+          formFields: fields
         });
       });
     }
@@ -851,7 +880,10 @@ window.GHL = (function () {
   // Normalize a GHL document/proposal/estimate object into a flat array of
   // {id, name, value} field entries. GHL returns filled-in document field
   // values in several shapes depending on which endpoint served the record:
-  //   • doc.formFields    — canonical array [{id,name,value}]
+  //   • doc.fillableFields — CURRENT shape from /proposals/document/ list
+  //                          — [{value, fieldId, type, id, recipient, ...}]
+  //                          — no human label, identify by fieldId
+  //   • doc.formFields    — older array [{id,name,value}]
   //   • doc.fields        — same shape, older
   //   • doc.answers       — array on completed proposals
   //   • doc.data          — object keyed by fieldKey / label / UUID
@@ -873,8 +905,14 @@ window.GHL = (function () {
       if (!Array.isArray(arr)) return;
       arr.forEach(f => {
         if (!f || typeof f !== 'object') return;
-        const id   = f.id || f.fieldId || f.customFieldId || null;
-        const name = f.name || f.label || f.fieldKey || f.key || '';
+        // fillableFields uses fieldId as the identifier and has NO
+        // human-readable label on the object itself. We surface fieldId
+        // in BOTH id (for byId matching + fieldKey overrides) and name
+        // (so the Unmapped section shows something recognizable to the
+        // admin). Once the admin maps a fieldId -> portal key in
+        // cq_ghl_field_overrides, the mapper picks it up via id: prefix.
+        const id   = f.fieldId || f.id || f.customFieldId || null;
+        const name = f.name || f.label || f.fieldKey || f.key || (id ? ('field:' + id.slice(-8)) : '');
         const val  = f.value != null ? f.value : (f.fieldValue != null ? f.fieldValue : f.answer);
         push(id, name, val);
       });
@@ -883,6 +921,7 @@ window.GHL = (function () {
       if (!obj || typeof obj !== 'object') return;
       Object.entries(obj).forEach(([k, v]) => push(null, k, v));
     };
+    flatArr(doc.fillableFields);   // Round 4: verified current shape
     flatArr(doc.formFields);
     flatArr(doc.fields);
     flatArr(doc.answers);
