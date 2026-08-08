@@ -715,13 +715,22 @@ window.GHL = (function () {
     }
     // Also try the Surveys endpoint — GHL's newer "onboarding" / multi-step
     // form builder stores submissions there, not under /forms.
+    // Round 3 param fix: /surveys/submissions also 422's when contactId is
+    // passed — same reason as /forms/submissions and /proposals/document/:
+    // the endpoint doesn't accept contactId as a filter. Fetch by locationId
+    // only, filter to this contact client-side.
     try {
-      const d2 = await _fetch('GET', '/surveys/submissions?locationId=' + locationId + '&contactId=' + contactId + '&limit=50');
-      const subs2 = (d2 && (d2.submissions || d2.surveySubmissions)) || [];
+      const d2 = await _fetch('GET', '/surveys/submissions?locationId=' + locationId + '&limit=100');
+      const rawSubs2 = (d2 && (d2.submissions || d2.surveySubmissions)) || [];
+      const subs2 = rawSubs2.filter(function(s) {
+        if (!s) return false;
+        var sid = s.contactId || (s.contact && s.contact.id);
+        return sid === contactId;
+      });
       subs2.forEach(s => { all.push(Object.assign({ _source: 'survey' }, s)); });
       try {
         if (localStorage.getItem('cq_ghl_quiet') !== '1') {
-          console.log('[GHL] surveys/submissions →', subs2.length, 'submission(s)', subs2.length ? subs2 : '');
+          console.log('[GHL] surveys/submissions →', rawSubs2.length, 'total,', subs2.length, 'for contact');
         }
       } catch (e) {}
     } catch (e) {
@@ -743,15 +752,34 @@ window.GHL = (function () {
     //
     // Two-step: list documents for this contact → filter to the completed
     // "Onboarding" doc → GET its detail for entered field values.
+    // Round 3 param fix: /proposals/document/ returns 422 when contactId is
+    // passed as a query param — GHL's List Documents endpoint doesn't
+    // support filter-by-contact, so passing it triggers validation
+    // rejection. Fetch by altId+altType only, filter to this contact
+    // client-side using the contactId embedded on each returned document.
     let _foundDocs = null;
     const _DOC_LIST = '/proposals/document/?altId=' + locationId
-                    + '&altType=location&contactId=' + contactId + '&limit=50';
+                    + '&altType=location&limit=100';
     try {
       const r = await _fetch('GET', _DOC_LIST);
-      const docs = (r && (r.documents || r.proposals || r.data || r.items)) || [];
+      const rawDocs = (r && (r.documents || r.proposals || r.data || r.items)) || [];
+      // Match to this contact by contactId embedded on each doc. GHL
+      // shapes vary: some responses expose contactId at the top level,
+      // some nest as contact.id, some use recipientId/customerId. Cover
+      // all common variants.
+      const docs = rawDocs.filter(function(d) {
+        if (!d) return false;
+        var did = d.contactId
+              || (d.contact && (d.contact.id || d.contact._id))
+              || d.recipientId
+              || d.customerId
+              || (d.recipient && d.recipient.contactId);
+        return did === contactId;
+      });
       try {
         if (localStorage.getItem('cq_ghl_quiet') !== '1') {
-          console.log('[GHL doc-fetch]', _DOC_LIST, '→', docs.length, 'doc(s)',
+          console.log('[GHL doc-fetch]', _DOC_LIST,
+            '→', rawDocs.length, 'total,', docs.length, 'for contact',
             docs.length ? docs.map(function(d){ return (d.name||d.title||'(no name)') + '/' + (d.status||d.state||'?'); }) : '');
         }
       } catch (e) {}
