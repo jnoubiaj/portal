@@ -27918,25 +27918,32 @@
     var bar   = document.getElementById('ghl-proxy-status-bar');
     if (!dot || !label) return;
 
-    dot.style.background   = '#f59e0b'; // amber = checking
-    label.textContent      = 'Checking proxy server (localhost:3001)…';
-
     if (typeof GHL === 'undefined') {
       dot.style.background = '#ef4444';
       label.textContent    = 'GHL module not loaded';
       return;
     }
 
-    GHL.resetProxyCheck();
-    var ready = GHL.isProxyReady ? GHL.isProxyReady() : false;
+    // Prefer Railway URL (production) then localhost (dev). Old code
+    // hardcoded localhost:3001/health so hosted admins ALWAYS saw the
+    // red 'Proxy not running' banner even when their Railway proxy was
+    // healthy — because ghl.js already resolves via Railway (see
+    // _getRailwayProxyBase) but this banner check didn't.
+    var railway = _getRemoteSchedulerUrl();
+    var target = railway || 'http://localhost:3001';
+    var targetLabel = railway ? 'Railway (' + railway + ')' : 'localhost:3001';
 
-    // Do a live check via fetch
+    dot.style.background   = '#f59e0b'; // amber = checking
+    label.textContent      = 'Checking proxy server (' + targetLabel + ')…';
+
+    GHL.resetProxyCheck();
+    var ready = false;
     try {
       var timer;
-      var done = fetch('http://localhost:3001/health').then(function(r) { return r.ok; });
+      var done = fetch(target + '/health').then(function(r) { return r.ok; });
       ready = await Promise.race([
         done,
-        new Promise(function(_, rej) { timer = setTimeout(function() { rej(new Error('timeout')); }, 2000); }),
+        new Promise(function(_, rej) { timer = setTimeout(function() { rej(new Error('timeout')); }, 3500); }),
       ]);
       clearTimeout(timer);
     } catch(e) { ready = false; }
@@ -27945,16 +27952,16 @@
       dot.style.background  = '#10b981'; // green
       if (bar) bar.style.background = '#f0fdf4';
       if (bar) bar.style.borderColor = '#bbf7d0';
-      label.innerHTML = '<strong>Proxy server running</strong> · localhost:3001 · SMS/Email will send through proxy';
+      label.innerHTML = '<strong>Proxy running</strong> · ' + targetLabel + ' · GHL calls routed through proxy';
     } else {
       dot.style.background  = '#ef4444'; // red
       if (bar) bar.style.background = '#fef2f2';
       if (bar) bar.style.borderColor = '#fecaca';
-      label.innerHTML = '<strong>Proxy not running</strong> — '
-        + '<code style="font-size:10px;background:#fee2e2;padding:1px 4px;border-radius:3px">node ghl-server.mjs</code>'
+      label.innerHTML = '<strong>Proxy not reachable</strong> · ' + targetLabel + ' · '
+        + (railway ? 'Check Railway deploy + CQ_ALLOWED_ORIGINS env var' : '<code style="font-size:10px;background:#fee2e2;padding:1px 4px;border-radius:3px">node ghl-server.mjs</code> not running')
         + ' · Direct API calls only (may have CORS issues)';
     }
-    console.log('[Admin] Proxy check result:', ready);
+    console.log('[Admin] Proxy check result:', ready, '| target:', target);
   }
 
   // ── Remote Scheduler Sync ────────────────────────────────────────────────────
