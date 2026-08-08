@@ -117,6 +117,10 @@ window.GHL = (function () {
         // GHL_API_KEY set as an env var on the host. Once ON, the PIT
         // token never leaves the server.
         proxyHoldsToken:      s.proxyHoldsToken      === true,
+        // Shared secret sent as X-CQ-Portal-Secret. Must match
+        // CQ_PORTAL_SECRET env var on the proxy. Stops random URL
+        // visitors from using this proxy. Empty = check disabled.
+        portalSecret:         s.portalSecret         || '',
       };
     } catch (e) {
       return { apiKey: window.GHL_API_KEY || '', locationId: window.GHL_LOCATION_ID || '', enabled: true };
@@ -232,6 +236,10 @@ window.GHL = (function () {
         if (!s.proxyHoldsToken) hdrs['X-GHL-Api-Key'] = s.apiKey;
         else delete hdrs['Authorization'];
         hdrs['X-GHL-Location-Id']  = s.locationId;
+        // Shared-secret gate. Only sent when portalSecret is configured;
+        // otherwise the proxy's check is disabled (no CQ_PORTAL_SECRET
+        // env var) and this header is unnecessary.
+        if (s.portalSecret) hdrs['X-CQ-Portal-Secret'] = s.portalSecret;
       }
       const opts = { method, headers: hdrs };
       if (body && method !== 'GET') opts.body = JSON.stringify(body);

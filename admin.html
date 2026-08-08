@@ -4551,6 +4551,15 @@
                     value="">
                   <div style="font-size:10px;color:var(--gray-400);margin-top:3px">Leave blank to use localhost only</div>
                 </div>
+                <div style="margin-bottom:10px">
+                  <div class="ghl-settings-label">Portal Secret (X-CQ-Portal-Secret)</div>
+                  <input class="ghl-settings-input" id="ghl-portal-secret" type="password" placeholder="Long random string — must match CQ_PORTAL_SECRET on Railway" style="max-width:420px" autocomplete="off">
+                  <div style="font-size:10px;color:var(--gray-400);margin-top:3px">
+                    Set the SAME value as an env var <code>CQ_PORTAL_SECRET</code> on your Railway service.
+                    When set here + on Railway, the proxy rejects any request without this header — stops random visitors from using your proxy.
+                    Leave blank to disable (dev only).
+                  </div>
+                </div>
                 <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
                   <button onclick="_schedCheckRailway()" style="padding:6px 14px;background:#f3f4f6;color:var(--navy);border:1px solid var(--gray-200);border-radius:8px;font-size:12px;cursor:pointer">Check Connection</button>
                   <span id="sched-railway-status" style="font-size:11px;color:var(--gray-400)">—</span>
@@ -27848,6 +27857,7 @@
     setChk('ghl-tog-proxy',        s.useProxy !== false);
     setChk('ghl-tog-proxy-holds-token', s.proxyHoldsToken === true);
     setChk('ghl-tog-testmode',     s.testMode === true);
+    setVal('ghl-portal-secret',    s.portalSecret);
     _ghlCheckProxy();
     var pill = document.getElementById('ghl-enabled-pill');
     var sub  = document.getElementById('ghl-settings-status');
@@ -27890,6 +27900,7 @@
     s.useProxy          = c('ghl-tog-proxy');
     s.proxyHoldsToken   = c('ghl-tog-proxy-holds-token');
     s.testMode          = c('ghl-tog-testmode');
+    s.portalSecret      = g('ghl-portal-secret');
     if (s.testMode) { addNotif('admin', null, '⚠ Test Mode ON — messages will NOT be sent to GHL'); }
     GHL.saveSettings(s);
     _ghlLoadSettingsUI();

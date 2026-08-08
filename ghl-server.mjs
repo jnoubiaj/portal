@@ -24,6 +24,25 @@ const GHL_BASE  = 'https://services.leadconnectorhq.com';
 const GHL_VER   = '2021-07-28';
 const PORT      = parseInt(process.env.PORT || '3001');
 
+// ── SECURITY (Round 2 hardening) ─────────────────────────────────────────────
+// The proxy is a public URL by necessity — the browser has to reach it. To
+// prevent a random visitor from using YOUR proxy (and, once the token toggle
+// is flipped, YOUR GHL token) to hit GHL on your behalf, we enforce two
+// layers:
+//
+//   1. Origin allowlist  — CORS. Browsers refuse to send credentials to a
+//      cross-origin request the server doesn't allow. Set via
+//      CQ_ALLOWED_ORIGINS env var (comma-separated); dev localhost always ok.
+//
+//   2. Shared secret     — every /api/ghl/* request must include header
+//      X-CQ-Portal-Secret matching env var CQ_PORTAL_SECRET. Stops
+//      curl-from-anywhere. If CQ_PORTAL_SECRET is unset, the check is
+//      SKIPPED (backwards-compatible for dev / existing deployments).
+//
+// Health endpoint remains public but no longer leaks token/location details.
+const ALLOWED_ORIGINS_ENV = (process.env.CQ_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const PORTAL_SECRET = process.env.CQ_PORTAL_SECRET || '';
+
 // ── Config ────────────────────────────────────────────────────────────────────
 let _cfg = {};
 const cfgPath = path.join(__dirname, 'ghl-config.json');
@@ -63,16 +82,31 @@ function sendJson(res, status, data) {
 }
 
 function setCors(res, origin) {
-  // Allow any localhost origin (3000, 3002, file://)
-  const allowed = origin && (
+  // Origin allowlist. Order:
+  //   1. Dev origins (localhost / 127.0.0.1 / file://) — always ok.
+  //   2. CQ_ALLOWED_ORIGINS env var (comma-separated) if set — the
+  //      production hosts (e.g. portal.capitalquestconsulting.com,
+  //      portal.capitalquestfunding.com).
+  //   3. If neither list matches AND the env var IS set → don't set
+  //      Access-Control-Allow-Origin at all (browser blocks the request).
+  //   4. If CQ_ALLOWED_ORIGINS is unset → fall back to '*' (dev default).
+  const isDevOrigin = origin && (
     origin.startsWith('http://localhost') ||
     origin.startsWith('http://127.0.0.1') ||
     origin === 'null'   // file:// shows as null
-  ) ? origin : '*';
-  res.setHeader('Access-Control-Allow-Origin',  allowed);
+  );
+  let allowed = null;
+  if (isDevOrigin) allowed = origin;
+  else if (ALLOWED_ORIGINS_ENV.length > 0) {
+    if (origin && ALLOWED_ORIGINS_ENV.indexOf(origin) !== -1) allowed = origin;
+    // else allowed stays null — no Access-Control-Allow-Origin header sent
+  } else {
+    allowed = '*'; // no allowlist configured — dev default
+  }
+  if (allowed) res.setHeader('Access-Control-Allow-Origin', allowed);
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers',
-    'Content-Type,Authorization,Version,X-GHL-Api-Key,X-GHL-Location-Id');
+    'Content-Type,Authorization,Version,X-GHL-Api-Key,X-GHL-Location-Id,X-CQ-Portal-Secret');
   res.setHeader('Access-Control-Max-Age', '86400');
   res.setHeader('Vary', 'Origin');
 }
@@ -182,18 +216,24 @@ const server = http.createServer(async (req, res) => {
   const locId   = resolveLocId(req.headers);
 
   // ── Health / Status ───────────────────────────────────────────────────────
+  // Public — anyone can hit /health. NO longer leaks locationId or apiKey
+  // prefix (Round 2 audit: even a prefix aids an attacker who's identifying
+  // the target account). Just presence booleans.
   if (reqPath === '/health' || reqPath === '/api/ghl/health') {
     return sendJson(res, 200, {
       ok:          true,
       configured:  !!apiKey,
-      locationId:  locId ? locId.substring(0, 6) + '…' : '(not set)',
-      apiKeyPrefix:apiKey ? apiKey.substring(0, 8) + '…' : '(not set)',
       port:        PORT,
       ts:          Date.now(),
     });
   }
 
+  // /api/ghl/status is behind the shared-secret check below (falls through
+  // to the /api/ghl/* handler). Kept for admin diagnostic use only.
   if (reqPath === '/api/ghl/status') {
+    if (PORTAL_SECRET && req.headers['x-cq-portal-secret'] !== PORTAL_SECRET) {
+      return sendJson(res, 401, { error: 'Portal secret required' });
+    }
     return sendJson(res, 200, {
       configured:  !!apiKey,
       locationId:  locId || '(not set)',
@@ -327,6 +367,18 @@ const server = http.createServer(async (req, res) => {
     child.stderr.on('data', d => res.write('ERR: ' + d.toString()));
     child.on('close', code => res.end(`\n\n=== Done (exit ${code}) ===\n`));
     return;
+  }
+
+  // ── Shared-secret gate ────────────────────────────────────────────────────
+  // Every /api/ghl/* request must carry X-CQ-Portal-Secret matching the
+  // server's CQ_PORTAL_SECRET env var. If the env var isn't set, the check
+  // is skipped (dev / backwards-compatible). Prevents random visitors from
+  // using this proxy — especially critical after the browser stops sending
+  // the GHL token itself (proxyHoldsToken toggle).
+  if (PORTAL_SECRET && reqPath.startsWith('/api/ghl/') && reqPath !== '/api/ghl/health') {
+    if (req.headers['x-cq-portal-secret'] !== PORTAL_SECRET) {
+      return sendJson(res, 401, { error: 'Portal secret required — set X-CQ-Portal-Secret header' });
+    }
   }
 
   // ── Must start with /api/ghl/ ─────────────────────────────────────────────
