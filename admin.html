@@ -17755,6 +17755,80 @@
     }
   }
 
+  // Round 4 mapper UI helpers — build the dropdown options once so every
+  // unmapped row shares the same list, and expose the save/reload handlers
+  // as window globals so inline onclick/onchange can reach them.
+  var _PORTAL_FIELD_OPTIONS = (function() {
+    var groups = [
+      { label: 'Personal', opts: [
+        ['dob', 'Date of Birth'], ['ssn', 'SSN'],
+        ['maidenName', "Mother's Maiden Name"],
+        ['annualIncome', 'Annual Income'], ['citizen', 'US Citizen'],
+        ['street', 'Home Street'], ['homeCity', 'Home City'],
+        ['homeState', 'Home State'], ['homeZip', 'Home ZIP']
+      ]},
+      { label: 'Business', opts: [
+        ['bizName', 'Business Name'], ['dba', 'DBA / Trade Name'],
+        ['ein', 'EIN'], ['dateEstablished', 'Date Established'],
+        ['bizType', 'Business Type'], ['industry', 'Industry'],
+        ['employees', '# Employees'], ['monthlySales', 'Monthly Revenue'],
+        ['ownership', 'Ownership %'], ['bizPhone', 'Business Phone'],
+        ['bizAddress', 'Business Street'], ['bizCity', 'Business City'],
+        ['bizState', 'Business State'], ['bizZip', 'Business ZIP'],
+        ['loanAmount', 'Funding Goal'], ['loanReason', 'Funding Purpose']
+      ]},
+      { label: 'Banking & Credit', opts: [
+        ['personalBanks', 'Personal Banks'],
+        ['bizBanks', 'Business Banks'],
+        ['bizCreditCards', 'Business Credit Cards']
+      ]}
+    ];
+    return groups.map(function(g) {
+      var opts = g.opts.map(function(o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
+      return '<optgroup label="' + g.label + '">' + opts + '</optgroup>';
+    }).join('');
+  })();
+
+  // Save a fieldId/fieldKey -> portal key mapping to localStorage. The
+  // mapping is checked by ghl.js mapGhlToPortalFields via the pick()
+  // resolver — id: matches first, then key:, then tag:.
+  window._ghlSaveOverride = function(sel) {
+    if (!sel) return;
+    var portalKey = sel.value;
+    var fid = sel.getAttribute('data-field-id') || '';
+    var fk  = sel.getAttribute('data-field-key') || '';
+    if (!portalKey) return;
+    var overrides = {};
+    try { overrides = JSON.parse(localStorage.getItem('cq_ghl_field_overrides') || '{}') || {}; } catch(e) { overrides = {}; }
+    overrides[portalKey] = fid
+      ? { id: fid }
+      : (fk && fk !== '(no fieldKey)' ? { key: fk } : { id: fid });
+    try { localStorage.setItem('cq_ghl_field_overrides', JSON.stringify(overrides)); } catch(e) {}
+    // Flash a small "Saved" indicator next to the dropdown.
+    var span = sel.parentElement && sel.parentElement.querySelector('span[class^="ghl-map-saved-"]');
+    if (span) {
+      span.style.display = 'inline';
+      clearTimeout(span._t);
+      span._t = setTimeout(function() { span.style.display = 'none'; }, 1600);
+    }
+    console.log('[GHL map] pinned', portalKey, '->', fid || fk);
+  };
+
+  // "Reload Import" button — re-runs the ghlImportFromForm flow so the
+  // just-saved overrides take effect (mapped rows move to the top table).
+  window._ghlReopenImport = function() {
+    var pending = window._ghlPendingImport;
+    if (!pending || !pending.clientId) {
+      var modal = document.getElementById('ghl-import-preview-modal');
+      if (modal) modal.remove();
+      return;
+    }
+    var clientId = pending.clientId;
+    var modal = document.getElementById('ghl-import-preview-modal');
+    if (modal) modal.remove();
+    if (typeof ghlImportFromForm === 'function') ghlImportFromForm(clientId, null);
+  };
+
   function _ghlShowImportPreview() {
     document.getElementById('ghl-import-preview-modal')?.remove();
     const pending = window._ghlPendingImport;
@@ -17992,36 +18066,42 @@
             '</table>' +
           '</div>' +
 
-          // Round 3: Unmapped custom fields section — shows every GHL
-          // custom-field value that wasn't routed to a portal field, so
-          // the admin can (a) see what data GHL has, (b) know what to
-          // add to cq_ghl_field_overrides to make it import next time.
+          // Round 4: Unmapped custom fields section — now with an inline
+          // "Map to portal field" dropdown per row. On change, saves to
+          // cq_ghl_field_overrides via a helper that survives across
+          // sessions. Once mapped, the next Import moves that row into
+          // the top "Select Fields to Import" table automatically.
           (_unmappedRows.length > 0
             ? '<div style="background:#fffbeb;border-radius:12px;border:1px solid #fde68a;overflow:hidden;margin-bottom:14px">'
               + '<div style="background:#fef3c7;padding:10px 16px;border-bottom:1px solid #fde68a;display:flex;align-items:center;gap:8px">'
-              +   '<span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#92400e">Additional GHL Fields (Unmapped) · ' + _unmappedRows.length + '</span>'
+              +   '<span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#92400e">Additional GHL Fields (Unmapped) &middot; ' + _unmappedRows.length + '</span>'
+              +   '<button onclick="_ghlReopenImport()" title="Refresh the import after mapping fields" style="margin-left:auto;font-size:10px;font-weight:700;color:#78350f;background:#fff;border:1px solid #fde68a;border-radius:6px;padding:3px 9px;cursor:pointer">Reload Import</button>'
               + '</div>'
               + '<div style="padding:8px 16px 4px;font-size:11px;color:#78350f;line-height:1.5">'
-              +   'These values live on the GHL contact but the portal doesn\'t know which profile field to route them to. '
-              +   'Copy the <code style="background:#fef3c7;padding:1px 4px;border-radius:3px">fieldKey</code> and pin it to a portal field via '
-              +   '<code style="background:#fef3c7;padding:1px 4px;border-radius:3px">localStorage.setItem(\'cq_ghl_field_overrides\', JSON.stringify({...}))</code> '
-              +   '(see console for exact syntax).'
+              +   'Pick a portal field for each row from the dropdown &mdash; the mapping saves instantly and is remembered for every future client. Click <strong>Reload Import</strong> to see the newly mapped fields move to the table above.'
               + '</div>'
               + '<table style="width:100%;border-collapse:collapse">'
               +   '<thead><tr style="background:#fef3c7">'
-              +     '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#92400e">GHL Field</th>'
-              +     '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#92400e">fieldKey</th>'
               +     '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#92400e">Value</th>'
+              +     '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#92400e">GHL fieldKey</th>'
+              +     '<th style="padding:6px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#92400e">Map to Portal Field</th>'
               +   '</tr></thead>'
-              +   '<tbody>' + _unmappedRows.map(function(e) {
+              +   '<tbody>' + _unmappedRows.map(function(e, i) {
                     var nm = String(e.name || e.fieldKey || '(unnamed)');
-                    var fk = String(e.fieldKey || '(no fieldKey)');
+                    var fk = String(e.fieldKey || e.id || '(no fieldKey)');
+                    var fid = String(e.id || e.fieldId || '');
                     var vv = String(e.value == null ? '' : e.value);
                     var esc = function(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
                     return '<tr style="border-bottom:1px solid #fef3c7">'
-                      + '<td style="padding:7px 10px;font-size:11px;font-weight:700;color:#0f172a">' + esc(nm) + '</td>'
-                      + '<td style="padding:7px 10px;font-size:11px;font-family:monospace;color:#78350f">' + esc(fk) + '</td>'
-                      + '<td style="padding:7px 10px;font-size:12px;color:#78350f;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(vv) + '">' + esc(vv.slice(0, 100)) + (vv.length > 100 ? '…' : '') + '</td>'
+                      + '<td style="padding:7px 10px;font-size:12px;color:#0f172a;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(vv) + '">' + esc(vv.slice(0, 80)) + (vv.length > 80 ? '&hellip;' : '') + '</td>'
+                      + '<td style="padding:7px 10px;font-size:10px;font-family:monospace;color:#78350f;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(fk) + '">' + esc(fk) + '</td>'
+                      + '<td style="padding:7px 10px">'
+                        + '<select data-field-id="' + esc(fid) + '" data-field-key="' + esc(fk) + '" onchange="_ghlSaveOverride(this)" style="font-size:11px;padding:4px 8px;border:1px solid #fcd34d;border-radius:5px;background:#fff;color:#78350f;min-width:180px;cursor:pointer">'
+                          + '<option value="">— pick portal field —</option>'
+                          + _PORTAL_FIELD_OPTIONS
+                        + '</select>'
+                        + '<span class="ghl-map-saved-' + i + '" style="margin-left:6px;font-size:10px;font-weight:700;color:#059669;display:none">&#10003; Saved</span>'
+                      + '</td>'
                       + '</tr>';
                   }).join('') + '</tbody>'
               + '</table>'
